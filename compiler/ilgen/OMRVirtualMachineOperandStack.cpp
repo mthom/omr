@@ -245,5 +245,9 @@ OMR::VirtualMachineOperandStack::init()
 
    // store current operand stack pointer base address so we can use it whenever we need
    // to recreate the stack as the interpreter would have
-   _mb->Store(_stackBaseName, _stackTopRegister->Load(_mb));
+   if(_stackTopRegister == nullptr) {
+     _mb->Store(_stackBaseName, _mb->NullAddress());
+   } else {
+     _mb->Store(_stackBaseName, _stackTopRegister->Load(_mb));     
    }
+}
