@@ -33,6 +33,7 @@
 #include "omrvm.h"
 #include "thread_api.h"
 #include "omrutil.h"
+#include "shrinit.h"
 
 #if defined(OMR_GC)
 #include "GCExtensionsBase.hpp"
@@ -324,6 +325,10 @@ OMR_Initialize_VM(OMR_VM **omrVMSlot, OMR_VMThread **omrVMThreadSlot, void *lang
 	OMR_Runtime *omrRuntime = NULL;
 	OMR_VM *omrVM = NULL;
 	OMR_VMThread *vmThread = NULL;
+	// mimick shrclssup.c in the next two declarations.
+	UDATA loadFlags = 0;
+	UDATA nonfatal = 0;
+	
 	OMRPORT_ACCESS_FROM_OMRPORT(&portLibrary);
 
 	/* Initialize the OMR thread and port libraries.*/
@@ -460,8 +465,9 @@ OMR_Initialize_VM(OMR_VM **omrVMSlot, OMR_VMThread **omrVMThreadSlot, void *lang
 			goto failed;
 		}
 	}
-#endif /* OMR_RAS_TDF_TRACE */
-
+#endif /* OMR_RAS_TDF_TRACE */	
+	// omrshr_init(*omrVMSlot, loadFlags, &nonfatal);
+	
 failed:
 	return rc;
 }

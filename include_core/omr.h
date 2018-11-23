@@ -28,6 +28,9 @@
  */
 
 #include "omrport.h"
+#include "j9pool.h"
+
+#include <string.h> // for memcmp
 
 #define OMRPORT_ACCESS_FROM_OMRRUNTIME(omrRuntime) OMRPortLibrary *privateOmrPortLibrary = (omrRuntime)->_portLibrary
 #define OMRPORT_ACCESS_FROM_OMRVM(omrVM) OMRPORT_ACCESS_FROM_OMRRUNTIME((omrVM)->_runtime)
@@ -109,6 +112,314 @@ typedef struct OMR_ExclusiveVMAccessStats {
 	struct OMR_VMThread *lastResponder;
 	UDATA haltedThreads;
 } OMR_ExclusiveVMAccessStats;
+// this is the J9UTF8 struct as defined in genBinaryBlob.hpp (which exists in the guts of OMR,
+// but seems to be intended only for use in its DDR interface). 
+struct OMRUTF8 {
+  uint16_t length;
+  uint8_t data[2];
+};
+
+#define OMRUTF8_LENGTH(j9UTF8Address) (((struct OMRUTF8 *)(j9UTF8Address))->length)
+#define OMRUTF8_SET_LENGTH(j9UTF8Address, len) (((struct OMRUTF8 *)(j9UTF8Address))->length = (len))
+#define OMRUTF8_DATA(j9UTF8Address) (((struct OMRUTF8 *)(j9UTF8Address))->data)
+
+#define OMRUTF8_DATA_EQUALS(data1, length1, data2, length2) ((((length1) == (length2)) && (memcmp((data1), (data2), (length1)) == 0)))
+#define OMRUTF8_EQUALS(utf1, utf2) (((utf1) == (utf2)) || (OMRUTF8_DATA_EQUALS(OMRUTF8_DATA(utf1), OMRUTF8_LENGTH(utf1), OMRUTF8_DATA(utf2), OMRUTF8_LENGTH(utf2))))
+#define OMRUTF8_LITERAL_EQUALS(data1, length1, cString) (OMRUTF8_DATA_EQUALS((data1), (length1), (cString), sizeof(cString) - 1))
+
+typedef struct J9SharedClassCacheDescriptor {
+	struct J9SharedCacheHeader* cacheStartAddress;
+	void* romclassStartAddress;
+	void* metadataStartAddress;
+	UDATA cacheSizeBytes;
+	void* deployedROMClassStartAddress;
+	struct J9SharedClassCacheDescriptor* next;
+} J9SharedClassCacheDescriptor;
+
+/* @ddr_namespace: map_to_type=J9SharedInternSRPHashTableEntry */
+
+typedef struct J9SharedInternSRPHashTableEntry {
+	J9SRP utf8SRP;
+	U_16 flags;
+	U_16 internWeight;
+	J9SRP prevNode;
+	J9SRP nextNode;
+} J9SharedInternSRPHashTableEntry;
+
+typedef struct MethodNameAndSignature {
+	J9SRP name;
+	J9SRP signature;
+} MethodNameAndSignature;
+
+typedef struct J9SharedInvariantInternTable {
+	UDATA  ( *performNodeAction)(struct J9SharedInvariantInternTable *sharedInvariantInternTable, struct J9SharedInternSRPHashTableEntry *node, UDATA action, void* userData) ;
+	UDATA flags;
+	omrthread_monitor_t tableInternFxMutex;
+	struct J9SRPHashTable* sharedInvariantSRPHashtable;
+	struct J9SharedInternSRPHashTableEntry* headNode;
+	struct J9SharedInternSRPHashTableEntry* tailNode;
+	J9SRP* sharedTailNodePtr;
+	J9SRP* sharedHeadNodePtr;
+	U_32* totalSharedNodesPtr;
+	U_32* totalSharedWeightPtr;
+//	struct J9ClassLoader* systemClassLoader;
+} J9SharedInvariantInternTable;
+
+#define STRINGINTERNTABLES_NODE_FLAG_UTF8_IS_SHARED  4
+#define STRINGINTERNTABLES_ACTION_VERIFY_BOTH_TABLES  10
+#define STRINGINTERNTABLES_ACTION_VERIFY_LOCAL_TABLE_ONLY  13
+
+#define J9SHAREDINTERNSRPHASHTABLEENTRY_UTF8SRP(base) SRP_GET((base)->utf8SRP, struct J9UTF8*)
+#define J9SHAREDINTERNSRPHASHTABLEENTRY_PREVNODE(base) SRP_GET((base)->prevNode, struct J9SharedInternSRPHashTableEntry*)
+#define J9SHAREDINTERNSRPHASHTABLEENTRY_NEXTNODE(base) SRP_GET((base)->nextNode, struct J9SharedInternSRPHashTableEntry*)
+
+typedef struct J9SharedDataDescriptor {
+	U_8* address;
+	UDATA length;
+	UDATA type;
+	UDATA flags;
+} J9SharedDataDescriptor;
+
+#define OMRSHRDATA_IS_PRIVATE  1
+#define OMRSHRDATA_ALLOCATE_ZEROD_MEMORY  2
+#define OMRSHRDATA_PRIVATE_TO_DIFFERENT_JVM  4
+#define OMRSHRDATA_USE_READWRITE  8
+#define OMRSHRDATA_NOT_INDEXED  16
+#define OMRSHRDATA_SINGLE_STORE_FOR_KEY_TYPE  32
+ 
+typedef struct J9SharedCacheInfo {
+	const char* name;
+	UDATA isCompatible;
+	UDATA cacheType;
+	UDATA os_shmid;
+	UDATA os_semid;
+	UDATA modLevel;
+	UDATA addrMode;
+	UDATA isCorrupt;
+	UDATA cacheSize;
+	UDATA freeBytes;
+	I_64 lastDetach;
+	UDATA softMaxBytes;
+} J9SharedCacheInfo;
+
+typedef struct J9SharedCacheHeader {
+	U_32 totalBytes;
+	U_32 readWriteBytes;
+	UDATA updateSRP;
+	UDATA readWriteSRP;
+	UDATA segmentSRP;
+	UDATA updateCount;
+	J9WSRP updateCountPtr;
+	volatile UDATA readerCount;
+	UDATA unused2;
+	UDATA writeHash;
+	UDATA unused3;
+	UDATA unused4;
+	UDATA crashCntr;
+	UDATA aotBytes;
+	UDATA jitBytes;
+	U_16 vmCntr;
+	U_8 corruptFlag;
+	U_8 roundedPagesFlag;
+	I_32 minAOT;
+	I_32 maxAOT;
+	U_32 locked;
+	J9WSRP lockedPtr;
+	J9WSRP corruptFlagPtr;
+	J9SRP sharedStringHead;
+	J9SRP sharedStringTail;
+	J9SRP unused1;
+	U_32 totalSharedStringNodes;
+	U_32 totalSharedStringWeight;
+	U_32 readWriteFlags;
+	UDATA readWriteCrashCntr;
+	UDATA readWriteRebuildCntr;
+	UDATA osPageSize;
+	UDATA ccInitComplete;
+	UDATA crcValid;
+	UDATA crcValue;
+	UDATA containsCachelets;
+	UDATA cacheFullFlags;
+	UDATA readWriteVerifyCntr;
+	UDATA extraFlags;
+	UDATA debugRegionSize;
+	UDATA lineNumberTableNextSRP;
+	UDATA localVariableTableNextSRP;
+	I_32 minJIT;
+	I_32 maxJIT;
+	IDATA sharedInternTableBytes;
+	IDATA corruptionCode;
+	UDATA corruptValue;
+	UDATA lastMetadataType;
+	UDATA writerCount;
+	UDATA unused5;
+	UDATA unused6;
+	U_32 softMaxBytes;
+	UDATA unused8;
+	UDATA unused9;
+	UDATA unused10;
+} J9SharedCacheHeader;
+
+#define J9SHAREDCACHEHEADER_UPDATECOUNTPTR(base) WSRP_GET((base)->updateCountPtr, UDATA*)
+#define J9SHAREDCACHEHEADER_LOCKEDPTR(base) WSRP_GET((base)->lockedPtr, U_32*)
+#define J9SHAREDCACHEHEADER_CORRUPTFLAGPTR(base) WSRP_GET((base)->corruptFlagPtr, U_8*)
+#define J9SHAREDCACHEHEADER_SHAREDSTRINGHEAD(base) SRP_GET((base)->sharedStringHead, struct J9SharedInternSRPHashTableEntry*)
+#define J9SHAREDCACHEHEADER_SHAREDSTRINGTAIL(base) SRP_GET((base)->sharedStringTail, struct J9SharedInternSRPHashTableEntry*)
+#define J9SHAREDCACHEHEADER_UNUSED01(base) SRP_GET((base)->unused01, void*)
+  
+typedef struct OMRSharedClassConfig {
+ 	void* sharedClassCache;
+        J9SharedClassCacheDescriptor* cacheDescriptorList;
+   // all of this being part of the SharedCache.. yeah, I dunno. obviously, they are
+   // java specific. we do not need them here.
+ //	omrthread_monitor_t jclCacheMutex;
+ //	struct J9Pool* jclClasspathCache;
+ //	struct J9Pool* jclURLCache;
+ //	struct J9Pool* jclTokenCache;
+ //	struct J9HashTable* jclURLHashTable;
+ //	struct J9HashTable* jclUTF8HashTable;
+ //	struct J9Pool* jclJ9ClassPathEntryPool;
+ //	struct J9SharedStringFarm* jclStringFarm;
+ //	struct J9ClassPathEntry* lastBootstrapCPE;
+ 
+   // this, I think, is more java-related stuff that ought not to be preserved here.
+ //	void* bootstrapCPI;
+ 	U_64 runtimeFlags;
+ 	UDATA verboseFlags;
+ //	UDATA findClassCntr;
+   // we want monitor-based concurrency support, which omr already has. clearly.
+ 	omrthread_monitor_t configMonitor;
+   // I guess because of the comment, we'll keep it?
+ 	UDATA configLockWord; /* The VM no longer uses this field, but the z/OS JIT doesn't build without it */
+ 	const struct J9UTF8* modContext;
+         void* sharedAPIObject; 
+ 	const char* ctrlDirName;
+ 	UDATA  ( *getCacheSizeBytes)(struct OMR_VM* vm) ;
+ 	UDATA  ( *getTotalUsableCacheBytes)(struct OMR_VM* vm);
+ 	void  ( *getMinMaxBytes)(struct OMR_VM* vm, U_32 *softmx, I_32 *minAOT, I_32 *maxAOT, I_32 *minJIT, I_32 *maxJIT);
+ 	I_32  ( *setMinMaxBytes)(struct OMR_VM* vm, U_32 softmx, I_32 minAOT, I_32 maxAOT, I_32 minJIT, I_32 maxJIT);
+ 	void (* increaseUnstoredBytes)(struct OMR_VM *vm, U_32 aotBytes, U_32 jitBytes);
+ 	void (* getUnstoredBytes)(struct OMR_VM *vm, U_32 *softmxUnstoredBytes, U_32 *maxAOTUnstoredBytes, U_32 *maxJITUnstoredBytes);
+ 	UDATA  ( *getFreeSpaceBytes)(struct OMR_VM* vm) ;
+ 	IDATA  ( *findSharedData)(struct OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool) ;
+ 	const U_8*  ( *storeSharedData)(struct OMR_VMThread* vmThread, const char* key, UDATA keylen, const J9SharedDataDescriptor* data) ;
+ 	UDATA  ( *storeAttachedData)(struct OMR_VMThread* vmThread, const void* addressInCache, const J9SharedDataDescriptor* data, UDATA forceReplace) ;
+ 	const U_8*  ( *findAttachedData)(struct OMR_VMThread* vmThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *dataIsCorrupt) ;
+ 	UDATA  ( *updateAttachedData)(struct OMR_VMThread* vmThread, const void* addressInCache, I_32 updateAtOffset, const J9SharedDataDescriptor* data) ;
+ 	UDATA  ( *updateAttachedUDATA)(struct OMR_VMThread* vmThread, const void* addressInCache, UDATA type, I_32 updateAtOffset, UDATA value) ;
+ 	void  ( *freeAttachedDataDescriptor)(struct OMR_VMThread* vmThread, J9SharedDataDescriptor* data) ;
+  const U_8*  ( *findCompiledMethodEx1)(struct OMR_VMThread* vmThread, const MethodNameAndSignature* methodNameAndSignature, UDATA* flags);
+ 	const U_8*  ( *storeCompiledMethod)(struct OMR_VMThread* vmThread, const MethodNameAndSignature* methodNameAndSignature, const U_8* dataStart, UDATA dataSize, const U_8* codeStart, UDATA codeSize, UDATA forceReplace) ;
+ 	UDATA  ( *existsCachedCodeForROMMethod)(struct OMR_VMThread* vmThread, const MethodNameAndSignature* methodNameAndSignature) ;
+ 	UDATA  ( *acquirePrivateSharedData)(struct OMR_VMThread* vmThread, const struct J9SharedDataDescriptor* data) ;
+ 	UDATA  ( *releasePrivateSharedData)(struct OMR_VMThread* vmThread, const struct J9SharedDataDescriptor* data) ;
+  // 	UDATA  ( *getJavacoreData)(struct OMR_VM *vm, struct J9SharedClassJavacoreDataDescriptor* descriptor) ;
+ 	UDATA  ( *isBCIEnabled)(struct OMR_VM *vm) ;
+  //	void  ( *freeClasspathData)(struct OMR_VM *vm, void *cpData) ;
+  //	void  ( *jvmPhaseChange)(struct OMR_VMThread *currentThread, UDATA phase);
+ 	struct J9MemorySegment* metadataMemorySegment;
+ 	J9Pool* classnameFilterPool;
+ 	U_32 softMaxBytes;
+ 	I_32 minAOT;
+ 	I_32 maxAOT;
+ 	I_32 minJIT;
+ 	I_32 maxJIT;
+} OMRSharedClassConfig;
+
+typedef struct J9SharedClassPreinitConfig {
+	UDATA sharedClassCacheSize;
+	IDATA sharedClassInternTableNodeCount;
+	IDATA sharedClassMinAOTSize;
+	IDATA sharedClassMaxAOTSize;
+	IDATA sharedClassMinJITSize;
+	IDATA sharedClassMaxJITSize;
+	IDATA sharedClassReadWriteBytes;
+	IDATA sharedClassDebugAreaBytes;
+	IDATA sharedClassSoftMaxBytes;
+} J9SharedClassPreinitConfig;
+
+typedef struct J9SharedCacheAPI {
+	char* ctrlDirName;
+	char* cacheName;
+	char* modContext;
+	char* expireTime;
+	U_64 runtimeFlags;
+	UDATA verboseFlags;
+	UDATA cacheType;
+	UDATA parseResult;
+	UDATA storageKeyTesting;
+	UDATA xShareClassesPresent;
+	UDATA cacheDirPerm;
+	IDATA  ( *iterateSharedCaches)(struct OMR_VM *vm, const char *cacheDir, UDATA groupPerm, BOOLEAN useCommandLineValues, IDATA (*callback)(struct OMR_VM *vm, J9SharedCacheInfo *event_data, void *user_data), void *user_data) ;
+	IDATA  ( *destroySharedCache)(struct OMR_VM *vm, const char *cacheDir, const char *name, U_32 cacheType, BOOLEAN useCommandLineValues) ;
+	UDATA printStatsOptions;
+	char* methodSpecs;
+	U_32 softMaxBytes;
+	I_32 minAOT;
+	I_32 maxAOT;
+	I_32 minJIT;
+	I_32 maxJIT;
+	U_8 sharedCacheEnabled;
+} J9SharedCacheAPI;
+
+typedef struct J9ShrCompositeCacheCommonInfo {
+	omrthread_tls_key_t writeMutexEntryCount;
+	struct J9VMThread* hasWriteMutexThread;
+	struct J9VMThread* hasReadWriteMutexThread;
+	struct J9VMThread* hasRefreshMutexThread;
+	struct J9VMThread* hasRWMutexThreadMprotectAll;
+	U_16 vmID;
+	U_32 writeMutexID;
+	U_32 readWriteAreaMutexID;
+	UDATA cacheIsCorrupt;
+	UDATA stringTableStarted;
+	UDATA oldWriterCount;
+} J9ShrCompositeCacheCommonInfo;
+
+//typedef struct J9SharedClassTransaction {
+//	struct OMR_VMThread* ownerThread;
+//  //	struct J9ClassLoader* classloader;
+//	I_16 entryIndex;
+//	UDATA loadType;
+//	U_16 classnameLength;
+//	U_8* classnameData;
+//	UDATA transactionState;
+//	IDATA isOK;
+//	struct OMRUTF8* partitionInCache;
+//	struct OMRUTF8* modContextInCache;
+//	IDATA helperID;
+//	void* allocatedMem;
+//	U_32 allocatedLineNumberTableSize;
+//	U_32 allocatedLocalVariableTableSize;
+//	void* allocatedLineNumberTable;
+//	void* allocatedLocalVariableTable;
+//	void* ClasspathWrapper;
+//	void* cacheAreaForAllocate;
+//	void* newItemInCache;
+//  //	j9object_t updatedItemSize;
+//	void* findNextRomClass;
+//	void* findNextIterator;
+//	void* firstFound;
+//	UDATA oldVMState;
+//	UDATA isModifiedClassfile;
+//	UDATA takeReadWriteLock;
+//} J9SharedClassTransaction;
+//
+typedef struct J9SharedStringTransaction {
+	struct OMR_VMThread* ownerThread;
+	UDATA transactionState;
+	IDATA isOK;
+} J9SharedStringTransaction;
+
+/* @ddr_namespace: map_to_type=J9GenericByID */
+
+typedef struct J9GenericByID {
+	U_8 magic;
+	U_8 type;
+	U_16 id;
+	struct J9ClassPathEntry* jclData;
+	void* cpData;
+} J9GenericByID;
 
 typedef struct OMR_VM {
 	struct OMR_Runtime *_runtime;
@@ -143,6 +454,9 @@ typedef struct OMR_VM {
 	struct OMRTraceEngine *_trcEngine;
 	void *_methodDictionary;
 #endif /* OMR_RAS_TDF_TRACE */
+        struct OMRSharedClassConfig* sharedClassConfig;
+        struct J9SharedCacheAPI* sharedCacheAPI;
+        struct J9SharedClassPreinitConfig* sharedClassPreinitConfig;
 } OMR_VM;
 
 typedef struct OMR_VMThread {
@@ -186,6 +500,57 @@ typedef struct OMR_VMThread {
 	void *_savedObject2; /**< holds new object allocation until object can be attached to reference graph (see MM_AllocationDescription::save/restoreObjects()) */
 } OMR_VMThread;
 
+#define OMR_SHARED_CACHE_INIT_OK           0x0
+#define OMR_SHARED_CACHE_INIT_FAILED       0x1
+#define OMR_SHARED_CACHE_INIT_SILENT_EXIT  0x3
+  
+#define J9VMSTATE_MAJOR  0xFFFF0000
+#define J9VMSTATE_MINOR  0xFFFF
+#define J9VMSTATE_INTERPRETER  0x10000
+#define J9VMSTATE_GC  0x20000
+#define J9VMSTATE_GROW_STACK  0x30000
+#define J9VMSTATE_JNI  0x40000
+#define J9VMSTATE_JNI_FROM_JIT  0x40001
+#define J9VMSTATE_JIT_CODEGEN  0x50000
+#define J9VMSTATE_BCVERIFY  0x60000
+#define J9VMSTATE_RTVERIFY  0x70000
+#define J9VMSTATE_SHAREDCLASS_FIND  0x80001
+#define J9VMSTATE_SHAREDCLASS_STORE  0x80002
+#define J9VMSTATE_SHAREDCLASS_MARKSTALE  0x80003
+#define J9VMSTATE_SHAREDAOT_FIND  0x80004
+#define J9VMSTATE_SHAREDAOT_STORE  0x80005
+#define J9VMSTATE_SHAREDDATA_FIND  0x80006
+#define J9VMSTATE_SHAREDDATA_STORE  0x80007
+#define J9VMSTATE_SHAREDCHARARRAY_FIND  0x80008
+#define J9VMSTATE_SHAREDCHARARRAY_STORE  0x80009
+#define J9VMSTATE_ATTACHEDDATA_STORE  0x8000A
+#define J9VMSTATE_ATTACHEDDATA_FIND  0x8000B
+#define J9VMSTATE_ATTACHEDDATA_UPDATE  0x8000C
+#define J9VMSTATE_SNW_STACK_VALIDATE  0x110000
+#define J9VMSTATE_GP  0xFFFF0000
+#define J9VMTHREAD_OBJECT_MONITOR_CACHE_SIZE  J9VM_OBJECT_MONITOR_CACHE_SIZE
+
+#define J9_SHARED_CLASS_CACHE_MIN_SIZE (4 * 1024)
+#define J9_SHARED_CLASS_CACHE_MAX_SIZE I_32_MAX
+/* Default shared class cache size on 64-bit platforms (if OS allows)
+ * Otherwise,
+ * 1. For non-persistent cache, if SHMMAX < J9_SHARED_CLASS_CACHE_DEFAULT_SIZE_64BIT_PLATFORM (300MB), default cache size is set to SHMMAX
+ * 2. For persistent cache, if free disk space is < SHRINIT_LOW_FREE_DISK_SIZE (6GB), default cache size is set to J9_SHARED_CLASS_CACHE_DEFAULT_SOFTMAX_SIZE_64BIT_PLATFORM (64MB)
+ */
+#define J9_SHARED_CLASS_CACHE_DEFAULT_SIZE_64BIT_PLATFORM (300 * 1024 * 1024)
+/* Default shared class soft max size on 64-bit platforms. This value is only set if the OS allows default cache size to be greater than J9_SHARED_CLASS_CACHE_MIN_DEFAULT_CACHE_SIZE_FOR_SOFTMAX */
+#define J9_SHARED_CLASS_CACHE_DEFAULT_SOFTMAX_SIZE_64BIT_PLATFORM (64 * 1024 * 1024)
+/* The minimum default shared class cache size to set a default soft max, on 64-bit platforms only. */
+#define J9_SHARED_CLASS_CACHE_MIN_DEFAULT_CACHE_SIZE_FOR_SOFTMAX (80 * 1024 *1024)
+/* Default shared class cache size on 32-bit platforms */
+#define J9_SHARED_CLASS_CACHE_DEFAULT_SIZE (16 * 1024 * 1024)
+
+#define VMOPT_XSCMINAOT "-Xscminaot"
+#define VMOPT_XSCMAXAOT "-Xscmaxaot"
+#define VMOPT_XSCMINJITDATA "-Xscminjitdata"
+#define VMOPT_XSCMAXJITDATA "-Xscmaxjitdata"
+#define VMOPT_XXSHARED_CACHE_HARD_LIMIT_EQUALS "-XX:SharedCacheHardLimit="
+  
 /**
  * Perform basic structural initialization of the OMR runtime
  * (allocating monitors, etc).

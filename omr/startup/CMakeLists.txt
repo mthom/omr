@@ -30,6 +30,7 @@ add_library(omrvmstartup STATIC
 target_include_directories(omrvmstartup
 	PRIVATE
 		${omr_BINARY_DIR}/omr
+		${PROJECT_SOURCE_DIR}/runtime/shared_common
 )
 add_dependencies(omrvmstartup
 	trc_omrvm
