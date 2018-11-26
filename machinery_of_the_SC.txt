@@ -1,0 +1,471 @@
+DISCLAIMER: This is a very rough set of notes on the implementation of the
+shared cache class. Our ambition is to transform it into a detailed, technically well-founded
+white paper on the shared cache class, which (presumably) will be released for the
+benefit of the general public (if not, at least internally to IBM and CASA). For now,
+this document must remain INTERNAL TO CASA.
+
+--
+
+First, it's instructive to look at the J9PORT_SHR_CACHE_TYPE enum. It's not an enum..
+they are defined separately as individual constants/macros, defined as 1-5. Their 
+names are:
+
+*_PERSISTENT
+*_NONPERSISTENT
+*_VMEM
+*_CROSSGUEST
+*_SNAPSHOT
+
+I don't know what distinguishes the last of these two. Or _VMEM.  J9_SHR_CACHELET_SUPPORT
+is linked to OsCachevm.hpp, so I suppose cachelets are connected to whatever the VMEM
+cache type handles.
+
+Starting with the data and functionality of OSCache.hpp and sattelite modules.
+
+The inheritance diagram for the OSCache*.[c|h]pp files is:
+
+			OSCache
+				|
+			OSCacheFile
+			  /    \     \
+			/       \      -------\
+	OSCachemmap		OSCachevmem  OSCachesysv
+	
+These are all preceded by the characters "SH_" within C++, BTW.
+	
+Certain crucial methods in OSCacheFile (like the very instructive createCacheFile
+method) are non-virtual. Indicating that OSCachemmap and OSCachevmem instantiate
+their parent objects with different mode creation settings, the mechanics of 
+which are otherwise the same.
+
+Note that SH_OSCacheInitializer is provided for use by consumers of the OSCache
+family. They tell the OSCache* class how to initialize data in the class. Or,
+the class itself. I suppose! I don't really know the direct purpose of it. To
+initialize the class at key moments, yes? I don't think OSCache presumes much
+about the client.
+
+OSCACHE.HPP MEMBER VARIABLES:
+
+As the header comment says.. the purpose of the class is to abstract over the 
+shared memory region that the class will be mapped into, and it also contains mutexes
+for read/write access.
+
+We run down the list.
+
+	char* _cacheName; // the name of the cache. command line argument.
+	/* Align the U_64 so we don't have too many platform specific structure padding
+	 * issues in the debug extensions. Note C++ adds a pointer variable at the start
+	 * of the structure so putting it second should align it.
+	 */
+	U_64 _runtimeFlags; // not sure what values these might assume.
+	U_32 _cacheSize; // size of the cache in bytes.
+	void* _headerStart; // where does the cache header start?
+	void* _dataStart; // and its data?
+	U_32 _dataLength; // how large is the data segment?
+	char* _cacheNameWithVGen; // cache name with version and generation included.
+	char* _cachePathName; // its filesystem path.
+	UDATA _activeGeneration; // which is the currently active generation?
+	UDATA _createFlags; // configures the creation of a cache (?)
+	UDATA _verboseFlags; // verbosity options.
+	IDATA _errorCode; // the active error code? possibly an OK code?
+	const J9SharedClassPreinitConfig* _config; // 
+	I_32 _openMode; // passed to j9file_open or j9file_blocking_async_open
+					// (platform dependent)
+	bool _runningReadOnly; // cannot write? wouldn't it be handled by _openMode?
+	J9PortLibrary* _portLibrary; // the port library. platform dependent.
+	char* _cacheDirName; // The parent directory of the cache.
+	bool _startupCompleted; // was startup completed???
+	bool _doCheckBuildID; // dunno.
+	IDATA _corruptionCode; // did some sort of corruption take place?
+	UDATA _corruptValue; // Which value is known to be corrupt?
+	bool _isUserSpecifiedCacheDir; // used the default cache dir?
+	
+Surely you notice the lack of mutexes. The member functions SH_OSCache contains that
+have to do with acquiring locks are pure virtual functions. ACKSHAULLY.. these methods..
+acquiring and releasing locks and so forth.. are defined in OSCacheFile, which is at
+the root of both OSCachevmem and OSCachemmap.
+
+Interesting comment from Hang Shao (dated Jun 19 of this year):
+
+"OSCachevmem.hpp/OSCachevmem.cpp is not being used now. They are only active under 
+J9SHR_CACHELET_SUPPORT, which is not defined.
+
+We could either remove these two files together with all the code inside 
+J9SHR_CACHELET_SUPPORT,
+or simply add vm parameter and put #include "OSCachevmem.hpp" inside 
+ifdef J9SHR_CACHELET_SUPPORT here."
+
+Fun!! So it isn't necessary at all. I don't understand what cachelets are.
+OSCACHE.HPP MEMBER FUNCTIONS:
+
+There is a 'newInstance' method, so it is a singleton class... well, no. That's what
+I initially thought. Instead, it's a helper method that creates a SH_OSCache according
+to the versionData->cacheType attribute. If it's of _VMEM type, then we construct
+a vmem object, etc. Interestingly, _VMEM object construction is supported only if
+J9SHR_CACHELET_SUPPORT is on, which per the earlier comment is never defined! So I don't
+think we have to worry about it at all, really. _SYSV is the version used if a
+nonpersistent cache is chosen, BTW.. doesn't appear particular to the system architecture
+used at all!! Contra our earlier impressions.
+
+One thing to note is that OSCachevmem uses j9file_read and j9file_blocking_async_read,
+while OSCachemmap does not. My impression is that 'cachelets' are smaller versions
+of the cache that are copied into main memory, though from a file (and hence they
+are persistent!). Does that mean they're written back to file?
+
+Despite the annotation, j9file_read is a macro defined in runtime/oti/j9port_generated.
+It expands to a call to the port library to call whatever file reading routine the 
+host platform provides. A great many other system calls are wrapped in macros and
+named similarly within the file. 
+
+See runtime/port/sysvipc for a collection of wrappers around System V style ipc primitives.
+Mostly for shared memory and semaphores, although there is j9sharedwrapper.[h|c], which
+provides some helper routines for dealing with the shared class cache. You see, strewn
+throughout, references to a 'control file', for shared memory..
+
+This is what the whole ctrlDir convention has been about!! Setting up the control file
+directory. From the OpenJ9 manual:
+
+"Nonpersistent caches are stored in shared memory and have control files that describe 
+the location of the memory. Control files are stored in a javasharedresources subdirectory 
+of the cacheDir specified. Do not move or delete control files in this directory. The 
+listAllCaches utility, the destroyAll utility, and the expire suboption work only in the 
+scope of a given cacheDir."
+
+Nonpersistent caches are still shared!! You must keep this in mind.
+
+Going back to OSCache, though, it appears to be mostly utilities for extracting
+the Java version and cache generation info from cache filenames / control files,
+depending on which is used (ie. is the cache persistent or nonpersistent?). 
+The only really non-trivial parts are those dealing with initialization and
+startup. 
+
+'commonStartup', as the name suggests, deals with the initializing the portions
+OSCache manages that are common to all its variants: vmem, Sysv, and mmap. Many of the
+utilities are statically initialized. commonStartup, again, is mostly concerned with
+initializing everything properly.. the cache names, their version and generation flags,
+various runtime and verbosity flags.. administrivia! 
+
+'commonInit' sets the OsCache data to 0 or NULL.  Or FALSE, if the values are boolean.
+This exhaustively describes what it does. See for yourself.
+
+'commonCleanup' is similar.. it mostly calls j9mem_free_memory on the string data that
+were allocated in commonStartup, and it emits some trace messages as it does so.
+Nothing interesting or spectacular.
+
+'initOSCache' does exactly that. It writes the _dataLength and _dataStart attributes
+into the header, along with the version, generation and build ID (a SHA hash) to the
+header.  Notice that OSCache does nothing at all with _dataStart and _dataLength, beyond 
+initializing them and writing them to the cache header. These belong to the subclasses!
+
+'checkOSCacheHeader' simply verifies that several important invariants hold.. ie.
+the size of the cache is equal to the size of the cache header + _dataLength.
+
+Then there's some functions for specifying the corruption context. Which is just a code,
+and the value that points to the corrupted thing or provides some helpful data, usually.
+It's all in the comments, no need to reiterate that here.
+
+Moving onto OSCacheFile.hpp !
+
+It's another abstract class. It doesn't initialize the 'initialize' virtual function
+or anything. It wraps a single file handle as its lone data member.
+
+It also defines some OSCache_mmap_header structs, which contain (among other things)
+locks for the header and data sections. OSCache_mmap_header_1 and *_2 contain many
+of the same members but are slightly different. *_1 appears to contain some 'unused'
+padding that's probably used to make them the same size. Hmmm.. yeah, I dunno.
+Actually appears to have more to do with OSCache_header1 versus OSCache_header2. 
+The mmap_header_*'s wrap one of each. Going by the #define's in OSCache.hpp, they
+appear to correspond to different cache generations.
+
+OSCACHEFILE member variables:
+
+	IDATA _fileHandle;
+	
+And that's it!! That's all the class wraps. It's a handle for a file. That is it.
+
+OSCACHEFILE member functions:
+
+'acquireHeaderWriteLock' reaches into the header, and grabs the header write lock,
+calling out to the j9file_lock/j9_file_async_blocking_lock primitives to acquire it.
+With traces and error handling, as always.
+
+'getmmapHeaderFieldOffsetForGen' finds the byte offset of a given field (second argument)
+with the OSCache header, depending on the generation passed to it (first argument). 
+
+'releaseHeaderWriteLock'.. similar, analogous thing. Clear the lock. 
+
+'tryAcquireAttachWriteLock' does.. pretty much the same as 'acquireHeaderWriteLock',
+only it gets the attach write lock.. to write to the attach region of the cache.
+I don't know what the 'attach region' is, exactly. I suppose we'll find out!
+But the logic is basically the same. I don't why the function name begins with 'try'
+and not 'acquire'.. there's nothing exceptional about it. No, I see the difference
+now. One of the flags has a NOWAIT stipulation. If the lock is held, it will immediately
+return to the caller.
+
+'checkCacheHeaderValid' checks that the cache header is well formed and forms
+a corruption context if it's not, and yadda yadda. Most of this stuff is straightforward
+and uninteresting!! Mostly has to do with acquiring and releasing locks. It assumes
+the cache is persistent, since, y'know, a cache formed at runtime must be valid, yes??
+There's no chance it was violated by openj9. I expect this to be the assumption.
+
+`openCacheFile' opens the cache attached to the file header. Nothing interesting
+about it. Uses the _openMode flags and such. Blah.
+
+'findfirst', 'findnext', and 'findclose' iterate through cache files in the cacheDir
+(a parameter for all three functions). There's a helper predicate that determines
+whether the files found are valid cache name files, and if they are, it returns the
+file handle of those files.
+
+And then we have two other functions checking cache access permissions attached
+to the file handle. These are static functions of OSCacheFile.
+
+And we're done! Easy.
+
+OSCACHESYSV
+
+Ok, in OSCachesysv.hpp, we have a few different header types corresponding to the 
+various cache generations. Again, they are similar to the mmap headers we saw
+last time (defined in OSCacheFile.hpp, confusingly). This time, they contain things
+like semaphore IDS (but never shared memory segment IDs).
+
+REMEMBER, OSCachesysv is NOT inherited from OSCacheFile!! It's a shared memory region
+after all, not a cache.
+
+OSCachesysv member variables:
+
+	j9shmem_handle* _shmhandle;
+	j9shsem_handle* _semhandle;
+
+	IDATA _attach_count; // # of processes attached to the region.
+	UDATA _totalNumSems; // total number of semaphores active.
+	UDATA _userSemCntr;  // the number of semaphores requested by users.
+	U_32 _actualCacheSize; // the actual size of the cache in bytes.
+
+	char* _shmFileName; // initialized as 'cacheNameWithVGen' in startup
+	char* _semFileName; // not sure!
+	bool _openSharedMemory; // did we fail at attempting to open an existing shared memory??
+	
+	UDATA _storageKeyTesting;
+
+	const J9SharedClassPreinitConfig* config;
+
+	SH_OSCache::SH_OSCacheInitializer* _initializer;
+	UDATA _groupPerm; // group permissions.
+
+	I_32 _semid; // ID of the seamphore.
+
+	SH_SysvSemAccess _semAccess;
+	SH_SysvShmAccess _shmAccess;
+
+	J9ControlFileStatus _controlFileStatus; // the status of the shared memory control file.
+	
+Clearly, these are much more elaborate than the other ones.	
+
+OSCACHESYSV MEMBER FUNCTIONS:
+\
+`startup` is a few hundred lines long, and mostly deals with the myriad cases involved
+in trying to create a new shared memory, or attach to an existing one.
+
+`openCache` is called if the caller holds the mutex... but it says as much. First,
+a few helper functions!!
+
+`OpenSysVMemoryHelper` does the thing of calling out to j9shmem_open and related
+functions. It even calls out to 'Deprecated' versions of j9shmem_open if the generation
+is less than current. So that is good.
+
+'shmemOpenWrapper' calls to OpenSysVMemoryHelper, and tries to open again if the previous
+read failed if an option was set to attempting a read-only open upon initial failure.
+
+'openCache'.. calls shmemOpenWrapper and branches on the result code. the *_FAILED cases
+consist mostly of printing an error message somewhere and promptly returning. For the
+opening (of an existing) shared cache case: check that there is a user specified
+cacheDir, and also get the shared memory access settings by calling 
+'checkSharedMemoryAccess'. If all checks out, do nothing. If we created the cache by
+opening it, call 'initializeHeader'. Otherwise, usually.. an error happened, and
+we simply print it out.
+
+`verifyCacheHeader`.. checks the validity of the cache header and assorted nonsense. Yeah.
+Sets the corruption context and/or prints error messages where applicable.
+
+'detachRegion' detaches from the _shmHandle memory region, and files error info if
+that doesn't succeed.
+
+'cleanup' calls 'detachRegion', and closes _shmHandle, using j9shmem_close. Similarly
+for _semhandle.. if they are both non-NULL. 'commonCleanup' is called.
+
+'detach' ... detaches the region. But adds some trace messages on top of calling 
+'detachRegion'.
+
+'initializeHeader' checks that the cacheSize and other features are set up appropriately,
+before attaching to the region by calling j9shmem_attach. If this doesn't succeed,
+ErrorInfo is recorded and we return. Otherwise, _headerStart, _dataStart and _dataLength
+are all written to (dataLength was determined previously in the function). We copy
+the shared memory eyecatcher into the header, call 'initOSCacheHeader', and importantly,
+we call the _initializer's init virtual function, if _initializer is non-NULL. Then
+we toggle _cacheInitComplete as true.
+
+'attach' similarly attaches to an existing region if one exists at _shmHandle.
+From there, it calls 'verifyCacheHeader', and if the cache header is found to be invalid
+or corrupt, it returns with an error after detaching _shmHandle. Otherwise, it initializes
+_dataStart and _dataLength as 'initializeHeader' does, and increments the _attachCount.
+Curiously, it doesn't seem to bother with mutexes.. I suppose because a header, once
+initialized, is a read-only structure. I don't think _attachCount is atomic either..
+yeah, it's not. It's just an old fashioned integer.
+
+'destroy' starts by calling 'DestroySysVShmHelper', which extracts the version and generation
+from the cacheName, and uses them to decide which j9shmem_destroy[Deprecated]? routine
+to call. Very much in parallel with OpenSysVHelper. Before this, it detaches from the
+shared memory region, and checks that the cache isn't active (ie. the number of processes
+attached isn't greater than 0). Then we call 'DestroySysVSemHelper' and so forth.
+
+'getNewWriteLockID' returns a new, unoccupied ID, from its store of unused write lock IDs.
+If there are none left, it returns -1.
+
+'acquireWriteID' awaits on a passed write lock id, and returns it when j9shmem_wait_deprecated
+returns, if successful. Otherwise it prints an error message and returns.
+
+'enterHeaderMutex' and 'exitHeaderMutex' acquire the specially designated SEM_HEADERLOCK
+as the previous two functions do, not much difference in how they work.
+
+'isCacheActive' retrieves the status of the shared memory region using j9shmem_stat,
+and checks that the number of processes attached is > 0. If so, return true; otherwise,
+false.
+
+'printErrorMessage' translates J9PORT_ERROR_SYSV_IPC_* values to trace messages.
+
+'cleanupSysVResources' tries to detach and destroy both _shmHandle and _semHandle.
+If 'isCacheActive' returns true, it simply detaches and closes the handles. There's 
+extensive error handling and platform specific code laden throughout.
+
+'errorHandler' prints the passed error message and calls 'cleanupSysVResources' if
+startup didn't complete, and we meant to create shared memory resources.
+
+'setRegionPermissions' is the barest of wrappers around j9shmem_protect.
+
+Same for 'getPermissionsRegionGranularity'.
+
+Most of the remaining functions are quite straightforward. What I'm drawn to primarily
+is 'getControlFilePerm', which gets the permissions of the control file, mostly..
+interesting that the name of the control file is stored outside the OSCachesysv object.
+Actually, no, the name is either 'memory' or 'semaphore'. Huh.
+
+'restoreSnapshotFile' is a tour de force through OSCacheSysv's internal functionality,
+and through SH_CacheMap's as well! I think that about sums up its methods.
+
+OSCACHEVMEM
+
+That's right! It's quite small, so I think we can devote a quick aside to it. Here are
+its member variables:
+
+	I_64 _actualFileLength;
+	UDATA _writeLockCounter;
+	
+	omrthread_monitor_t _lockMutex[J9SH_OSCACHE_VMEM_LOCK_COUNT];
+
+That's the list. We have mutexes and a counter for write lock. Also, OSCachevmem
+inherits from OSCacheFile, so it does have a file handle. Interesting.
+
+Yeah, pouring over this, looks to be very very much like an mmap! That's the 
+header format it uses.. all the rest is just logic for 'attaching' to a file, and
+setting up the internals of the object.
+
+OSCACHEMMAP
+
+Like OSCacheVmem, it also inherits from OSCacheFile. 
+
+Member variables:
+	I_64 _actualFileLength;
+	J9MmapHandle *_mapFileHandle;
+	
+	UDATA _finalised;
+	
+	omrthread_monitor_t _lockMutex[J9SH_OSCACHE_MMAP_LOCK_COUNT];
+	
+	SH_CacheFileAccess _cacheFileAccess;
+	
+That's all she wrote! Notice the addition of the _mapFileHandle clause thingum.
+Something OSCacheVmem didn't have. I guess the virtual memory versus was.. a lightweight
+spin on this more elaborate idea? Maybe a paring down of functionality, or management
+responsibility?
+
+Looking at the startup method, I see that OSCacheSysv's startup is largely mirrored,
+in terms of what is checked.. only here we fall back on the 'openCacheFile' of OSCacheFile.
+
+It's 'internalAttach' which calls j9mmap_map_file, and passes the _fileHandle field
+along to it. It returns the _mapFileHandle. Then some error checking is done, the 
+header is gotten at eventually, the _dataStart and _dataLength things are loaded into
+it.. pretty unremarkable stuff I'd say!!
+
+ok, moving on from the OSCACHE* files...
+
+.. and to the CompositeCache classes.
+
+SH_CompositeCache is a pure abstract class defining a minimal interface:
+
+
+class SH_CompositeCache
+{
+public:
+	virtual U_16 getJVMID(void) = 0;
+	virtual bool isRunningReadOnly(void) = 0;
+	virtual UDATA getTotalUsableCacheSize(void) = 0;
+	virtual void getMinMaxBytes(U_32 *softmx, I_32 *minAOT, I_32 *maxAOT, I_32 *minJIT, 
+								I_32 *maxJIT) = 0;
+	virtual UDATA getFreeAvailableBytes(void) = 0;
+	virtual U_32 getDebugBytes(void) = 0;
+	virtual void setInternCacheHeaderFields(J9SRP** sharedTail, J9SRP** sharedHead, 
+								U_32** totalSharedNodes, U_32** totalSharedWeight) = 0;
+	virtual bool isStarted(void) = 0;
+	virtual IDATA restoreFromSnapshot(J9JavaVM* vm, const char* cacheName, 
+									  bool* cacheExist) = 0;
+	virtual I_32 tryAdjustMinMaxSizes(J9VMThread *currentThread, 
+									  bool isJCLCall = false) = 0;
+};
+
+SH_CompositeCacheImpl is much much larger. The implementation of the CompositeCacheImpl
+class, which inherits from SH_CompositeCache, of course, is in CompositeCache.cpp.
+
+Composite caches are linked lists of composite caches that represent the view of shared
+class in terms of blocks of memory. Each node in the list has its own locks for reading
+and writing. Cache entries grow from the back, memory segments from the front. 
+CompositeCache.cpp contains a helpful diagram. Top of the file, can't miss it!!
+
+The start of the block (the node in the list managed by this object) is stored in
+the member variable _theca.
+
+A J9SharedCacheHeader contains a bunch of useful information about the layout of each
+cache block.. its updateSRP, readWriteSRP, etc.. how they're all maintained in relation
+to one another. Also, it has lots of statistics on how many bytes are taken up by
+different types of data, like JIT and AOT code.
+
+Importantly, each SH_CompositeCacheImpl contains an SH_OSCache *. Part of our work will
+be uncovering the relationship between the two!
+
+BTW, a cachelet is an SH_CompositeCache nested *within* an SH_CompositeCache!! Why you'd
+ever want to use it (and from Hang Shao's comments, they do not!) I dunno. 
+'newInstanceNested' and 'newInstanceChained' are both walled off behind the 
+J9SHR_CACHELET_SUPPORT conditional, so we will not document them here (for now).
+
+Back to _theca.. it's not set until way down in ::startup. Late in the file.
+
+In 'startup', cacheMemory is argument that is non-NULL only if we are UnitTesting
+the cache and want to avoid using the OSCache, per the comments. Otherwise, we are
+using the OSCache to store shit in. _oscache is initialized primarily in 'initialize',
+but a few other places as well. The cacheName is provided to SH_OSCache's static
+'newInstance' function, which builds the subclass of SH_OSCache that applies, as we
+saw earlier.
+
+Back to 'startup'. oscache calls its 'startup' method, and we pass _runtimeFlags,
+_verboseFlags, etc. along to it. Then, if we 'hasWriteMutex' (ie. the CompositeCache
+object's 'startup' secured the CompositeCache's write mutex), we do something like this:
+
+		if (cacheMemory != NULL) {
+			_theca = (J9SharedCacheHeader*)cacheMemory;
+		} else {
+	    	_theca = (J9SharedCacheHeader*)_oscache->attach(currentThread, &versionData);
+
+That's right, we get the _dataStart of _oscache and store it in our _theca. Yep.
+Then we check if the cache hasn't already been corrupted. Presumably by a concurrently
+running VM that is trying to do the same thing we are. If so, do the usual error reporting
+song and dance and return; if not, do a veritable fuckton of other crap. Corruption
+and error checking and reporting, and writing numbers to stats variables, mostly.
