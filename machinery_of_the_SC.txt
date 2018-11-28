@@ -402,7 +402,6 @@ ok, moving on from the OSCACHE* files...
 
 SH_CompositeCache is a pure abstract class defining a minimal interface:
 
-
 class SH_CompositeCache
 {
 public:
@@ -416,10 +415,8 @@ public:
 	virtual void setInternCacheHeaderFields(J9SRP** sharedTail, J9SRP** sharedHead, 
 								U_32** totalSharedNodes, U_32** totalSharedWeight) = 0;
 	virtual bool isStarted(void) = 0;
-	virtual IDATA restoreFromSnapshot(J9JavaVM* vm, const char* cacheName, 
-									  bool* cacheExist) = 0;
-	virtual I_32 tryAdjustMinMaxSizes(J9VMThread *currentThread, 
-									  bool isJCLCall = false) = 0;
+	virtual IDATA restoreFromSnapshot(J9JavaVM* vm, const char* cacheName, bool* cacheExist) = 0;
+	virtual I_32 tryAdjustMinMaxSizes(J9VMThread *currentThread, bool isJCLCall = false) = 0;
 };
 
 SH_CompositeCacheImpl is much much larger. The implementation of the CompositeCacheImpl
@@ -469,3 +466,518 @@ Then we check if the cache hasn't already been corrupted. Presumably by a concur
 running VM that is trying to do the same thing we are. If so, do the usual error reporting
 song and dance and return; if not, do a veritable fuckton of other crap. Corruption
 and error checking and reporting, and writing numbers to stats variables, mostly.
+
+_theca is a J9SharedCacheHeader, which looks like this:
+
+typedef struct J9SharedCacheHeader {
+	U_32 totalBytes;
+	U_32 readWriteBytes;
+	UDATA updateSRP;
+	UDATA readWriteSRP;
+	UDATA segmentSRP;
+	UDATA updateCount;
+	J9WSRP updateCountPtr;
+	volatile UDATA readerCount;
+	UDATA unused2;
+	UDATA writeHash;
+	UDATA unused3;
+	UDATA unused4;
+	UDATA crashCntr;
+	UDATA aotBytes;
+	UDATA jitBytes;
+	U_16 vmCntr;
+	U_8 corruptFlag;
+	U_8 roundedPagesFlag;
+	I_32 minAOT; // minimum reserved space for AOT code.
+	I_32 maxAOT;
+	U_32 locked;
+	J9WSRP lockedPtr;
+	J9WSRP corruptFlagPtr;
+	J9SRP sharedStringHead;
+	J9SRP sharedStringTail;
+	J9SRP unused1;
+	U_32 totalSharedStringNodes;
+	U_32 totalSharedStringWeight;
+	U_32 readWriteFlags;
+	UDATA readWriteCrashCntr;
+	UDATA readWriteRebuildCntr;
+	UDATA osPageSize;
+	UDATA ccInitComplete;
+	UDATA crcValid;
+	UDATA crcValue;
+	UDATA containsCachelets;
+	UDATA cacheFullFlags;
+	UDATA readWriteVerifyCntr;
+	UDATA extraFlags;
+	UDATA debugRegionSize;
+	UDATA lineNumberTableNextSRP;
+	UDATA localVariableTableNextSRP;
+	I_32 minJIT; // minimum reserved space for JIT.
+	I_32 maxJIT;
+	IDATA sharedInternTableBytes;
+	IDATA corruptionCode;
+	UDATA corruptValue;
+	UDATA lastMetadataType;
+	UDATA writerCount;
+	UDATA unused5;
+	UDATA unused6;
+	U_32 softMaxBytes;
+	UDATA unused8;
+	UDATA unused9;
+	UDATA unused10;
+} J9SharedCacheHeader;
+
+'getRequiredConstrBytes' indicates that is an OSCache instance is to
+be built with the object (ie. we are not doing any UnitTest'ing),
+since the sizeof(OSCache) is included in the reqBytes value returned
+by the function!! This indicates they are to be built on the same
+block.
+
+'getRequiredConstrBytesWithCommonInfo' gets the constructor size of
+'getRequiredConstrBytes', plus the size of
+J9ShrCompositeCacheCommonInfo, which houses data common to *all*
+composite caches, as the name would suggest. It's:
+
+typedef struct J9ShrCompositeCacheCommonInfo {
+	omrthread_tls_key_t writeMutexEntryCount;
+	struct J9VMThread* hasWriteMutexThread;
+	struct J9VMThread* hasReadWriteMutexThread;
+	struct J9VMThread* hasRefreshMutexThread;
+	struct J9VMThread* hasRWMutexThreadMprotectAll;
+	U_16 vmID;
+	U_32 writeMutexID;
+	U_32 readWriteAreaMutexID;
+	UDATA cacheIsCorrupt;
+	UDATA stringTableStarted;
+	UDATA oldWriterCount;
+} J9ShrCompositeCacheCommonInfo;
+
+ShcItemHdr is this:
+
+typedef struct ShcItemHdr {
+	U_32 itemLen; 		/* lower bit set means item is stale */
+} ShcItemHdr;
+
+
+Why do I bring this up?? Because the composite cache can be
+'scanned'.. that is, its contents can be walked.
+
+I went down to 'nextEntry' to see how the cache is iterated over,
+starting from 'findStart'. It depends on these macros, defined in
+shcdatatypes.h :
+
+#define CCITEMLEN(ih) (J9SHR_READMEM((ih)->itemLen) & 0xFFFFFFFE)
+#define CCITEMSTALE(ih) (J9SHR_READMEM((ih)->itemLen) & 0x1)
+#define CCSETITEMLEN(ih, len) ((ih)->itemLen = (len & 0x1) ? len+1 : len)
+#define CCSETITEMSTALE(ih) ((ih)->itemLen |= 0x1)
+#define CCITEM(ih) (((U_8*)(ih)) - (CCITEMLEN(ih) - sizeof(ShcItemHdr)))
+#define CCITEMNEXT(ih) ((ShcItemHdr*)(CCITEM(ih) - sizeof(ShcItemHdr)))
+
+'nextEntry' skips over stale items within the cache (which it counts,
+if staleItems is a non-NULL pointer). The ih values (item headers) are
+given by 'next'. 'nextEntry' returns the first non-stale item it
+can find, if it can found one.
+
+'next' sets BlockPtr free to UPDATEPTR(_theca), which has this definition:
+
+#define UPDATEPTR(ca) (((BlockPtr)(ca)) + (ca)->updateSRP)
+
+We need the refresh mutex *or* the write mutex! I don't know what the
+difference is between them, but there is an Assert that checks that
+one of them is held.
+
+ih points to _scan, which starts when the object is initialized as
+NULL. That's in 'commonInit.' When 'startup' is called, _scan
+is initialized as
+
+   _prevScan = _scan = (ShcItemHdr*)CCFIRSTENTRY(_theca); // line
+   1463.
+
+'findStart' initializes _scan as:
+
+_prevScan = _scan;
+_scan = (ShcItemHdr*)CCFIRSTENTRY(_theca);
+
+Same basic thing.
+
+CCFIRSTENTRY has this definition:
+
+#define CCFIRSTENTRY(ca) (((BlockPtr)(ca)) + (ca)->totalBytes -
+ (ca)->debugRegionSize - sizeof(ShcItemHdr))
+
+In each case, it goes to the start of the cache entry lineup, and
+skips over the header. Seems that.. the aim is to look past _scan for
+the next cache entry in the sequence, while also checking conditions
+that indicate the cache is corrupted.
+
+UPDATEPTR(_theca) is the allocation pointer. The point at which
+new cache entries are allocated. As evidence of this, witness!!!
+Line 2952:
+
+BlockPtr allocPtr = UPDATEPTR(_theca);
+
+Context! fillCacheIfNearlyFill. The description: fill the cache with
+dummy data for some reason if there's not enough free space left
+beyond what's allocated for AOT and JIT code. Fill the remainder with
+stuff that's not NULL. No idea why, as yet.
+
+Anyway, yes.. free is the allocation pointer. A bump pointer into
+the cache. If ih exceeds free, then it points at an item. This is
+clear. It returns the next available item, at *ih, as its result
+if no corruption is found. 'next' is ONLY called from 'nextEntry',
+according to the comment.
+
+/*
+ * This method fills up cache with dummy data.
+ * Dummy data added is a sequence of 0xD9 byte.
+ * Cache is filled only if (available bytes - (AOT + JIT reserved bytes)) < CC_MIN_SPACE_BEFORE_CACHE_FULL.
+ * Dummy data is added such that a gap of J9SHR_MIN_GAP_BEFORE_METADATA bytes is maintained between classes and metadata.
+ * After adding the dummy data, it sets the runtime flags to mark the cache full.
+ *
+ * Note: This method is not called for realtime cache. If ever it needs to be called for realtime cache,
+ * it would have to be modified to call setRuntimeCacheFullFlags() on first super cache.
+ * ...
+ */
+
+'reset' calls findStart(currentThread) to set the scan pointers back
+to UPDATEPTR(_theca). And _stored* statistics back to 0, besides. It
+also unlocks the cache. Should the cache be locked before hand? Hard
+to tell.
+
+Back to the initialization dance.
+
+'setCacheAreaBoundaries' sets up the various boundaries of the cache!!
+According to the diagram that leads the source file, I
+suppose. Apparently, an SRP hashtable is also stored within its
+depths!! This determines the value of finalReadWriteSize, in part,
+under the right conditions. It contains "numOfSharedNodes"
+entries. I'm not sure what a "shared node" is.
+
+It goes through some trouble to determine finalReadWriteSize.  This
+determines the size of the read/write area after the shared cache
+header. The start of the segment area is much much easier to compute.
+If the "ENABLE_ROUND_TO_PAGE_SIZE" option is enabled, then
+finalSegmentStart, newCacheEnd, etc. are rounded to the size of a
+page. Whatever the value of _osPageSize is.
+
+"Currently the read write area of composite cache is only used by
+shared string intern table."
+
+Sounds as though that's the SRP hash table that determines the size of
+the read/write area! Then, since we're not using cachelets (we never
+use cachelets!), the ClassDebugDataProvider calls its static
+'HeaderInit' method.
+
+A debug message is printed if the composite cache size was rounded
+down to a page's size, and we're done.
+
+But verily, we are writing segmentSRP and updateSRP in this
+segment. So it's all good, I think.
+
+'initBlockData' initializes an ShcItem type. Which contains a type
+tag, length, and Java VM ID. That's it.
+
+'enterReadMutex' increments the reader count (by calling
+'incReaderCount') and waits for the cache to be unlocked, if it's
+currently locked. It will block until the cache is locked. Or the wait
+count is exceeded. If it is locked, the reader count is immediately
+decremented, and 'acquireWriteLockMutex' is called. I'm not sure of
+the scope of the read/write mutexes here.. I suppose because they're
+object methods, they govern their parent objects. If the write lock
+mutex was acquired successfully, 'incReaderCount' is called *again*.
+Then the write lock is released, by calling 'releaseWriteLock'.
+
+'incReaderCount' uses VM_AtomicSupport to do a 'lockCompareExchange'
+on the reader count, which may fail! Suggesting that high-granularity
+locks are being used, rather than, you know, actual atomics. Something
+belied by the name. These calls to 'lockCompareExchange' are
+buttressed by a call to 'protectHeaderReadWriteArea' and
+'unprotectHeaderReadWriteArea'.
+
+'protectHeaderReadWriteArea' protects the header of the read/write
+area? If we're protecting the header, or we're protecting the read
+write area and also changing it,
+
+_readWriteAreaPageStart is the rounded down size of the read/write
+area (rounded down to a page size, of course). I think the header,
+read/write area, and cache area all occupy a single page? I think??
+
+/* Calculate the page boundaries for the CC header and readWrite areas, used for page protection.	
+ * Note that on platforms with 1MB page boundaries, the header and readWrite areas will all be in one page */
+
+ok, that's pretty damn unclear. It's just rounded it *to* a multiple
+of the page size, in terms of address, yes? so that the boundaries
+align??
+
+It's possible for _readWriteAreaPageStart and _cacheHeaderPageStart to
+coincide as integers. This makes a bit more sense with all the
+rounding, then. If not, there is this comment:
+
+/* Header is smaller than a page, round up the start of the readWrite area to the next page
+ * to ensure that it can be protected/unprotected independently */
+
+Seems they can be on either a single page or two separate pages.
+
+Anyway, I get the areaStart.. based on whether the caller wants to
+protect the header, the read/write area, or both.. it calls
+'setRegionPermissions' to set the page permissions if areaStart is
+non-NULL. Then it decrements the [_readWrite|_headerProtect]Cntr
+variables. And then the _commonCCInfo->hasReadWriteMutexThread is set
+to NULL, away from the current thread, and similarly for
+_commonCCInfo->hasRwMutexThreadMprotectAll. Presuming that
+currentThread == the latter.
+
+'setRegionPermissions' checks that length is positive, and that the
+OSCache _oscache exists, before deferring to
+_oscache->setRegionPermissions. If _oscache is NULL, j9mmap_protect
+is called instead.. but why might _oscache be NULL? Is it known to the
+head composite cache only? Why then is a new instance created at
+startup? Perhaps 'startup' deters that other CompositeCache's exist,
+at which point it dredges up the parent's OSCache.
+
+'unprotectHeaderReadWriteArea': same thing. has logic to do nothing
+if some other thread is changing the two (or one, where applicable).
+Call 'setRegionPermissions' to unprotect.
+
+'startupForStats' is the method to call to create a CompositeCache
+for a shared cache that exists, and is attached already. An 'oscache'
+parameter is passed into it. I don't think its comment has been
+updated in some time, it definitely sounds.. behind. But it makes it
+sound as though oscache is the 'attached shared memory region'. Or its
+representative as an object, anyway.
+
+It sets _oscache to oscache, one of its arguments, to answer our
+earlier question. attachedMemory, mentioned in the now obsolete
+comments above the definition of the method, is now derived from
+this line:
+
+attachedMemory = (BlockPtr)oscache->getAttachedMemory();
+
+It configures the CompositeCache object by extracting information from
+oscache.
+
+'allocateBlock' allocates a block of memory. Its parameter itemToWrite
+is a ShcItem, which serves as a header for the block.. containing its
+type, length, and Java VM ID, as we saw previously.
+
+'allocate', which 'allocateBlock' and friends call, is not static,
+which is odd when you consider its parameter names. segmentBuffer,
+and readWriteBuffer, especially. 'allocateBlock' passes in NULL
+values for these.
+
+The rest of the function that isn't immediately straightforward is
+a dispatch on the value of type, as a series of if/else if blocks.
+
+if allocating aot:
+
+... it gets the available AOT bytes!! Naturally. The ones that were
+reserved. This is the task of 'getAvailableReservedAOTBytes'.
+
+'getFreeAOTBytes' returns the AOT bytes that are reserved for AOT
+allocations, but that have not yet been allocated. Regardless of how
+many of the reserved AOT bytes are available, we flag the
+regionFullFlag bit vector, toggling J9SHR_AOT_SPACE_FULL (!)..
+to indicate that other threads should back off on AOT allocations
+until we're finished, I guess? What could be the reason for that???
+
+The JIT case allocation is almost identical to the AOT one!!
+Substitute 'JIT' for 'AOT' in the code and you're most of the way
+there! We also mark the regionFullFlag with J9SHR_JIT_SPACE_FULL!
+
+If readWriteBuffer hasn't been decided yet, we compute a boolean value
+called enoughSpace, which is self-descriptive.
+
+It moves onto checking that 'enoughAvailableSpace' is true, which is
+so if enoughSpace is true, and usedBytes + usedBytesInc <=
+softMaxValue. The soft max, guy, not the hard max! Unsure of the
+distinction.
+
+Any allocate type that isn't AOT or JIT counts as metadata! According
+to the comments within the code.
+
+So, we call 'allocateMetadataEntry'. The past two paragraphs are
+applicable if itemLen > 0. We then check to see that
+separateBufferSize > 0.
+
+If we yes, and segmentBuffer != NULL, the point the segmentBuffer
+pointer at SEGMENTUPDATEPTR. The END of the segment section,
+where new segments are added. We need to look
+'changePartialPageProtection', which is the thing that is allocated
+next.
+
+If readWriteBuffer is allocated, we call allocateReadWrite.. which
+allocates space in the read/write area, I can only guess. When was
+readWriteBuffer sent to something non-NULL? Answer: when it was passed
+in, by the caller. If cachelets and crap aren't enabled, we use
+RWUPDATEPTR. Obviously.
+
+If there is 'enoughSpace', but not 'enoughAvailableSpace', the cache
+space is enough, but available space is not! So we defer to either the
+head of the cache linked list, or the parent's cache, if either exist,
+checking in that order.
+
+If we mean to allocate a block, we call increaseUnstoredBytes, with
+usedBytesInc as the amount of space needed, I presume.
+
+Otherwise, we use the common cache info struct to set cache header
+full flags, using the value of the regionFullFlag. There's our
+answer.. the regionFullFlag, true to the name (the lack of an opening
+underscore), is just a local variable whose value impinges on nothing
+until this moment.
+
+Otherwise! enoughSpace is false, our life is a lie! We go about
+markings flags with the bits signified by
+J9SPACE_[JIT|AOT]_SPACE_FULL, as before! But we don't have
+regionFullFlag at our disposal anymore. Some other logic applies if we
+are nested (ie. cachelets are enabled), but we're not considering it
+just yet.
+
+'allocateMetadataEntry' .. seems to allocate a cache entry, not a
+segment but an actual, no shit entry, against the cache! And does the
+actual work of writing stuff into the cache that we never saw directly
+in 'allocate'.
+
+It begins by carving out space, from the allocPtr, for a ShcItemPtr
+(it moves backwards to do this, seeing as how it's a cache entry).
+Then it invokes partial page protection at the allocPtr, using
+'changePartialPageProjection' (it passes the address). Then good old
+fashioned memcpy is called!! I have no idea how this is or isn't
+affected by the partial page protection scheme. But I supposed I'll
+find out. Oh, and the previous _scan and _prevScan values are backed
+up to _storedScan and _storedPrevScan respectively, so that _prevScan
+is set to scan, and _scan refers to the item after the item header.
+Then the result is returned.
+
+'changePartialPageProtection' does some rounding of the passed in
+address according to the page alignment, and calls
+'setRegionPermissions' on that address. If the address passed in is
+already page aligned, we jump to the done label, which does nothing
+but emit a trace message.
+
+'allocateWithSegment' calls allocate, asking for a block to be
+allocated as the allocation type.
+
+'allocateJIT' calls allocate, asking for a JIT type.
+
+'allocateAOT' calls allocate, asking for an AOT type.
+
+'decReaderCount' does the decrement/wait on 'atomic' lock and exchange
+loop again. This time to decrement _theca->readerCount. Once finished,
+it calls 'protectHeaderReadWriteArea'. Not a typo.
+
+'enterWriteMutex' either acquires the write lock through the owning
+osCache (either or our own if _ccHead or NULL, or the head's oscache,
+lending further creedence to the idea that there is only *one* OSCache
+for every chain of CompositeCache's, of which there is also just one),
+or by using omrthread_monitor_enter. Then a bunch of other options
+that might revoke possession of the mutex if toggled are
+checked. That's basically it, not much more to say.
+
+'exitWriteMutex' is largely the same thing, complete with an
+unprotectHeaderReadWriteArea/protectHeaderReadWriteArea wrapping a
+increment/decrement to _theca->writerCount (depending on whether we
+are entering or exiting the mutex respectively).
+
+For 'doLockCache' and 'doUnlockCache', the caller must hold the write
+mutex. The comments say as much. The header and read/write are
+unprotected, the cache is locked/unlocked, and then the header and
+read/write area are protected again. 
+
+--
+
+There are many more secrets of the CompositeCache to be discovered,
+and for that we have to see how it's being used in the wild,
+probably!! For instance, many of CompositeCache's features -- reader
+count and writer count -- are outward facing, and don't affects the
+internals of the cache beyond their values being
+manipulated. Similarly, there are getter/setter functions for fields
+like _next.. that point to subsequent caches in a chain of caches (the
+comments spread throughout the implementation suggest that there is a
+chain of 'supercaches' -- the top level caches that potentially
+contain nested caches). But nothing further! All manipulation of
+those fields is done by users of the SH_CompositeCache class.
+
+So, let's begin to look at CacheMap. Its member variables:
+
+SH_CompositeCacheImpl* _cc;					/* current cache */
+
+/* See other _writeHash fields below. Put U_64 at the top so the debug
+ * extensions can more easily mirror the shape.
+ */
+ U_64 _writeHashStartTime;
+ OMRSharedClassConfig* _sharedClassConfig;
+
+SH_CompositeCacheImpl* _ccHead;				/* head of supercache list */
+SH_CompositeCacheImpl* _cacheletHead;		/* head of all known cachelets */
+SH_CompositeCacheImpl* _ccCacheletHead;		/* head of cachelet list for current cache */
+SH_CompositeCacheImpl* _cacheletTail;		/* tail of all known cachelets */
+SH_CompositeCacheImpl* _prevCClastCachelet;	/* Reference to the last allocated cachelet in the last supercache */
+//	SH_ClasspathManager* _cpm;
+//	SH_TimestampManager* _tsm;
+//	SH_ROMClassManager* _rcm;
+//	SH_ScopeManager* _scm;
+SH_CompiledMethodManager* _cmm;
+//	SH_ByteDataManager* _bdm;
+SH_AttachedDataManager* _adm;
+OMRPortLibrary* _portlib;
+omrthread_monitor_t _refreshMutex;
+bool _cacheCorruptReported;
+U_64* _runtimeFlags;
+const char* _cacheName;
+const char* _cacheDir;
+UDATA _localCrashCntr;
+
+UDATA _writeHashAverageTimeMicros;
+UDATA _writeHashMaxWaitMicros;
+UDATA _writeHashSavedMaxWaitMicros;
+UDATA _writeHashContendedResetHash;
+/* Also see U_64 _writeHashStartTime above */
+
+UDATA _verboseFlags;
+UDATA _bytesRead;
+U_32 _actualSize;
+UDATA _cacheletCntr;
+J9Pool* _ccPool;
+uintptr_t  _minimumAccessedShrCacheMetadata;
+uintptr_t _maximumAccessedShrCacheMetadata;
+bool _metadataReleased;
+
+/* True iff (*_runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_NESTED). Set in startup().
+* This flag is a misnomer. It indicates the cache is growable (chained), which also
+* implies it contains cachelets. However, the cache may contain cachelets even
+* if this flag is not set.
+* NOT equivalent to SH_Manager::_isRunningNested.
+*/
+bool _runningNested;
+
+/* True iff we allow growing the cache via chained supercaches. Set in startup().
+* _runningNested requests the growing capability, but _growEnabled controls the
+* support for it.
+* Currently always false, because cache growing is unstable.
+* Internal: Requires cachelets.
+*/
+bool _growEnabled;
+
+/* For growable caches, the cache can only be serialized once, because serialization "corrupts"
+* the original cache and renders it unusable. e.g. We fix up offsets in AOT methods.
+* This flag indicates whether the cache has already been serialized.
+* Access to this is not currently synchronized.
+*/
+bool _isSerialized;
+
+bool _isAssertEnabled; /* flag to turn on/off assertion before acquiring local mutex */
+
+SH_Managers * _managers;
+
+We see from the top of the list that there are a number of manager
+classes. They appear to decide how certain items are stored within the
+cache, and encapsulate information and methods describing how the
+items are to be written and read. Of course, we also have a composite
+cache implementation object, _cc.
+
+Let's take a look at how 'findCompiledMethod' works. It takes a
+J9ROMMethod, the VM current thread, and parameters called
+dataStart, codeStart, codeSize, and forceReplace.
+
+Most of the work are delegated to the SH_Managers, whichever are
+appropriate for the desired data. So we should probably refer to them!

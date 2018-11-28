@@ -43,9 +43,11 @@ set(OBJECTS "")
 set(VPATH "")
 
 add_tracegen(utilcore.tdf j9utilcore)
+add_tracegen(util.tdf omrutil)
 
 add_library(omrutil_obj OBJECT
-	ut_j9utilcore.c
+  ut_j9utilcore.c
+  ut_omrutil.c
 )
 
 list(APPEND VPATH .)
@@ -120,6 +122,7 @@ list(APPEND OBJECTS
 	detectVMDirectory.c
 	gettimebase.c
 	j9memclr.c
+	omrcrc32.c
 	poolForPort.c
 	primeNumberHelper.c
 	ranking.c
@@ -129,6 +132,7 @@ list(APPEND OBJECTS
 	thrname_core.c
 	utf8decode.c
 	utf8encode.c
+	wildcard.c
 	xlphelp.c
 	xml.c
 )

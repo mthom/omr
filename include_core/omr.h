@@ -29,6 +29,7 @@
 
 #include "omrport.h"
 #include "j9pool.h"
+#include "omrsrp.h"
 
 #include <string.h> // for memcmp
 
@@ -123,10 +124,13 @@ struct OMRUTF8 {
 #define OMRUTF8_SET_LENGTH(j9UTF8Address, len) (((struct OMRUTF8 *)(j9UTF8Address))->length = (len))
 #define OMRUTF8_DATA(j9UTF8Address) (((struct OMRUTF8 *)(j9UTF8Address))->data)
 
+#define OMRNAMEANDSIG_NAME(base) NNSRP_GET(base->name, struct OMRUTF8*)
+#define OMRNAMEANDSIG_SIGNATURE(base) NNSRP_GET(base->signature, struct OMRUTF8*)
+  
 #define OMRUTF8_DATA_EQUALS(data1, length1, data2, length2) ((((length1) == (length2)) && (memcmp((data1), (data2), (length1)) == 0)))
 #define OMRUTF8_EQUALS(utf1, utf2) (((utf1) == (utf2)) || (OMRUTF8_DATA_EQUALS(OMRUTF8_DATA(utf1), OMRUTF8_LENGTH(utf1), OMRUTF8_DATA(utf2), OMRUTF8_LENGTH(utf2))))
 #define OMRUTF8_LITERAL_EQUALS(data1, length1, cString) (OMRUTF8_DATA_EQUALS((data1), (length1), (cString), sizeof(cString) - 1))
-
+  
 typedef struct J9SharedClassCacheDescriptor {
 	struct J9SharedCacheHeader* cacheStartAddress;
 	void* romclassStartAddress;
@@ -364,10 +368,10 @@ typedef struct J9SharedCacheAPI {
 
 typedef struct J9ShrCompositeCacheCommonInfo {
 	omrthread_tls_key_t writeMutexEntryCount;
-	struct J9VMThread* hasWriteMutexThread;
-	struct J9VMThread* hasReadWriteMutexThread;
-	struct J9VMThread* hasRefreshMutexThread;
-	struct J9VMThread* hasRWMutexThreadMprotectAll;
+	struct OMR_VMThread* hasWriteMutexThread;
+	struct OMR_VMThread* hasReadWriteMutexThread;
+	struct OMR_VMThread* hasRefreshMutexThread;
+	struct OMR_VMThread* hasRWMutexThreadMprotectAll;
 	U_16 vmID;
 	U_32 writeMutexID;
 	U_32 readWriteAreaMutexID;
@@ -456,6 +460,7 @@ typedef struct OMR_VM {
 #endif /* OMR_RAS_TDF_TRACE */
         struct OMRSharedClassConfig* sharedClassConfig;
         struct J9SharedCacheAPI* sharedCacheAPI;
+    	struct J9SharedInvariantInternTable* sharedInvariantInternTable;
         struct J9SharedClassPreinitConfig* sharedClassPreinitConfig;
 } OMR_VM;
 
