@@ -41,7 +41,7 @@ class SH_OSCachemmap : public SH_OSCacheFile
 public:
 	static IDATA getCacheStats(OMR_VM* vm, const char* cacheDirName, const char* filePath, SH_OSCache_Info* returnVal, UDATA reason);
 	  
-	SH_OSCachemmap(J9PortLibrary* portlib, OMR_VM* vm, const char* cacheDirName, const char* cacheName, J9SharedClassPreinitConfig* piconfig, IDATA numLocks,
+	SH_OSCachemmap(OMRPortLibrary* portlib, OMR_VM* vm, const char* cacheDirName, const char* cacheName, J9SharedClassPreinitConfig* piconfig, IDATA numLocks,
 			UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer);
 	/*This constructor should only be used by this class or its parent*/
 	SH_OSCachemmap() {};
@@ -77,15 +77,15 @@ public:
 	
 	virtual IDATA getLockCapabilities();
 	
-	virtual void initialize(J9PortLibrary* portLibrary, char* memForConstructor, UDATA generation);
+	virtual void initialize(OMRPortLibrary* portLibrary, char* memForConstructor, UDATA generation);
 	
-	virtual IDATA setRegionPermissions(J9PortLibrary* portLibrary, void *address, UDATA length, UDATA flags);
+	virtual IDATA setRegionPermissions(OMRPortLibrary* portLibrary, void *address, UDATA length, UDATA flags);
 	
-	virtual UDATA getPermissionsRegionGranularity(J9PortLibrary* portLibrary);
+	virtual UDATA getPermissionsRegionGranularity(OMRPortLibrary* portLibrary);
 
 	virtual U_32 getTotalSize();
 
-	virtual UDATA getJavacoreData(OMR_VM *vm, J9SharedClassJavacoreDataDescriptor* descriptor);
+  //	virtual UDATA getJavacoreData(OMR_VM *vm, J9SharedClassJavacoreDataDescriptor* descriptor);
 
 	SH_CacheAccess isCacheAccessible(void) const;
 	virtual void dontNeedMetadata(OMR_VMThread* currentThread, const void* startAddress, size_t length);

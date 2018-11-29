@@ -30,8 +30,8 @@
 #include "omrcfg.h"
 #include "omrport.h"
 #include "pool_api.h"
-//#include "ut_j9shr.h"
-//#include "j9shrnls.h"
+#include "ut_omrshr.h"
+#include "shrnls.h"
 //#include "util_api.h"
 
 #include "OSCachemmap.hpp"
@@ -51,14 +51,14 @@
  * 
  * Constructs and initializes a SH_OSCachemmap object and calls startup to open/create 
  * a shared classes cache.
- * This c'tor is currently used during unit testing only. Therefore we pass J9SH_DIRPERM_ABSENT as cacheDirPerm to startup().
+ * This c'tor is currently used during unit testing only. Therefore we pass OMRSH_DIRPERM_ABSENT as cacheDirPerm to startup().
  *
  * @param [in]  portLibrary The Port library
  * @param [in]  cacheName The name of the cache to be opened/created
  * @param [in]  piconfig Pointer to a configuration structure
  * @param [in]  numLocks The number of locks to be initialized
  * @param [in]  createFlag Indicates whether cache is to be opened or created.
- * \args J9SH_OSCACHE_CREATE Create the cache if it does not exists, otherwise open existsing cache
+ * \args OMRSH_OSCACHE_CREATE Create the cache if it does not exists, otherwise open existsing cache
  * \args J9SH_OSCACHE_OPEXIST Open an existing cache only, failed if it doesn't exist.
  * @param [in]  verboseFlags Verbose flags
  * @param [in]  openMode Mode to open the cache in. Any of the following flags:
@@ -70,12 +70,12 @@
  * @param [in]  initializer Pointer to an initializer to be used to initialize the data
  * 				area of a new cache
  */ 
-SH_OSCachemmap::SH_OSCachemmap(J9PortLibrary* portLibrary, OMR_VM* vm, const char* cacheDirName, const char* cacheName, J9SharedClassPreinitConfig* piconfig,
+SH_OSCachemmap::SH_OSCachemmap(OMRPortLibrary* portLibrary, OMR_VM* vm, const char* cacheDirName, const char* cacheName, J9SharedClassPreinitConfig* piconfig,
 		IDATA numLocks, UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer)
 {
 	Trc_SHR_OSC_Mmap_Constructor_Entry(cacheName, piconfig->sharedClassCacheSize, numLocks, createFlag, verboseFlags);
 	initialize(portLibrary, NULL, OSCACHE_CURRENT_CACHE_GEN);
-	startup(vm, cacheDirName, J9SH_DIRPERM_ABSENT, cacheName, piconfig, numLocks, createFlag, verboseFlags, runtimeFlags, openMode, 0, versionData, initializer, SHR_STARTUP_REASON_NORMAL);
+	startup(vm, cacheDirName, OMRSH_DIRPERM_ABSENT, cacheName, piconfig, numLocks, createFlag, verboseFlags, runtimeFlags, openMode, 0, versionData, initializer, SHR_STARTUP_REASON_NORMAL);
 	Trc_SHR_OSC_Mmap_Constructor_Exit();
 }
 
@@ -89,7 +89,7 @@ SH_OSCachemmap::SH_OSCachemmap(J9PortLibrary* portLibrary, OMR_VM* vm, const cha
  * @param [in]  generation The generation of this cache
  */
 void
-SH_OSCachemmap::initialize(J9PortLibrary* portLibrary, char* memForConstructor, UDATA generation)
+SH_OSCachemmap::initialize(OMRPortLibrary* portLibrary, char* memForConstructor, UDATA generation)
 {
 	Trc_SHR_OSC_Mmap_initialize_Entry(portLibrary, memForConstructor);
 	commonInit(portLibrary, generation);
@@ -161,7 +161,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 	IDATA retryCntr;
 	bool creatingNewCache = false;
 	struct J9FileStat statBuf;
-	IDATA errorCode = J9SH_OSCACHE_FAILURE;
+	IDATA errorCode = OMRSH_OSCACHE_FAILURE;
 	LastErrorInfo lastErrorInfo;
 	UDATA defaultCacheSize = J9_SHARED_CLASS_CACHE_DEFAULT_SIZE;
 
@@ -175,15 +175,15 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 #endif /* OPENJ9_BUILD */
 #endif /* J9VM_ENV_DATA64 */
 	
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
 	Trc_SHR_OSC_Mmap_startup_Entry(cacheName, ctrlDirName,
 		(piconfig!= NULL)? piconfig->sharedClassCacheSize : defaultCacheSize,
 		numLocks, createFlag, verboseFlags, openMode);
 	
-	versionData->cacheType = J9PORT_SHR_CACHE_TYPE_PERSISTENT;
-	mmapCapabilities = j9mmap_capabilities();
-	if (!(mmapCapabilities & J9PORT_MMAP_CAPABILITY_WRITE) || !(mmapCapabilities & J9PORT_MMAP_CAPABILITY_MSYNC)) {
+	versionData->cacheType = OMRPORT_SHR_CACHE_TYPE_PERSISTENT;
+	mmapCapabilities = omrmmap_capabilities();
+	if (!(mmapCapabilities & OMRPORT_MMAP_CAPABILITY_WRITE) || !(mmapCapabilities & OMRPORT_MMAP_CAPABILITY_MSYNC)) {
 		Trc_SHR_OSC_Mmap_startup_nommap(mmapCapabilities);
 		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_MMAPCAP, NULL);
 		goto _errorPreFileOpen;
@@ -197,7 +197,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 	
 	/* Detect remote filesystem */
 	if (openMode & J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE) {
-		if (0 == j9file_stat(_cacheDirName, 0, &statBuf)) {
+		if (0 == omrfile_stat(_cacheDirName, 0, &statBuf)) {
 			if (statBuf.isRemote) {
 				Trc_SHR_OSC_Mmap_startup_detectedNetworkCache();
 				errorHandler(J9NLS_SHRC_OSCACHE_MMAP_NETWORK_CACHE, NULL);
@@ -207,7 +207,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 	}
 	
 	/* Open the file */
-	if (!openCacheFile(_createFlags & J9SH_OSCACHE_CREATE, &lastErrorInfo)) {
+	if (!openCacheFile(_createFlags & OMRSH_OSCACHE_CREATE, &lastErrorInfo)) {
 		Trc_SHR_OSC_Mmap_startup_badfileopen(_cachePathName);
 		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_FILEOPEN_ERROR, &lastErrorInfo);  /* TODO: ADD FILE NAME */
 		goto _errorPostFileOpen;
@@ -216,16 +216,16 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 
 	/* Avoid any checks for cache file access if
 	 * - user has specified a cache directory, or
-	 * - destroying an existing cache (if SHR_STARTUP_REASON_DESTROY or SHR_STARTUP_REASON_EXPIRE or J9SH_OSCACHE_OPEXIST_DESTROY is set)
+	 * - destroying an existing cache (if SHR_STARTUP_REASON_DESTROY or SHR_STARTUP_REASON_EXPIRE or OMRSH_OSCACHE_OPEXIST_DESTROY is set)
 	 */
 	if (!_isUserSpecifiedCacheDir 
-		&& (J9_ARE_NO_BITS_SET(_createFlags, J9SH_OSCACHE_OPEXIST_DESTROY))
+		&& (OMR_ARE_NO_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_DESTROY))
 		&& (SHR_STARTUP_REASON_DESTROY != reason)
 		&& (SHR_STARTUP_REASON_EXPIRE != reason)
 	) {
 		_cacheFileAccess = checkCacheFileAccess(_portLibrary, _fileHandle, _openMode, &lastErrorInfo);
 
-		if (J9_ARE_ALL_BITS_SET(_createFlags, J9SH_OSCACHE_OPEXIST_STATS)
+		if (OMR_ARE_ALL_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_STATS)
 			|| (J9SH_CACHE_FILE_ACCESS_ALLOWED == _cacheFileAccess)
 		) {
 			Trc_SHR_OSC_Mmap_startup_fileaccessallowed(_cachePathName);
@@ -269,7 +269,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 	if (-1 == acquireHeaderWriteLock(_activeGeneration, &lastErrorInfo)) {
 		Trc_SHR_OSC_Mmap_startup_badAcquireHeaderWriteLock();
 		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ACQUIREHEADERWRITELOCK_ERROR, &lastErrorInfo);
-		errorCode = J9SH_OSCACHE_CORRUPT;
+		errorCode = OMRSH_OSCACHE_CORRUPT;
 		OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CORRUPT_ACQUIRE_HEADER_WRITE_LOCK_FAILED, lastErrorInfo.lastErrorCode);
 		setCorruptionContext(ACQUIRE_HEADER_WRITE_LOCK_FAILED, (UDATA)lastErrorInfo.lastErrorCode);
 		goto _errorPostHeaderLock;
@@ -278,9 +278,9 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 	
 	/* Check the length of the file */
 #if defined(WIN32) || defined(WIN64)
-	if ((_cacheSize = (U_32)j9file_blockingasync_flength(_fileHandle)) > 0) {
+	if ((_cacheSize = (U_32)omrfile_blockingasync_flength(_fileHandle)) > 0) {
 #else
-	if ((_cacheSize = (U_32)j9file_flength(_fileHandle)) > 0) {
+	if ((_cacheSize = (U_32)omrfile_flength(_fileHandle)) > 0) {
 #endif
 		IDATA rc;
 		/* We are opening an existing cache */
@@ -288,7 +288,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 		
 		if (_cacheSize <= sizeof(OSCachemmap_header_version_current)) {
 			Trc_SHR_OSC_Mmap_startup_cacheTooSmall();
-			errorCode = J9SH_OSCACHE_CORRUPT;
+			errorCode = OMRSH_OSCACHE_CORRUPT;
 			OSC_ERR_TRACE1(J9NLS_SHRC_CC_STARTUP_CORRUPT_CACHE_SIZE_INVALID, _cacheSize);
 			setCorruptionContext(CACHE_SIZE_INVALID, (UDATA)_cacheSize);
 			goto _errorPostHeaderLock;
@@ -307,8 +307,8 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 			U_32* initCompleteAddr = (U_32*)getMmapHeaderFieldAddressForGen(_headerStart, _activeGeneration, OSCACHE_HEADER_FIELD_CACHE_INIT_COMPLETE);
 
 			/* In readonly, we can't get a header lock, so if the cache is mid-init, give it a chance to complete initialization */
-			while ((!*initCompleteAddr) && (retryCntr < J9SH_OSCACHE_READONLY_RETRY_COUNT)) {
-				omrthread_sleep(J9SH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS);
+			while ((!*initCompleteAddr) && (retryCntr < OMRSH_OSCACHE_READONLY_RETRY_COUNT)) {
+				omrthread_sleep(OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS);
 				++retryCntr;
 			}
 			if (!*initCompleteAddr) {
@@ -318,7 +318,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 			}
 		}
 				
-		if (_verboseFlags & J9SHR_VERBOSEFLAG_ENABLE_VERBOSE) {
+		if (_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
 			if (_runningReadOnly) {
 				OSC_TRACE1(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_OPENED_READONLY, _cacheName);
 			} else {
@@ -351,7 +351,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 		Trc_SHR_OSC_Mmap_startup_goodSetCacheLength(piconfig->sharedClassCacheSize);
 
 		/* Verify if the group access has been set */
-		if (J9_ARE_ALL_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_GROUPACCESS)) {
+		if (OMR_ARE_ALL_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_GROUPACCESS)) {
 			I_32 groupAccessRc = verifyCacheFileGroupAccess(_portLibrary, _fileHandle, &lastErrorInfo);
 			
 			if (0 == groupAccessRc) {
@@ -391,7 +391,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 	 		Trc_SHR_OSC_Mmap_startup_goodInitializeDataHeader();
 		}
 		
-		if (_verboseFlags & J9SHR_VERBOSEFLAG_ENABLE_VERBOSE) {
+		if (_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
 			OSC_TRACE1(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_CREATED, _cacheName);
 		}
 	}
@@ -458,8 +458,8 @@ void
 SH_OSCachemmap::dontNeedMetadata(OMR_VMThread* currentThread, const void* startAddress, size_t length) {
 /* AIX does not allow memory to be disclaimed for memory mapped files */
 #if !defined(AIXPPC)
-	PORT_ACCESS_FROM_VMC(currentThread);
-	j9mmap_dont_need(startAddress, length);
+	OMRPORT_ACCESS_FROM_VMC(currentThread->_vm);
+	omrmmap_dont_need(startAddress, length);
 #endif
 }
 
@@ -478,7 +478,7 @@ SH_OSCachemmap::dontNeedMetadata(OMR_VMThread* currentThread, const void* startA
 IDATA
 SH_OSCachemmap::destroy(bool suppressVerbose, bool isReset)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	UDATA origVerboseFlags = _verboseFlags;
 	IDATA returnVal = -1; 		/* Assume failure */
 	LastErrorInfo lastErrorInfo;
@@ -516,10 +516,10 @@ SH_OSCachemmap::destroy(bool suppressVerbose, bool isReset)
 
 			memset(&versionData, 0, sizeof(J9PortShcVersion));
 			/* Do not care about the getValuesFromShcFilePrefix() return value */
-			getValuesFromShcFilePrefix(PORTLIB, _cacheNameWithVGen, &versionData);
-			if (J9SH_FEATURE_COMPRESSED_POINTERS == versionData.feature) {
+			getValuesFromShcFilePrefix(OMRPORTLIB, _cacheNameWithVGen, &versionData);
+			if (OMRSH_FEATURE_COMPRESSED_POINTERS == versionData.feature) {
 				OSC_TRACE1(J9NLS_SHRC_OSCACHE_MMAP_DESTROY_SUCCESS_CR, _cacheName);
-			} else if (J9SH_FEATURE_NON_COMPRESSED_POINTERS == versionData.feature) {
+			} else if (OMRSH_FEATURE_NON_COMPRESSED_POINTERS == versionData.feature) {
 				OSC_TRACE1(J9NLS_SHRC_OSCACHE_MMAP_DESTROY_SUCCESS_NONCR, _cacheName);
 			} else {
 				OSC_TRACE1(J9NLS_SHRC_OSCACHE_MMAP_DESTROY_SUCCESS, _cacheName);
@@ -565,14 +565,14 @@ SH_OSCachemmap::cleanup()
 				errorHandler(J9NLS_SHRC_OSCACHE_MMAP_CLEANUP_ERROR_UPDATING_LAST_DETACHED_TIME, NULL);
 			}
 			if (releaseHeaderWriteLock(_activeGeneration, NULL) == -1) {
-				PORT_ACCESS_FROM_PORT(_portLibrary);
-				I_32 myerror = j9error_last_error_number();
+				OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+				I_32 myerror = omrerror_last_error_number();
 				Trc_SHR_OSC_Mmap_cleanup_releaseHeaderWriteLock_Failed(myerror);
 				Trc_SHR_Assert_ShouldNeverHappen();
 			}
 		} else {
-			PORT_ACCESS_FROM_PORT(_portLibrary);
-			I_32 myerror = j9error_last_error_number();
+			OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+			I_32 myerror = omrerror_last_error_number();
 			Trc_SHR_OSC_Mmap_cleanup_acquireHeaderWriteLock_Failed(myerror);
 			Trc_SHR_Assert_ShouldNeverHappen();
 		}
@@ -629,9 +629,9 @@ IDATA SH_OSCachemmap::getReadWriteLockID()
 IDATA
 SH_OSCachemmap::acquireWriteLock(UDATA lockID)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
-	I_32 lockFlags = J9PORT_FILE_WRITE_LOCK | J9PORT_FILE_WAIT_FOR_LOCK;
+	I_32 lockFlags = OMRPORT_FILE_WRITE_LOCK | OMRPORT_FILE_WAIT_FOR_LOCK;
 	U_64 lockOffset, lockLength;
 	I_32 rc = 0;
 	I_64 startLoopTime = 0;
@@ -661,20 +661,20 @@ SH_OSCachemmap::acquireWriteLock(UDATA lockID)
 
 	Trc_SHR_OSC_Mmap_acquireWriteLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
-	rc = j9file_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+	rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #else
-	rc = j9file_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+	rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif	
 	
-	while ((rc == -1) && (j9error_last_error_number() == J9PORT_ERROR_FILE_LOCK_EDEADLK)) {
+	while ((rc == -1) && (omrerror_last_error_number() == OMRPORT_ERROR_FILE_LOCK_EDEADLK)) {
 		if (++loopCount > 1) {
 			/* We time the loop so it doesn't loop forever. Try the lock algorithm below
 			 * once before staring the timer. */
 			if (startLoopTime == 0) {
-				startLoopTime = j9time_nano_time();
+				startLoopTime = omrtime_nano_time();
 			} else if (loopCount > 2) {
 				/* Loop at least twice */
-				endLoopTime = j9time_nano_time();
+				endLoopTime = omrtime_nano_time();
 				if ((endLoopTime - startLoopTime) > ((I_64)RETRY_OBTAIN_WRITE_LOCK_MAX_MS * NANOSECS_PER_MILLISEC)) {
 					break;
 				}
@@ -702,9 +702,9 @@ SH_OSCachemmap::acquireWriteLock(UDATA lockID)
 			 */
 			Trc_SHR_OSC_Mmap_acquireWriteLockDeadlockMsg("Case 1: Current thread owns W lock & monitor, and RW monitor, but EDEADLK'd on RW lock");
 #if defined(WIN32) || defined(WIN64)
-			rc = j9file_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+			rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #else
-			rc = j9file_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+			rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif			
 
 		} else if (lockID == J9SH_OSCACHE_MMAP_LOCKID_READWRITELOCK) {
@@ -739,9 +739,9 @@ SH_OSCachemmap::acquireWriteLock(UDATA lockID)
 				return -1;
 			}
 #if defined(WIN32) || defined(WIN64)
-			rc = j9file_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+			rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #else
-			rc = j9file_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+			rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif	
 
 			omrthread_monitor_exit(_lockMutex[J9SH_OSCACHE_MMAP_LOCKID_WRITELOCK]);
@@ -770,9 +770,9 @@ SH_OSCachemmap::acquireWriteLock(UDATA lockID)
 				break;
 			}
 #if defined(WIN32) || defined(WIN64)
-			rc = j9file_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+			rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #else
-			rc = j9file_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+			rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif
 			omrthread_monitor_exit(_lockMutex[J9SH_OSCACHE_MMAP_LOCKID_READWRITELOCK]);
 
@@ -800,7 +800,7 @@ SH_OSCachemmap::acquireWriteLock(UDATA lockID)
 IDATA
 SH_OSCachemmap::releaseWriteLock(UDATA lockID)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
 	U_64 lockOffset, lockLength;
 	I_32 rc = 0;
@@ -817,9 +817,9 @@ SH_OSCachemmap::releaseWriteLock(UDATA lockID)
 	
 	Trc_SHR_OSC_Mmap_releaseWriteLock_gettingLock(_fileHandle, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)	
-	rc = j9file_blockingasync_unlock_bytes(_fileHandle, lockOffset, lockLength);
+	rc = omrfile_blockingasync_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #else
-	rc = j9file_unlock_bytes(_fileHandle, lockOffset, lockLength);
+	rc = omrfile_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #endif	
 	
 	if (-1 == rc) {
@@ -850,9 +850,9 @@ SH_OSCachemmap::releaseWriteLock(UDATA lockID)
 IDATA
 SH_OSCachemmap::acquireAttachReadLock(UDATA generation, LastErrorInfo *lastErrorInfo)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
-	I_32 lockFlags = J9PORT_FILE_READ_LOCK | J9PORT_FILE_WAIT_FOR_LOCK;
+	I_32 lockFlags = OMRPORT_FILE_READ_LOCK | OMRPORT_FILE_WAIT_FOR_LOCK;
 	U_64 lockOffset, lockLength;
 	I_32 rc = 0;
 
@@ -867,14 +867,14 @@ SH_OSCachemmap::acquireAttachReadLock(UDATA generation, LastErrorInfo *lastError
 
 	Trc_SHR_OSC_Mmap_acquireAttachReadLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)	
-	rc = j9file_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+	rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #else
-	rc = j9file_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+	rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif	
 	if (-1 == rc) {
 		if (NULL != lastErrorInfo) {
-			lastErrorInfo->lastErrorCode = j9error_last_error_number();
-			lastErrorInfo->lastErrorMsg = j9error_last_error_message();
+			lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+			lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
 		}
 		Trc_SHR_OSC_Mmap_acquireAttachReadLock_badLock();
 	} else {
@@ -897,7 +897,7 @@ SH_OSCachemmap::acquireAttachReadLock(UDATA generation, LastErrorInfo *lastError
 IDATA
 SH_OSCachemmap::releaseAttachReadLock(UDATA generation)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
 	U_64 lockOffset, lockLength;
 	I_32 rc = 0;
@@ -909,9 +909,9 @@ SH_OSCachemmap::releaseAttachReadLock(UDATA generation)
 
 	Trc_SHR_OSC_Mmap_releaseAttachReadLock_gettingLock(_fileHandle, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)	
-	rc = j9file_blockingasync_unlock_bytes(_fileHandle, lockOffset, lockLength);
+	rc = omrfile_blockingasync_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #else
-	rc = j9file_unlock_bytes(_fileHandle, lockOffset, lockLength);
+	rc = omrfile_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #endif	
 	
 	if (-1 == rc) {
@@ -936,20 +936,20 @@ SH_OSCachemmap::releaseAttachReadLock(UDATA generation)
  * 				false if the cache is pre-existing and we can read the size fields from the cache header 
  * @param [in] generation The generation of the cache header to use when calculating the lock offset
  *
- * @return 0 on success, J9SH_OSCACHE_FAILURE on failure, J9SH_OSCACHE_CORRUPT for corrupt cache
+ * @return 0 on success, OMRSH_OSCACHE_FAILURE on failure, OMRSH_OSCACHE_CORRUPT for corrupt cache
  */
 IDATA
 SH_OSCachemmap::internalAttach(bool isNewCache, UDATA generation)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
-	U_32 accessFlags = _runningReadOnly ? J9PORT_MMAP_FLAG_READ : J9PORT_MMAP_FLAG_WRITE;
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+	U_32 accessFlags = _runningReadOnly ? OMRPORT_MMAP_FLAG_READ : OMRPORT_MMAP_FLAG_WRITE;
 	LastErrorInfo lastErrorInfo;
-	IDATA rc = J9SH_OSCACHE_FAILURE;
+	IDATA rc = OMRSH_OSCACHE_FAILURE;
 	
 	Trc_SHR_OSC_Mmap_internalAttach_Entry();
 	
 	/* Get current length of file */
-	accessFlags |= J9PORT_MMAP_FLAG_SHARED;
+	accessFlags |= OMRPORT_MMAP_FLAG_SHARED;
 	
 	_actualFileLength = _cacheSize;
 	Trc_SHR_Assert_True(_actualFileLength > 0);
@@ -957,7 +957,7 @@ SH_OSCachemmap::internalAttach(bool isNewCache, UDATA generation)
 	if (0 != acquireAttachReadLock(generation, &lastErrorInfo)) {
 		Trc_SHR_OSC_Mmap_internalAttach_badAcquireAttachedReadLock();
 		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_ACQUIRING_ATTACH_READ_LOCK, &lastErrorInfo);
-		rc = J9SH_OSCACHE_FAILURE;
+		rc = OMRSH_OSCACHE_FAILURE;
 		goto error;
 	}
 	Trc_SHR_OSC_Mmap_internalAttach_goodAcquireAttachReadLock();
@@ -966,11 +966,11 @@ SH_OSCachemmap::internalAttach(bool isNewCache, UDATA generation)
 	{
 		J9FileStatFilesystem fileStatFilesystem;
 		/* check for free disk space */
-		rc = j9file_stat_filesystem(_cachePathName, 0, &fileStatFilesystem);
+		rc = omrfile_stat_filesystem(_cachePathName, 0, &fileStatFilesystem);
 		if (0 == rc) {
 			if (fileStatFilesystem.freeSizeBytes < (U_64)_actualFileLength) {
 				OSC_ERR_TRACE2(J9NLS_SHRC_OSCACHE_MMAP_DISK_FULL, (U_64)fileStatFilesystem.freeSizeBytes, (U_64)_actualFileLength);
-				rc = J9SH_OSCACHE_FAILURE;
+				rc = OMRSH_OSCACHE_FAILURE;
 				goto error;
 			}
 		}
@@ -978,13 +978,13 @@ SH_OSCachemmap::internalAttach(bool isNewCache, UDATA generation)
 #endif
 
 	/* Map the file */
-	_mapFileHandle = j9mmap_map_file(_fileHandle, 0, (UDATA)_actualFileLength, _cachePathName, accessFlags, J9MEM_CATEGORY_CLASSES_SHC_CACHE);
+	_mapFileHandle = omrmmap_map_file(_fileHandle, 0, (UDATA)_actualFileLength, _cachePathName, accessFlags, OMRMEM_CATEGORY_CLASSES_SHC_CACHE);
 	if ((NULL == _mapFileHandle) || (NULL == _mapFileHandle->pointer)) {
-		lastErrorInfo.lastErrorCode = j9error_last_error_number();
-		lastErrorInfo.lastErrorMsg = j9error_last_error_message();
+		lastErrorInfo.lastErrorCode = omrerror_last_error_number();
+		lastErrorInfo.lastErrorMsg = omrerror_last_error_message();
 		Trc_SHR_OSC_Mmap_internalAttach_badmapfile();
 		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_ATTACH_ERROR_MAPPING_FILE, &lastErrorInfo);
-		rc = J9SH_OSCACHE_FAILURE;
+		rc = OMRSH_OSCACHE_FAILURE;
 		goto error;
 	}
 	_headerStart = _mapFileHandle->pointer;
@@ -1005,7 +1005,7 @@ SH_OSCachemmap::internalAttach(bool isNewCache, UDATA generation)
 			Trc_SHR_OSC_Mmap_internalAttach_corruptcachefile();
 			OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_DATA_START_NULL, _dataStart);
 			setCorruptionContext(CACHE_DATA_NULL, (UDATA)_dataStart);
-			rc = J9SH_OSCACHE_CORRUPT;
+			rc = OMRSH_OSCACHE_CORRUPT;
 			goto error;
 		}
 	} else {
@@ -1033,11 +1033,11 @@ error:
 void *
 SH_OSCachemmap::attach(OMR_VMThread *currentThread, J9PortShcVersion* expectedVersionData)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	OSCachemmap_header_version_current *cacheHeader;
 	IDATA headerRc;
 	LastErrorInfo lastErrorInfo;
-	OMR_VM *vm = currentThread->javaVM;
+	OMR_VM *vm = currentThread->_vm;
 	bool doRelease = false;
 	IDATA rc;
 	
@@ -1068,24 +1068,24 @@ SH_OSCachemmap::attach(OMR_VMThread *currentThread, J9PortShcVersion* expectedVe
 	cacheHeader = (OSCachemmap_header_version_current *)_headerStart;
 
 	/* Verify the header */
-	if ((headerRc = isCacheHeaderValid(cacheHeader, expectedVersionData)) != J9SH_OSCACHE_HEADER_OK) {
-		if (headerRc == J9SH_OSCACHE_HEADER_CORRUPT) {
+	if ((headerRc = isCacheHeaderValid(cacheHeader, expectedVersionData)) != OMRSH_OSCACHE_HEADER_OK) {
+		if (headerRc == OMRSH_OSCACHE_HEADER_CORRUPT) {
 			Trc_SHR_OSC_Mmap_attach_corruptCacheHeader2();
 			/* Cache is corrupt, trigger hook to generate a system dump.
 			 * This is the last chance to get corrupt cache image in system dump.
 			 * After this point, cache is detached.
 			 */
-			if (0 ==(_runtimeFlags & J9SHR_RUNTIMEFLAG_DISABLE_CORRUPT_CACHE_DUMPS)) {
-				TRIGGER_J9HOOK_VM_CORRUPT_CACHE(vm->hookInterface, currentThread);
+			if (0 ==(_runtimeFlags & OMRSHR_RUNTIMEFLAG_DISABLE_CORRUPT_CACHE_DUMPS)) {
+//				TRIGGER_J9HOOK_VM_CORRUPT_CACHE(vm->hookInterface, currentThread);
 			}
-			setError(J9SH_OSCACHE_CORRUPT);
-		} else if (headerRc == J9SH_OSCACHE_HEADER_DIFF_BUILDID) {
+			setError(OMRSH_OSCACHE_CORRUPT);
+		} else if (headerRc == OMRSH_OSCACHE_HEADER_DIFF_BUILDID) {
 			Trc_SHR_OSC_Mmap_attach_differentBuildID();
-			setError(J9SH_OSCACHE_DIFF_BUILDID);
+			setError(OMRSH_OSCACHE_DIFF_BUILDID);
 		} else {
 			errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_INVALID_CACHE_HEADER, NULL);
 			Trc_SHR_OSC_Mmap_attach_invalidCacheHeader2();
-			setError(J9SH_OSCACHE_FAILURE);
+			setError(OMRSH_OSCACHE_FAILURE);
 		}
 		goto detach;
 	}
@@ -1094,7 +1094,7 @@ SH_OSCachemmap::attach(OMR_VMThread *currentThread, J9PortShcVersion* expectedVe
 	if (!updateLastAttachedTime(cacheHeader)) {
 		Trc_SHR_OSC_Mmap_attach_badupdatelastattachedtime2();
 		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_UPDATING_LAST_ATTACHED_TIME, NULL);
-		setError(J9SH_OSCACHE_FAILURE);
+		setError(OMRSH_OSCACHE_FAILURE);
 		goto detach;
 	}
 	Trc_SHR_OSC_Mmap_attach_goodupdatelastattachedtime();
@@ -1107,7 +1107,7 @@ SH_OSCachemmap::attach(OMR_VMThread *currentThread, J9PortShcVersion* expectedVe
 		goto detach;
 	}
 
-	if ((_verboseFlags & J9SHR_VERBOSEFLAG_ENABLE_VERBOSE) && _startupCompleted) {
+	if ((_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) && _startupCompleted) {
 		OSC_TRACE1(J9NLS_SHRC_OSCACHE_MMAP_ATTACH_ATTACHED, _cacheName);
 	}
 	
@@ -1136,7 +1136,7 @@ release:
 I_32
 SH_OSCachemmap::updateLastAttachedTime(OSCachemmap_header_version_current* header)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
 	Trc_SHR_OSC_Mmap_updateLastAttachedTime_Entry();
 	
@@ -1145,7 +1145,7 @@ SH_OSCachemmap::updateLastAttachedTime(OSCachemmap_header_version_current* heade
 		return true;
 	}
 	
-	I_64 newTime = j9time_current_time_millis();
+	I_64 newTime = omrtime_current_time_millis();
 	Trc_SHR_OSC_Mmap_updateLastAttachedTime_time(newTime, header->lastAttachedTime);
 	header->lastAttachedTime = newTime;
 	
@@ -1162,7 +1162,7 @@ SH_OSCachemmap::updateLastAttachedTime(OSCachemmap_header_version_current* heade
 I_32
 SH_OSCachemmap::updateLastDetachedTime()
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
 	OSCachemmap_header_version_current* cacheHeader = (OSCachemmap_header_version_current*)_headerStart;
 	I_64 newTime;
@@ -1174,7 +1174,7 @@ SH_OSCachemmap::updateLastDetachedTime()
 		return true;
 	}
 
-	newTime = j9time_current_time_millis();
+	newTime = omrtime_current_time_millis();
 	Trc_SHR_OSC_Mmap_updateLastDetachedTime_time(newTime, cacheHeader->lastDetachedTime);
 	cacheHeader->lastDetachedTime = newTime;
 	
@@ -1194,7 +1194,7 @@ SH_OSCachemmap::updateLastDetachedTime()
 I_32
 SH_OSCachemmap::createCacheHeader(OSCachemmap_header_version_current *cacheHeader, J9PortShcVersion* versionData)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	U_32 headerLen = MMAP_CACHEHEADERSIZE;
 	
 	if(NULL == cacheHeader) {
@@ -1208,9 +1208,9 @@ SH_OSCachemmap::createCacheHeader(OSCachemmap_header_version_current *cacheHeade
 	
 	initOSCacheHeader(&(cacheHeader->oscHdr), versionData, headerLen);
 
-	cacheHeader->createTime = j9time_current_time_millis();
-	cacheHeader->lastAttachedTime = j9time_current_time_millis();
-	cacheHeader->lastDetachedTime = j9time_current_time_millis();
+	cacheHeader->createTime = omrtime_current_time_millis();
+	cacheHeader->lastAttachedTime = omrtime_current_time_millis();
+	cacheHeader->lastDetachedTime = omrtime_current_time_millis();
 	
 	Trc_SHR_OSC_Mmap_createCacheHeader_header(cacheHeader->eyecatcher, 
 													cacheHeader->oscHdr.size, 
@@ -1234,7 +1234,7 @@ SH_OSCachemmap::createCacheHeader(OSCachemmap_header_version_current *cacheHeade
 bool
 SH_OSCachemmap::setCacheLength(U_32 cacheSize, LastErrorInfo *lastErrorInfo)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
 	Trc_SHR_OSC_Mmap_setCacheLength_Entry(cacheSize);
 	
@@ -1247,13 +1247,13 @@ SH_OSCachemmap::setCacheLength(U_32 cacheSize, LastErrorInfo *lastErrorInfo)
 	}
 	
 #if defined(WIN32) || defined(WIN64)
-	if (0 != j9file_blockingasync_set_length(_fileHandle, cacheSize)) {
+	if (0 != omrfile_blockingasync_set_length(_fileHandle, cacheSize)) {
 #else
-	if (0 != j9file_set_length(_fileHandle, cacheSize)) {
+	if (0 != omrfile_set_length(_fileHandle, cacheSize)) {
 #endif
 		LastErrorInfo localLastErrorInfo;
-		localLastErrorInfo.lastErrorCode = j9error_last_error_number();
-		localLastErrorInfo.lastErrorMsg = j9error_last_error_message();
+		localLastErrorInfo.lastErrorCode = omrerror_last_error_number();
+		localLastErrorInfo.lastErrorMsg = omrerror_last_error_message();
 		Trc_SHR_OSC_Mmap_setCacheLength_badfilesetlength();
 		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_SETCACHELENGTH_FILESETLENGTH, &localLastErrorInfo);
 		if (NULL != lastErrorInfo) {
@@ -1325,14 +1325,14 @@ SH_OSCachemmap::detach()
 	if (acquireHeaderWriteLock(_activeGeneration, NULL) != -1) {
 		updateLastDetachedTime();	
 		if (releaseHeaderWriteLock(_activeGeneration, NULL) == -1) {
-			PORT_ACCESS_FROM_PORT(_portLibrary);
-			I_32 myerror = j9error_last_error_number();
+			OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+			I_32 myerror = omrerror_last_error_number();
 			Trc_SHR_OSC_Mmap_detach_releaseHeaderWriteLock_Failed(myerror);
 			Trc_SHR_Assert_ShouldNeverHappen();
 		}
 	} else {
-		PORT_ACCESS_FROM_PORT(_portLibrary);
-		I_32 myerror = j9error_last_error_number();
+		OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+		I_32 myerror = omrerror_last_error_number();
 		Trc_SHR_OSC_Mmap_detach_acquireHeaderWriteLock_Failed(myerror);
 		Trc_SHR_Assert_ShouldNeverHappen();
 	}
@@ -1343,7 +1343,7 @@ SH_OSCachemmap::detach()
 void
 SH_OSCachemmap::internalDetach(UDATA generation)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
 	Trc_SHR_OSC_Mmap_internalDetach_Entry();
 	
@@ -1353,7 +1353,7 @@ SH_OSCachemmap::internalDetach(UDATA generation)
 	}
 	
 	if (_mapFileHandle) {
-		j9mmap_unmap_file(_mapFileHandle);
+		omrmmap_unmap_file(_mapFileHandle);
 		_mapFileHandle = NULL;
 	}
 	
@@ -1397,8 +1397,8 @@ SH_OSCachemmap::internalDetach(UDATA generation)
 IDATA
 SH_OSCachemmap::getCacheStats(OMR_VM* vm, const char* cacheDirName, const char *cacheNameWithVGen, SH_OSCache_Info *cacheInfo, UDATA reason)
 {
-	J9PortLibrary *portLibrary = vm->portLibrary;
-	PORT_ACCESS_FROM_PORT(portLibrary);
+	OMRPortLibrary *portLibrary = vm->_runtime->_portLibrary;
+	OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
 	/* Using 'SH_OSCachemmap cacheStruct' breaks the pattern of calling getRequiredConstrBytes(), and then allocating memory.
 	 * However it is consistent with 'SH_OSCachesysv::getCacheStats'.
 	 */
@@ -1415,11 +1415,11 @@ SH_OSCachemmap::getCacheStats(OMR_VM* vm, const char* cacheDirName, const char *
 	Trc_SHR_OSC_Mmap_getCacheStats_Entry(cacheNameWithVGen, cacheInfo);
 
 	getValuesFromShcFilePrefix(portLibrary, cacheNameWithVGen, &versionData);
-	versionData.cacheType = J9PORT_SHR_CACHE_TYPE_PERSISTENT;
+	versionData.cacheType = OMRPORT_SHR_CACHE_TYPE_PERSISTENT;
 	
-	if (removeCacheVersionAndGen(cacheInfo->name, CACHE_ROOT_MAXLEN, J9SH_VERSION_STRING_LEN+1, cacheNameWithVGen) != 0) {
-		return -1;
-	}
+//	if (removeCacheVersionAndGen(cacheInfo->name, CACHE_ROOT_MAXLEN, J9SH_VERSION_STRING_LEN+1, cacheNameWithVGen) != 0) {
+//		return -1;
+//	}
 	
 	if (SHR_STATS_REASON_DESTROY == reason) {
 		reasonForStartup = SHR_STARTUP_REASON_DESTROY;
@@ -1427,17 +1427,17 @@ SH_OSCachemmap::getCacheStats(OMR_VM* vm, const char* cacheDirName, const char *
 		reasonForStartup = SHR_STARTUP_REASON_EXPIRE;
 	}
 
-	cache = (SH_OSCachemmap *) SH_OSCache::newInstance(PORTLIB, &cacheStruct, cacheInfo->name, cacheInfo->generation, &versionData);
+	cache = (SH_OSCachemmap *) SH_OSCache::newInstance(OMRPORTLIB, &cacheStruct, cacheInfo->name, cacheInfo->generation, &versionData);
 	
 	/* We try to open the cache read/write */
-	if (!cache->startup(vm, cacheDirName, vm->sharedCacheAPI->cacheDirPerm, cacheInfo->name, &piconfig, SH_CompositeCacheImpl::getNumRequiredOSLocks(), J9SH_OSCACHE_OPEXIST_STATS, 0, 0/*runtime flags*/, 0, 0, &versionData, NULL, reasonForStartup)) {
+	if (!cache->startup(vm, cacheDirName, vm->sharedCacheAPI->cacheDirPerm, cacheInfo->name, &piconfig, SH_CompositeCacheImpl::getNumRequiredOSLocks(), OMRSH_OSCACHE_OPEXIST_STATS, 0, 0/*runtime flags*/, 0, 0, &versionData, NULL, reasonForStartup)) {
 	
 		/* If that fails - try to open the cache read-only */
-		if (!cache->startup(vm, cacheDirName, vm->sharedCacheAPI->cacheDirPerm, cacheInfo->name, &piconfig, 0, J9SH_OSCACHE_OPEXIST_STATS, 0, 0/*runtime flags*/, J9OSCACHE_OPEN_MODE_DO_READONLY, 0, &versionData, NULL, reasonForStartup)) {
+		if (!cache->startup(vm, cacheDirName, vm->sharedCacheAPI->cacheDirPerm, cacheInfo->name, &piconfig, 0, OMRSH_OSCACHE_OPEXIST_STATS, 0, 0/*runtime flags*/, J9OSCACHE_OPEN_MODE_DO_READONLY, 0, &versionData, NULL, reasonForStartup)) {
 			cache->cleanup();
 			return -1;
 		}
-		inUse = J9SH_OSCACHE_UNKNOWN; /* We can't determine whether there are JVMs attached to a read-only cache */
+		inUse = OMRSH_OSCACHE_UNKNOWN; /* We can't determine whether there are JVMs attached to a read-only cache */
 	
 	} else {
 		/* Try to acquire the attach write lock. This will only succeed if noone else
@@ -1453,11 +1453,11 @@ SH_OSCachemmap::getCacheStats(OMR_VM* vm, const char* cacheDirName, const char *
 		}
 	}
 
-	cacheInfo->lastattach = J9SH_OSCACHE_UNKNOWN;
-	cacheInfo->lastdetach = J9SH_OSCACHE_UNKNOWN;
-	cacheInfo->createtime = J9SH_OSCACHE_UNKNOWN;
-	cacheInfo->os_shmid = (UDATA)J9SH_OSCACHE_UNKNOWN;
-	cacheInfo->os_semid = (UDATA)J9SH_OSCACHE_UNKNOWN;
+	cacheInfo->lastattach = OMRSH_OSCACHE_UNKNOWN;
+	cacheInfo->lastdetach = OMRSH_OSCACHE_UNKNOWN;
+	cacheInfo->createtime = OMRSH_OSCACHE_UNKNOWN;
+	cacheInfo->os_shmid = (UDATA)OMRSH_OSCACHE_UNKNOWN;
+	cacheInfo->os_semid = (UDATA)OMRSH_OSCACHE_UNKNOWN;
 	cacheInfo->nattach = inUse;
 	
 	/* CMVC 177634: Skip calling internalAttach() when destroying the cache */
@@ -1465,7 +1465,7 @@ SH_OSCachemmap::getCacheStats(OMR_VM* vm, const char* cacheDirName, const char *
 		/* The offset of fields createTime, lastAttachedTime, lastDetachedTime in struct OSCache_mmap_header2 are different on 32-bit and 64-bit caches. 
 		 * This depends on OSCachemmap_header_version_current and OSCache_header_version_current not changing in an incompatible way.
 		 */
-		if (J9SH_ADDRMODE == cacheInfo->versionData.addrmode) {
+		if (OMRSH_ADDRMODE == cacheInfo->versionData.addrmode) {
 			IDATA rc;
 			/* Attach to the cache, so we can read the fields in the header */
 			rc = cache->internalAttach(false, cacheInfo->generation);
@@ -1515,7 +1515,7 @@ bool
 SH_OSCachemmap::deleteCacheFile(LastErrorInfo *lastErrorInfo)
 {
 	bool result = true;
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
 	Trc_SHR_OSC_Mmap_deleteCacheFile_entry();
 
@@ -1523,13 +1523,13 @@ SH_OSCachemmap::deleteCacheFile(LastErrorInfo *lastErrorInfo)
 		lastErrorInfo->lastErrorCode = 0;
 	}
 
-	if (-1 == j9file_unlink(_cachePathName)) {
-		I_32 errorCode = j9error_last_error_number();
+	if (-1 == omrfile_unlink(_cachePathName)) {
+		I_32 errorCode = omrerror_last_error_number();
 
-		if (J9PORT_ERROR_FILE_NOENT != errorCode) {
+		if (OMRPORT_ERROR_FILE_NOENT != errorCode) {
 			if (NULL != lastErrorInfo) {
 				lastErrorInfo->lastErrorCode = errorCode;
-				lastErrorInfo->lastErrorMsg = j9error_last_error_message();
+				lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
 			}
 			Trc_SHR_OSC_Mmap_deleteCacheFile_failed();
 			result = false;
@@ -1560,8 +1560,8 @@ SH_OSCachemmap::runExitCode()
 		}
 		releaseHeaderWriteLock(_activeGeneration, NULL);			/* No point checking return value - we're going down */
 	} else {
-		PORT_ACCESS_FROM_PORT(_portLibrary);
-		I_32 myerror = j9error_last_error_number();
+		OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+		I_32 myerror = omrerror_last_error_number();
 		Trc_SHR_OSC_Mmap_runExitCode_acquireHeaderWriteLock_Failed(myerror);
 		Trc_SHR_Assert_ShouldNeverHappen();
 	}
@@ -1569,24 +1569,24 @@ SH_OSCachemmap::runExitCode()
 	Trc_SHR_OSC_Mmap_runExitCode_Exit();
 }
 
-#if defined (J9SHR_MSYNC_SUPPORT)
+#if defined (OMRSHR_MSYNC_SUPPORT)
 /**
  * Synchronise cache updates to disk
  * 
- * This function call j9mmap_msync to synchronise the cache to disk
+ * This function call omrmmap_msync to synchronise the cache to disk
  * 
  * @return 0 on success, -1 on failure
  */
 IDATA
 SH_OSCachemmap::syncUpdates(void* start, UDATA length, U_32 flags)
 {
-	PORT_ACCESS_FROM_PORT(_portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 	
 	IDATA rc;
 	
 	Trc_SHR_OSC_Mmap_syncUpdates_Entry(start, length, flags);
 	
-	rc = j9mmap_msync(start, length, flags);
+	rc = omrmmap_msync(start, length, flags);
 	if (-1 == rc) {
 		Trc_SHR_OSC_Mmap_syncUpdates_badmsync();
 		return -1;
@@ -1622,11 +1622,11 @@ SH_OSCachemmap::getLockCapabilities()
  * @return 0 if the operations has been successful, -1 if an error has occured
  */
 IDATA
-SH_OSCachemmap::setRegionPermissions(J9PortLibrary* portLibrary, void *address, UDATA length, UDATA flags)
+SH_OSCachemmap::setRegionPermissions(OMRPortLibrary* portLibrary, void *address, UDATA length, UDATA flags)
 {
-	PORT_ACCESS_FROM_PORT(portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
 		
-	return j9mmap_protect(address, length, flags);
+	return omrmmap_protect(address, length, flags);
 }
 
 /**
@@ -1637,17 +1637,17 @@ SH_OSCachemmap::setRegionPermissions(J9PortLibrary* portLibrary, void *address, 
  * @return the minimum size of region on which we can control permissions size or 0 if this is unsupported
  */
 UDATA
-SH_OSCachemmap::getPermissionsRegionGranularity(J9PortLibrary* portLibrary)
+SH_OSCachemmap::getPermissionsRegionGranularity(OMRPortLibrary* portLibrary)
 {
-	PORT_ACCESS_FROM_PORT(portLibrary);
+	OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
 
 	/* The code below is used as is in SH_CompositeCacheImpl::initialize()
 	 * for initializing SH_CompositeCacheImpl::_osPageSize during unit testing.
 	 */
 
 	/* This call to capabilities is arguably unnecessary, but it is a good check to do */
-	if (j9mmap_capabilities() & J9PORT_MMAP_CAPABILITY_PROTECT) {
-		return j9mmap_get_region_granularity((void*)_headerStart);
+	if (omrmmap_capabilities() & OMRPORT_MMAP_CAPABILITY_PROTECT) {
+		return omrmmap_get_region_granularity((void*)_headerStart);
 	}
 	return 0;
 }
@@ -1665,15 +1665,15 @@ SH_OSCachemmap::getTotalSize()
 	return (U_32)_actualFileLength;
 }
 
-UDATA 
-SH_OSCachemmap::getJavacoreData(OMR_VM *vm, J9SharedClassJavacoreDataDescriptor* descriptor)
-{
-	descriptor->cacheGen = _activeGeneration;
-	descriptor->shmid = descriptor->semid = -2;
-	descriptor->cacheDir = _cachePathName;
-
-	return 1;
-}
+//UDATA 
+//SH_OSCachemmap::getJavacoreData(OMR_VM *vm, J9SharedClassJavacoreDataDescriptor* descriptor)
+//{
+//	descriptor->cacheGen = _activeGeneration;
+//	descriptor->shmid = descriptor->semid = -2;
+//	descriptor->cacheDir = _cachePathName;
+//
+//	return 1;
+//}
 
 void * 
 SH_OSCachemmap::getAttachedMemory()

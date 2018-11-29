@@ -29,67 +29,67 @@
 #include "shchelp.h"
 #include "ut_omrshr.h"
 
-#define J9SH_OSCACHE_CREATE 			0x1
-#define J9SH_OSCACHE_OPEXIST_DESTROY	0x2
-#define J9SH_OSCACHE_OPEXIST_STATS		0x4
-#define J9SH_OSCACHE_OPEXIST_DO_NOT_CREATE	0x8
-#define J9SH_OSCACHE_UNKNOWN -1
+#define OMRSH_OSCACHE_CREATE 			0x1
+#define OMRSH_OSCACHE_OPEXIST_DESTROY	0x2
+#define OMRSH_OSCACHE_OPEXIST_STATS		0x4
+#define OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE	0x8
+#define OMRSH_OSCACHE_UNKNOWN -1
 
 /* 
  * The different results from attempting to open/create a cache are
  * defined below. Failure cases MUST all be less than zero.
  */
-#define J9SH_OSCACHE_OPENED 2
-#define J9SH_OSCACHE_CREATED 1
-#define J9SH_OSCACHE_FAILURE -1
-#define J9SH_OSCACHE_CORRUPT -2
-#define J9SH_OSCACHE_DIFF_BUILDID -3
-#define J9SH_OSCACHE_OUTOFMEMORY -4
-#define J9SH_OSCACHE_INUSE -5
-#define J9SH_OSCACHE_NO_CACHE -6
+#define OMRSH_OSCACHE_OPENED 2
+#define OMRSH_OSCACHE_CREATED 1
+#define OMRSH_OSCACHE_FAILURE -1
+#define OMRSH_OSCACHE_CORRUPT -2
+#define OMRSH_OSCACHE_DIFF_BUILDID -3
+#define OMRSH_OSCACHE_OUTOFMEMORY -4
+#define OMRSH_OSCACHE_INUSE -5
+#define OMRSH_OSCACHE_NO_CACHE -6
 
-#define J9SH_OSCACHE_HEADER_OK 0
-#define J9SH_OSCACHE_HEADER_WRONG_VERSION -1
-#define J9SH_OSCACHE_HEADER_CORRUPT -2
-#define J9SH_OSCACHE_HEADER_MISSING -3
-#define J9SH_OSCACHE_HEADER_DIFF_BUILDID -4
-#define J9SH_OSCACHE_SEMAPHORE_MISMATCH -5
+#define OMRSH_OSCACHE_HEADER_OK 0
+#define OMRSH_OSCACHE_HEADER_WRONG_VERSION -1
+#define OMRSH_OSCACHE_HEADER_CORRUPT -2
+#define OMRSH_OSCACHE_HEADER_MISSING -3
+#define OMRSH_OSCACHE_HEADER_DIFF_BUILDID -4
+#define OMRSH_OSCACHE_SEMAPHORE_MISMATCH -5
 
-#define J9SH_OSCACHE_READONLY_RETRY_COUNT 10
-#define J9SH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS 10
+#define OMRSH_OSCACHE_READONLY_RETRY_COUNT 10
+#define OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS 10
 
 #define OSCACHE_LOWEST_ACTIVE_GEN 1
 
 /* Always increment this value by 2. For testing we use the (current generation - 1) and expect the cache contents to be compatible. */
 #define OSCACHE_CURRENT_CACHE_GEN 35
 
-#define J9SH_VERSION(versionMajor, versionMinor) (versionMajor*100 + versionMinor)
+#define OMRSH_VERSION(versionMajor, versionMinor) (versionMajor*100 + versionMinor)
 
-#define J9SH_GET_VERSION_STRING(portLib, versionStr, version, modlevel, feature, addrmode)\
-											 j9str_printf(portLib, versionStr, J9SH_VERSION_STRING_LEN, J9SH_VERSION_STRING_SPEC,\
+#define OMRSH_GET_VERSION_STRING(portLib, versionStr, version, modlevel, feature, addrmode)\
+											 omrstr_printf(versionStr, OMRSH_VERSION_STRING_LEN, OMRSH_VERSION_STRING_SPEC,\
 											 version, modlevel, feature, addrmode)
 
-#define J9SH_GET_VERSION_STRING_JAVA9ANDLOWER(portLib, versionStr, version, modlevel, feature, addrmode)\
-											 j9str_printf(portLib, versionStr, J9SH_VERSION_STRING_LEN - J9SH_VERSTRLEN_INCREASED_SINCEJAVA10, J9SH_VERSION_STRING_SPEC,\
+#define OMRSH_GET_VERSION_STRING_JAVA9ANDLOWER(portLib, versionStr, version, modlevel, feature, addrmode)\
+											 omrstr_printf(versionStr, OMRSH_VERSION_STRING_LEN - OMRSH_VERSTRLEN_INCREASED_SINCEJAVA10, OMRSH_VERSION_STRING_SPEC,\
 											 version, modlevel, feature, addrmode)
 
-#define J9SH_GET_VERSION_G07TO29_STRING(portLib, versionStr, version, modlevel, addrmode)\
-											 j9str_printf(portLib, versionStr, J9SH_VERSION_STRING_LEN - J9SH_VERSTRLEN_INCREASED_SINCEG29 - J9SH_VERSTRLEN_INCREASED_SINCEJAVA10, J9SH_VERSION_STRING_G07TO29_SPEC,\
+#define OMRSH_GET_VERSION_G07TO29_STRING(portLib, versionStr, version, modlevel, addrmode)\
+											 omrstr_printf(versionStr, OMRSH_VERSION_STRING_LEN - OMRSH_VERSTRLEN_INCREASED_SINCEG29 - OMRSH_VERSTRLEN_INCREASED_SINCEJAVA10, OMRSH_VERSION_STRING_G07TO29_SPEC,\
 											 version, modlevel, addrmode)
 
-#define J9SH_GET_VERSION_G07ANDLOWER_STRING(portLib, versionStr, version, modlevel, addrmode)\
-											 j9str_printf(portLib, versionStr, J9SH_VERSION_STRING_LEN - J9SH_VERSTRLEN_INCREASED_SINCEG29 - J9SH_VERSTRLEN_INCREASED_SINCEJAVA10, J9SH_VERSION_STRING_G07ANDLOWER_SPEC,\
+#define OMRSH_GET_VERSION_G07ANDLOWER_STRING(portLib, versionStr, version, modlevel, addrmode)\
+											 omrstr_printf(versionStr, OMRSH_VERSION_STRING_LEN - OMRSH_VERSTRLEN_INCREASED_SINCEG29 - OMRSH_VERSTRLEN_INCREASED_SINCEJAVA10, OMRSH_VERSION_STRING_G07ANDLOWER_SPEC,\
 											 version, modlevel, addrmode)
 
-#define OSC_TRACE(var) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_INFO, var)
-#define OSC_TRACE1(var, p1) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_INFO, var, p1)
-#define OSC_TRACE2(var, p1, p2) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_INFO, var, p1, p2)
-#define OSC_ERR_TRACE(var) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_ERROR, var)
-#define OSC_ERR_TRACE1(var, p1) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_ERROR, var, p1)
-#define OSC_ERR_TRACE2(var, p1, p2) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_ERROR, var, p1, p2)
-#define OSC_ERR_TRACE4(var, p1, p2, p3, p4) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_ERROR, var, p1, p2, p3, p4)
-#define OSC_WARNING_TRACE(var) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_WARNING, var)
-#define OSC_WARNING_TRACE1(var, p1) if (_verboseFlags) j9nls_printf(PORTLIB, J9NLS_WARNING, var, p1)
+#define OSC_TRACE(var) if (_verboseFlags) omrnls_printf(J9NLS_INFO, var)
+#define OSC_TRACE1(var, p1) if (_verboseFlags) omrnls_printf(J9NLS_INFO, var, p1)
+#define OSC_TRACE2(var, p1, p2) if (_verboseFlags) omrnls_printf(J9NLS_INFO, var, p1, p2)
+#define OSC_ERR_TRACE(var) if (_verboseFlags) omrnls_printf(J9NLS_ERROR, var)
+#define OSC_ERR_TRACE1(var, p1) if (_verboseFlags) omrnls_printf(J9NLS_ERROR, var, p1)
+#define OSC_ERR_TRACE2(var, p1, p2) if (_verboseFlags) omrnls_printf(J9NLS_ERROR, var, p1, p2)
+#define OSC_ERR_TRACE4(var, p1, p2, p3, p4) if (_verboseFlags) omrnls_printf(J9NLS_ERROR, var, p1, p2, p3, p4)
+#define OSC_WARNING_TRACE(var) if (_verboseFlags) omrnls_printf(J9NLS_WARNING, var)
+#define OSC_WARNING_TRACE1(var, p1) if (_verboseFlags) omrnls_printf(J9NLS_WARNING, var, p1)
 
 /**
  * @struct SH_OSCache_Info

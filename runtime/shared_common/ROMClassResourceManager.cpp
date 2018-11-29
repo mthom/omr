@@ -25,9 +25,9 @@
  */
 
 #include "ROMClassResourceManager.hpp"
-#include "ut_j9shr.h"
-#include "j9shrnls.h"
-#include "j9consts.h"
+#include "ut_omrshr.h"
+#include "shrnls.h"
+//#include "j9consts.h"
 #include <string.h>
 
 SH_ROMClassResourceManager::SH_ROMClassResourceManager() :
@@ -42,12 +42,12 @@ SH_ROMClassResourceManager::~SH_ROMClassResourceManager()
 
 /* Creates a new hashtable. Pre-req: portLibrary must be initialized */
 J9HashTable* 
-SH_ROMClassResourceManager::localHashTableCreate(J9VMThread* currentThread, U_32 initialEntries)
+SH_ROMClassResourceManager::localHashTableCreate(OMR_VMThread* currentThread, U_32 initialEntries)
 {
 	J9HashTable* returnVal;
 
 	Trc_SHR_RRM_localHashTableCreate_Entry(currentThread, initialEntries);
-	returnVal = hashTableNew(OMRPORT_FROM_J9PORT(_portlib), (char*)_rrmHashTableName, initialEntries, sizeof(HashTableEntry), sizeof(char*), 0, J9MEM_CATEGORY_CLASSES, SH_ROMClassResourceManager::rrmHashFn, SH_ROMClassResourceManager::rrmHashEqualFn, NULL, (void*)currentThread->javaVM->internalVMFunctions);
+	returnVal = hashTableNew(_portlib, (char*)_rrmHashTableName, initialEntries, sizeof(HashTableEntry), sizeof(char*), 0, OMRMEM_CATEGORY_CLASSES, SH_ROMClassResourceManager::rrmHashFn, SH_ROMClassResourceManager::rrmHashEqualFn, NULL, NULL); //(void*)currentThread->javaVM->internalVMFunctions);
 	_hashTableGetNumItemsDoFn = SH_ROMClassResourceManager::customCountItemsInList;
 	Trc_SHR_RRM_localHashTableCreate_Exit(currentThread, returnVal);
 	return returnVal;
@@ -92,7 +92,7 @@ SH_ROMClassResourceManager::HashTableEntry::~HashTableEntry()
 }
 
 SH_ROMClassResourceManager::HashTableEntry* 
-SH_ROMClassResourceManager::rrmTableAddHelper(J9VMThread* currentThread, HashTableEntry* newEntry, SH_CompositeCache* cachelet)
+SH_ROMClassResourceManager::rrmTableAddHelper(OMR_VMThread* currentThread, HashTableEntry* newEntry, SH_CompositeCache* cachelet)
 {
 	HashTableEntry* rc = NULL;
 
@@ -100,7 +100,7 @@ SH_ROMClassResourceManager::rrmTableAddHelper(J9VMThread* currentThread, HashTab
 	
 	if ((rc = (HashTableEntry*)hashTableAdd(_hashTable, newEntry)) == NULL) {
 		Trc_SHR_RRM_rrmTableAdd_Exception1(currentThread);
-		PORT_ACCESS_FROM_PORT(_portlib);
+		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 		M_ERR_TRACE(J9NLS_SHRC_RRM_FAILED_CREATE_HASHTABLE_ENTRY);
 	}
 	Trc_SHR_RRM_rrmTableAdd_HashtableAdd(currentThread, rc);
@@ -110,7 +110,7 @@ SH_ROMClassResourceManager::rrmTableAddHelper(J9VMThread* currentThread, HashTab
 }
 
 SH_ROMClassResourceManager::HashTableEntry* 
-SH_ROMClassResourceManager::rrmTableAdd(J9VMThread* currentThread, const ShcItem* item, SH_CompositeCache* cachelet)
+SH_ROMClassResourceManager::rrmTableAdd(OMR_VMThread* currentThread, const ShcItem* item, SH_CompositeCache* cachelet)
 {
 	UDATA key = getKeyForItem(item);
 	HashTableEntry newItem(key, item, cachelet);
@@ -125,7 +125,7 @@ SH_ROMClassResourceManager::rrmTableAdd(J9VMThread* currentThread, const ShcItem
 		}
 		unlockHashTable(currentThread, _rrmAddFnName);
 	} else {
-		PORT_ACCESS_FROM_PORT(_portlib);
+		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 		M_ERR_TRACE(J9NLS_SHRC_RRM_FAILED_ENTER_RRMMUTEX);
 		Trc_SHR_RRM_rrmTableAdd_Exit1(currentThread, MONITOR_ENTER_RETRY_TIMES);
 		return NULL;
@@ -140,7 +140,7 @@ SH_ROMClassResourceManager::rrmTableAdd(J9VMThread* currentThread, const ShcItem
  * This assumes the hash is the key, and all keys are unique.
  */
 SH_ROMClassResourceManager::HashTableEntry* 
-SH_ROMClassResourceManager::rrmTableAddPrime(J9VMThread* currentThread, UDATA key, SH_CompositeCache* cachelet)
+SH_ROMClassResourceManager::rrmTableAddPrime(OMR_VMThread* currentThread, UDATA key, SH_CompositeCache* cachelet)
 {
 	HashTableEntry newItem(key, NULL, cachelet);
 	HashTableEntry* rc = NULL;
@@ -149,7 +149,7 @@ SH_ROMClassResourceManager::rrmTableAddPrime(J9VMThread* currentThread, UDATA ke
 		rc = rrmTableAddHelper(currentThread, &newItem, cachelet);
 		unlockHashTable(currentThread, _rrmAddFnName);
 	} else {
-		PORT_ACCESS_FROM_PORT(_portlib);
+		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 		M_ERR_TRACE(J9NLS_SHRC_RRM_FAILED_ENTER_RRMMUTEX);
 		Trc_SHR_RRM_rrmTableAdd_Exit1(currentThread, MONITOR_ENTER_RETRY_TIMES);
 		return NULL;
@@ -161,7 +161,7 @@ SH_ROMClassResourceManager::rrmTableAddPrime(J9VMThread* currentThread, UDATA ke
 
 /* Hashtable lookup function. Returns value if found, otherwise returns NULL */
 SH_ROMClassResourceManager::HashTableEntry* 
-SH_ROMClassResourceManager::rrmTableLookup(J9VMThread* currentThread, UDATA key)
+SH_ROMClassResourceManager::rrmTableLookup(OMR_VMThread* currentThread, UDATA key)
 {
 	HashTableEntry searchKey(key, 0, NULL);
 	HashTableEntry* returnVal = NULL;
@@ -204,7 +204,7 @@ SH_ROMClassResourceManager::rrmTableLookup(J9VMThread* currentThread, UDATA key)
 		unlockHashTable(currentThread, _rrmLookupFnName);
 #endif
 	} else {
-		PORT_ACCESS_FROM_PORT(_portlib);
+		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 		M_ERR_TRACE(J9NLS_SHRC_RRM_FAILED_ENTER_RRMMUTEX);
 		Trc_SHR_RRM_rrmTableLookup_Exit1(currentThread, MONITOR_ENTER_RETRY_TIMES);
 		return NULL;
@@ -220,7 +220,7 @@ SH_ROMClassResourceManager::rrmTableLookup(J9VMThread* currentThread, UDATA key)
 /* Hashtable remove function. Returns value if found, otherwise returns NULL
  * Returns 0 on success and 1 on failure */
 UDATA 
-SH_ROMClassResourceManager::rrmTableRemove(J9VMThread* currentThread, UDATA key)
+SH_ROMClassResourceManager::rrmTableRemove(OMR_VMThread* currentThread, UDATA key)
 {
 	IDATA retryCount = 0;
 	HashTableEntry searchKey(key, 0, NULL);
@@ -238,7 +238,7 @@ SH_ROMClassResourceManager::rrmTableRemove(J9VMThread* currentThread, UDATA key)
 		retryCount++;
 	}
 	if (retryCount==MONITOR_ENTER_RETRY_TIMES) {
-		PORT_ACCESS_FROM_PORT(_portlib);
+		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 		M_ERR_TRACE(J9NLS_SHRC_RRM_FAILED_ENTER_RRMMUTEX);
 		Trc_SHR_RRM_rrmTableRemove_Exit1(currentThread, retryCount);
 		return 1;
@@ -260,7 +260,7 @@ SH_ROMClassResourceManager::rrmTableRemove(J9VMThread* currentThread, UDATA key)
  * @return true if successful, false otherwise
  */
 bool
-SH_ROMClassResourceManager::storeNew(J9VMThread* currentThread, const ShcItem* itemInCache, SH_CompositeCache* cachelet)
+SH_ROMClassResourceManager::storeNew(OMR_VMThread* currentThread, const ShcItem* itemInCache, SH_CompositeCache* cachelet)
 {
 	HashTableEntry* entry = NULL;
 
@@ -300,7 +300,7 @@ SH_ROMClassResourceManager::storeNew(J9VMThread* currentThread, const ShcItem* i
  * @return The resource data if found, or null
  */
 const void*
-SH_ROMClassResourceManager::findResource(J9VMThread* currentThread, UDATA resourceKey)
+SH_ROMClassResourceManager::findResource(OMR_VMThread* currentThread, UDATA resourceKey)
 {
 	const void* returnVal = NULL;
 	HashTableEntry* entry = NULL;
@@ -322,7 +322,7 @@ SH_ROMClassResourceManager::findResource(J9VMThread* currentThread, UDATA resour
 }
 
 UDATA
-SH_ROMClassResourceManager::markStale(J9VMThread* currentThread, UDATA resourceKey, const ShcItem* itemInCache)
+SH_ROMClassResourceManager::markStale(OMR_VMThread* currentThread, UDATA resourceKey, const ShcItem* itemInCache)
 {
 	UDATA returnVal = 1;
 
@@ -333,7 +333,7 @@ SH_ROMClassResourceManager::markStale(J9VMThread* currentThread, UDATA resourceK
 	Trc_SHR_RRM_markStale_Entry(currentThread, resourceKey, itemInCache);
 	
 	if ((returnVal = rrmTableRemove(currentThread, resourceKey))==0) {
-		_cache->markItemStale(currentThread, itemInCache, false);
+//		_cache->markItemStale(currentThread, itemInCache, false);
 	}
 	
 	Trc_SHR_RRM_markStale_Exit(currentThread, returnVal);
@@ -342,7 +342,7 @@ SH_ROMClassResourceManager::markStale(J9VMThread* currentThread, UDATA resourceK
 }
 
 bool 
-SH_ROMClassResourceManager::permitAccessToResource(J9VMThread* currentThread)
+SH_ROMClassResourceManager::permitAccessToResource(OMR_VMThread* currentThread)
 {
 	return _accessPermitted;
 }
@@ -418,7 +418,7 @@ SH_ROMClassResourceManager::rrmCollectHashOfEntry(void* entry, void* userData)
  * Collect the hash entry hashes into a cachelet hint.
  */
 IDATA
-SH_ROMClassResourceManager::rrmCollectHashes(J9VMThread* currentThread, SH_CompositeCache* cachelet, CacheletHints* hints)
+SH_ROMClassResourceManager::rrmCollectHashes(OMR_VMThread* currentThread, SH_CompositeCache* cachelet, CacheletHints* hints)
 {
 	PORT_ACCESS_FROM_VMC(currentThread);
 	CacheletHintHashData hashes;
@@ -435,7 +435,7 @@ SH_ROMClassResourceManager::rrmCollectHashes(J9VMThread* currentThread, SH_Compo
 		hints->data = NULL;
 		return 0;
 	}
-	hints->data = (U_8*)j9mem_allocate_memory(hints->length, J9MEM_CATEGORY_CLASSES);
+	hints->data = (U_8*)omrmem_allocate_memory(hints->length, OMRMEM_CATEGORY_CLASSES);
 	if (!hints->data) {
 		/* TODO trace alloc failure */
 		hints->length = 0;
@@ -451,7 +451,7 @@ SH_ROMClassResourceManager::rrmCollectHashes(J9VMThread* currentThread, SH_Compo
 }
 
 void
-SH_ROMClassResourceManager::fixupHintsForSerialization(J9VMThread* vmthread,
+SH_ROMClassResourceManager::fixupHintsForSerialization(OMR_VMThread* vmthread,
 			UDATA dataType, UDATA dataLen, U_8* data,
 			IDATA deployedOffset, void* serializedROMClassStartAddress) 
 {
@@ -491,7 +491,7 @@ SH_ROMClassResourceManager::fixupHintsForSerialization(J9VMThread* vmthread,
  * @retval -1 failure
  */
 IDATA
-SH_ROMClassResourceManager::createHintsForCachelet(J9VMThread* vmthread, SH_CompositeCache* cachelet, CacheletHints* hints)
+SH_ROMClassResourceManager::createHintsForCachelet(OMR_VMThread* vmthread, SH_CompositeCache* cachelet, CacheletHints* hints)
 {
 	Trc_SHR_Assert_True(hints != NULL);
 
@@ -506,7 +506,7 @@ SH_ROMClassResourceManager::createHintsForCachelet(J9VMThread* vmthread, SH_Comp
  * only called with hints of the right data type 
  */
 IDATA
-SH_ROMClassResourceManager::primeHashtables(J9VMThread* vmthread, SH_CompositeCache* cachelet, U_8* hintsData, UDATA dataLength)
+SH_ROMClassResourceManager::primeHashtables(OMR_VMThread* vmthread, SH_CompositeCache* cachelet, U_8* hintsData, UDATA dataLength)
 {
 	UDATA* hashSlot = (UDATA*)hintsData;
 	UDATA hintCount = 0;

@@ -972,7 +972,7 @@ SH_CompositeCacheImpl::startupNested(OMR_VMThread* currentThread)
 	
 	Trc_SHR_Assert_True(_parent->_commonCCInfo != NULL);
 	this->_commonCCInfo = _parent->_commonCCInfo;
-	return startup(currentThread, &tempConfig, _nestedMemory, _runtimeFlags, _verboseFlags, "A_CACHELET", "CACHELET_ROOT", J9SH_DIRPERM_ABSENT, &actualSize, &ignore, false, &ignore2);
+	return startup(currentThread, &tempConfig, _nestedMemory, _runtimeFlags, _verboseFlags, "A_CACHELET", "CACHELET_ROOT", OMRSH_DIRPERM_ABSENT, &actualSize, &ignore, false, &ignore2);
 }
 
 IDATA 
@@ -1032,7 +1032,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 	SH_SharedCacheHeaderInit* headerInit = SH_SharedCacheHeaderInit::newInstance(_newHdrPtr);
 	J9PortShcVersion versionData;
 	I_32 openMode = 0;
-	UDATA createFlags = J9SH_OSCACHE_CREATE;
+	UDATA createFlags = OMRSH_OSCACHE_CREATE;
 	bool hasWriteMutex = SH_CompositeCacheImpl::hasWriteMutex(currentThread);
 	bool hasReadWriteMutex = SH_CompositeCacheImpl::hasReadWriteMutex(currentThread);
 	bool doReleaseWriteMutex = false;
@@ -1070,9 +1070,9 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 			openMode |= J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE;
 		}
 		if (*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_STATS) {
-			createFlags = J9SH_OSCACHE_OPEXIST_STATS;
+			createFlags = OMRSH_OSCACHE_OPEXIST_STATS;
 		} else if (OMR_ARE_ANY_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_SNAPSHOT | OMRSHR_RUNTIMEFLAG_DO_NOT_CREATE_CACHE)) {
-			createFlags = J9SH_OSCACHE_OPEXIST_DO_NOT_CREATE;
+			createFlags = OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE;
 		}
 	}
 		
@@ -1165,7 +1165,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 		_readOnlyOSCache = _oscache->isRunningReadOnly();
 
 		if (OSCStarted == false) {
-			if (_oscache->getError() == J9SH_OSCACHE_CORRUPT) {
+			if (_oscache->getError() == OMRSH_OSCACHE_CORRUPT) {
 				/* cache is corrupt, trigger hook to generate a system dump */
 //				if (0 ==(*_runtimeFlags & OMRSHR_RUNTIMEFLAG_DISABLE_CORRUPT_CACHE_DUMPS)) {
 //					TRIGGER_J9HOOK_VM_CORRUPT_CACHE(vm->hookInterface, currentThread);
@@ -1177,7 +1177,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 			}
 			/* _oscache returns failure - no point marking it corrupted as we are not able to attach to the cache */
 			Trc_SHR_CC_startup_Exit2(currentThread);
-			if (_oscache->getError() == J9SH_OSCACHE_NO_CACHE) {
+			if (_oscache->getError() == OMRSH_OSCACHE_NO_CACHE) {
 				return CC_STARTUP_NO_CACHE;
 			}
 			return CC_STARTUP_FAILED;
@@ -1335,8 +1335,8 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 	                /* The cache is about to undergo change, so mark the CRC as invalid */
 					_theca->crcValid = 0;
 				} else {
-					while ((isCacheInitComplete() == false) && (retryCntr < J9SH_OSCACHE_READONLY_RETRY_COUNT)) {
-						omrthread_sleep(J9SH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS);
+					while ((isCacheInitComplete() == false) && (retryCntr < OMRSH_OSCACHE_READONLY_RETRY_COUNT)) {
+						omrthread_sleep(OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS);
 						++retryCntr;
 					}
 					if (isCacheInitComplete() == false) {
@@ -1648,12 +1648,12 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 		} else {
 			rc = CC_STARTUP_FAILED;
 			if (_parent == NULL) {
-				if (_oscache->getError() == J9SH_OSCACHE_CORRUPT) {
+				if (_oscache->getError() == OMRSH_OSCACHE_CORRUPT) {
 					Trc_SHR_CC_startup_Event6(currentThread);
 					/* no need to store corruption context as it has already been done during _oscache->attach(). */
 					setCorruptCache(currentThread);
 					rc = CC_STARTUP_CORRUPT;
-				} else if (_oscache->getError() == J9SH_OSCACHE_DIFF_BUILDID) {
+				} else if (_oscache->getError() == OMRSH_OSCACHE_DIFF_BUILDID) {
 					Trc_SHR_CC_startup_Event7(currentThread);
 					if (OMR_ARE_ANY_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_DO_NOT_CREATE_CACHE)) {
 						/* do not reset the cache, but print out a error message about the buildID mismatch */

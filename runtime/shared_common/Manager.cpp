@@ -28,8 +28,8 @@
 #include "Manager.hpp"
 #include "Managers.hpp"
 #include "SharedCache.hpp"
-//#include "ut_j9shr.h"
-//#include "j9shrnls.h"
+#include "ut_omrshr.h"
+#include "shrnls.h"
 #include "CacheMap.hpp"
 #include "AtomicSupport.hpp"
 
@@ -161,7 +161,7 @@ IDATA
 SH_Manager::initializeHashTable(OMR_VMThread* currentThread)
 {
 	IDATA returnVal = 0;
-	PORT_ACCESS_FROM_PORT(_portlib);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 
 	Trc_SHR_M_initializeHashTable_Entry(currentThread, _managerType);
 
@@ -234,7 +234,7 @@ SH_Manager::startup(OMR_VMThread* currentThread, U_64* runtimeFlags_, UDATA verb
 	_htEntries = getHashTableEntriesFromCacheSize(cacheSizeBytes);
 
 	if (omrthread_monitor_init(&_htMutex, 0)) {
-		PORT_ACCESS_FROM_PORT(_portlib);
+		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 		M_ERR_TRACE(J9NLS_SHRC_M_FAILED_CREATE_MUTEX);
 		Trc_SHR_M_startup_Exit2(currentThread);
 		goto _startupFailed;
@@ -388,7 +388,7 @@ SH_Manager::hllTableAdd(OMR_VMThread* currentThread, const J9Pool* linkPool, con
 {
 	HashLinkedListImpl* newItem;
 	IDATA retryCount = 0;
-	PORT_ACCESS_FROM_PORT(_portlib);
+	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 	
 	Trc_SHR_Assert_True(key != NULL);
 	Trc_SHR_M_hllTableAdd_Entry(currentThread, OMRUTF8_LENGTH(key), OMRUTF8_DATA(key), item);
@@ -463,7 +463,7 @@ SH_Manager::hllTableLookup(OMR_VMThread* currentThread, const char* name, U_16 n
 exit_lockFailed:
 #endif
 
-		PORT_ACCESS_FROM_PORT(_portlib);
+		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 		M_ERR_TRACE(J9NLS_SHRC_M_FAILED_ENTER_HTMUTEX);
 		Trc_SHR_M_hllTableLookup_Exit1(currentThread, MONITOR_ENTER_RETRY_TIMES);
 		return NULL;
@@ -557,7 +557,7 @@ SH_Manager::startupHintCachelets(OMR_VMThread* currentThread, UDATA hint)
 /* Creates a new link, adds it to the hashtable and links it to the correct list.
  * Returns the newly created link or NULL if there was an error */
 SH_Manager::HashLinkedListImpl* 
-SH_Manager::hllTableUpdate(J9VMThread* currentThread, const J9Pool* linkPool, const OMRUTF8* key, const ShcItem* item, SH_CompositeCache* cachelet)
+SH_Manager::hllTableUpdate(OMR_VMThread* currentThread, const J9Pool* linkPool, const OMRUTF8* key, const ShcItem* item, SH_CompositeCache* cachelet)
 {
 	HashLinkedListImpl* newLink = NULL;
 	HashLinkedListImpl* addToList = NULL;
@@ -706,7 +706,7 @@ SH_Manager::hllCountCacheletHashes(void* entry, void* userData)
  * Collect the hash entry hashes into a cachelet hint.
  */
 IDATA
-SH_Manager::hllCollectHashes(J9VMThread* currentThread, SH_CompositeCache* cachelet, CacheletHints* hints)
+SH_Manager::hllCollectHashes(OMR_VMThread* currentThread, SH_CompositeCache* cachelet, CacheletHints* hints)
 {
 	PORT_ACCESS_FROM_VMC(currentThread);
 	CacheletHintHashData hashes;
@@ -795,7 +795,7 @@ SH_Manager::countItemsInList(void* entry, void* opaque)
  * TODO: Protect these cache area calls with a mutex
  */
 SH_CompositeCacheImpl* 
-SH_Manager::getCacheAreaForData(SH_CacheMap * cm, J9VMThread* currentThread, UDATA dataType, UDATA dataLength)
+SH_Manager::getCacheAreaForData(SH_CacheMap * cm, OMR_VMThread* currentThread, UDATA dataType, UDATA dataLength)
 {
 	if (_cacheletListHead != NULL) {
 		CacheletListItem* walk = _cacheletListHead;
@@ -863,13 +863,13 @@ SH_Manager::canShareNewCacheletsWithOtherManagers()
 
 /* Default implementation does nothing. Managers wanting to create hints should override */
 IDATA
-SH_Manager::primeHashtables(J9VMThread* vmthread, SH_CompositeCache* cachelet, U_8* hintsData, UDATA datalength)
+SH_Manager::primeHashtables(OMR_VMThread* vmthread, SH_CompositeCache* cachelet, U_8* hintsData, UDATA datalength)
 {
 	return 0;
 }
 
 IDATA
-SH_Manager::primeFromHints(J9VMThread* vmthread, SH_CompositeCache* cachelet, U_8* hintsData, UDATA datalength)
+SH_Manager::primeFromHints(OMR_VMThread* vmthread, SH_CompositeCache* cachelet, U_8* hintsData, UDATA datalength)
 {
 	if (_state != MANAGER_STATE_STARTED) {
 		Trc_SHR_Assert_ShouldNeverHappen();
@@ -883,7 +883,7 @@ SH_Manager::primeFromHints(J9VMThread* vmthread, SH_CompositeCache* cachelet, U_
 }
 
 IDATA
-SH_Manager::generateHints(J9VMThread* vmthread, CacheletMetadataArray* metadataArray)
+SH_Manager::generateHints(OMR_VMThread* vmthread, CacheletMetadataArray* metadataArray)
 {
 	UDATA i, j;
 	CacheletMetadata* current;  
@@ -919,7 +919,7 @@ SH_Manager::generateHints(J9VMThread* vmthread, CacheletMetadataArray* metadataA
 }
 
 IDATA
-SH_Manager::freeHintData(J9VMThread* vmthread, CacheletMetadataArray* metadataArray)
+SH_Manager::freeHintData(OMR_VMThread* vmthread, CacheletMetadataArray* metadataArray)
 {
 	UDATA i, j;
 	CacheletMetadata* current;
@@ -956,7 +956,7 @@ SH_Manager::freeHintData(J9VMThread* vmthread, CacheletMetadataArray* metadataAr
  * @retval -1 failure
  */
 IDATA 
-SH_Manager::createHintsForCachelet(J9VMThread* vmthread, SH_CompositeCache* cachelet, CacheletHints* hints)
+SH_Manager::createHintsForCachelet(OMR_VMThread* vmthread, SH_CompositeCache* cachelet, CacheletHints* hints)
 {
 	if (!canCreateHints()) {
 		Trc_SHR_Assert_ShouldNeverHappen();
