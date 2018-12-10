@@ -254,7 +254,11 @@ omrshmem_openDeprecated (struct OMRPortLibrary *portLibrary, const char* cacheDi
 		omrshmem_controlBaseFileFormat controlinfo;
 		uintptr_t size = 0;
 		struct shmid_ds shminfo;
-
+		shminfo.shm_segsz = 0; // MARK: this initialization
+				       // may screw things up. but on
+				       // volvo, it's necessary for
+				       // OMR to compile.
+		
 		if (readOlderNonZeroByteControlFile(portLibrary, fd, &controlinfo) != OMRSH_SUCCESS) {
 			Trc_PRT_shmem_omrshmem_openDeprecated_Message("Error: could not read deprecated control file.");
 			goto error;

@@ -20,11 +20,9 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 ################################################################################
 
-include(OmrCompilerSupport)
-
 omr_add_tracegen(omrshr.tdf)
 
-set(OMR_SHR_COMMON_OBJECTS
+add_library(shared_cache STATIC
         shrinit.cpp
 	AttachedDataManagerImpl.cpp
 	ByteDataManagerImpl.cpp
@@ -53,11 +51,11 @@ set(OMR_SHR_COMMON_OBJECTS
 )
 
 # Create shared class library.
-create_omr_compiler_library(
-	NAME    shared_cache
-	OBJECTS ${OMR_SHR_COMMON_OBJECTS}
-#	DEFINES PROD_WITH_ASSUMES JITTEST
-)
+# create_omr_compiler_library(
+# 	NAME    shared_cache
+# 	OBJECTS ${OMR_SHR_COMMON_OBJECTS}
+# #	DEFINES PROD_WITH_ASSUMES JITTEST
+# )
 
 target_include_directories(shared_cache
 	PRIVATE

@@ -789,7 +789,7 @@ called enoughSpace, which is self-descriptive.
 
 It moves onto checking that 'enoughAvailableSpace' is true, which is
 so if enoughSpace is true, and usedBytes + usedBytesInc <=
-softMaxValue. The soft max, guy, not the hard max! Unsure of the
+softMaxValue. The soft max, not the hard max! Unsure of the
 distinction.
 
 Any allocate type that isn't AOT or JIT counts as metadata! According
@@ -883,12 +883,14 @@ mutex. The comments say as much. The header and read/write are
 unprotected, the cache is locked/unlocked, and then the header and
 read/write area are protected again. 
 
+
+
 --
 
 There are many more secrets of the CompositeCache to be discovered,
 and for that we have to see how it's being used in the wild,
 probably!! For instance, many of CompositeCache's features -- reader
-count and writer count -- are outward facing, and don't affects the
+count and writer count -- are outward facing, and don't affect the
 internals of the cache beyond their values being
 manipulated. Similarly, there are getter/setter functions for fields
 like _next.. that point to subsequent caches in a chain of caches (the
@@ -979,5 +981,444 @@ Let's take a look at how 'findCompiledMethod' works. It takes a
 J9ROMMethod, the VM current thread, and parameters called
 dataStart, codeStart, codeSize, and forceReplace.
 
+--
+
 Most of the work are delegated to the SH_Managers, whichever are
 appropriate for the desired data. So we should probably refer to them!
+
+The ROMClassResourceManager, once SH_CacheMap->storeCompiledMethod
+gets it successfully, is passed to the cache map's
+storeROMClassResource method. In storeROMClassResource, we start by
+emitting some trace messages, and calling
+permitAccessToResource. Which is just a getter that returns the field
+_accessPermitted from localRRM, the SH_ROMClassResourceManager object
+storeCompiledMethod passed to storeROMClassResource. If access is not
+permitted, we return an error, emit a trace msg, etc.
+
+Otherwise, we enter the write mutex on _ccHead, which is at the head
+of the composite cache chain (making _ccHead a composite cache). If we
+can't get the write mutex, once again, we return with a resource store
+error.
+
+Then we call runEntryPointChecks. According to the comments, it should
+be run before any find/store operation made to the cache. With either
+the read or write mutex held, if other threads are active. As an
+overview.. it checks these things:
+
+1) Is the head corrupt? If yes, exit with error.
+
+2) Is the address out of the bounds of the cache? If yes, exit with error.
+
+3) Is the cache running in read-only mode? If not, do we have the
+write mutex? If we have the write mutex, check for a crash. If there
+was a crash, fail and exit. If we don't have the write mutex.. keep going.
+
+Next, refresh the hash tables! Do this by calling
+refreshHashtables. Per the comments, it "update[s] hashtables with new
+data that might have appeared in the cache." The refresh mutex is held
+throughout its execution, which makes it thread safe!! We don't need
+to hold the write mutex if we have the refresh mutex. I should
+specify, refreshHashtables enters the refresh mutex, not its caller.
+
+Once the refresh mutex is held, we call readCacheUpdates. From it, we
+call readCache. readCache expects to hold either the read or refresh
+mutex. readCache walks the cache items using the nextEntry function in
+a do/while loop. It retrieves each entry as a ShcItem*. For those
+non-NULL items, it finds the suitable Manager type, belonging to the
+CompositeCache. It does this by calling getAndStartManagerForType.
+Each manager needs to be initialized.. this is all that is meant by
+'start'. They don't run on dedicated threads or anything like that.
+
+Anyway, this returns an SH_Manager*, which in actuality points to one
+of the manager subclass objects. We call storeNew on that manager
+object, with the item and a SH_CompositeCacheImpl* (named cache) as
+parameters. From the call site in readCacheUpdates, this is none other
+than _cc, the cache map's current cache. Which actually does the
+action of storing the item in the *manager's* hashtable, the field
+_hashTable inside SH_Manager, the manager abstract class. A resource
+can be stored inside the cache *before* it is registered in the
+manager of the corresponding type.
+
+Before we return to discussing readCache, an interlude: what does it
+mean for a cache item to be stale?? We never bothered answering that
+above.. shame on us! SH_CacheMap::isStale calls
+SH_CompositeCacheImpl::stale, which is little more than a wrapper
+around the macro CCITEMSTALE. It's defined like this:
+
+#define CCITEMSTALE(ih) (J9SHR_READMEM((ih)->itemLen) & 0x1)
+
+So, we're checking to see if a single bit is set! This doesn't answer
+what staleness means exactly.. or at all, depending on your
+definition. For now, it suffices to know that an item is stale if it's
+been invalidated in some way. Looking to the implementation of
+storeNew in ROMClassResourceManager, we see that stale entries found
+within the manager hash table are deleted. So it's a fair assumption
+that, as the adjective 'stale' implies, the items are no longer good,
+and can be discarded unhesitantly.
+
+The do/while loop continues iterating until either some read fails, or
+there are no items left in the iteration, or the cache is found to be
+corrupt. The iteration is over the cache, by the way.. the passed in
+SH_CompositeCacheImpl* argument cache. Not the CacheMap's own
+_cc. Once finished, check if cache has become corrupt, and report that
+fact if it is. Then call cache->doneReadUpdates. And we are done.
+
+doneReadUpdates receives the currentThread and updates, the number of
+cache entries that were updated. If there was more than one update,
+and the new count of updates exceeds _oldUpdateCount, we update
+_oldUpdateCount now that we're finished. Then we call
+_debugData->processUpdates(currentThread, this). If we are protecting
+the cache area that contains ROM class (ie. the segment area, which is
+flagged by the boolean _doSegmentProtect), we call
+this->notifyPagesRead(). And from there we're done.
+
+SH_CompositeCacheImpl::notifyPagesRead tells the cache that a series
+of pages are being read. This executes only if the cache is unlocked,
+and if memory protection on the cache has been enabled. The logic
+calls setRegionPermissions after calculating whether the start pointer
+is greater or less than the end pointer, which decides the direction
+(forward or backward). These checks are present to perform page
+rounding on the start and end pointers correctly. This is really just
+a wrapper on setRegionPermissions with some particulars in place for
+how the cache is laid out.
+
+Question for Hang: why is locking the cache distinct from memory
+protecting regions of the cache?? Further, what purpose does memory
+protection serve that is different from those of the write and release
+mutexes? Don't all these do the same thing, really? Does memory
+protection also protect a region from the thread that holds one of the
+mutexes?
+
+Once we return from runEntryPointChecks.. we are back in
+storeROMClassResource. If we force a replacement, by the way, the RRM
+marks the item as stale! We then call addROMClassResourceToCache.
+initBlockData is called in the _ccHead. Which sets the info in the
+ShcItem* item appropriately. Then getCacheAreaForDataType is
+called. It's a SH_CompositeCacheImpl*. If the cache isn't nested
+in some other cache, it's just _ccHead! Then we check to see that
+the address of the ROM resource is in the range of _cc's
+getBaseAddress() and _cc->getCacheLastEffectiveAddress(). If not,
+it's in a different superclass, and we must fail.
+
+Otherwise, we do a switch on the resourceType. For
+TYPE_COMPILED_METHOD, we call allocateAOT on the CompositeCache.
+Otherwise, we call allocateJIT for TYPE_ATTACHED_DATA (which usually
+pertains to JIT hints, and JIT related info in general). All other
+types are allocated with allocateBlock.
+
+These allocations fail if the pointer they return, which is always
+stored in itemInCache, regardless of type, is NULL. We do the usual
+error dance and return with J9SHR_RESOURCE_STORE_FULL.
+
+If we succeed, it's the resourceDescriptor that encapsulates knowledge
+of how to write the item of the specific data type to the cache.  It
+does this by calling 'writeDataToCache', with the itemInCache (not
+actually the item, but a pointer to where it will live) and the
+romAddress. As we saw below, romAddress forms the key into the
+hashtable of the RRM, which indexes all the ROMClassResource's stored
+within the cache. In particular (speaking to our interests on this
+project, currently), CompiledMethodManager's writeDataToCache wraps
+the info into a CompiledMethodWrapper, a struct containing fields for
+the codeLength, dataLength, and the romMethodOffset (the romAddress -
+the value of the CompiledMethodWrapper*, an address in the cache --
+this is an SRP). We call localRRM->storeNew after writeDataToCache
+returns. Again, this merely updates the localRRM's hash table to
+contain the location within the cache under the key, the address of
+the ROMClassResource in question.
+
+Then commitUpdate is called on the cacheAreaForAllocate (again, this
+is usually just _ccHead). We have not documented 'commitUpdate'
+previously. According to comments heading up 'commitUpdate's
+definition, the purpose of 'commitUpdate' is to notify other JVMs of
+the cache update. It does this mostly by relying on
+'commitUpdateHelper'. Specifically, it updates various cache header
+counters.
+
+'commitUpdate' is quite involved, and the expose here will conclude
+our discussion of storeROMClassResource, since it's the last thing to
+be called!
+
+First, 'startCriticalUpdate' is called by 'commitUpdateHelper'. This
+removes memory protection from the header. It unprotects the header of
+the read/write area, and increments the crash counter. Then it
+returns. By 'crashing', the cache becomes corrupted. The cache will
+crash if the critical update is not 'stopped' by decrementing the
+crash counter again.
+
+That's all 'startCriticalUpdate' does. We return to where we left off
+in 'commitUpdateHelper'. First, the composite cache CRC is marked as
+invalid because the cache is about to change. Based on whether the
+read/write section or class segment sections were updated, we
+increment the readWriteSRP (resp., segmentSRP) value. Or both,
+if both were modified. How do we know they were modified? The values
+of the uints _storedSegmentUsedBytes and _storedReadWriteUsedBytes
+tell us so. If they are 0, they act as false in a boolean context
+(like the condition of an if statement).
+
+Metadata, AOT code, and JIT code can all go into the cache entry
+section, so updateSRP is decremented similarly. Then we change
+_oldUpdateCount to a newly calculated value stored at
+_theca->updateCountPtr. Surrounding all this, on the read/write and
+metadata areas, are booleans that determine whether we use memory
+protection. Earlier we unprotect these regions so we could manipulate
+them, yes? But now that we've finished successfully, without a crash,
+we restore protections. This is what the nested calls to
+'notifyPagesCommitted' do. It works much like 'notifyPagesRead', which
+we documented earlier. 'notifyPagesRead' is called at the conclusion
+of 'notifyPagesCommitted', in fact, but before that, once the
+applicable regions are calculated according to page size roundings as
+before, _oscache->syncUpdates is called. This is what actually
+synchronizes the updates to disk, depending on the semantics of the
+underlying OSCache. syncUpdates is a pure virtual function in OSCache
+that must be overloaded by a concrete subclass, in other
+words. SH_OSCachemmap::updateSync will call j9mmap_msymc, the memory
+map sync primitive, to do its work, for instance.
+
+This brings us back to where 'notifyPagesCommitted' was possibly
+called within 'commitUpdateHelper'. We call 'endCriticalUpdate' next.
+It calls 'protectHeaderReadWriteArea' again, and decrements the
+crash counter, undoing the work of 'startCriticalUpdate'.
+
+From 'commitUpdateHelper' we go on to call 'updateMetadataSegment'
+after updating _totalStoredBytes and _storedMetadataUsedBytes. This
+mostly updates _metadataSegmentPtr, if there's an address stored
+in it. Otherwise the method returns.
+
+And that's it for 'commitUpdateHelper'. It returns to 'commitUpdate',
+where it does some stuff if nested caches are enabled, but otherwise
+finishes.
+
+Ok, now to findCompiledMethod (in shrinit.cpp).
+
+It dispatches to CacheMap's findCompiledMethod. Which, in turn, calls
+out to findROMClassResource. It checks that RRM (the
+SH_ROMClassResourceManager* instance) permits access.. by calling
+permitAccessToResource. If useReadMutex is specified, it calls
+enterReadMutex, and fails if enterReadMutex does. Then it calls
+runEntryPointChecks, which checks that the cache isn't locked, isn't
+read-only, we hold the right mutexes, all the manager hash tables are
+up to date, etc.
+
+Then we generate a keyfrom the resourceDescriptor. resourceDescriptor
+is of type SH_ROMClassResourceManager::SH_ResourceDescriptor*.
+generateKey is defined as a pure virtual function there! So it's
+expected to be covered by some inheriting class. The answer to this is
+that several manager classes derive from SH_ROMClassResourceManager,
+and these subclasses have internal classes subclassing
+SH_ResourceDescriptor. SH_CompiledMethodResourceDescriptor in
+SH_CompiledMethodManager is one example. If you look to its
+generateKey method, it returns the address of the method as the key,
+and does nothing else.
+
+Still, it's weird that the ROMClassResourceDescriptor and
+ROMClassResourceManager are passed as two separate arguments to
+findROMClassResource! Very bizarre indeed. This is just a wrapper
+around rrmTableLookup.
+
+'findROMClass' is also pretty illustrative, enough though we are not
+looking to load classes of any kind just yet. We started by checking
+that we have ROMClassManager, and that the head of _ccHead isn't
+running read only. Assuming all it good, we get the read mutex of
+_ccHead, and call 'runEntryPointChecks'.
+
+This brings us to another detour into SH_CompositeCacheImpl, this
+time, into the 'testAndSetWriteHash' method. We wondered previously
+about what the 'write hash' was for. From the method description:
+
+Test whether a class is being loaded by another JVM.  If not, update
+to indicate this JVM will load it.
+
+Should be called if an attempt to find a class in the cache has failed.
+If the hash field in the cache field is free (0), it is set, indicating that the JVM is going to load the class.
+If the hash field has already been set, then this means that another JVM is loading the class.
+If it is the same class, 1 is returned which indicates that it would be wise to wait. Otherwise, 0 is returned.
+
+A hash value, hashValue, is passed in, that it is calculated from the
+name of the class (from 'computeHashForUTF8'). The writeHash value in
+the cache is called _theca->writeHash. The hash value has some bitwise
+component pertaining to the write hash, which is captured by &&'ing it
+with the value WRITEHASH_MASK. If _theca->writeHash is 0, we call
+'setWriteHash'. Otherwise, if hashValue & WRITEHASH_MASK == cacheValue
+& WRITEHASH_MASK, we shift _theca->writeHash right by WRITEHASH_SHIFT
+bytes, indicating the ID of the JVM that is 'in the
+cache'. _theca->writeHash is really an indicator of two things, then:
+the ID of the JVM modifying the cache, and the 'true' write hash in
+the bits preceding it, of which there are WRITEHASH_SHIFT.
+
+If the VM ID doesn't match _commonCCInfo->vmID, return 1, or true,
+indicating that yes, the caller VM should wait for the cache to be
+released. The call of 'setWriteHash' is to indicate to other JVMs that
+*this* JVM is loading the class.
+
+'setWriteHash' is really just a compare and swap atomic operation on
+_theca->writeHash, buffeted by calls to 'unprotectHeaderReadWriteArea'
+and 'protectHeaderReadWriteArea'. That's all. Again, the new value is
+recorded as such, which corroborates the account given above:
+
+value = ((hashValue & WRITEHASH_MASK) | (_commonCCInfo->vmID << WRITEHASH_SHIFT));
+
+The hash value, the 'true' hash of the write hash, is &&-masked by
+WRITEHASH_MASK, and the rest is simply the VM ID shifted by the number
+of bits composing WRITEHASH_MASK.
+
+Back to 'findROMClass'! If 'testAndSetWriteHash' tells us we should
+wait, whatever waiting means (we will find out shortly!), we do the
+following. We calculate the amount of time we should wait in
+milliseconds. We use some internal stats (_writeHashAverageTimeMicros
+and _writeHashMaxWaitMicros) to determine the value of waitMillis.
+Then we get endTime and startTime, initializing them to
+j9time_usec_clock().
+
+If _writeHashMaxWaitMicros != 0, then while
+_ccHead->checkUpdates(currentThread) returns false (indicating that
+the cache was not updated since it was last read and synchronized), we
+update endTime, and see if endTime - startTime >=
+_writeHashMaxWaitMicros. If so, we break from the loop we've entered!
+(the while(!_ccHead->checkUpdates(currentThread)) loop, not the
+enclosing do loop).
+
+If not, we modify waitMillis accordingly and wait waitMillis
+milliseconds by calling omrthread_sleep(waitMillis). There are some
+rules governing how the waitMillis is increased until the max waiting
+time is reached. I have no idea what inspired their design. See the
+source for details.
+
+Once we've escaped the while loop, we check again that
+_ccHead->checkUpdates(currentThread) returns a positive amount. If so,
+we capture the read mutex. If that doesn't succeed, we fail and
+return. Then we call 'refreshHashtables', which we've already
+covered. Like _ccHead->checkUpdates, 'refreshHashtables' returns the
+number of items read (and written into hashtables in the process).
+
+If that succeeds (ie. rv != -1), we call localRCM->locateROMClass.
+From within the Manager's hash, which is why the calls to update were
+necessary. Well, not. 'refreshHashtables' was necessary, which we know
+from _ccHead->checkUpdates returning a positive value. If nothing had
+been updated, 'refreshHashtables' wouldn't have been necessary.
+
+Anyway, localRCM->locateROMClass returns an error code containing
+LOCATE_ROMCLASS_RETURN_DO_TRY_WAIT (which can happen), we continue
+with the enclosing do if the actualTimeMicros (the time waited) hasn't
+exceeded the maximum wait time. Otherwise we set updates, the count
+returned from _ccHead->checkUpdates(), to 0. If the return code wasn't
+LOCATE_ROMCLASS_RETURN_DO_TRY_WAIT, and counter of wait periods is >
+0, we call 'updateAverageWriteHashTime', so that the average of write
+hash wait times so far is updated to reflect the last witnessed length
+of time the write hash was waited on.
+
+If updates == 0, it could be that the class being searched for doesn't
+exist, at least, not to the cache.. If that's the case, set
+_writeHashMaxWaitMicros to 0. Also record the startTime, and some
+other stuff. At this point, retry is false, and so we leave the
+do/while loop (which continues only if retry is true, naturally).
+
+After checking the staleness of ClassPathEntryItem (and marking the
+ROMClass as stale if so), if the ROM class was found, we call
+_ccHead->tryResetWriteHash if are using the write hash. And we're
+trying to reduce contention.. this is a runtime flag stored within the
+cache, btw. If we hold the write hash, or if the write hash failed to
+be set too many times, we reset it. This is all the action of
+_ccHead->tryResetWriteHash.
+
+Once finished, we 'updateAccessedShrCacheMetadataBounds', and
+'updateBytesRead'. That's about it!
+
+My question, currently: when do we call 'rollbackUpdate'? A: not from
+anywhere within CacheMap, it would appear. So we won't document it
+just yet.
+
+'updateROMSegmentList' is mostly a wrapper around
+'updateROMSegmentListForCache'. We iterate through the linked list of
+caches (that are started!), calling 'updateROMSegmentListForCache' on
+each.
+
+'updateROMSegmentListForCache' does the following. It gets the current
+ROM Segment. How you ask? By calling getCurrentROMSegment() on the
+target cache. It returns _currentROMSegment. If it's NULL, it's
+initialized via 'addNewROMImageSegment'. Mostly, it calls
+'createNewSegment', and adds the resulting romSegment as a
+J9AVLTreeNode to vm->classMemorySegments->avlTreeData, which is an
+index of class memory segments, it looks like.
+
+'createNewSegment' calls
+vm->internalVMFunctions->allocateMemorySegmentListEntry to retrieve
+the address of romSegment, a J9MemorySegment*, and its fields are
+initialized. So, it does appear as ROM class segments are contained
+*within* the shared cache! Although.. no. The ROM segment (called
+romSegment) appears to simply be a descriptor record, that stores the
+type, the size of the ROM class, the base address, its class loader,
+etc. The base address it records belongs to the
+cache. forCache->getBaseAddress(), if we're being specific. This is
+none other CASTART(_theca). The beginning of the segment entry free
+area.
+
+'updateROMSegmentListForCache' then calls setCurrentROMSegment on the
+cache. And it proceeds to walk the ROM class list within the cache,
+using resident info from the ROM segment. Namely, the
+currentSegment. If the ROM class size found is too great for what the
+current ROM segment has recorded, create a new segment that reflects
+the present size. This is the essence of the update.. the VM's view on
+which ROM classes are contained with the cache can be out of step with
+the state of the cache itself. As we've seen. Hence the need for
+updates.
+
+ROM classes are stored via 'commitROMClass'. That's what *adds* a ROM
+class to the cache. Space for ROM classes is allocated via
+'allocateROMClass'. Which is part of CacheMap, not CompositeCache,
+somewhat confusingly. Starting with 'allocateROMClass' first.
+
+'allocateROMClass' tries to allocate memory in the class debug
+segment. Debug info pertaining to the class, I think. Then we call
+'allocateROMClassOnly', and that's presumably where the interesting
+stuff begins. It's assigned the returned address to pieces->romClass.
+And there's a lot more logic dealing with the ClasspathManager,
+marking previously stored versions of the class as stale if
+found. There's plenty of trace messages recording what's going on
+there. Either way though, we wind up calling 'allocateFromCache'.
+
+'allocateFromCache' checks some settings, emits some trace messages,
+and calls initBlockData and allocateWithSegment on the
+localCacheAreaForAllocate, which is returned from
+getCacheAreaForDataType. localCacheAreaForAllocate is indeed a
+SH_CompositeCacheImpl*. We call
+allocateCacheAreaForAllocate->allocateWithSegment.
+
+allocateCacheAreaForAllocate->allocateWithSegment just wraps a call
+onto SH_CompositeCacheImpl::allocate, with the allocate type being a
+block. The segmentBuffer parameter passed into it is a BlockPtr*, so a
+double pointer. allocate winds up writing the address of the region to
+be written, to it, starting at line 2788 of CompositeCache.cpp in the
+OpenJ9 source.
+
+Back to commitROMClass. Now that the ROM class has been written into
+the cache, we want to store it in one of two wrapper types:
+ROMClassWrapper or ScopedROMClassWrapper. This is based on whether the
+boolean useScope is true. useScope's value is true if neither
+partitionInCache nor modContextInCache, both parameters to
+'commitROMClass', are NULL values.
+
+Even if useScope is false, srcw, the ScopedROMClassWrapper object
+created in the body of 'commitROM', is initialized in several
+parts. Its ClassPathEntryIndex, cpeIndex, is recorded, and timestamp
+is set to 0. I have no clue how this ClassPathEntry business works,
+currently. I'm now weighing to what degree it shapes the design of the
+SCC, and whether I should investigate it further. Until I reach a
+conclusion on that, I'm going to ignore it for the rest of this
+miniature writeup of 'commitROMClass'.
+
+I have some idea of what a modification context is, but not a
+partition. It would be lovely if the writers of the SCC were sat down
+and encouraged to use consistent language. I guess the onus for that
+is now on us.
+
+We call _rcm->storeNew to store the itemInCache. itemInCache is cast
+to a ScopedROMClassManager*, regardless of whether useScope is
+true. Then we call cacheAreaForAllocate->commitUpdate,
+'updateROMSegmentList', we do some more stuff for the write
+hash.. yeah. 
+
+TODO: maybe answer this whole allocate JIT vs. allocate AOT thing??
+Yes? What the limitations of the JIT and AOT sections really mean,
+amid the structure of the composite cache? Also, getReaderCount!
+Where does _metadataSegmentPtr point to????
+
