@@ -3943,7 +3943,7 @@ SH_CompositeCacheImpl::enterReadWriteAreaMutex(OMR_VMThread* currentThread, BOOL
 					 * Not incrementing this counter means if ctrl+c, or kill -9, is executed 
 					 * on the JVM then there will be no need to reset the string table.  
 					 */
-					 _incrementedRWCrashCntr = true;
+				        _incrementedRWCrashCntr = true;
 					unprotectHeaderReadWriteArea(currentThread, true);
 					unprotectHeaderReadWriteArea(currentThread, false);
 					_theca->readWriteCrashCntr = oldReadWriteCrashCntr + 1;

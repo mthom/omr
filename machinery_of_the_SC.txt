@@ -262,7 +262,7 @@ OSCachesysv member variables:
 Clearly, these are much more elaborate than the other ones.	
 
 OSCACHESYSV MEMBER FUNCTIONS:
-\
+
 `startup` is a few hundred lines long, and mostly deals with the myriad cases involved
 in trying to create a new shared memory, or attach to an existing one.
 
@@ -470,58 +470,98 @@ and error checking and reporting, and writing numbers to stats variables, mostly
 _theca is a J9SharedCacheHeader, which looks like this:
 
 typedef struct J9SharedCacheHeader {
-	U_32 totalBytes;
-	U_32 readWriteBytes;
-	UDATA updateSRP;
-	UDATA readWriteSRP;
-	UDATA segmentSRP;
-	UDATA updateCount;
-	J9WSRP updateCountPtr;
-	volatile UDATA readerCount;
-	UDATA unused2;
-	UDATA writeHash;
+	U_32 totalBytes;      /* set to
+	piconfig->sharedClassCacheSize. the size of the entire cache
+	as a file, or a block of shared memory. */
+	U_32 readWriteBytes;  /* size of the readWriteArea */
+	UDATA updateSRP;      /* the 'free' part, growing leftward
+	from the metadata area (the cache entries part of the cache). */
+	UDATA readWriteSRP;   /* the 'written' readWrite area, its
+	startpoint, growing rightward */
+	UDATA segmentSRP;     /* the 'free part' of the segment entry,
+	growing rightward */
+	UDATA updateCount;    /* the number of updates since the last
+	nextEntry() call; why is this useful? */
+	J9WSRP updateCountPtr; /* initialized to the address of
+	updateCount, in this very header */
+	volatile UDATA readerCount; /* incremented in conjunction
+	with locking the cache, for reads. */
+	UDATA unused2; /* it's unused! I don't know why it's here. Ask
+	Hang. */
+	UDATA writeHash; /* used to record the hash value of the class
+	being cached. */
 	UDATA unused3;
 	UDATA unused4;
-	UDATA crashCntr;
-	UDATA aotBytes;
+	UDATA crashCntr; /* used to count the number of actors
+	performing critical section updates! critical in the sense
+	that if they fail, the cache will 'crash', ie. be corrupted. */
+	UDATA aotBytes; // I don't know what the next two fields do.
 	UDATA jitBytes;
-	U_16 vmCntr;
-	U_8 corruptFlag;
-	U_8 roundedPagesFlag;
+	U_16 vmCntr; // the number of VMs using the cache.
+	U_8 corruptFlag; // 0 or 1, boolean value flagging corruption.
+	U_8 roundedPagesFlag; // 0 or 1, boolean value indicating roundedPages.
 	I_32 minAOT; // minimum reserved space for AOT code.
-	I_32 maxAOT;
-	U_32 locked;
-	J9WSRP lockedPtr;
-	J9WSRP corruptFlagPtr;
-	J9SRP sharedStringHead;
-	J9SRP sharedStringTail;
-	J9SRP unused1;
-	U_32 totalSharedStringNodes;
-	U_32 totalSharedStringWeight;
-	U_32 readWriteFlags;
-	UDATA readWriteCrashCntr;
-	UDATA readWriteRebuildCntr;
-	UDATA osPageSize;
-	UDATA ccInitComplete;
-	UDATA crcValid;
-	UDATA crcValue;
-	UDATA containsCachelets;
-	UDATA cacheFullFlags;
-	UDATA readWriteVerifyCntr;
-	UDATA extraFlags;
-	UDATA debugRegionSize;
-	UDATA lineNumberTableNextSRP;
-	UDATA localVariableTableNextSRP;
+	I_32 maxAOT; // maximum reserved space for AOT code.
+	U_32 locked; // is the cache locked? also a boolean.. 0 or 1.
+	J9WSRP lockedPtr; // the pointer to the locked field in this header.
+	J9WSRP corruptFlagPtr; /* the pointer to the corruptFlag field
+	in this header. */
+	J9SRP sharedStringHead; /* I can't find anywhere in the ported
+	shared cache this is used. Even in OpenJ9, it doesn't appear
+	to be used anymore. My guess: it's vestigial.*/
+	J9SRP sharedStringTail; // ditto.
+	J9SRP unused1; 
+	U_32 totalSharedStringNodes; /* has no use anywhere in OpenJ9. */
+	U_32 totalSharedStringWeight; /* same. */
+	U_32 readWriteFlags; /* set to
+	OMRSHR_HEADER_STRING_TABLE_INITIALIZED in CompositeCache.cpp,
+	does seem to be read anywhere, not even in OpenJ9. */
+	UDATA readWriteCrashCntr; /* incremented when we enter the
+	string table mutex, and decremented when we have it. This
+	flags a crash if the decrement isn't reached because of a VM
+	crash in the midst of entering the mutex. */
+	UDATA readWriteRebuildCntr; /* used to detect the need for a
+	cache rebuild. Flagged if oldReadWriteCrashCntr (the value of
+	_theca->readWriteRebuildCntr before the increment in
+	enterReadWriteMutex) doesn't equal readWriteRebuildCntr. */
+	UDATA osPageSize; /* the size of pages used to layout the
+	OSCache */
+	UDATA ccInitComplete; /* boolean, is the compositecache
+	startup complete? */
+	UDATA crcValid; /* is the CRC valid? */
+	UDATA crcValue; /* the CRC value. */
+	UDATA containsCachelets; /* cachelets are obsolete, and are
+	never used now. */
+	UDATA cacheFullFlags; /* is the cache full? which section? AOT
+	section? JIT section? a bitvector. */
+	UDATA readWriteVerifyCntr; /* I.. don't know what this
+	does. If the resetReason in exitReadWriteAreaMutex is not
+	J9SHR_STRING_POOL_OK, we use it for some reason. Otherwise it
+	appears nowhere. */
+	UDATA extraFlags; /* pertains to
+	OMRSHR_EXTRA_FLAGS_*.. flags. Again, a bit vector. */
+	UDATA debugRegionSize; /* The size of the debug region. */
+	UDATA lineNumberTableNextSRP; /* There is a table for storing
+	line numbers of methods! Apparent the debug area stores only
+	line numbers and local variables. Free space is calculated as
+	localVariableTableNextSRP - lineNumberTableNextSRP. */
+	UDATA localVariableTableNextSRP; // see above.
 	I_32 minJIT; // minimum reserved space for JIT.
-	I_32 maxJIT;
-	IDATA sharedInternTableBytes;
-	IDATA corruptionCode;
-	UDATA corruptValue;
-	UDATA lastMetadataType;
-	UDATA writerCount;
+	I_32 maxJIT; // maximum reserved space for JIT.
+	IDATA sharedInternTableBytes; /* initialized as
+	sharedClassReadWriteBytes. The size of the
+	readWriteArea. Initialized in several places as that value,
+	calculated according to the available data. */
+	IDATA corruptionCode; // self-explanatory.
+	UDATA corruptValue; // same.
+	UDATA lastMetadataType; /* type of the last piece of the
+	metadata added to the metadata area. */
+	UDATA writerCount; /* increment the number of concurrent
+	writers. used when entering and exiting the write mutex. */
 	UDATA unused5;
 	UDATA unused6;
-	U_32 softMaxBytes;
+	U_32 softMaxBytes; /* I don't know what the soft maximum is
+	for. Ask Hang. */ 
 	UDATA unused8;
 	UDATA unused9;
 	UDATA unused10;
@@ -539,17 +579,36 @@ J9ShrCompositeCacheCommonInfo, which houses data common to *all*
 composite caches, as the name would suggest. It's:
 
 typedef struct J9ShrCompositeCacheCommonInfo {
-	omrthread_tls_key_t writeMutexEntryCount;
-	struct J9VMThread* hasWriteMutexThread;
-	struct J9VMThread* hasReadWriteMutexThread;
-	struct J9VMThread* hasRefreshMutexThread;
-	struct J9VMThread* hasRWMutexThreadMprotectAll;
-	U_16 vmID;
-	U_32 writeMutexID;
-	U_32 readWriteAreaMutexID;
-	UDATA cacheIsCorrupt;
-	UDATA stringTableStarted;
-	UDATA oldWriterCount;
+	omrthread_tls_key_t writeMutexEntryCount; /* whaaat.. a write
+	mutex entry count? I have no clue what this might
+	signify. enterWriteMutex allows only single-threaded writing
+	to the cache. The function preamble says so. I don't know what
+	an entry count. omrthread_tls_set sets.. a thread's TLS
+	value. It's thread local storage.. it needs to be free,
+	sometimes. And set to 0 (it's actually uintptr_t). When
+	calling enterWriteMutex, we get the entry count from TLS using
+	writeMutexEntryCount (the TLS entry), increment it, and store
+	it back. */
+	struct J9VMThread* hasWriteMutexThread; /* the thread holding
+	the write mutex. */
+	struct J9VMThread* hasReadWriteMutexThread; // Similar.
+	struct J9VMThread* hasRefreshMutexThread; // Similar.
+	struct J9VMThread* hasRWMutexThreadMprotectAll; // Similar.
+	U_16 vmID; // which VM is this?
+	U_32 writeMutexID; /* .. is passed to
+	oscache->acquireWriteLock. I'm not sure how it works. Beyond
+	being a lockID. From the implementation in OSCachemmap.cpp,
+	the lockID is actually more appropriately called a lock
+	type. It takes values like J9SH_OSCACHE_MMAP_LOCKID_WRITELOCK,
+	*_READWRITELOCK, etc. Also it determines the offset of the
+	lock into the OSCachemmap_header. And then an index into the
+	_lockMutex array of OSCachemmap. Then it acquires the lock to
+	lock between processes and threads. */
+	U_32 readWriteAreaMutexID; // same thing, I think. Yes.
+	UDATA cacheIsCorrupt; // a 0-1 boolean.
+	UDATA stringTableStarted; // a 0-1 boolean.
+	UDATA oldWriterCount; /* the writer count before we (the
+	current thread in the current VM) incremented it. */
 } J9ShrCompositeCacheCommonInfo;
 
 ShcItemHdr is this:
@@ -557,7 +616,6 @@ ShcItemHdr is this:
 typedef struct ShcItemHdr {
 	U_32 itemLen; 		/* lower bit set means item is stale */
 } ShcItemHdr;
-
 
 Why do I bring this up?? Because the composite cache can be
 'scanned'.. that is, its contents can be walked.
@@ -572,6 +630,181 @@ shcdatatypes.h :
 #define CCSETITEMSTALE(ih) ((ih)->itemLen |= 0x1)
 #define CCITEM(ih) (((U_8*)(ih)) - (CCITEMLEN(ih) - sizeof(ShcItemHdr)))
 #define CCITEMNEXT(ih) ((ShcItemHdr*)(CCITEM(ih) - sizeof(ShcItemHdr)))
+
+Before examining methods, we should look to fields! Here they are.
+
+  	OMRSharedClassConfig* _sharedClassConfig; /* the index of
+	function pointers. */
+	SH_OSCache* _oscache; /* The underlying OSCache object that
+	provides the data and functions to manage it. */
+	omrthread_monitor_t _utMutex, _headerProtectMutex,
+	_runtimeFlagsProtectMutex; /* thread-level management for the
+	components of the composite cache. */
+	
+	OMRPortLibrary* _portlib; /* the cross-platform library. wraps
+	routines and so forth. */
+
+	J9SharedCacheHeader* _theca; /* The header at the header of
+	the cache, after the OSCache header, which is
+	subclass-dependent. */
+	bool _started; // is the cache started?
+	const char* _cacheName; /* the name of the cache. Derived from
+	the version, and generated of the cache, used. */
+	
+	SH_CompositeCacheImpl* _next;   // not used! cachelets are obsolete.
+	SH_CompositeCacheImpl* _parent; // same.
+	SH_CompositeCacheImpl* _ccHead; /* the head of the cache, as
+	distinct from.. this one itself? Probably just equal to 'this'. */
+	
+	ShcItemHdr* _scan; // the scan pointer.
+	ShcItemHdr* _prevScan;
+	ShcItemHdr* _storedScan;
+	ShcItemHdr* _storedPrevScan;
+	BlockPtr _romClassProtectEnd; /* Has the simplest possible
+	getters and setters. Used in shrtest, and no where else. */
+
+	UDATA _oldUpdateCount; /* the update count prior to the latest
+	change to the update count. */
+
+	U_32 _storedSegmentUsedBytes; /* How many stored segment bytes
+	were used in an allocation? Of those stored in the segment region,
+	how many have been used? */
+	U_32 _storedMetaUsedBytes; // Similar.
+	U_32 _storedAOTUsedBytes;  // Similar.
+	U_32 _storedJITUsedBytes;  // Similar.
+	U_32 _storedReadWriteUsedBytes; // Similar.
+	U_32 _softmxUnstoredBytes; // Similar.
+	U_32 _maxAOTUnstoredBytes; // Similar.
+	U_32 _maxJITUnstoredBytes; // Similar.
+	I_32 _maxAOT; /* Separate from _theca->maxAOT. Seems to be
+	work like a liaison to _theca->maxAOT. Nope, at least, not
+	within CompositeCache.cpp. */
+	I_32 _maxJIT; /* Same deal as with _maxAOT. */
+
+	U_64* _runtimeFlags; /* A bitvector tracking various
+	OMRSHR_RUNTIMEFLAG_* values. */
+	UDATA _verboseFlags; /* A bitvector tracking various
+	OMRSHR_VERBOSEFLAG_* values. */
+	UDATA _cacheFullFlags; /* A bitvector tracking regions
+	of the cache that are full. */
+
+	U_32 _totalStoredBytes; /* the total bytes stored in the cache */
+
+	UDATA _lastFailedWriteHash; /* the hash value of the last
+	class that failed to be found on disk (or in shared
+	memory). */
+	U_32 _lastFailedWHCount; /* how many times has the
+	write hash remain unchanged? which is to say failed? We don't
+	care about thread safety for this field, as the exactness of
+	the value isn't important, according to the comments. I don't
+	know why, exactly, it's not important. The count being greater
+	than FAILED_WRITEHASH_MAX_COUNT is the only place it's checked
+	within CompositeCache. */
+
+	BlockPtr _readWriteAreaStart; // the start of the read write area!
+	U_32 _readWriteAreaBytes; // the size of the read write area.
+	BlockPtr _readWriteAreaPageStart; /* _readWriteAreaStart
+	rounded down to the next multiple of _osPageSize. */
+	U_32 _readWriteAreaPageBytes; /* _readWriteAreaPageBytes
+	rounded *up* to the next multiple of _osPageSize. */
+	
+	BlockPtr _cacheHeaderPageStart; /* same thing as documented
+	with _readWriteAreaPageBytes, but with the cache header in
+	place of the read write area. */
+	U_32 _cacheHeaderPageBytes; // same thing.
+
+	UDATA _osPageSize; /* the size of pages used as a unit of page
+	size in the underlying OSCache. */
+	
+	UDATA _nestedSize; // cachelet thing! irrelevant.
+	BlockPtr _nestedMemory; // same.
+	
+	UDATA _localReadWriteCrashCntr; /* appears in startup() a few
+	times. I don't really know what it means when variables and
+	functions in the CompositeCache are designated 'local'. I will
+	ask Hang. */
+
+	J9MemorySegment** _metadataSegmentPtr; /* points to the field
+	of the same name in _sharedClassConfig. Not sure what it
+	does. */
+	J9MemorySegment* _currentROMSegment; /* not paid much
+	attention in the CompositeCache. Mostly just defines getters
+	and setters. These are used in the CacheMap, however. */
+	
+	bool _doReadWriteSync; /* do we sync updates to the
+	readWriteArea? In effect only under the mandate of the
+	OMRSHR_MYSNC_SUPPORT flag. */
+	bool _doHeaderReadWriteProtect; /* Encoded by
+	OMRSHR_RUNTIMEFLAG_ENABLE_MPROTECT_RW being flagged. */
+	bool _readWriteAreaHeaderIsReadOnly; /* Set to true if we're
+	protecting the header (_doHeaderProtect, one below) and if the
+	_headerProtectCntr == 1. */
+	bool _doHeaderProtect; /* Encoded by
+	OMRSHR_RUNTIMEFLAG_ENABLE_MPROTECT_ALL. */	
+	bool _doSegmentProtect; /* Set if we don't contain cachelets,
+	for some reason, and since cachelets are now obsolete, we
+	never contain cachelets! So this is always true.. we always
+	want to protect the ROM segments. The segments are where the
+	ROM classes are stored. */
+	bool _doMetaProtect; /* Encoded by
+	OMRSHR_RUNTIMEFLAG_ENABLE_MPROTECT. */
+	bool _doPartialPagesProtect; /* Encoded by
+	OMRSHR_RUNTIMEFLAG_ENABLE_MPROTECT_PARTIAL_PAGES. I don't know
+	what partial pages are. I'm confused by the concept. A page is
+	an atom, an indivisible unit, you heathen motherfuckers. */
+	bool _readOnlyOSCache; // is the underlying OSCache read-only?
+#if defined (J9SHR_MSYNC_SUPPORT)
+	bool _doMetaSync; /* the following three: determine whether we
+	sync the metadata, header, and ROM segment areas. */
+	bool _doHeaderSync;
+	bool _doSegmentSync;
+#endif
+	
+	IDATA _headerProtectCntr; /* A value of 1 indicates that the
+	header is unprotected, according to the comments. This is
+	distinguished from the later counters. */
+	IDATA _readWriteProtectCntr; // 1 doesn't mean unprotected.
+	IDATA _readOnlyReaderCount; // Same.
+	bool _incrementedRWCrashCntr; /* counts the number of VMs
+	accessing the read/write area while it is protected, so that
+	we can diagnose the cause of a crash, should it occur while
+	the RW area is protected. */
+	
+	bool _useWriteHash; // do we use the writeHash?
+	
+	bool _canStoreClasspaths; // can the cache store Java classpaths?
+
+	bool _reduceStoreContentionDisabled; /* is the reduce store
+	contention option enabled? Encoded by
+	OMRSHR_RUNTIMEFLAG_ENABLE_REDUCE_STORE_CONTENTION. */
+
+	/* All instances of this class share a common debug & raw class data region
+	 */
+  //	ClassDebugDataProvider * _debugData;
+	
+	/* All composite caches within a JVM point to the same 'J9ShrCompositeCacheCommonInfo' 
+	 * structure.
+	 */
+	J9ShrCompositeCacheCommonInfo * _commonCCInfo;
+
+--
+
+Now methods.
+
+'newInstance' is indeed static, belong to
+SH_SharedCacheHeaderInit. It's init method is virtual, and thus,
+instance-based. Uses placement new to construct a
+SH_CompositeCacheImpl(), and calls initializeWithCommonInfo() on it.
+
+'getFreeBlockBytes' uses the minAOT flags in the header to determine
+whether AOT and JIT space is being allocated at all! In other words,
+if their values are negative, there is no reserved space for AOT or
+JIT. It calculates the free block space available in the class,
+without the space that's been reserved for JIT and AOT. FREEBYTES, the
+macro, corresponds to exactly the region you think it would in the
+all-important CompositeCache diagram.
+
+'initializeWithCommonInfo' 
 
 'nextEntry' skips over stale items within the cache (which it counts,
 if staleItems is a non-NULL pointer). The ih values (item headers) are
@@ -1228,10 +1461,12 @@ about what the 'write hash' was for. From the method description:
 Test whether a class is being loaded by another JVM.  If not, update
 to indicate this JVM will load it.
 
-Should be called if an attempt to find a class in the cache has failed.
-If the hash field in the cache field is free (0), it is set, indicating that the JVM is going to load the class.
-If the hash field has already been set, then this means that another JVM is loading the class.
-If it is the same class, 1 is returned which indicates that it would be wise to wait. Otherwise, 0 is returned.
+Should be called if an attempt to find a class in the cache has
+failed.  If the hash field in the cache field is free (0), it is set,
+indicating that the JVM is going to load the class.  If the hash field
+has already been set, then this means that another JVM is loading the
+class.  If it is the same class, 1 is returned which indicates that it
+would be wise to wait. Otherwise, 0 is returned.
 
 A hash value, hashValue, is passed in, that it is calculated from the
 name of the class (from 'computeHashForUTF8'). The writeHash value in
