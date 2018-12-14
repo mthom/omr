@@ -7,7 +7,7 @@ this document must remain INTERNAL TO CASA.
 --
 
 First, it's instructive to look at the J9PORT_SHR_CACHE_TYPE enum. It's not an enum..
-they are defined separately as individual constants/macros, defined as 1-5. Their 
+they are defined separately as individual constants/macros, defined as 1-5. Their
 names are:
 
 *_PERSISTENT
@@ -30,12 +30,12 @@ The inheritance diagram for the OSCache*.[c|h]pp files is:
 			  /    \     \
 			/       \      -------\
 	OSCachemmap		OSCachevmem  OSCachesysv
-	
+
 These are all preceded by the characters "SH_" within C++, BTW.
-	
+
 Certain crucial methods in OSCacheFile (like the very instructive createCacheFile
 method) are non-virtual. Indicating that OSCachemmap and OSCachevmem instantiate
-their parent objects with different mode creation settings, the mechanics of 
+their parent objects with different mode creation settings, the mechanics of
 which are otherwise the same.
 
 Note that SH_OSCacheInitializer is provided for use by consumers of the OSCache
@@ -46,7 +46,7 @@ about the client.
 
 OSCACHE.HPP MEMBER VARIABLES:
 
-As the header comment says.. the purpose of the class is to abstract over the 
+As the header comment says.. the purpose of the class is to abstract over the
 shared memory region that the class will be mapped into, and it also contains mutexes
 for read/write access.
 
@@ -68,7 +68,7 @@ We run down the list.
 	UDATA _createFlags; // configures the creation of a cache (?)
 	UDATA _verboseFlags; // verbosity options.
 	IDATA _errorCode; // the active error code? possibly an OK code?
-	const J9SharedClassPreinitConfig* _config; // 
+	const J9SharedClassPreinitConfig* _config; //
 	I_32 _openMode; // passed to j9file_open or j9file_blocking_async_open
 					// (platform dependent)
 	bool _runningReadOnly; // cannot write? wouldn't it be handled by _openMode?
@@ -79,7 +79,7 @@ We run down the list.
 	IDATA _corruptionCode; // did some sort of corruption take place?
 	UDATA _corruptValue; // Which value is known to be corrupt?
 	bool _isUserSpecifiedCacheDir; // used the default cache dir?
-	
+
 Surely you notice the lack of mutexes. The member functions SH_OSCache contains that
 have to do with acquiring locks are pure virtual functions. ACKSHAULLY.. these methods..
 acquiring and releasing locks and so forth.. are defined in OSCacheFile, which is at
@@ -87,12 +87,12 @@ the root of both OSCachevmem and OSCachemmap.
 
 Interesting comment from Hang Shao (dated Jun 19 of this year):
 
-"OSCachevmem.hpp/OSCachevmem.cpp is not being used now. They are only active under 
+"OSCachevmem.hpp/OSCachevmem.cpp is not being used now. They are only active under
 J9SHR_CACHELET_SUPPORT, which is not defined.
 
-We could either remove these two files together with all the code inside 
+We could either remove these two files together with all the code inside
 J9SHR_CACHELET_SUPPORT,
-or simply add vm parameter and put #include "OSCachevmem.hpp" inside 
+or simply add vm parameter and put #include "OSCachevmem.hpp" inside
 ifdef J9SHR_CACHELET_SUPPORT here."
 
 Fun!! So it isn't necessary at all. I don't understand what cachelets are.
@@ -113,9 +113,9 @@ of the cache that are copied into main memory, though from a file (and hence the
 are persistent!). Does that mean they're written back to file?
 
 Despite the annotation, j9file_read is a macro defined in runtime/oti/j9port_generated.
-It expands to a call to the port library to call whatever file reading routine the 
+It expands to a call to the port library to call whatever file reading routine the
 host platform provides. A great many other system calls are wrapped in macros and
-named similarly within the file. 
+named similarly within the file.
 
 See runtime/port/sysvipc for a collection of wrappers around System V style ipc primitives.
 Mostly for shared memory and semaphores, although there is j9sharedwrapper.[h|c], which
@@ -125,25 +125,25 @@ throughout, references to a 'control file', for shared memory..
 This is what the whole ctrlDir convention has been about!! Setting up the control file
 directory. From the OpenJ9 manual:
 
-"Nonpersistent caches are stored in shared memory and have control files that describe 
-the location of the memory. Control files are stored in a javasharedresources subdirectory 
-of the cacheDir specified. Do not move or delete control files in this directory. The 
-listAllCaches utility, the destroyAll utility, and the expire suboption work only in the 
+"Nonpersistent caches are stored in shared memory and have control files that describe
+the location of the memory. Control files are stored in a javasharedresources subdirectory
+of the cacheDir specified. Do not move or delete control files in this directory. The
+listAllCaches utility, the destroyAll utility, and the expire suboption work only in the
 scope of a given cacheDir."
 
 Nonpersistent caches are still shared!! You must keep this in mind.
 
 Going back to OSCache, though, it appears to be mostly utilities for extracting
 the Java version and cache generation info from cache filenames / control files,
-depending on which is used (ie. is the cache persistent or nonpersistent?). 
+depending on which is used (ie. is the cache persistent or nonpersistent?).
 The only really non-trivial parts are those dealing with initialization and
-startup. 
+startup.
 
 'commonStartup', as the name suggests, deals with the initializing the portions
 OSCache manages that are common to all its variants: vmem, Sysv, and mmap. Many of the
 utilities are statically initialized. commonStartup, again, is mostly concerned with
 initializing everything properly.. the cache names, their version and generation flags,
-various runtime and verbosity flags.. administrivia! 
+various runtime and verbosity flags.. administrivia!
 
 'commonInit' sets the OsCache data to 0 or NULL.  Or FALSE, if the values are boolean.
 This exhaustively describes what it does. See for yourself.
@@ -154,7 +154,7 @@ Nothing interesting or spectacular.
 
 'initOSCache' does exactly that. It writes the _dataLength and _dataStart attributes
 into the header, along with the version, generation and build ID (a SHA hash) to the
-header.  Notice that OSCache does nothing at all with _dataStart and _dataLength, beyond 
+header.  Notice that OSCache does nothing at all with _dataStart and _dataLength, beyond
 initializing them and writing them to the cache header. These belong to the subclasses!
 
 'checkOSCacheHeader' simply verifies that several important invariants hold.. ie.
@@ -173,14 +173,14 @@ It also defines some OSCache_mmap_header structs, which contain (among other thi
 locks for the header and data sections. OSCache_mmap_header_1 and *_2 contain many
 of the same members but are slightly different. *_1 appears to contain some 'unused'
 padding that's probably used to make them the same size. Hmmm.. yeah, I dunno.
-Actually appears to have more to do with OSCache_header1 versus OSCache_header2. 
+Actually appears to have more to do with OSCache_header1 versus OSCache_header2.
 The mmap_header_*'s wrap one of each. Going by the #define's in OSCache.hpp, they
 appear to correspond to different cache generations.
 
 OSCACHEFILE member variables:
 
 	IDATA _fileHandle;
-	
+
 And that's it!! That's all the class wraps. It's a handle for a file. That is it.
 
 OSCACHEFILE member functions:
@@ -190,9 +190,9 @@ calling out to the j9file_lock/j9_file_async_blocking_lock primitives to acquire
 With traces and error handling, as always.
 
 'getmmapHeaderFieldOffsetForGen' finds the byte offset of a given field (second argument)
-with the OSCache header, depending on the generation passed to it (first argument). 
+with the OSCache header, depending on the generation passed to it (first argument).
 
-'releaseHeaderWriteLock'.. similar, analogous thing. Clear the lock. 
+'releaseHeaderWriteLock'.. similar, analogous thing. Clear the lock.
 
 'tryAcquireAttachWriteLock' does.. pretty much the same as 'acquireHeaderWriteLock',
 only it gets the attach write lock.. to write to the attach region of the cache.
@@ -223,7 +223,7 @@ And we're done! Easy.
 
 OSCACHESYSV
 
-Ok, in OSCachesysv.hpp, we have a few different header types corresponding to the 
+Ok, in OSCachesysv.hpp, we have a few different header types corresponding to the
 various cache generations. Again, they are similar to the mmap headers we saw
 last time (defined in OSCacheFile.hpp, confusingly). This time, they contain things
 like semaphore IDS (but never shared memory segment IDs).
@@ -244,7 +244,7 @@ OSCachesysv member variables:
 	char* _shmFileName; // initialized as 'cacheNameWithVGen' in startup
 	char* _semFileName; // not sure!
 	bool _openSharedMemory; // did we fail at attempting to open an existing shared memory??
-	
+
 	UDATA _storageKeyTesting;
 
 	const J9SharedClassPreinitConfig* config;
@@ -258,8 +258,8 @@ OSCachesysv member variables:
 	SH_SysvShmAccess _shmAccess;
 
 	J9ControlFileStatus _controlFileStatus; // the status of the shared memory control file.
-	
-Clearly, these are much more elaborate than the other ones.	
+
+Clearly, these are much more elaborate than the other ones.
 
 OSCACHESYSV MEMBER FUNCTIONS:
 
@@ -279,7 +279,7 @@ read failed if an option was set to attempting a read-only open upon initial fai
 'openCache'.. calls shmemOpenWrapper and branches on the result code. the *_FAILED cases
 consist mostly of printing an error message somewhere and promptly returning. For the
 opening (of an existing) shared cache case: check that there is a user specified
-cacheDir, and also get the shared memory access settings by calling 
+cacheDir, and also get the shared memory access settings by calling
 'checkSharedMemoryAccess'. If all checks out, do nothing. If we created the cache by
 opening it, call 'initializeHeader'. Otherwise, usually.. an error happened, and
 we simply print it out.
@@ -293,7 +293,7 @@ that doesn't succeed.
 'cleanup' calls 'detachRegion', and closes _shmHandle, using j9shmem_close. Similarly
 for _semhandle.. if they are both non-NULL. 'commonCleanup' is called.
 
-'detach' ... detaches the region. But adds some trace messages on top of calling 
+'detach' ... detaches the region. But adds some trace messages on top of calling
 'detachRegion'.
 
 'initializeHeader' checks that the cacheSize and other features are set up appropriately,
@@ -334,7 +334,7 @@ false.
 'printErrorMessage' translates J9PORT_ERROR_SYSV_IPC_* values to trace messages.
 
 'cleanupSysVResources' tries to detach and destroy both _shmHandle and _semHandle.
-If 'isCacheActive' returns true, it simply detaches and closes the handles. There's 
+If 'isCacheActive' returns true, it simply detaches and closes the handles. There's
 extensive error handling and platform specific code laden throughout.
 
 'errorHandler' prints the passed error message and calls 'cleanupSysVResources' if
@@ -359,30 +359,30 @@ its member variables:
 
 	I_64 _actualFileLength;
 	UDATA _writeLockCounter;
-	
+
 	omrthread_monitor_t _lockMutex[J9SH_OSCACHE_VMEM_LOCK_COUNT];
 
 That's the list. We have mutexes and a counter for write lock. Also, OSCachevmem
 inherits from OSCacheFile, so it does have a file handle. Interesting.
 
-Yeah, pouring over this, looks to be very very much like an mmap! That's the 
+Yeah, pouring over this, looks to be very very much like an mmap! That's the
 header format it uses.. all the rest is just logic for 'attaching' to a file, and
 setting up the internals of the object.
 
 OSCACHEMMAP
 
-Like OSCacheVmem, it also inherits from OSCacheFile. 
+Like OSCacheVmem, it also inherits from OSCacheFile.
 
 Member variables:
 	I_64 _actualFileLength;
 	J9MmapHandle *_mapFileHandle;
-	
+
 	UDATA _finalised;
-	
+
 	omrthread_monitor_t _lockMutex[J9SH_OSCACHE_MMAP_LOCK_COUNT];
-	
+
 	SH_CacheFileAccess _cacheFileAccess;
-	
+
 That's all she wrote! Notice the addition of the _mapFileHandle clause thingum.
 Something OSCacheVmem didn't have. I guess the virtual memory versus was.. a lightweight
 spin on this more elaborate idea? Maybe a paring down of functionality, or management
@@ -392,7 +392,7 @@ Looking at the startup method, I see that OSCacheSysv's startup is largely mirro
 in terms of what is checked.. only here we fall back on the 'openCacheFile' of OSCacheFile.
 
 It's 'internalAttach' which calls j9mmap_map_file, and passes the _fileHandle field
-along to it. It returns the _mapFileHandle. Then some error checking is done, the 
+along to it. It returns the _mapFileHandle. Then some error checking is done, the
 header is gotten at eventually, the _dataStart and _dataLength things are loaded into
 it.. pretty unremarkable stuff I'd say!!
 
@@ -408,11 +408,11 @@ public:
 	virtual U_16 getJVMID(void) = 0;
 	virtual bool isRunningReadOnly(void) = 0;
 	virtual UDATA getTotalUsableCacheSize(void) = 0;
-	virtual void getMinMaxBytes(U_32 *softmx, I_32 *minAOT, I_32 *maxAOT, I_32 *minJIT, 
+	virtual void getMinMaxBytes(U_32 *softmx, I_32 *minAOT, I_32 *maxAOT, I_32 *minJIT,
 								I_32 *maxJIT) = 0;
 	virtual UDATA getFreeAvailableBytes(void) = 0;
 	virtual U_32 getDebugBytes(void) = 0;
-	virtual void setInternCacheHeaderFields(J9SRP** sharedTail, J9SRP** sharedHead, 
+	virtual void setInternCacheHeaderFields(J9SRP** sharedTail, J9SRP** sharedHead,
 								U_32** totalSharedNodes, U_32** totalSharedWeight) = 0;
 	virtual bool isStarted(void) = 0;
 	virtual IDATA restoreFromSnapshot(J9JavaVM* vm, const char* cacheName, bool* cacheExist) = 0;
@@ -424,7 +424,7 @@ class, which inherits from SH_CompositeCache, of course, is in CompositeCache.cp
 
 Composite caches are linked lists of composite caches that represent the view of shared
 class in terms of blocks of memory. Each node in the list has its own locks for reading
-and writing. Cache entries grow from the back, memory segments from the front. 
+and writing. Cache entries grow from the back, memory segments from the front.
 CompositeCache.cpp contains a helpful diagram. Top of the file, can't miss it!!
 
 The start of the block (the node in the list managed by this object) is stored in
@@ -439,8 +439,8 @@ Importantly, each SH_CompositeCacheImpl contains an SH_OSCache *. Part of our wo
 be uncovering the relationship between the two!
 
 BTW, a cachelet is an SH_CompositeCache nested *within* an SH_CompositeCache!! Why you'd
-ever want to use it (and from Hang Shao's comments, they do not!) I dunno. 
-'newInstanceNested' and 'newInstanceChained' are both walled off behind the 
+ever want to use it (and from Hang Shao's comments, they do not!) I dunno.
+'newInstanceNested' and 'newInstanceChained' are both walled off behind the
 J9SHR_CACHELET_SUPPORT conditional, so we will not document them here (for now).
 
 Back to _theca.. it's not set until way down in ::startup. Late in the file.
@@ -510,7 +510,7 @@ typedef struct J9SharedCacheHeader {
 	shared cache this is used. Even in OpenJ9, it doesn't appear
 	to be used anymore. My guess: it's vestigial.*/
 	J9SRP sharedStringTail; // ditto.
-	J9SRP unused1; 
+	J9SRP unused1;
 	U_32 totalSharedStringNodes; /* has no use anywhere in OpenJ9. */
 	U_32 totalSharedStringWeight; /* same. */
 	U_32 readWriteFlags; /* set to
@@ -561,7 +561,7 @@ typedef struct J9SharedCacheHeader {
 	UDATA unused5;
 	UDATA unused6;
 	U_32 softMaxBytes; /* I don't know what the soft maximum is
-	for. Ask Hang. */ 
+	for. Ask Hang. */
 	UDATA unused8;
 	UDATA unused9;
 	UDATA unused10;
@@ -640,7 +640,7 @@ Before examining methods, we should look to fields! Here they are.
 	omrthread_monitor_t _utMutex, _headerProtectMutex,
 	_runtimeFlagsProtectMutex; /* thread-level management for the
 	components of the composite cache. */
-	
+
 	OMRPortLibrary* _portlib; /* the cross-platform library. wraps
 	routines and so forth. */
 
@@ -650,12 +650,12 @@ Before examining methods, we should look to fields! Here they are.
 	bool _started; // is the cache started?
 	const char* _cacheName; /* the name of the cache. Derived from
 	the version, and generated of the cache, used. */
-	
+
 	SH_CompositeCacheImpl* _next;   // not used! cachelets are obsolete.
 	SH_CompositeCacheImpl* _parent; // same.
 	SH_CompositeCacheImpl* _ccHead; /* the head of the cache, as
 	distinct from.. this one itself? Probably just equal to 'this'. */
-	
+
 	ShcItemHdr* _scan; // the scan pointer.
 	ShcItemHdr* _prevScan;
 	ShcItemHdr* _storedScan;
@@ -707,7 +707,7 @@ Before examining methods, we should look to fields! Here they are.
 	rounded down to the next multiple of _osPageSize. */
 	U_32 _readWriteAreaPageBytes; /* _readWriteAreaPageBytes
 	rounded *up* to the next multiple of _osPageSize. */
-	
+
 	BlockPtr _cacheHeaderPageStart; /* same thing as documented
 	with _readWriteAreaPageBytes, but with the cache header in
 	place of the read write area. */
@@ -715,10 +715,10 @@ Before examining methods, we should look to fields! Here they are.
 
 	UDATA _osPageSize; /* the size of pages used as a unit of page
 	size in the underlying OSCache. */
-	
+
 	UDATA _nestedSize; // cachelet thing! irrelevant.
 	BlockPtr _nestedMemory; // same.
-	
+
 	UDATA _localReadWriteCrashCntr; /* appears in startup() a few
 	times. I don't really know what it means when variables and
 	functions in the CompositeCache are designated 'local'. I will
@@ -730,7 +730,7 @@ Before examining methods, we should look to fields! Here they are.
 	J9MemorySegment* _currentROMSegment; /* not paid much
 	attention in the CompositeCache. Mostly just defines getters
 	and setters. These are used in the CacheMap, however. */
-	
+
 	bool _doReadWriteSync; /* do we sync updates to the
 	readWriteArea? In effect only under the mandate of the
 	OMRSHR_MYSNC_SUPPORT flag. */
@@ -740,7 +740,7 @@ Before examining methods, we should look to fields! Here they are.
 	protecting the header (_doHeaderProtect, one below) and if the
 	_headerProtectCntr == 1. */
 	bool _doHeaderProtect; /* Encoded by
-	OMRSHR_RUNTIMEFLAG_ENABLE_MPROTECT_ALL. */	
+	OMRSHR_RUNTIMEFLAG_ENABLE_MPROTECT_ALL. */
 	bool _doSegmentProtect; /* Set if we don't contain cachelets,
 	for some reason, and since cachelets are now obsolete, we
 	never contain cachelets! So this is always true.. we always
@@ -759,7 +759,7 @@ Before examining methods, we should look to fields! Here they are.
 	bool _doHeaderSync;
 	bool _doSegmentSync;
 #endif
-	
+
 	IDATA _headerProtectCntr; /* A value of 1 indicates that the
 	header is unprotected, according to the comments. This is
 	distinguished from the later counters. */
@@ -769,9 +769,9 @@ Before examining methods, we should look to fields! Here they are.
 	accessing the read/write area while it is protected, so that
 	we can diagnose the cause of a crash, should it occur while
 	the RW area is protected. */
-	
+
 	bool _useWriteHash; // do we use the writeHash?
-	
+
 	bool _canStoreClasspaths; // can the cache store Java classpaths?
 
 	bool _reduceStoreContentionDisabled; /* is the reduce store
@@ -781,8 +781,8 @@ Before examining methods, we should look to fields! Here they are.
 	/* All instances of this class share a common debug & raw class data region
 	 */
   //	ClassDebugDataProvider * _debugData;
-	
-	/* All composite caches within a JVM point to the same 'J9ShrCompositeCacheCommonInfo' 
+
+	/* All composite caches within a JVM point to the same 'J9ShrCompositeCacheCommonInfo'
 	 * structure.
 	 */
 	J9ShrCompositeCacheCommonInfo * _commonCCInfo;
@@ -804,7 +804,618 @@ without the space that's been reserved for JIT and AOT. FREEBYTES, the
 macro, corresponds to exactly the region you think it would in the
 all-important CompositeCache diagram.
 
-'initializeWithCommonInfo' 
+'initializeWithCommonInfo' calls 'initCommonCCInfoHelper', then 'initialize'.
+
+'initialize' calls 'commonInit', and 'setCurrentCacheVersion'. Guess
+what the latter does!! _osPageSize is computed in terms of region
+granularity!! 'j9mmap:get_region_granularity' is called for this
+purpose... verily! Otherwise it's initialized to 0. This is if we are
+unit testing, I think. UnitTest is just a wrapper around the enum,
+with a static IDATA to contain an enum value. If UnitTest is ==
+NO_TEST, no tests are performed.. the explanation I just gave applies
+if UnitTest::unitTest != NO_TEST or CORRUPT_CACHE_TEST.
+
+If startupForStats is true (meaning that we want to enable the reading
+of cache statistics, and ONLY THAT.. we cannot write to or delete the
+cache), _oscache is NULL. We.. do some stuff we would ordinarily do,
+but without regard to previous cache generations. I take this to mean
+that gather stats using startupForStats is not supported for previous
+generations of the cache.
+
+Notice that the OSCache is not initialized if we are "startupForStats"
+or if some unit test is active. _oscache is only initialized in the
+'else' case. The '*_CREATE_OLD_GEN' runtime flag decrements the cache
+generation to *one* before the current.
+
+'getRequiredConstrBytes' computes the required bytes needed to build
+an object instance, according to the comments. An 'object instance' in
+this case is necessarily an instance of SH_CompositeCache, as well as
+the OSCache attached to the _oscache pointer. Notice that the criteria
+to include OSCache::getRequiredConstrBytes() as a summand in the
+reqBytes return value are exactly those that determine whether
+_oscache is initialized or left NULL in 'initialize'! In summary, they
+are the following:
+
+1) sizeof(OSCache) (if applicable)
+2) sizeof(SH_CompositeCacheImpl)
+3) sizeof(SH_CompositeCacheImpl::SH_SharedCacheHeaderInit)
+4) sizeof(ClassDebugDataProvider)
+
+'getRequiredConstrBytesWithCommonInfo' calls 'getRequiredConstrBytes'
+with exactly the same parameters, isNested and startupForStats. It
+takes its value, and adds sizeof(J9ShrCompositeCacheCommonInfo).
+
+'cleanup' mostly acts as a delegate to _oscache->cleanup(). It also
+releases the _headerProtectMutex and _runtimeFlagsProtectMutex, frees
+the writeMutexEntryCount TLS, etc.
+
+'crashDetected' checks that *localCrashCntr != _theca->crashCntr. You
+see, this object that we are currently in is local to a thread.. but
+the _theca is cross-thread and possibly cross-process. So if the two
+do not agree at the point 'crashDetected' was called, we are in
+trouble. Something has crashed!! We return true. Otherwise, we return
+false. Note that localCrashCntr was passed in as an argument, which
+you can see from the formatting of the variable name. 'crashDetected'
+is used from SH_CacheMap's 'checkForCrash', which keeps
+_localCrashCntr as a field. More on that when we study CacheMap.
+
+'reset' mainly resets the _stored* fields and the _oldUpdateCount (as
+well as the _maxAOTUnstoredBytes and _maxJITUnstoredBytes fields) to
+0. It first calls 'findStart', and bookends the resetting of the named
+fields with 'doUnlockCache'. 'findStart', we recall, sets _prevScan to
+_scan and _scan to the first entry in the cache entries section of
+_theca.
+
+'isCacheCorrupt' checks if _commonCCInfo->cacheIsCorrupt is true, and
+is so, returns true. If not, it goes to the supercache (again, an
+obsolete concept now that cachelets are obsolete) and checks its
+_theca->corruptFlag. If it's not 0, guess what?!? The cache is
+corrupt.
+
+'setCorruptCache' sets _commonCCInfo->cacheIsCorrupt = 1. If the cache
+has been started, it calls 'ccToUse->unprotectHeaderReadWriteArea'
+(usually ccToUse == this, unless cachelets are active, which they
+never are anymore!). It calls 'getCorruptionContext' to record the
+corruption code and value (the corrupt value) to
+_theca->corruptionCode and _theca->corruptValue. If we aren't using
+UnitTest to test a corrupt cache, and statistics gathering isn't
+enabled (via the J9SHR_RUNTIMEFLAG_ENABLE_STATS), we set
+_theca->corruptFlag to 1. Finally, we call
+ccUse->protectHeaderReadWriteArea.
+
+'setCorruptCache' has a second, overloaded version that takes two
+additional parameter: the corruptionCode and corruptValue (the corrupt
+value in the cache indeed, confirmed in the preamble comments) as
+parameters. It sets those values in the underlying _oscache, if it
+exists. (Where are the stats stored, if not the OSCache? Which is not
+initialized if we "startupForStats").
+
+'setCacheAreaBoundaries' sets up the various boundaries of the cache.
+According to the diagram that leads the source file, in fact.
+
+As the comments say, the read/write area, for now, is home only to the
+shared intern string table. "String interning" is the practice of
+keeping single immutable copies of strings around in the memory for
+the sake of efficiently using space. There are a few circumstances
+where the size of the readWriteArea is 0: -Xitsn, the command line
+argument, is how the user defines the size of the shared string intern
+table. If it's 0, so goes the read/write area! Also, it may be 0 if
+the user explicitly defines -Xitsn to be 0.
+
+That's the main thing. Either of these circumstances will set
+piConfig->sharedClassReadWriteBytes to -1 and finalReadWriteSize to
+0. If that is true, we reset finalReadWriteSize to a portion of the
+cache size, aligned by the word. J9SRPHashTable nodes correspond to
+the 'buckets' of the hash table, which are filled via linear probing,
+from what I can tell. The number of nodes is the number of buckets, in
+other words.
+
+Anyway, once the number of shared nodes is calculated (which is
+essentially a quotient between the finalReadWriteSize and the sizeof
+J9SharedInternSRPHashTableEntry, rounded up or down to the nearest
+prime number), finalReadWriteSize is set to that. Keep in mind, these
+calculations occur only if the finalReadWriteSize was initialized to
+0, as described above.
+
+The final segment size is computed in a single line, in consequence of
+finalReadWriteSize being computed, precisely where the diagram says it
+should start. There's padding added in the address to ensure it starts
+at a word-aligned address.
+
+If J9SHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE, we round up to
+_osPageSize, and recalculate the end of the cache to ensure it ends on
+a page boundary (the cache end is rounded *down* as you might
+suspect). _theca->readWriteBytes is computed to match the size of the
+read/write area, and _theca->totalBytes is the total size of the cache
+(which was modified if the cache size was rounded down in the previous
+check).
+
+Then we set _theca->sharedInternTableBytes. It's easy! Reflects the
+same logic described above. Then we check to see that _parent is
+non-NULL. I'm unsure about the role of it absent cachelets. If it
+isn't NULL, ClassDebugDataProvider::HeaderInit is called.
+
+If _theca->softMaxBytes isn't -1, we call 'getUsedBytes()' and store
+it to usedBytes. If _theca->softMaxBytes < usedBytes, we call
+'setSoftMaxBytes' with the current thread and usedBytes as parameters.
+
+Lastly, if _runtimeFlags has
+J9SHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE is toggled, and
+'isVerbosePages' returns true, we print a ton of diagnostic info to
+tty, using j9tty_printf.
+
+An SRP hashtable is also stored within its depths!! This
+determines the value of finalReadWriteSize, in part, under the right
+conditions. It contains "numOfSharedNodes" entries. I'm not sure what
+a "shared node" is.
+
+It goes through some trouble to determine finalReadWriteSize.  This
+determines the size of the read/write area after the shared cache
+header. The start of the segment area is much much easier to compute.
+If the "ENABLE_ROUND_TO_PAGE_SIZE" option is enabled, then
+finalSegmentStart, newCacheEnd, etc. are rounded to the size of a
+page. Whatever the value of _osPageSize is.
+
+"Currently the read write area of composite cache is only used by
+shared string intern table."
+
+Sounds as though that's the SRP hash table that determines the size of
+the read/write area! Then, since we're not using cachelets (we never
+use cachelets!), the ClassDebugDataProvider calls its static
+'HeaderInit' method.
+
+A debug message is printed if the composite cache size was rounded
+down to a page's size, and we're done.
+
+But verily, we are writing segmentSRP and updateSRP in this
+segment. So it's all good, I think.
+
+'isLocked'.. finds the appropriate cache using the usual ternary
+expression that selects between _ccHead, _parent and _this, based upon
+which of the three is not NULL.
+
+'setLocked'.. toggles _ccToUse->_theca->locked. Any time you see
+ccToUse, you should keep the aforementioned ternary expression in
+mind. It appears frequently.
+
+'notifyPagesRead' tells the cache that a series of pages are being
+read. This executes only if the cache is unlocked, and if memory
+protection on the cache has been enabled (see the opening condition,
+it's one of the RUNTIME_FLAGS). The condition wraps the entire body of
+the function. The start and end parameters, the region to protect for
+reading, are rounded up or down to the nearest page boundaries,
+depending on the direction (ie. if start < end or end < start). The
+rounded start and end are called protectStart and protectEnd. If
+they're not equal, *then* we call 'setRegionPermissions'. Then there's
+some trace messages emitted if rc, the result code, is non-zero.. but
+otherwise we're done.
+
+Question for Hang: why is locking the cache distinct from memory
+protecting regions of the cache??
+
+A: Memory protection is to protect from access by malicious
+processes. Locking the cache is done to protect the cache when it is
+being read.
+
+'notifyPagesCommitted' If J9SHR_MSYNC_SUPPORT is toggled in
+_runtimeFlags, we computed the actual direction (again, based on
+whether start < end or end < start), round them up or down to the
+nearest page boundary, and call _oscache->syncUpdates. Sync'ing
+flushes updates made to a memory-mapped file back to disk. It has similar
+effects with shared memory.. the idea is to intercalate concurrent
+writes so that they don't overstep each other.. anyway,
+'notifyPagesCommitted' ends by calling 'notifyPagesRead'.
+
+So, 'startup'! We begin by setting a ton of local variables (all of
+these are easy to understand!! on lines 1025 - 1053). If the _parent
+is NULL for some reason, we toggle the openMode local variable /
+argument. These are modes which are somewhat like UNIX style open
+modes, but not really. They govern the open mode of the OSCache, which
+we.. really should've documented before. createFlags, same
+deal. openMode later goes on to decide whether the OSCache is open in
+read-only mode. 'startup' is called with the parameter isFirstStart,
+which determines whether the cache has been started before. 'startup'
+either connects to a running cache, or starts an entirely new one.
+
+After we configure openMode and createFlags, we try to get
+_headerProtectMutex and _runtimeFlagsProtectMutex. Then, if firstStart
+== true, we set _commonCCInfo->cacheIsCorrupt = 0. If _osPageSize is
+0, *_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE is toggled off in
+_runtimeFlags. If it is still enabled after this, we round up
+piconfig->sharedClassCacheSize to *twice* the _osPageSize, if we
+can. Otherwise, we round the sharedClassCacheSize *down* to the next
+multiple of _osPageSize. So it all aligns.
+
+Then we make sure that piconfig->sharedClassCacheSize is between
+MIN_CC_SIZE and MAX_CC_SIZE.
+
+Then we set *actualSize = 0. For we do not know the actual size yet!
+
+There's another argument to 'startup', a BlockPtr named
+cacheMemory. It's used when unit testing to ensure that _oscache is
+NULL if we are unit testing, which is something we noticed
+earlier. For normal use, cacheMemory is always 0. Always. If
+cacheMemory isn't NULL, we check that the composite cache
+initialization and startup are complete, at which point we initialize
+headerInit by calling headerInit->init() (with some arguments, it's
+not an empty argument list).
+
+Next, if _parent == NULL, we know we're unit testing!! And we toggle
+_readOnlyOSCache according to whether J9OSCACHE_OPEN_MODE_DO_READONLY
+is true in openMode. If _readOnlyOSCache becomes true from this, we
+set _commonCCInfo->writeMutexID and
+_commonCCInfo->readWriteAreaMutexID to CC_READONLY_LOCK_VALUE. The
+same TLS key (I believe! this is something I've yet to confirm). If
+isFirstStart is true, we also allocate a TLS key for
+_commonCCInfo->writeMutexEntryCount, and we try to initialize the
+_utMutex (the trace/logger).
+
+If cacheMemory is NULL, we go about the usual thing. That is, we set
+the current cache version by calling setCurrentCacheVersion.. and from
+there we call _oscache->startup(). We set OSCStarted =
+_oscache->startup(..). The bad BUILDID test is disabled in the runtime
+flags, since it only applies during testing. If OSCStarted is false,
+we check if _oscache was corrupted. By comparing _oscache->getError()
+to J9SH_OSCACHE_CORRUPT, because that will the error value if so. If
+we disable corrupt cache dumps, we trigger it. And we set the
+corruption context and value by calling 'setCorruptCache', and return
+CC_STARTUP_CORRUPT.
+
+If that was not the error, we check to see that the error is
+J9SH_OSCACHE_NO_CACHE. And we return CC_STARTUP_NO_CACHE.
+
+So, if OSCStarted == false, we return from 'startup'. Otherwise, we
+keep going!
+
+If _readOnlyOSCache is true, set the _commonCCInfo write and
+readWriteArea mutex ID's to CC_READONLY_LOCK_VALUE.. again, as
+before. Same thing with writeMutexEntryCount that we just went over in
+the testing branch. We are repeating ourselves here, so eat your heart
+out, Uncle Bob.
+
+Otherwise, if the OS Cache isn't readonly, and isFirstStart is true,
+we do... same thing. Set _commonCCInfo->writeMutexID and
+_commonCCInfo->readWriteAreaMutexID via _oscache->getWriteLockID() and
+_oscache->getReadWriteLockID(). If we fail to return either of these,
+we return with CC_STARTUP_FAILED.
+
+If we don't have the write mutex (ie. hasWriteMutex == false), we try
+to claim the write mutex by calling 'enterWriteMutex'. Using either
+this CC, or the _parent, if _parent is non-NULL. If the result was 0,
+meaning we succeeded, we toggle hasWriteMutex = doReleaseWriteMutex =
+true, and we continue.
+
+Then we check to see that hasWriteMutex is true. But first, a burning
+missive from Hang Shao:
+
+yes, _parent is always NULL now that cachelets are not a thing, which
+would indicate the same is true of _ccHead.
+
+Ok, where we left off, hasWriteMutex was true. We set _oldUpdateCount
+to 0. If _cacheMemory != NULL, we set _theca to be the
+J9SharedCacheHeader pointed to by cacheMemory.. otherwise, we
+initialize _theca by _theca =
+(J9SharedCacheHeader*)_oscache->attach(..).
+
+Either way, _theca comes out non-NULL, or rather it should. If _theca
+!= NULL, we check that the CC_INIT_COMPLETE flag fails to holds in
+_theca->ccInitComplete, and that !_readOnlyOSCache is true.  If this
+is true, we set rc = CC_STARTUP_CORRUPT, we call 'setCorruptCode' with
+the corrupt context values (*_INIT and _theca->ccInitComplete, in this
+case) and we goto releaseLockCheck (the label of that name).
+
+If that if failed to fire, is we check that isCacheInitComplete() ==
+true. If so, and also, _theca->osPageSize != _osPageSize, we goto
+releaseLockCheck again, setting rc = CC_STARTUP_RESET. Then there's a
+section dedicated exclusively to WIN32 and its weird handling of
+virtual memory, but I think we can safely ignore that for
+now. Skipping down to line 1314.
+
+If !isCacheCorrupt() is true, and !checkCacheCRC(), then the CRC is
+deemed invalid.. and the cache is indeed corrupt, with crcValue being
+the corrupt value, and CACHE_CRC_INVALID the corruption code. If
+!isCacheCorrupt() is false, we force a cache dump if _runtimeFlags is
+configured appropriately.
+
+If it remains true that !isCacheCorrupt(), we continue on (at line
+1329). We set retryCntr = 0 (a local variable). If !_readOnlyOSCache,
+we set _theca->crcValid = 0. Otherwise, If isCacheInitComplete() ==
+false, and retryCntr < J9SH_OSCACHE_READONLY_RETRY_COUNT, we sleep a
+*_SLEEP_MILLIS count of milliseconds before incrementing retryCntr. If
+isCacheInitComplete() == false, we set rc = CC_STARTUP_FAILED and goto
+releaseLockCheck.
+
+So! Suppose isCacheInitComplete() returns false. We check to see that
+_ccHead != NULL. If it isn't, we set _theca->updateCountPtr,
+_theca->corruptFlagPtr, and _theca->lockedPtr with the values of each
+of their counterparts in _ccHead->_theca.
+
+Then, regardless of what happened in the previous paragraph, we set
+*actualSize = _theca->totalBytes. If isCacheInitComplete() == false,
+we are starting a new cache! So set _initializingNewCache = true. We
+check a few flags, and toggle the extraFlags variable (just
+initialized in this branch to 0) according to these settings:
+
+1) J9VM_DEBUG_ATTRIBUTE_LINE_NUMBER_TABLE |
+J9VM_DEBUG_ATTRIBUTE_SOURCE_FILE being false => *_NO_LINE_NUMBERS in
+extraFlags
+2) J9SHR_RUNTIMEFLAG_ENABLE_CACHERETRANSFORMED? =>
+*_runtimeFlags |= J9SHR_RUNTIMEFLAG_DISABLE_BCI
+3) !J9SHR_RUNTIMEFLAG_DISABLE_BCI =>
+*_runtimeFlags |= J9SHR_RUNTIMEFLAG_ENABLE_BCI;
+extraFlags |= J9SHR_EXTRA_FLAGS_BCI_ENABLED;
+4) J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_PARTIAL_PAGES* =>
+extraFlags |= J9SHR_EXTRA_FLAGS_BCI_ENABLED;
+*_runtimeFlags |= J9SHR_RUNTIMEFLAG_ENABLE_BCI;
+5) J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_PARTIAL_PAGES* =>
+extraFlags |= J9SHR_EXTRA_FLAGS_MPROTECT_PARTIAL_PAGES
+5a) if J9SHR_RUNTIMEFLAG_MPROTECT_PARTIAL_PAGES_ON_STARTUP* =>
+    extraFlags |= J9SHR_EXTRA_FLAGS_MPROTECT_PARTIAL_PAGES_ON_STARTUP;
+6) J9SHR_RUNTIMEFLAG_RESTRICT_CLASSPATHS* =>
+extraFlags |= J9SHR_EXTRA_FLAGS_RESTRICT_CLASSPATHS;
+
+A * at the end of the flag means the flag is checked with
+J9_ARE_ALL_BITS_SET; ? corresponds to *_ANY_* and ! to *_NO_*.
+
+Then 'setCacheHeaderExtraFlags' is called with extraFlags as an
+argument, and similarly for 'setCacheAreaBoundaries'. This is because
+the cache is new. These options need to be set. Finally,
+_canStoreClasspaths = true.
+
+Now, alternatively, if isCacheInitComplete() == true.. we call
+'checkCacheCompatibility'. If the return value is false, set rc =
+CC_STARTUP_FAILED, and goto releaseLockCheck. We compute
+_canStoreClasspaths again, for this branch (the work in the previous
+one was, of course, deferred! that is how conditionals work). We can
+if (false == this->isRestrictClasspathsSet(currentThread)) ||
+J9_ARE_ALL_BITS_SET(*_runtimeFlags,
+J9SHR_RUNTIMEFLAG_ALLOW_CLASSPATHS)). We will examine these later!
+
+If we _canStoreClasspaths, we emit some trace messages saying so, and
+we toggle the *_RESTRICT_CLASSPATHS flag off in _runtimeFlags. I'll
+let the comments above explain the next cache section:
+
+/* If cache is created with partialpage protection enabled then use the cache in that mode,
+ * and ignore any incompatible option like mprotect=nopartialpages or mprotect=none.
+ * Similarly, if the cache is created with mprotect=nopartialpages, then use the cache in that mode,
+ * and unset runtime flags for protecting partially filled pages.
+ */
+
+All of it is just making sure _runtimeFlags is consistent with respect
+to potentially contradictory options being enabled at once. Thank
+Christ, it would've been so tedious to read and most importantly for
+me to explain.
+
+We set _prevScan and _scan to
+(ShcItemHdr*)CCFIRSTENTRY(_theca). Without reserve, without
+controversy! No qualifying conditions are checked before this can
+happen.
+
+If this is the first start.. we store _theca to
+_sharedClassConfig->cacheDescriptorList->cacheStartAddress, so that
+external users of the VM can reach it. We also set _metadataSegmentPtr
+= &(_sharedClassConfig->metadataMemorySegment).
+
+Next, if isFirstStart is true, we increment _theca->vmCntr if the
+cache isn't read only, or, we set _commonCCInfo->vmID = _theca->vmCntr
++ 1 if it is. Note that we can modify _commonCCInfo with impunity,
+even if _readOnlyOSCache is true! But _theca->vmCntr must be modified
+with care. If there is integer overflow from the increment, the
+_commonCCInfo->vmID is incremented once more, since it cannot be
+allowed to be 0! Watch for the vmID, I think it may used as a flag
+that the CC hasn't been initialized.
+
+Next, *localCrashCntr = _theca->crashCntr. Because, of
+course. localCrashCntr is the VM local counter of crashes, and
+_theca->crashCntr is at the centre of it all. If !_readOnlyOSCache &&
+isLocked(), call setIsLocked(false). This indicates that another JVM
+crashed while it had locked the cache, and being here now, with a
+non-readonly cache, we need to unlock it.
+
+Next, _readWriteAreaStart and _readWriteAreaBytes are initialized in
+the most uninteresting manner possible, based on whether
+READWRITEAREASIZE(_theca) is non-zero.
+
+Then, based on whether J9SHR_MSYNC_SUPPORT is defined true (or false)
+in the C preprocessor, we toggle (or untoggle) a few flags having to
+do with MPROTECT settings in _runtimeFlags. Similarly, we set
+_doHeaderSync, _doReadWriteSync, _doSegmentSync and _doMetaSync to
+true or false based on the same compile-time setting.
+
+Then comes all this crap, which is so similarly themed I'm deflated by
+the thought of writing about it:
+
+if (J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT)) {
+_doSegmentProtect = !getContainsCachelets();
+_doMetaProtect = true;
+}
+_doHeaderProtect = J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_ALL);
+_doHeaderReadWriteProtect = J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_RW);
+_doPartialPagesProtect = J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_PARTIAL_PAGES);
+
+if (J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_ALL)) {
+CC_TRACE(J9SHR_VERBOSEFLAG_ENABLE_VERBOSE, J9NLS_INFO, J9NLS_CC_PAGE_PROTECTION_ALLENABLED_INFO);
+}
+
+Yeah, booleans are being set that reflect the value of various runtime
+flags, passed to us on the command line when OpenJ9 was invoked.
+
+Then a bunch of CC_TRACE messages are emitted, based on some platform
+specific flags being defined, at compile time (ie. J9ZOS390, AIXPPC,
+etc). Then:
+
+/* Calculate the page boundaries for the CC header and readWrite areas, used for page protection.
+ * Note that on platforms with 1MB page boundaries, the header and readWrite areas will all be in one page */
+
+This happens once more, if *_runtimeFlags &
+J9SHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE is true. We compute
+_cacheHeaderPageStart and _cacheHeaderPageBytes by rounding down/up to
+the nearest page boundary.. which is determined by, guess
+what.. _osPageSize. Very familiar by now. If _readWriteAreaStart !=
+NULL (meaning it has positive size, from what we saw a moment ago!) it
+is rounded to match the page boundary sizes. _readWriteAreaPageStart
+and _readWriteAreaPageBytes are set to NULL and 0 resp. if the
+readwrite area and the cache header occur on the same page. Which
+helps explain some of the more oblique conditionals encountered
+later. The point of putting the two on separate pages, if large
+enough, is to be able to protect them separately. Then there's a brief
+sanity check about the rounding calculations, to make sure the new
+byte size of the cache header and read/write area amount to several
+whole pages.
+
+Next, if we aren't testing (meaning _oscache isn't NULL) and if
+_parent == NULL, so that we are the authority in our own household, we
+try to capture the readWriteMutex if we don't have it already. This is
+indicated by hasReadWriteMutex. If it's false, and if
+_commonCCInfo->readWriteAreaMutexID != CC_READONLY_LOCK_VALUE, then we
+call _oscache->acquireWriteLock with the readWriteAreaMutexID just
+mentioned. If it succeeds, then hasReadWriteMutex and
+doReleaseReadWriteMutex are set to true! Otherwise, and regardless of
+whether the branch fired or _oscache->acquireWriteLock succeeded if
+the branch fired, we do:
+
+_localReadWriteCrashCntr = _theca->readWriteCrashCntr.
+
+Y'see, claiming the readWriteAreaMutex was just a ploy to do
+this. Once we have it, if doReleaseReadWriteMutex is true, we call
+_oscache->releaseWriteLock.. if that call fails, we set rc =
+CC_STARTUP_FAILED. If the call succeeds, we do NOT set
+hasReadWriteMutex to false, strangely enough.
+
+If it wasn't the cache that we had hasReadWriteMutex, or that the
+readWriteAreaMutexID == CC_READONLY_LOCK_VALUE, we set it to
+CC_READONLY_LOCK_VALUE, and _localReadWriteCrashCntr =
+CC_COULD_NOT_ENTER_STRINGTABLE_ON_STARTUP. Since that is all that is
+stored there! We may be able to get the readWriteAreaLock, but the
+other parts of the cache should be cool to access, is what this
+section is trying to convey to the VM.
+
+Then comes this:
+
+if (_doSegmentProtect && (SEGUPDATEPTR(_theca) != CASTART(_theca))) {
+/* If the cache has ROMClass data, notify that the area exists and will be read */
+   notifyPagesRead(CASTART(_theca), SEGUPDATEPTR(_theca), DIRECTION_FORWARD, true);
+}
+
+We protect the pages read from the start of the cache, to the end of
+the segment area, if the region is non-empty. Then this puzzling piece
+of code:
+
+/* Update romClassProtectEnd regardless of protect being enabled. This value is
+ * used by shrtest which doesn't enable protection until after startup
+ */
+setRomClassProtectEnd(SEGUPDATEPTR(_theca));
+
+I was confused by this yesterday. Protect the end of the ROMClass
+section? Wha? Yeah, it's just a pointer.. _romClassProtectEnd is set
+to the pointer passed into it. That's a complete description of what
+'setRomClassProtectEnd' does. Fin.
+
+If _initializingNewCache was set to true earlier, *cacheHasIntegrity =
+true and _theca->ccInitComplete |= CC_STARTUP_COMPLETE. So we are
+doing just fine.
+
+Also,
+
+_maxAOT = _theca->maxAOT;
+_maxJIT = _theca->maxJIT;
+
+Which answers that.. whole series of questions. Heh.
+
+Going way back up to the top, is isCacheCorrupt() is true, rc =
+CC_STARTUP_CORRUPT, and that's it. Anticlimactic. To the other
+enclosing else branch that time forgot, where _theca = 0, rc =
+CC_STARTUP_FAILED. Again. If _parent == NULL, it's up to us to call
+'setCorruptCache' and set rc = CC_STARTUP_CORRUPT, if
+_oscache->getError() returns J9SH_OSCACHE_CORRUPT.
+
+Otherwise, if J9SH_OSCACHE_DIFF_BUILDID is the return value of
+_oscache->getError(), we set rc = CC_STARTUP_SOFT_RESET, unless the
+*_DO_NOT_CREATE_CACHE flag is set inside _runtimeFlags.
+
+Now! We're rounding the bend of 'startup'! The witch is nearly
+dead. If rc == CC_STARTUP_OK, and if hasWriteMutex is true, we call
+_debugData->init(..) if _parent == NULL. So that the
+ClassDebugDataProvider is initialized. If it fails, we call
+'setCorruptCache'.. with the unusual, overloaded option of passing the
+corruption code and corruption value. rc = CC_STARTUP_CORRUPT
+follows.
+
+We're at the bottom of 'startup', and at the 'releaseLockCheck:'
+label. If doReleaseWriteMutex is true, and _parent == NULL, we call
+'exitWriteMutex'. If this fails, then rc = CC_STARTUP_FAILED. And we
+reach a big overarching else, now that the containing branch's
+positive side has run out. What is the condition of this branch? It's
+hasWriteMutex being true. If it's not, rc = CC_STARTUP_FAILED.
+
+So, that branch is ended. We check that rc == CC_STARTUP_OK. If so,
+set _started = true, and call 'protectHeaderReadWriteArea'. Then do a
+trace, and return rc.
+
+'checkCacheCompatibility', which is used from 'startup', is a bit
+weird. We check to see that 'getIsBCIEnabled' returns false. This
+check is nothing but an add into _theca->extraFlags, and seeing that
+BCI is enabled. I have no idea what BCI is. From the Holy Manual:
+
+"-Xshareclasses:enableBCI
+
+    This option is enabled by default.  Allows a JVMTI
+    ClassFileLoadHook event to be triggered every time, for classes
+    that are loaded from the cache. This mode also prevents caching of
+    classes that are modified by JVMTI agents. For more information
+    about this option, see Using the JVMTI ClassFileLoadHook with
+    cached classes. This option is incompatible with the
+    cacheRetransformed option. Using the two options together causes
+    the VM to end with an error message, unless
+    -Xshareclasses:nonfatal is specified. In this case, the VM
+    continues without using shared classes."
+
+There's no indication of what BCI stands for/means, which I find odd.
+
+This enables overloading via OpenJ9's JVMTI, its tools interface. So,
+I don't know if we need to worry overmuch about the specifics of this,
+since, after all, we don't care about Java. All that either branch
+does is toggle _runtimeFlags around, according to those sections
+specified by J9SHR_RUNTIMEFLAG_ENABLE_BCI and
+J9SHR_RUNTIMEFLAG_DISABLE_BCI. If the stats are enabled, but BCI is
+not, the cache is not compatible, and this also holds if vice
+versa. Also, something to do if -Xshareclasses:cacheRetransformed is
+enabled. That can also fuck everything up.
+
+Moving on to 'next'. Not 'nextEntry', but 'next'. We should hold
+either the refresh mutex or the write mutex. These conditions are
+checked (either will do) in an assert. free is a local variable set to
+UPDATEPTR(_theca). The cusp of the cache entries area, where new items
+are placed. The local variable ih is set to &_scan. The maximum length
+of a composite cache entry, then is the difference between ih and
+free, plus the length of a single shared cache item header (a
+ShcItemHdr).
+
+If (BlockPtr)(*ih) > free, (remember, the cache entry region grows to
+the left), then we have found an item at _scan! If:
+
+(CCITEMLEN(*ih) <= 0) || (CCITEMLEN(*ih) > maxCCItemLen)
+
+holds, then something has gone wrong. A problem that may indicate a
+corrupted cache, specifically. We call 'setCorruptCache'. ih is the
+corrupted value, and ITEM_LENGTH_CORRUPT is the corruption code.
+
+Otherwise, _prevScan = _scan, result = *ih, and *ih (an lvalue of
+_scan, in other words) is set to CCITEMNEXT(*ih), which iterates to
+the next item in the linked list. If _doMetaProtect is true (and yes,
+this is the metadata region we are walking), we call
+'notifyPagesRead', on the region _prevScan.._scan +
+sizeof(ShcItemHdr), in the backward direction, where doProtect is
+true.
+
+Then we record a Trace message, and return the result. The end.
+
+'initBlockData' initializes an ShcItem type. Which contains a type
+tag, length, and Java VM ID. That's it. The ShcItem is passed in as a
+ShcItem**, along with a data length, and a datatype. And a jvmID,
+which is _commonCCInfo->vmID.
+
+'checkUpdates' is next. 
 
 'nextEntry' skips over stale items within the cache (which it counts,
 if staleItems is a non-NULL pointer). The ih values (item headers) are
@@ -879,37 +1490,6 @@ to tell.
 
 Back to the initialization dance.
 
-'setCacheAreaBoundaries' sets up the various boundaries of the cache!!
-According to the diagram that leads the source file, I
-suppose. Apparently, an SRP hashtable is also stored within its
-depths!! This determines the value of finalReadWriteSize, in part,
-under the right conditions. It contains "numOfSharedNodes"
-entries. I'm not sure what a "shared node" is.
-
-It goes through some trouble to determine finalReadWriteSize.  This
-determines the size of the read/write area after the shared cache
-header. The start of the segment area is much much easier to compute.
-If the "ENABLE_ROUND_TO_PAGE_SIZE" option is enabled, then
-finalSegmentStart, newCacheEnd, etc. are rounded to the size of a
-page. Whatever the value of _osPageSize is.
-
-"Currently the read write area of composite cache is only used by
-shared string intern table."
-
-Sounds as though that's the SRP hash table that determines the size of
-the read/write area! Then, since we're not using cachelets (we never
-use cachelets!), the ClassDebugDataProvider calls its static
-'HeaderInit' method.
-
-A debug message is printed if the composite cache size was rounded
-down to a page's size, and we're done.
-
-But verily, we are writing segmentSRP and updateSRP in this
-segment. So it's all good, I think.
-
-'initBlockData' initializes an ShcItem type. Which contains a type
-tag, length, and Java VM ID. That's it.
-
 'enterReadMutex' increments the reader count (by calling
 'incReaderCount') and waits for the cache to be unlocked, if it's
 currently locked. It will block until the cache is locked. Or the wait
@@ -935,7 +1515,7 @@ _readWriteAreaPageStart is the rounded down size of the read/write
 area (rounded down to a page size, of course). I think the header,
 read/write area, and cache area all occupy a single page? I think??
 
-/* Calculate the page boundaries for the CC header and readWrite areas, used for page protection.	
+/* Calculate the page boundaries for the CC header and readWrite areas, used for page protection.
  * Note that on platforms with 1MB page boundaries, the header and readWrite areas will all be in one page */
 
 ok, that's pretty damn unclear. It's just rounded it *to* a multiple
@@ -1114,7 +1694,7 @@ are entering or exiting the mutex respectively).
 For 'doLockCache' and 'doUnlockCache', the caller must hold the write
 mutex. The comments say as much. The header and read/write are
 unprotected, the cache is locked/unlocked, and then the header and
-read/write area are protected again. 
+read/write area are protected again.
 
 
 
@@ -1304,23 +1884,6 @@ _debugData->processUpdates(currentThread, this). If we are protecting
 the cache area that contains ROM class (ie. the segment area, which is
 flagged by the boolean _doSegmentProtect), we call
 this->notifyPagesRead(). And from there we're done.
-
-SH_CompositeCacheImpl::notifyPagesRead tells the cache that a series
-of pages are being read. This executes only if the cache is unlocked,
-and if memory protection on the cache has been enabled. The logic
-calls setRegionPermissions after calculating whether the start pointer
-is greater or less than the end pointer, which decides the direction
-(forward or backward). These checks are present to perform page
-rounding on the start and end pointers correctly. This is really just
-a wrapper on setRegionPermissions with some particulars in place for
-how the cache is laid out.
-
-Question for Hang: why is locking the cache distinct from memory
-protecting regions of the cache?? Further, what purpose does memory
-protection serve that is different from those of the write and release
-mutexes? Don't all these do the same thing, really? Does memory
-protection also protect a region from the thread that holds one of the
-mutexes?
 
 Once we return from runEntryPointChecks.. we are back in
 storeROMClassResource. If we force a replacement, by the way, the RRM
@@ -1650,10 +2213,9 @@ We call _rcm->storeNew to store the itemInCache. itemInCache is cast
 to a ScopedROMClassManager*, regardless of whether useScope is
 true. Then we call cacheAreaForAllocate->commitUpdate,
 'updateROMSegmentList', we do some more stuff for the write
-hash.. yeah. 
+hash.. yeah.
 
 TODO: maybe answer this whole allocate JIT vs. allocate AOT thing??
 Yes? What the limitations of the JIT and AOT sections really mean,
 amid the structure of the composite cache? Also, getReaderCount!
 Where does _metadataSegmentPtr point to????
-
