@@ -990,8 +990,8 @@ they're not equal, *then* we call 'setRegionPermissions'. Then there's
 some trace messages emitted if rc, the result code, is non-zero.. but
 otherwise we're done.
 
-Question for Hang: why is locking the cache distinct from memory
-protecting regions of the cache??
+Question for Hang: why is locking the cache a separate operation from
+memory protecting regions of the cache??
 
 A: Memory protection is to protect from access by malicious
 processes. Locking the cache is done to protect the cache when it is
@@ -1380,7 +1380,20 @@ specified by J9SHR_RUNTIMEFLAG_ENABLE_BCI and
 J9SHR_RUNTIMEFLAG_DISABLE_BCI. If the stats are enabled, but BCI is
 not, the cache is not compatible, and this also holds if vice
 versa. Also, something to do if -Xshareclasses:cacheRetransformed is
-enabled. That can also fuck everything up.
+enabled. That can also fuck everything up, unless stats are
+enabled. cacheRetransformed allows retransformed classes to be written
+to the cache. From the Holy Manual:
+
+"Retransformed classes are classes with registered retransformation
+capable agents that have been called by a JVMTI agent at run
+time. Unlike RedefineClasses, the RetransformClasses function allows
+the class definition to be changed without reference to the original
+bytecode. An example of retransformation is a profiling agent that
+adds or removes profiling calls with each
+retransformation. Retransformed classes are not stored in the cache by
+default, but caching can be enabled using the
+-Xshareclasses:cacheRetransformed option. This option will also work
+with modification contexts or partitions."
 
 Moving on to 'next'. Not 'nextEntry', but 'next'. We should hold
 either the refresh mutex or the write mutex. These conditions are
@@ -1415,27 +1428,718 @@ tag, length, and Java VM ID. That's it. The ShcItem is passed in as a
 ShcItem**, along with a data length, and a datatype. And a jvmID,
 which is _commonCCInfo->vmID.
 
-'checkUpdates' is next. 
+'checkUpdates' reads the value at _theca->updateCountPtr, and tries to
+return the difference between it and _oldUpdateCount, if it's
+non-negative. If negative, it returns 0. I don't like this,
+really.. it's a kludge to circumvent a potential stateful
+inconsistency. But there it is.
+
+'doneReadUpdates' takes the currentThread and a value, updates. The
+number of updates 'actually' read from the cache, according to the
+comment preamble.. it also says the value returned 'checkUpdates'
+should be used in conjunction with 'doneReadUpdates'. It reads
+_theca->updateCountPtr, as before. If updates > 0 and the
+_oldUpdateCount is < than _theca->updateCountPtr, it increments
+_oldUpdateCount by updates. It also calls
+_debugData->processUpdates... if _doSegmentProtect is true at this
+stage, it calls 'notifyPagesRead' to protect the region
+
+getRomClassProtectEnd() .. newRomClassEndAddr
+
+where newRomClassEndAddr is a local variable set to
+SEGUPDATEPTR(_theca). It then calls 'setRomClassProtectEnd' on
+newRomClassEndAddr, so that the next call of the getter
+'getRomClassProtectEnd' will return the current value of
+newRomClassEndAddr.
 
 'nextEntry' skips over stale items within the cache (which it counts,
 if staleItems is a non-NULL pointer). The ih values (item headers) are
-given by 'next'. 'nextEntry' returns the first non-stale item it
-can find, if it can found one.
+given by 'next'. 'nextEntry' returns the first non-stale item it can
+find, if it can found one. It expects the caller to hold either the
+refresh mutex or the write mutex.
 
-'next' sets BlockPtr free to UPDATEPTR(_theca), which has this definition:
+'enterWriteMutex' either acquires the write lock through the owning
+osCache (either our own if _ccHead or NULL, or the head's oscache,
+lending further creedence to the idea that there is only *one* OSCache
+for every chain of CompositeCache's, of which there is also just one),
+or by using omrthread_monitor_enter. Then a bunch of other options
+that might revoke possession of the mutex if toggled are
+checked. That's basically it, not much more to say.
 
-#define UPDATEPTR(ca) (((BlockPtr)(ca)) + (ca)->updateSRP)
+Holding the write mutex allows multiple concurrent readers of the
+cache, unless the cache is locked!
 
-We need the refresh mutex *or* the write mutex! I don't know what the
-difference is between them, but there is an Assert that checks that
-one of them is held.
+If _commonCCInfo->writeMutexID == CC_READONLY_LOCK_VALUE, the TLS
+value _commonCCInfo->writeMutexEntryCount is incremented by 1, and 0
+is returned. That's it, if the writeMutexID is the
+CC_READONLY_LOCK_VALUE!
 
-ih points to _scan, which starts when the object is initialized as
-NULL. That's in 'commonInit.' When 'startup' is called, _scan
-is initialized as
+If that's not the case, we continue. We assert, via
+Trc_SHR_Assert_NotEquals, that currentHeader is not equal to any of:
+_commonCCInfo->hasWriteMutexThread,
+_commonCCInfo->hasReadWriteMutexThread,
+_commonCCInfo->hasRefreshMutexThread.
 
-   _prevScan = _scan = (ShcItemHdr*)CCFIRSTENTRY(_theca); // line
-   1463.
+If we're using an oscache (determined by the pointer oscacheToUse
+being non-NULL, of course), call
+oscacheToUse->acquireWriteLock. Otherwise, call
+omrthread_monitor_enter. Either way, if rc == 0, it succeeded!! If
+DENY_CACHE_UPDATES is enabled in _runtimeFlags, call
+'exitWriteMutex', and set rc = -1. Otherwise, if DENY_CACHE_UPDATES
+isn't enabled, see if lockCache, the local variable, is
+true. lockCache was passed to 'enterWriteMutex' as an argument
+parameter (a boolean). If it's true, call 'doLockCache'.
+
+If UnitTest::unitTest !=
+COMPOSITE_CACHE_TEST_SKIP_WRITE_COUNTER_UPDATE, we call
+'unprotectHeaderReadWriteArea', set _commonCCInfo->oldWriteCount =
+_theca->oldWriterCount to _theca->writerCount (we can safely do this
+because we have the write mutex!!), and increment
+_theca->writerCount. Once this is done, call
+'protectHeaderReadWriteArea'.
+
+Then emit some trace messages if rc == -1, and return rc.
+
+'exitWriteMutex' is largely the same thing, complete with an
+unprotectHeaderReadWriteArea/protectHeaderReadWriteArea wrapping a
+*decrement* to _theca->writerCount (depending on whether we are
+entering or exiting the mutex respectively). This time, if
+_commonCCInfo->writeMutexID == CC_READONLY_LOCK_VALUE, we decrement
+the TLS value _commonCCInfo->writeMutexEntryCount and return 0. Also,
+it calls 'doUnlockCache' again, and sets
+_commonCCInfo->hasWriteMutexThread to
+NULL. oscacheToUse->releaseWriteLock is called if oscacheToUse !=
+NULL, and omrthread_monitor_exit is called otherwise. Then rc is
+returned. It's the mirror-mirror version of 'enterWriteMutex'.
+
+For 'doLockCache' and 'doUnlockCache', the caller must hold the write
+mutex. The comments say as much. The header and read/write are
+unprotected, the cache is locked/unlocked, and then the header and
+read/write area are protected again. Also, theca->crcValid is set to 0
+(a C style boolean for false). 'setIsLocked' is called with true,
+sandwiched by protect/unprotect calls. After
+'protectHeaderReadWriteArea' has been called, the local patienceCntr
+(initialized to 0 in 'doLockCache', it's a local variable) is checked
+for < CACHE_LOCK_PATIENCE_COUNTER, and this is &&'ed with
+_theca->readerCount > 0. The body of the while loop that's entered via
+these conditions sleeps 5 milliseconds, and patienceCntr is
+incremented.
+
+Once the loop is existed, we check the conditions that caused the
+exit. If patienceCntr == CACHE_LOCK_PATIENCE_COUNTER, *and*
+_theca->readerCount > 0, the comments say, 'Reader has almost
+certainly died. Cannot wait forever. Whack to zero and proceed'. And
+it does exactly that. We call 'unprotectHeaderReadWriteArea', set
+_theca->readerCount = 0, call 'protectHeaderReadWriteArea', and on we
+go. We call 'unprotectMetadataArea' and return (.. nothing, it's a
+void function).
+
+'doUnlockCache' checks that the cache is not read-only. It
+ShouldNeverHappen here that the cache is read-only. If not, check
+_theca is not NULL, and that 'isLocked' returns true. Then we call
+'protectMetadataArea', 'unprotectHeaderReadWriteArea', call
+setIsLocked(false), and then call 'protectHeaderReadWriteArea'
+again. That's it, easy peasy.
+
+'peekForWriteHash' sets and returns _useWriteHash, a boolean. Here's
+the comment preamble, it.. simply says more than my words ever could.
+
+/**
+ * Check whether to use writeHash when loading classes
+ *
+ * This method helps answer the question: Is it worth us using writeHash when loading classes? 
+ * The answer is: Yes if another VM has connected since us or if a VM previous to us has detected us 
+ * and started writeHashing
+ * 
+ * Current thread should hold refresh mutex when entering this method.
+ *
+ * @param [in] currentThread  Points to the J9VMThread struct for the current thread
+ * 
+ * @return true if this VM should use writeHash while loading classes, false otherwise
+ */
+
+And then:
+
+_useWriteHash = ((_commonCCInfo->vmID < _theca->vmCntr) || _theca->writeHash);
+return _useWriteHash;
+
+after some trace messages and a ShouldNeverHappen is the cache is not
+started, or read-only. That's it! _commonCCInfo->vmID < _theca->vmCntr
+checks that there are other VMs active.. _theca->writeHash checks that
+a writeHash has been recorded. It can't be 0, of course.
+
+'testAndSetWriteHash', according to the preamble, tests to see if the
+class (demarcated by the function parameter hashValue) is being loaded
+by another JVM. If not, set the write hash to that value. 
+
+Should be called if an attempt to find a class in the cache has
+failed.  If the hash field in the cache field is free (0), it is set,
+indicating that the JVM is going to load the class.  If the hash field
+has already been set, then this means that another JVM is loading the
+class.  If it is the same class, 1 is returned which indicates that it
+would be wise to wait. Otherwise, 0 is returned.
+
+A hash value, hashValue, is passed in, that it is calculated from the
+name of the class (from 'computeHashForUTF8'). The writeHash value in
+the cache is called _theca->writeHash. The hash value has some bitwise
+component pertaining to the write hash, which is captured by &&'ing it
+with the value WRITEHASH_MASK. If _theca->writeHash is 0, we call
+'setWriteHash'. Otherwise, if hashValue & WRITEHASH_MASK == cacheValue
+& WRITEHASH_MASK, we shift _theca->writeHash right by WRITEHASH_SHIFT
+bytes, indicating the ID of the JVM that is 'in the
+cache'. _theca->writeHash is really an indicator of two things, then:
+the ID of the JVM modifying the cache, and the 'true' write hash in
+the bits preceding it, of which there are WRITEHASH_SHIFT.
+
+If the VM ID doesn't match _commonCCInfo->vmID, return 1, or true,
+indicating that yes, the caller VM should wait for the cache to be
+released. The call of 'setWriteHash' is to indicate to other JVMs that
+*this* JVM is loading the class.
+
+'setWriteHash' is really just a compare and swap atomic operation on
+_theca->writeHash, buffeted by calls to 'unprotectHeaderReadWriteArea'
+and 'protectHeaderReadWriteArea'. That's all. Again, the new value is
+recorded as such, which corroborates the account given above:
+
+value = ((hashValue & WRITEHASH_MASK) | (_commonCCInfo->vmID << WRITEHASH_SHIFT));
+
+The hash value, the 'true' hash of the write hash, is &&-masked by
+WRITEHASH_MASK, and the rest is simply the VM ID shifted by the number
+of bits composing WRITEHASH_MASK.
+
+'tryResetWriteHash' has this write-up.. later within this very
+writeup:
+
+After checking the staleness of ClassPathEntryItem (and marking the
+ROMClass as stale if so), if the ROM class was found, we call
+_ccHead->tryResetWriteHash if are using the write hash. And we're
+trying to reduce contention.. this is a runtime flag stored within the
+cache, btw. If we hold the write hash, or if the write hash failed to
+be set too many times, we reset it. This is all the action of
+_ccHead->tryResetWriteHash.
+
+I should specify, the write hash is set to 0 if successfully reset in
+'tryResetWriteHash'.
+
+'setWriteHash', similarly quite similar. It's a
+VM_AtomicSupport::lockCompareExchange on &(_theca->writeHash), the
+oldNum (the previous value that we read in), and value, a local
+variable computed from the VM ID and the passed in hashValue. We do
+the lock compare exchange in the midst of unprotecting/protecting the
+HeaderReadWriteArea.
+
+'incReaderCount' uses VM_AtomicSupport to do a 'lockCompareExchange'
+on the reader count, which may fail! Suggesting that high-granularity
+locks are being used, rather than, you know, actual atomics. Something
+belied by the name. These calls to 'lockCompareExchange' are
+buttressed by a call to 'protectHeaderReadWriteArea' and
+'unprotectHeaderReadWriteArea', as in the previous function. We do in
+a compare-test-swap loop until the new value is finally written!
+
+'decReaderCount' does the decrement/wait on 'atomic' lock and exchange
+loop again. This time to decrement _theca->readerCount. Once finished,
+it calls 'protectHeaderReadWriteArea'. It checks to see if the
+previous readerCount value was whacked to 0 by doLockCache, and if so,
+it breaks out of the do/while. This is the only notable difference
+from 'incReaderCount', apart from the decrement in place of the
+increment.
+
+'enterReadMutex' increments the reader count (by calling
+'incReaderCount') and waits for the cache to be unlocked, if it's
+currently locked. It will block until the cache is unlocked. Or the
+wait count is exceeded. If it is locked, the reader count is
+immediately decremented, and 'acquireWriteLock' is called. This waits
+for the lock to be undone (I can only presume!), and for the write
+mutex to become available, before incrementing the reader count again
+via 'incReaderCount'. If the write lock mutex was acquired
+successfully, 'incReaderCount' is called *again*.  Then the write lock
+is released, by calling 'releaseWriteLock'. If we look down to
+'doLockCache', we see from the comment preamble that 'doLockCache'
+*expects* the caller to hold the write mutex. So everything in this
+paragraph is justified, non? We can be sure the cache is not locked at
+the time we increment the reader counter in 'enterReadMutex'. All the
+acquiring of write locks and grabbing of monitors and so on you see in
+this function have entirely to do with securing the write mutex. The
+so-called "read mutex" is nothing other than the check readerCount >
+0.
+
+'exitReadMutex' calls 'decReaderCount' unless
+_commonCCInfo->writeMutexID == CC_READONLY_LOCK_VALUE, in which case
+_readOnlyReaderCount is decremented, and we return. That's it!
+
+'deleteCache' calls _oscache->destroy to destroy the cache, if
+_oscache is not NULL. Note that there's no mucking around with
+_ccHead, or _parent, or any of that nonsense we saw before. Again, as
+always, this is buttressed by
+unprotectHeaderReadWriteArea/protectHeaderReadWriteArea. Of course.
+
+'startCriticalUpdate' is perhaps best explained by appealing to the
+preamble, as I so often do:
+
+/**
+ * Called when performing critical section which, if does not complete, will
+ * cause the cache to be corrupted.
+ * Calling this function causes the cache header to become unprotected until endCriticalUpdate is called
+ *
+ * @param [in] currentThread  Pointer to J9VMThread structure for the current thread
+ */
+
+It will 'cause the cache to be corrupted' by unprotect(ing) the
+read/write area, as we've come to expect, and incrementing
+_theca->crashCntr. That's because the critical section has things
+done to it that the CompositeCache judges as corruptions if they're
+not soon undone.
+
+'endCriticalUpdate' is the mirror image of 'start'.. we decrement
+_theca->crashCntr, and protect the read/write area.
+
+Also, as a prelude, 'allocateMetadataEntry' tries to allocate a
+section to store a metadata item represented by a ShcItem entry. A lot
+of the trickiness once again boils down to rounding the size of the
+item up or down according to a page boundary. Here,
+'changePartialPageProtection' is applied so that the metadata region
+becomes read/write. It writes to the metadata area of the cache using
+memcpy. Yes, the system routine memcpy! I was expecting something a
+little more haute couture. But there it is.
+
+Before that, we check to see if the allocation area produced for the
+metadata item abuts against the page containing
+SEGUPDATEPTR(_theca). If it does, use 'changePartialPageProtection' to
+protect it, too. Also update _scan to reflect the addition of the
+latest item. Remember, walking the cache items in the metadata area
+involves stepping *forward* through the metadata area, which allocates
+new items *backwards*. 
+
+'allocate' firsts starts by checking a NeverShouldHappen condition:
+
+!_started || _readOnlyOSCache || (itemToWrite == NULL) ||
+ ((I_32)itemToWrite->dataLen < 0)
+
+So, if we haven't started, or are read-only, or we don't have an item
+to write to the cache, or if the dataLen of the item is corrupted,
+yes, none of those things should happen.
+
+Similarly, isCacheCorrupt() cannot be true, or we are in trouble. More
+in the sense that we return NULL, so, less severe than NeverShouldHappen.
+
+Then, itemToWrite is aligned to byte align (ie. as an integer, it must
+be even) because the lower bit is used to indicate staleness, as the
+comments say. This is if itemToWrite->dataLen > 0. The itemLen, the
+'true' aligned length of the item, is represented by the local
+variable itemLen. Otherwise, if itemToWrite->dataLen == 0, itemLen =
+0.
+
+There is this fun assert:
+
+Trc_SHR_Assert_False(_storedSegmentUsedBytes | _storedReadWriteUsedBytes | _storedMetaUsedBytes | _storedAOTUsedBytes | _storedJITUsedBytes);
+
+All these bools must be false. We cannot currently be in the process
+of storing any data, to anywhere in the cache. It's by design a single-threaded
+operation.
+
+Next, we set the locations *at* the pointers segmentBuffer and
+readWriteBuffer to NULL, if the pointers themselves aren't NULL, of
+course. Then we consider the enum type, a parameter to 'allocate'.
+
+If type == ALLOCATE_TYPE_BLOCK, we are allocating a generic block, in
+the sense that it's distinct from a JIT or AOT block. freeBytes, the
+local variable, is set to 'getFreeBlockBytes' (its return value, not
+the function). And that does a few calculations based on
+FREEBYTES(_theca), and subtracting away the portions reserved for JIT
+and AOT code.
+
+The local variables usedBytesInc = itemLen + addBufferSize +
+_debugData->getStoredDebugDataBytes(). addBufferSize is a bit of a
+stumper. If readWriteBuffer == NULL, it's separateBufferSize.
+Otherwise it's 0. The readWriteBuffer does indeed -- usually --
+correspond to the read/write buffer of the cache as we usually
+understand it.
+
+If type == ALLOCATE_TYPE_AOT, we start by calling
+'getAvailableReservedAOTBytes'. That function answers a longstanding
+question I've had about the role of minAOT and minJIT. The number
+of *available* reserved AOT bytes is minAOT - aotBytes and we expect
+_theca->minAOT <= _theca->aotBytes <= _theca->maxAOT.  But also
+'getAOTBytes' has a comment stating that it is indeed the total number
+of AOT bytes stored in the SCC. Similarly for JIT!
+
+The available reserved AOT bytes are stored in
+reservedAOT. 'getFreeAOTBytes' is slightly different! It computes the
+local variable
+
+I_32 usableFreeBytes = (I_32)getFreeBytes() - getAvailableReservedJITBytes(currentThread);
+
+We need to know that _theca->maxAOT - _theca->aotBytes.   (1)
+
+the maximum amount of space useable for AOT minus the number of bytes
+presently used for AOT.. exceeds usableFreeBytes. In this case we
+return usableFreeBytes. We also return usableFreeBytes if
+_theca->maxAOT == -1.
+
+Otherwise, if _theca->maxAOT != -1, and the difference at (1) is <
+usableFreeBytes.. then we go with (_theca->maxAOT -
+_theca->aotBytes). The lesser value.
+
+Back to allocate! If the number of reserved AOT bytes is >=
+_theca->aotBytes, *plus* the length of the code data (the parameter of
+'allocate', codeDataLen; the code data can be such as profiling data
+related info, you know), set usedBytesInc = itemLen + addBufferSize -
+codeDataLen. This is because, quoth the comment,
+
+/* Reserved AOT has already been counted as used bytes. If it
+ * is not reached, codeDataLen should not be counted as used
+ * bytes */
+
+The amount of space reserved for AOT (and that is *available*) has
+already been counted in the usedBytes count (yep, this is true.. see
+'getFreeBlockBytes'). If it can accommodate all it contains *plus* the
+codeDataLen bytes, clearly, the increment to usedBytes at the finale
+of allocate should not include codeDataLen! We would double count the
+bytes of codeDataLen in that case.
+
+But that implies that while the data whose length is counted
+codeDataLen goes into the AOT area (that was pre-reserved) the AOT
+code itself does not. See if this holds up!
+
+In the second case,
+
+(reservedAOT > _theca->aotBytes) && (reservedAOT < _theca->aotBytes +
+codeDataLen)
+
+and so, usedBytesInc is computed as follows:
+
+usedBytesInc = (U_32)_theca->aotBytes + itemLen + addBufferSize -
+reservedAOT;
+
+meaning that we deduct the last bit of reservedAOT space that remains
+available, yes? So we are going to copy the used parts of the cache
+into the available, reserved parts of the AOT? Or we're going to
+behave like that will happen, and use only the residual part
+represented by _theca->aotBytes - reservedAOT?? WHY?? Seems that we're
+always trying to maintain a buffer of at least the amount of space
+used to *store* AOT/JIT code in reserved space for *future* AOT/JIT
+code. This is the best possible explanation I can give currently.
+
+Finally, if neither of these conditions applies, then reservedAOT <=
+_theca->aotBytes, and usedBytesInc = itemLen + addBufferLen, the
+simplest case.
+
+Regardless of what happens,
+
+regionFullFlag |= J9SHR_AOT_SPACE_FULL.
+
+If type == ALLOCATE_TYPE_JIT, it's the same thing, with the character
+sequence 'aot' in all cases substituted by 'jit'. That is a complete
+description of the difference! All numbers are infinite, there is no
+difference.
+
+If !readWriteBuffer, then we are not writing to the read/write area,
+which means we are dealing either in the segment area, or the metadata
+area. We want to ensure a 1KB gap between the classes and metadata at
+all times. This requires that the local variable freeBytes >
+J9SHR_MIN_GAP_BEFORE_METADATA. If it is, we deduct
+J9SHR_MIN_GAP_BEFORE_METADATA from freeBytes, so that the gap is not
+considered part of the freeBytes. Otherwise, freeBytes = 0.
+
+Then enoughSpace is a boolean (and a local variable) calculated as:
+
+enoughSpace = (freeBytes >= (I_32)(itemLen + separateBufferSize));
+
+The itemLen + separateBufferSize. The separateBufferSize is not really
+a separate buffer at all, it turns out. It's being allocated in the
+SCC.
+
+Otherwise! If readWriteBuffer != NULL,
+
+enoughSpace = ((freeBytes >= (I_32)itemLen) &&
+((I_32)FREEREADWRITEBYTES(_theca) >= (I_32)separateBufferSize));
+
+This despite the read/write area being home to exclusively the shared
+string intern table! Although it might not be, I dunno! Perhaps
+they're planning for some future time. The separate buffer will live
+inside the read/write area in this setup! Again, I'm not sure the
+readWriteBuffer (a parameter to 'allocate') is ever != NULL.
+
+So, usedBytes = getUsedBytes(), and softMaxValue =
+_theca->softMaxBytes. enoughAvailableSpace is a boolean that is true
+iff enoughSpace && ((usedBytes + usedBytesInc) <= softMaxValue).
+
+If enoughAvailableSpace is true, we check that itemLen > 0 and
+dispatch on item type again. The check is to increment
+_stored*UsedBytes by the appropriate amount, which, of course, varies
+by the type of item we're storing. This happens regardless of whether
+we are allocating JIT, AOT, or BLOCK data! There is always a
+descriptor item allocated in the metadata area.
+
+if itemLen == 0, we just set _storedMetaUsedBytes = 0, and don't
+bother with the metadata area.
+
+If separateBufferSize > 0, we turn our attention to allocating within
+the segmentBuffer. We check to see that segmentBuffer != NULL. If so,
+record _storedSegmentUsedBytes = separateBufferSize, and set
+*segmentBuffer = SEGUPDATEPTR(_theca). Use
+'changePartialPageProtection' on *segmentBuffer's resident page so
+that it's read-write.
+
+Next, if readWriteBuffer != NULL, we .. mostly do nothing. The code
+present in that area applied only if cachelets were enabled, and they
+are now. So we don't worry about it.
+
+Otherwise, if enoughAvailableSpace is false, but enoughSpace is
+true..  we calculate ccToUse in our accustomed manner. We emit a trace
+message to indicate that the limit softMaxBytes has been reached!!! If
+type == ALLOCATE_TYPE_BLOCK, we assert that
+
+(softMaxValue - usedBytes) >= CC_MIN_SPACE_BEFORE_CACHE_FULL
+
+is true.
+
+Then we call 'increaseUnstoredBytes' to try to buy more space, passing
+usedBytesInc as an indicator of how much new space we need for the
+block. Note that the other two parameters (for the AOT and JIT space
+needed) as passed as 0.
+
+As an aside, 'increaseUnstoredBytes' deals in manipulation of
+_softmxUnstoredBytes, mostly! It's a volatile which requires the use
+of VM_AtomicSupport::addU32 to be incremented. Based on whether we are
+requesting AOT, JIT, or block bytes to be allocated through the
+parameters. _maxAOTUnstoredBytes and _maxJITUnstoredBytes are likewise
+volatile data that can be atomically incremented through the same
+means. This depends on various runtime flags that control the policy
+on making additional space available for JIT, AOT, and block code. The
+policy is usually to increment _maxAOTUnstoredBytes by aotBytes, the
+number of bytes requested by the allocator, if beneath
+maxAOTUnstoredLimit (calculated as MAX_CC_SIZE - maxAOT), and if so,
+increment it. If that's not the case, then set _maxAOTUnstoredBytes to
+maxAOTUnstoredLimit.
+
+This reveals that the maximum limit to storage space is 'soft' because
+it can be incremented if space is available!! Generally not,
+though. We don't want to bother with these checks all the
+time.. rather, we want a regime of 'light' changes that confirm we're
+in the green, without needing more extensive checking.. the more
+extensive checks are reserved for when we begin to broach the limits
+of available space.
+
+Back to 'allocate'. If the allocation type isn't BLOCK, we call
+ccToUse->setCacheHeaderFullFlags with the local variable
+regionFullFlag.. because regionFullFlag was only a local variable up
+until now, it had no effect. But now that we know there isn't enough
+available space, we flag it as full quantified in response to the type
+of space we requested for allocation.
+
+Finally.. if neither enoughSpace nor enoughAvailableSpace is true..
+if type == AOT, we mark the local variables 'flags' with
+J9SHR_AOT_SPACE_FULL, and similarly for JIT. Otherwise, if type != JIT
+or AOT, then.. we do nothing, really. We check that
+_theca->cacheFullFlags reflects J9SHR_BLOCK_SPACE_FULL in its entire
+bit representation. We assert this is true, in fact. And then, we call
+ccToUse->setCacheHeaderFullFlags with flags again, as before, and
+we're done. We return the result. Note that the result contains the
+metadata item entry. That's it! The pointers segmentBuffer and
+readWriteBuffer can return the addresses into the cache (usually,
+SEGUPDATEPTR(_theca), etc). They are BlockPtr*, which makes them
+pointers to pointers. 
+
+I think we're ready to look at 'allocateJIT' and 'allocateAOT' in a
+new light. The prototype of 'allocate' is this:
+
+allocate(J9VMThread* currentThread, U_8 type, ShcItem* itemToWrite, U_32 codeDataLen, U_32 separateBufferSize,
+	 BlockPtr* segmentBuffer, BlockPtr* readWriteBuffer, U_32 align, U_32 alignOffset)
+
+'allocateJIT' initializes it as follows:
+
+return allocate(currentThread, ALLOCATE_TYPE_JIT, itemToWrite, dataBytes, 0, NULL, NULL, SHC_DOUBLEALIGN, 0);	
+
+dataBytes could be the size of profiling data! Substituting for
+codeDataLen. separateBufferSize is 0, so we are allocating zilch
+inside the segment area! The segmentBuffer and readWriteBuffer are
+NULL, and the align is a double alignment! With 0 for the offset.
+
+In other words.. JIT data is mostly profiling data, as far as this
+indicates. Not code.
+
+'allocateAOT' initializes as follows:
+
+return allocate(currentThread, ALLOCATE_TYPE_AOT, itemToWrite, dataBytes, 0, NULL, NULL, SHC_WORDALIGN, 0);
+
+And now we have word alignment, but things are otherwise the same.
+dataBytes is now described as 'size of code data' by the comment
+preamble. It looks as though both AOT code and JIT metadata are stored
+in the metadata section! Seeing as how codeDataLen is part of itemLen
+and all that. codeDataLen's only purpose in being passed to 'allocate'
+is to get _stored*UsedBytes changes right. See lines 2776 and 2779 for
+support of the thesis that itemLen >= codeDataLen.
+
+'allocateBlock' initializes as follows:
+
+return allocate(currentThread, ALLOCATE_TYPE_BLOCK, itemToWrite, 0, 0,
+NULL, NULL, align, alignOffset);
+
+Again, same deal! No metadata this time, and align and alignOffset are
+both customized values! So the block once again is located inside the
+metadata area... when do we ever use this interface to get a
+bidda-bidda the segment area?
+
+As if in response to this prurient question, 'allocateWithSegment'
+comes through, and is initialized as follows:
+
+return allocate(currentThread, ALLOCATE_TYPE_BLOCK, itemToWrite, 0,
+segmentBufferSize, segmentBuffer, NULL, SHC_WORDALIGN, 0);
+
+We allocate a block, yes, but we want a side piece in the segment
+area, of segmentBufferSize, at the pointer segmentBuffer. These are
+all arguments to 'allocateWithSegment', nothing more. Once more!
+readWriteBuffer is passed as NULL into allocate.
+
+There's also 'allocateWithReadWriteBlock', which allocates like this:
+
+return allocate(currentThread, ALLOCATE_TYPE_BLOCK, itemToWrite, 0,
+readWriteBufferSize, NULL, readWriteBuffer, SHC_WORDALIGN, 0);
+
+Here, the segmentBufferSize is 0 and the segment address is NULL. A
+complete reversal from 'allocateWithSegment'. Otherwise very similar,
+though!
+
+'getBytesRequiredForItemWithAlign' is the utility function we reviewed
+in 'allocate'. It finds the allocPtr as UPDATEPTR(_theca), and adds
+the dataLen to the size of the ShcItemHdr struct and the ShcItem
+struct, since we make space for those. Then adds the alignOffset, and
+modulo's out the align, and boom.. that's the padAmount. Which is
+added to the itemLen, so that itemLen is properly aligned. Some space
+is wasted when we do this, sure.
+
+'getBytesRequiredForItem' is the same as
+'getBytesRequiredForItemWithAlign', but with an alignment of 0.
+
+'fillCacheIfNearlyFull' fills the cache with dummy data if the cache
+is nearly full. "Nearly full" means this, per the comment preamble:
+
+(available bytes - (AOT + JIT reserved bytes)) <
+CC_MIN_SPACE_BEFORE_CACHE_FULL
+
+Yeah. So, if this condition applies, and freeBlockBytes >=
+J9SHR_MIN_DUMMY_DATA_SIZE, we allocate a ShcItem header in the
+metadata area, and call allocateMetaDataEntry with an itemLen value
+equal to freeBlockBytes. Then we memset the data region with the
+constant J9SHR_DUMMY_DATA_BYTE, and call 'commitUpdateHelper' to
+broadcast the change to all VM's. Before that, we increment
+_storedMetaUsedBytes by itemLen, yes we do! 
+
+The rest has to do with updating the cache full flags with
+'setCacheHeaderFullFlags'.
+
+'rollbackUpdate'.. is used to rollback a shared classes cache update
+that's found to have crashed the cache. It consists exclusively in
+restoring _scan and _prevScan to their 'stored' values _storedScan and
+_storedPrevScan, and also setting _stored*UsedBytes values to
+0. That's it!
+
+'updateStoredSegmentUsedBytes' is just a setter of
+_storedSegmentUsedBytes. It also asserts _storedMetaUsedBytes > 0 as
+true.
+
+Bedtime story! After a new item has been added to the cache, after a
+call to 'allocate', we must 'commit' the update by propagating a
+record of the changes made via allocate to the various Managers that
+orbit the SCC. That provide an interface to find and manipulate items
+of data that have been stored within the cache. Typically via a hash
+table lookup, because obvy, that is so much faster than doing a linear
+search through the metadata area. Which is to the best of my knowledge
+thus far, is a perfectly sufficient if unperformant way of searching
+the cache.
+
+'commitUpdate' calls 'fillCacheIfNearlyFill' after it's done, so that
+the dummy data flooding is done if it needs to be done. Apart from
+that, it's just a wrapper around 'commitUpdateHelper', which we turn
+to next!
+
+So, 'commitUpdateHelper'. First, _theca->crcValid = 0. Because the
+cache has changed, the CRC has to be recomputed. We also call
+'startCriticalUpdate'. This increments the crash counter. If
+_storedSegmentUsedBytes > 0.. then the segment area was modified. We
+check that _storedMetaUsedBytes > 0 is true. We increment
+_theca->segmentSRP by _storedSegmentUsedBytes. If _doSegmentProtect is
+true, or if _doSegmentSync is true (iff J9SHR_MSYNC_SUPPORT is
+enabled), we call 'notifyPagesCommitted', with some rounding around
+page sizes, if partial page protection is enabled within further
+settings.
+
+Then we call 'setRomClassProtectEnd', like this:
+
+setRomClassProtectEnd(startAddress + _storedSegmentUsedBytes);
+
+Which is just a setter around _romClassProtectEnd.. the end of the ROM
+class section. startAddress the local variable was initialized as
+
+BlockPtr startAddress = SEGUPDATEPTR(_theca);
+
+earlier, before _theca->segmentSRP was incremented by
+_storedSegmentUsedBytes. It's the end of the segment region after
+readWriteSRP that needs to be protected.. it's the upper bound of the
+segment area.
+
+For _storedReadWriteUsedBytes, the entirety of the commit is this:
+
+if (_storedReadWriteUsedBytes) {
+   /* Don't currently notify read or commit of readWrite bytes */
+   _theca->readWriteSRP += _storedReadWriteUsedBytes;
+}
+
+The comments note that if we crash at exactly this moment.. the ROM
+class and read/write sections will have been updated without any
+reference to those updates made elsewhere. So, we update
+_theca->lastMetadataType to offer the future some chance at restoring
+the state if a crash does happen. It looks like this:
+
+oldNum = _theca->updateSRP;
+/* Store the ShcItem->dataType and jvmID */
+_theca->lastMetadataType = *(U_32 *)&((ShcItem *)((UDATA)_theca + oldNum - (_storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes)))->dataType;
+
+_theca->updateSRP -= _storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes;
+
+Then we check that the 'free' gap in the CompositeCache diagram is at
+least J9SHR_MIN_GAP_BEFORE_METADATA, in the form of an Assert_True.
+
+Then we update _theca->updateCountPtr, incrementing it by 1. We update
+_oldUpdateCount after the increment to reflect the new amount. There
+are no concurrency primitives employed in this!! From the preamble, we
+see that the caller MUST hold the shared classes cache write mutex! It
+must.
+
+_theca->aotBytes and _theca->jitBytes are incremented by
+_stored[AOT|JIT]UsedBytes if either one is non-zero.
+
+Then we employ a similar protect/sync check (again, if
+J9SHR_MSYNC_SUPPORT is enabled) for the metadata area, in analogy to
+the check for the segment area mentioned earlier. These are indicated
+by the flags _doMetaProtect and _doMetaSync. 'notifyPagesCommitted' is
+called with some modifications if partial page protection is enabled,
+blah blah. It's largely the exactly same thing! The only change is in
+the change in the area of the cache being protected.
+
+Then we call 'endCriticalUpdate', which re-protects the header and
+read/write areas, and decrements crashCntr. We update
+_totalStoredBytes to reflect the new amounts, and set the
+_stored*UsedBytes fields back to 0. And we're done.
+
+'markStale', marks blocks of memory as stale, as you might
+imagine. It's the first byte at the end of a block that's marked 1 to
+indicate staleness, which is why items are always aligned on at least
+a word boundary. blockEnd, the parameter, is BlockPtr pointing to the
+ShcItemHdr of the item to be marked as stale. If _doMetaProtect is
+true and isCacheLocked true (bizarrely, isCacheLocked is passed in as
+an argument) we round ih->itemLen down to the _osPageSize, and round
+its length _osPageSize (the length of the metadata area), and call
+'setRegionPermissions' on it so that we may write to it.
+
+Then we call CCSETITEMSTALE(ih) to mark the last bit as 1, indicating
+staleness, and we are done!! Then we restore read protections, if the
+cache isn't locked, and if _doMetaProtect is true, and the _areaStart
+> _prevScan.
+
+'stale' checks a ShcItemHdr at its only parameter blockEnd for
+staleness. The final bit being 0, that's it.
 
 'findStart' initializes _scan as:
 
@@ -1454,34 +2158,181 @@ skips over the header. Seems that.. the aim is to look past _scan for
 the next cache entry in the sequence, while also checking conditions
 that indicate the cache is corrupted.
 
-UPDATEPTR(_theca) is the allocation pointer. The point at which
-new cache entries are allocated. As evidence of this, witness!!!
-Line 2952:
+Also, it asserts that hasWriteMutex(currentThread) is true. Because we
+are writing to _scan and _prevScan, you see. I think.
 
-BlockPtr allocPtr = UPDATEPTR(_theca);
+'getBaseAddress' is CASTART(_theca). The very beginning of the
+block, after the header. It returns that value.
 
-Context! fillCacheIfNearlyFill. The description: fill the cache with
-dummy data for some reason if there's not enough free space left
-beyond what's allocated for AOT and JIT code. Fill the remainder with
-stuff that's not NULL. No idea why, as yet.
+'getCacheHeaderAddress' just returns _theca.
 
-Anyway, yes.. free is the allocation pointer. A bump pointer into
-the cache. If ih exceeds free, then it points at an item. This is
-clear. It returns the next available item, at *ih, as its result
-if no corruption is found. 'next' is ONLY called from 'nextEntry',
-according to the comment.
+'getStringTableBase' is just READWRITEAREASTART(_theca), which it
+returns.
 
-/*
- * This method fills up cache with dummy data.
- * Dummy data added is a sequence of 0xD9 byte.
- * Cache is filled only if (available bytes - (AOT + JIT reserved bytes)) < CC_MIN_SPACE_BEFORE_CACHE_FULL.
- * Dummy data is added such that a gap of J9SHR_MIN_GAP_BEFORE_METADATA bytes is maintained between classes and metadata.
- * After adding the dummy data, it sets the runtime flags to mark the cache full.
+'getCacheMemorySize' is "return _theca->totalBytes".
+
+'getCacheEndAddress' is "return CAEND(_theca)".
+
+'getCacheLastEffectiveAddress' is (CAEND(_theca)) - sizeof(UDATA). The
+address of the last readable/writeable word the block contains, in
+other words. Why is this necessary?
+
+/**
+ * Utility function for finding the last writeable/readable UDATA address in the cache.
+ * This function was created b.c when the cache is mapped to the end of memory CAEND(_theca)
+ * will return NULL. Which causes problems in various asserts, and could possible create problems
+ * with bounds checking in a ROM class segment.
  *
- * Note: This method is not called for realtime cache. If ever it needs to be called for realtime cache,
- * it would have to be modified to call setRuntimeCacheFullFlags() on first super cache.
- * ...
+ * @note This function is needed for representing the cache as a J9MemorySegment.
+ *
+ * @return Address of the last writeable/readable UDATA in the cache
  */
+
+'getSegmentAllocPtr' just returns SEGMENTUPDATEPTR(_theca).
+
+Similarly, 'getMetaAllocPtr' just returns UPDATEPTR(_theca).
+
+'getReadWriteAllocPtr' returns RWUPDATEPTR(_theca).
+
+'getTotalUsableCacheSize' returns (CAEND(_theca) -
+READWRITEAREASTART(_theca)).
+
+'getTotalStoredBytes' returns _totalStoredBytes.
+
+'getUnstoredBytes' gets the unstored bytes, of the three types!
+softmxUnstoredBytes (blocks), and then the max unstored bytes for AOT
+and JIT allocations. There's page rounding via _osPageSize, if
+_osPageSize != 0. The parameters are pointers, and they are the return
+values! Each of the quantities is already known internally.
+
+'getAOTBytes' returns _theca->aotBytes.
+
+'getJITBytes' returns _theca->jitBytes.
+
+'getReadWriteBytes' and 'getStringTableBytes' return
+'READWRITEAREASIZE(_theca) and _theca->sharedInternTableBytes
+respectively.
+
+'getFreeBytes' returns FREEBYTES(_theca).
+
+'getFreeAvailableBytes' is mostly getTotalSize() - getUsedBytes(),
+which might be modified if _theca->softMaxBytes == -1 (and is thus
+disabled). Reserved AOT and JIT memory is considered used! That's why
+they're reserved.
+
+'isAddressInCacheDebugArea' just checks to see if the address is
+within bounds of the area, a contiguous area in memory! Nothing
+complicated there.
+
+'getDebugBytes' calls out to _debugData->getDebugDataSize() and
+returns the result.
+
+'getFreeDebugSpaceBytes', 'getLineNumberTableBytes' and
+'getLocalVariableTableBytes' similarly call out to getter functions in
+_debugData.
+
+'getFreeReadWriteBytes' returns FREEREADWRITEBYTES(_theca).
+
+'isInaddressInROMClassSegment' and 'isAddressInCache' do similar
+contiguous region comparisons. Not a huge deal.
+
+'runExitCode' is the first non-trivial thing in a while. It's cleanup
+code that runs when the JVM exits. oscacheToUse is calculated via the
+ccToUse convention of checking to see if _ccHead == NULL, and using
+its oscache if it is, and our own if it isn't. Then
+'unprotectHeaderReadWriteArea' is called on the current thread. Some
+special considerations are made if J9ZOS390 is enabled.
+
+Then we assert that _headerProtectCntr == 1.
+
+Then we check _commonCCInfo->hasRWMutexThreadMprotectAll ==
+currentThread. If so, it is ours to relinquish! We set
+
+_commonCCInfo->hasReadWriteMutexThread = NULL;
+_commonCCInfo->hasRWMutexThreadMprotectAll = NULL;
+
+to let go of the mutexes that we hold. Then we call
+oscacheToUse->releaseWriteLock(_commonCCInfo->readWriteAreaMutexID) so
+that we no longer hold the write lock in TLS storage.
+
+Then there's this weird ass segment:
+
+/* If we're exiting abnormally, a thread may have the write mutex.
+* If that's the case, do not attempt to update the cache CRC
+* because otherwise we can hang writing the dumps */
+if ((_commonCCInfo->hasWriteMutexThread == NULL) && (_commonCCInfo->writeMutexID != CC_READONLY_LOCK_VALUE)) {
+   IDATA lockrc = 0;
+   PORT_ACCESS_FROM_PORT(_portlib);
+   if ((lockrc = oscacheToUse->acquireWriteLock(_commonCCInfo->writeMutexID)) == 0) {
+      updateCacheCRC();
+      /* Deny updates so the CRC is not invalidated */
+      *_runtimeFlags |= J9SHR_RUNTIMEFLAG_DENY_CACHE_UPDATES;
+      if ((lockrc = oscacheToUse->releaseWriteLock(_commonCCInfo->writeMutexID)) != 0) {
+      	 CC_ERR_TRACE1(J9NLS_SHRC_CC_FAILED_EXIT_MUTEX, lockrc);
+      }
+    } else {
+      CC_ERR_TRACE1(J9NLS_SHRC_CC_FAILED_RUN_EXIT_CODE_ACQUIRE_MUTEX, lockrc);
+    }
+}
+
+We try to get the write mutex before updating the cache CRC! If we
+call 'updateCacheCRC' without holding the write mutex ourselves, it
+might hang on writing the CRC dump. I think. Then we toggle a denial
+of cache updates that the CRC is not invalidated, and we're good. We
+release the write mutex.
+
+Then, finally, we call oscacheToUse->runExitCode().
+
+'getJVMID' is a simple getter, and returns _commonCCInfo->vmID.
+_commonCCInfo is cross-thread, intra-process.
+
+'setInernCacheHeaderFields' sets the passed in ** pointers (its
+arguments) to the locations of _theca->sharedStringTail,
+_theca->sharedStringHead, and other fields. I don't know what their
+significance is.
+
+'enterReadWriteAreaMutex' contains several arguments instructing that
+some section of the cache should be rebuilt if the possibility of
+corruption was detected. We compute oscacheToUse using the standard
+convention, and we confirm _readWriteAreaBytes > 0. And that
+oscacheToUse != NULL. If so, we check that
+_commonCCInfo->readWriteAreaMutexID != CC_READONLY_LOCK_VALUE.
+
+We do the following asserts:
+
+Trc_SHR_Assert_NotEquals(currentThread, _commonCCInfo->hasReadWriteMutexThread);
+Trc_SHR_Assert_NotEquals(currentThread, _commonCCInfo->hasRefreshMutexThread);
+
+and do
+
+oscacheToUse->acquireWriteLock(_commonCCInfo->readWriteAreaMutexID);
+
+If that returns 0, we do
+
+oscacheToUse->hasReadWriteMutexThread = currentThread;
+
+Then there's a bunch of overspecific crap concerning string table
+resets that we may want to consult later. Suffice it to say, they can
+toggle whether the cache is read-only. In "normal" circumstances, with
+a non-readonly cache, we unprotect the header and read/write areas to
+increment _theca->readWriteCrashCntr.
+
+Then for the crash/corruption detection pass! If
+
+oldReadWriteCrashCntr != _theca->readWriteRebuildCntr
+
+we set *doRebuildCacheData = 1 in case the caller wants to handle
+it. We set _theca->readWriteRebuildCntr = oldReadWriteCrashCntr so
+that we don't endlessly thrash around flagging for a rebuild, I guess.
+
+Similarly, if (_localReadWriteCrashCntr != oldReadWriteCrashCntr), we
+set *doRebuildLocalData = 1, and _localReadWriteCrashCntr =
+oldReadWriteCrashCntr. I don't know where _localReadWriteCrashCntr and
+_theca->readWriteRebuildCntr are set.
+
+Finally, we return rc.
+
+
 
 'reset' calls findStart(currentThread) to set the scan pointers back
 to UPDATEPTR(_theca). And _stored* statistics back to 0, besides. It
@@ -1489,23 +2340,6 @@ also unlocks the cache. Should the cache be locked before hand? Hard
 to tell.
 
 Back to the initialization dance.
-
-'enterReadMutex' increments the reader count (by calling
-'incReaderCount') and waits for the cache to be unlocked, if it's
-currently locked. It will block until the cache is locked. Or the wait
-count is exceeded. If it is locked, the reader count is immediately
-decremented, and 'acquireWriteLockMutex' is called. I'm not sure of
-the scope of the read/write mutexes here.. I suppose because they're
-object methods, they govern their parent objects. If the write lock
-mutex was acquired successfully, 'incReaderCount' is called *again*.
-Then the write lock is released, by calling 'releaseWriteLock'.
-
-'incReaderCount' uses VM_AtomicSupport to do a 'lockCompareExchange'
-on the reader count, which may fail! Suggesting that high-granularity
-locks are being used, rather than, you know, actual atomics. Something
-belied by the name. These calls to 'lockCompareExchange' are
-buttressed by a call to 'protectHeaderReadWriteArea' and
-'unprotectHeaderReadWriteArea'.
 
 'protectHeaderReadWriteArea' protects the header of the read/write
 area? If we're protecting the header, or we're protecting the read
@@ -1673,30 +2507,6 @@ allocated as the allocation type.
 'allocateJIT' calls allocate, asking for a JIT type.
 
 'allocateAOT' calls allocate, asking for an AOT type.
-
-'decReaderCount' does the decrement/wait on 'atomic' lock and exchange
-loop again. This time to decrement _theca->readerCount. Once finished,
-it calls 'protectHeaderReadWriteArea'. Not a typo.
-
-'enterWriteMutex' either acquires the write lock through the owning
-osCache (either or our own if _ccHead or NULL, or the head's oscache,
-lending further creedence to the idea that there is only *one* OSCache
-for every chain of CompositeCache's, of which there is also just one),
-or by using omrthread_monitor_enter. Then a bunch of other options
-that might revoke possession of the mutex if toggled are
-checked. That's basically it, not much more to say.
-
-'exitWriteMutex' is largely the same thing, complete with an
-unprotectHeaderReadWriteArea/protectHeaderReadWriteArea wrapping a
-increment/decrement to _theca->writerCount (depending on whether we
-are entering or exiting the mutex respectively).
-
-For 'doLockCache' and 'doUnlockCache', the caller must hold the write
-mutex. The comments say as much. The header and read/write are
-unprotected, the cache is locked/unlocked, and then the header and
-read/write area are protected again.
-
-
 
 --
 
@@ -2019,45 +2829,8 @@ _ccHead, and call 'runEntryPointChecks'.
 
 This brings us to another detour into SH_CompositeCacheImpl, this
 time, into the 'testAndSetWriteHash' method. We wondered previously
-about what the 'write hash' was for. From the method description:
-
-Test whether a class is being loaded by another JVM.  If not, update
-to indicate this JVM will load it.
-
-Should be called if an attempt to find a class in the cache has
-failed.  If the hash field in the cache field is free (0), it is set,
-indicating that the JVM is going to load the class.  If the hash field
-has already been set, then this means that another JVM is loading the
-class.  If it is the same class, 1 is returned which indicates that it
-would be wise to wait. Otherwise, 0 is returned.
-
-A hash value, hashValue, is passed in, that it is calculated from the
-name of the class (from 'computeHashForUTF8'). The writeHash value in
-the cache is called _theca->writeHash. The hash value has some bitwise
-component pertaining to the write hash, which is captured by &&'ing it
-with the value WRITEHASH_MASK. If _theca->writeHash is 0, we call
-'setWriteHash'. Otherwise, if hashValue & WRITEHASH_MASK == cacheValue
-& WRITEHASH_MASK, we shift _theca->writeHash right by WRITEHASH_SHIFT
-bytes, indicating the ID of the JVM that is 'in the
-cache'. _theca->writeHash is really an indicator of two things, then:
-the ID of the JVM modifying the cache, and the 'true' write hash in
-the bits preceding it, of which there are WRITEHASH_SHIFT.
-
-If the VM ID doesn't match _commonCCInfo->vmID, return 1, or true,
-indicating that yes, the caller VM should wait for the cache to be
-released. The call of 'setWriteHash' is to indicate to other JVMs that
-*this* JVM is loading the class.
-
-'setWriteHash' is really just a compare and swap atomic operation on
-_theca->writeHash, buffeted by calls to 'unprotectHeaderReadWriteArea'
-and 'protectHeaderReadWriteArea'. That's all. Again, the new value is
-recorded as such, which corroborates the account given above:
-
-value = ((hashValue & WRITEHASH_MASK) | (_commonCCInfo->vmID << WRITEHASH_SHIFT));
-
-The hash value, the 'true' hash of the write hash, is &&-masked by
-WRITEHASH_MASK, and the rest is simply the VM ID shifted by the number
-of bits composing WRITEHASH_MASK.
+about what the 'write hash' was for. See the method description of
+'testAndSetWriteHash'.
 
 Back to 'findROMClass'! If 'testAndSetWriteHash' tells us we should
 wait, whatever waiting means (we will find out shortly!), we do the
