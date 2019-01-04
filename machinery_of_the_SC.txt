@@ -6,9 +6,9 @@ this document must remain INTERNAL TO CASA.
 
 --
 
-First, it's instructive to look at the J9PORT_SHR_CACHE_TYPE enum. It's not an enum..
-they are defined separately as individual constants/macros, defined as 1-5. Their
-names are:
+First, it's instructive to look at the J9PORT_SHR_CACHE_TYPE
+enum. It's not an enum..  they are defined separately as individual
+constants/macros, defined as 1-5. Their names are:
 
 *_PERSISTENT
 *_NONPERSISTENT
@@ -16,39 +16,40 @@ names are:
 *_CROSSGUEST
 *_SNAPSHOT
 
-I don't know what distinguishes the last of these two. Or _VMEM.  J9_SHR_CACHELET_SUPPORT
-is linked to OsCachevm.hpp, so I suppose cachelets are connected to whatever the VMEM
-cache type handles.
+I don't know what distinguishes the last of these two. Or _VMEM.
+J9_SHR_CACHELET_SUPPORT is linked to OsCachevm.hpp, so I suppose
+cachelets are connected to whatever the VMEM cache type handles.
 
-Starting with the data and functionality of OSCache.hpp and sattelite modules.
+Starting with the data and functionality of OSCache.hpp and sattelite
+modules.
 
 The inheritance diagram for the OSCache*.[c|h]pp files is:
 
-			OSCache
-				|
-			OSCacheFile
-			  /    \     \
-			/       \      -------\
+			OSCache             <----
+			    |                    \
+			OSCacheFile               \
+			 /     \                  |
+			/       \                 |
 	OSCachemmap		OSCachevmem  OSCachesysv
 
 These are all preceded by the characters "SH_" within C++, BTW.
 
-Certain crucial methods in OSCacheFile (like the very instructive createCacheFile
-method) are non-virtual. Indicating that OSCachemmap and OSCachevmem instantiate
-their parent objects with different mode creation settings, the mechanics of
-which are otherwise the same.
+Certain crucial methods in OSCacheFile (like the very instructive
+createCacheFile method) are non-virtual. Indicating that OSCachemmap
+and OSCachevmem instantiate their parent objects with different mode
+creation settings, the mechanics of which are otherwise the same.
 
-Note that SH_OSCacheInitializer is provided for use by consumers of the OSCache
-family. They tell the OSCache* class how to initialize data in the class. Or,
-the class itself. I suppose! I don't really know the direct purpose of it. To
-initialize the class at key moments, yes? I don't think OSCache presumes much
-about the client.
+Note that SH_OSCacheInitializer is provided for use by consumers of
+the OSCache family. They tell the OSCache* class how to initialize
+data in the class. Or, the class itself. I suppose! I don't really
+know the direct purpose of it. To initialize the class at key moments,
+yes? I don't think OSCache presumes much about the client.
 
 OSCACHE.HPP MEMBER VARIABLES:
 
-As the header comment says.. the purpose of the class is to abstract over the
-shared memory region that the class will be mapped into, and it also contains mutexes
-for read/write access.
+As the header comment says.. the purpose of the class is to abstract
+over the shared memory region that the class will be mapped into, and
+it also contains mutexes for read/write access.
 
 We run down the list.
 
@@ -80,156 +81,182 @@ We run down the list.
 	UDATA _corruptValue; // Which value is known to be corrupt?
 	bool _isUserSpecifiedCacheDir; // used the default cache dir?
 
-Surely you notice the lack of mutexes. The member functions SH_OSCache contains that
-have to do with acquiring locks are pure virtual functions. ACKSHAULLY.. these methods..
-acquiring and releasing locks and so forth.. are defined in OSCacheFile, which is at
-the root of both OSCachevmem and OSCachemmap.
+Surely you notice the lack of mutexes. The member functions SH_OSCache
+contains that have to do with acquiring locks are pure virtual
+functions. ACKSHAULLY.. these methods..  acquiring and releasing locks
+and so forth.. are defined in OSCacheFile, which is at the root of
+both OSCachevmem and OSCachemmap.
 
 Interesting comment from Hang Shao (dated Jun 19 of this year):
 
-"OSCachevmem.hpp/OSCachevmem.cpp is not being used now. They are only active under
-J9SHR_CACHELET_SUPPORT, which is not defined.
+"OSCachevmem.hpp/OSCachevmem.cpp is not being used now. They are only
+active under J9SHR_CACHELET_SUPPORT, which is not defined.
 
-We could either remove these two files together with all the code inside
-J9SHR_CACHELET_SUPPORT,
-or simply add vm parameter and put #include "OSCachevmem.hpp" inside
-ifdef J9SHR_CACHELET_SUPPORT here."
+We could either remove these two files together with all the code
+inside J9SHR_CACHELET_SUPPORT, or simply add vm parameter and put
+#include "OSCachevmem.hpp" inside ifdef J9SHR_CACHELET_SUPPORT here."
 
-Fun!! So it isn't necessary at all. I don't understand what cachelets are.
+Fun!! So it isn't necessary at all. I don't understand what cachelets
+are.
+
 OSCACHE.HPP MEMBER FUNCTIONS:
 
-There is a 'newInstance' method, so it is a singleton class... well, no. That's what
-I initially thought. Instead, it's a helper method that creates a SH_OSCache according
-to the versionData->cacheType attribute. If it's of _VMEM type, then we construct
-a vmem object, etc. Interestingly, _VMEM object construction is supported only if
-J9SHR_CACHELET_SUPPORT is on, which per the earlier comment is never defined! So I don't
-think we have to worry about it at all, really. _SYSV is the version used if a
-nonpersistent cache is chosen, BTW.. doesn't appear particular to the system architecture
-used at all!! Contra our earlier impressions.
+There is a 'newInstance' method, so it is a singleton class... well,
+no, OSCache is not a singleton class. That's what I initially
+thought. Instead, it's a static helper method that creates a
+SH_OSCache according to the versionData->cacheType attribute. If it's
+of _VMEM type, then we construct a vmem object, etc. Interestingly,
+_VMEM object construction is supported only if J9SHR_CACHELET_SUPPORT
+is on, which per the earlier comment is never defined! So I don't
+think we have to worry about it at all, really. _SYSV is the version
+used if a nonpersistent cache is chosen, BTW.. doesn't appear
+particular to the system architecture used at all!! Contra our earlier
+impressions.
 
-One thing to note is that OSCachevmem uses j9file_read and j9file_blocking_async_read,
-while OSCachemmap does not. My impression is that 'cachelets' are smaller versions
-of the cache that are copied into main memory, though from a file (and hence they
-are persistent!). Does that mean they're written back to file?
+One thing to note is that OSCachevmem uses j9file_read and
+j9file_blocking_async_read, while OSCachemmap does not. My impression
+is that 'cachelets' are smaller versions of the cache that are copied
+into main memory, though from a file (and hence they are
+persistent!). Does that mean they're written back to file?
 
-Despite the annotation, j9file_read is a macro defined in runtime/oti/j9port_generated.
-It expands to a call to the port library to call whatever file reading routine the
-host platform provides. A great many other system calls are wrapped in macros and
+Despite the annotation, j9file_read is a macro defined in
+runtime/oti/j9port_generated.  It expands to a call to the port
+library to call whatever file reading routine the host platform
+provides. A great many other system calls are wrapped in macros and
 named similarly within the file.
 
-See runtime/port/sysvipc for a collection of wrappers around System V style ipc primitives.
-Mostly for shared memory and semaphores, although there is j9sharedwrapper.[h|c], which
-provides some helper routines for dealing with the shared class cache. You see, strewn
+See runtime/port/sysvipc for a collection of wrappers around System V
+style ipc primitives.  Mostly for shared memory and semaphores,
+although there is j9sharedwrapper.[h|c], which provides some helper
+routines for dealing with the shared class cache. You see, strewn
 throughout, references to a 'control file', for shared memory..
 
-This is what the whole ctrlDir convention has been about!! Setting up the control file
-directory. From the OpenJ9 manual:
+This is what the whole ctrlDir convention has been about!! Setting up
+the control file directory. From the OpenJ9 manual:
 
-"Nonpersistent caches are stored in shared memory and have control files that describe
-the location of the memory. Control files are stored in a javasharedresources subdirectory
-of the cacheDir specified. Do not move or delete control files in this directory. The
-listAllCaches utility, the destroyAll utility, and the expire suboption work only in the
-scope of a given cacheDir."
+"Nonpersistent caches are stored in shared memory and have control
+files that describe the location of the memory. Control files are
+stored in a javasharedresources subdirectory of the cacheDir
+specified. Do not move or delete control files in this directory. The
+listAllCaches utility, the destroyAll utility, and the expire
+suboption work only in the scope of a given cacheDir."
 
 Nonpersistent caches are still shared!! You must keep this in mind.
 
-Going back to OSCache, though, it appears to be mostly utilities for extracting
-the Java version and cache generation info from cache filenames / control files,
-depending on which is used (ie. is the cache persistent or nonpersistent?).
-The only really non-trivial parts are those dealing with initialization and
-startup.
+Going back to OSCache, though, it appears to be mostly used for
+extracting the Java version and cache generation info from cache
+filenames / control files, depending on which is used (ie. is the
+cache persistent or nonpersistent?).  The only really non-trivial
+parts are those dealing with initialization and startup.
 
-'commonStartup', as the name suggests, deals with the initializing the portions
-OSCache manages that are common to all its variants: vmem, Sysv, and mmap. Many of the
-utilities are statically initialized. commonStartup, again, is mostly concerned with
-initializing everything properly.. the cache names, their version and generation flags,
-various runtime and verbosity flags.. administrivia!
+'commonStartup', as the name suggests, deals with the initializing the
+portions OSCache manages that are common to all its variants: vmem,
+Sysv, and mmap. Many of the utilities are statically
+initialized. commonStartup, again, is mostly concerned with
+initializing everything properly.. the cache names, their version and
+generation flags, various runtime and verbosity flags.. administrivia!
 
-'commonInit' sets the OsCache data to 0 or NULL.  Or FALSE, if the values are boolean.
-This exhaustively describes what it does. See for yourself.
+'commonInit' sets the OsCache data to 0 or NULL.  Or FALSE, if the
+values are boolean.  This exhaustively describes what it does. See for
+yourself.
 
-'commonCleanup' is similar.. it mostly calls j9mem_free_memory on the string data that
-were allocated in commonStartup, and it emits some trace messages as it does so.
-Nothing interesting or spectacular.
+'commonCleanup' is similar.. it mostly calls j9mem_free_memory on the
+string data that were allocated in commonStartup, and it emits some
+trace messages as it does so.  Nothing interesting or spectacular.
 
-'initOSCache' does exactly that. It writes the _dataLength and _dataStart attributes
-into the header, along with the version, generation and build ID (a SHA hash) to the
-header.  Notice that OSCache does nothing at all with _dataStart and _dataLength, beyond
-initializing them and writing them to the cache header. These belong to the subclasses!
+'initOSCache' does exactly that. It writes the _dataLength and
+_dataStart attributes into the header, along with the version,
+generation and build ID (a SHA hash) to the header.  Notice that
+OSCache does nothing at all with _dataStart and _dataLength, beyond
+initializing them and writing them to the cache header. These belong
+to the subclasses!
 
-'checkOSCacheHeader' simply verifies that several important invariants hold.. ie.
-the size of the cache is equal to the size of the cache header + _dataLength.
+'checkOSCacheHeader' simply verifies that several important invariants
+hold.. ie.  the size of the cache is equal to the size of the cache
+header + _dataLength.
 
-Then there's some functions for specifying the corruption context. Which is just a code,
-and the value that points to the corrupted thing or provides some helpful data, usually.
-It's all in the comments, no need to reiterate that here.
+Then there's some functions for specifying the corruption
+context. Which is just a code, and the value that points to the
+corrupted thing or provides some helpful data, usually.  It's all in
+the comments, no need to reiterate that here.
 
 Moving onto OSCacheFile.hpp !
 
-It's another abstract class. It doesn't initialize the 'initialize' virtual function
-or anything. It wraps a single file handle as its lone data member.
+It's another abstract class. It doesn't initialize the 'initialize'
+virtual function or anything. It wraps a single file handle as its
+lone data member.
 
-It also defines some OSCache_mmap_header structs, which contain (among other things)
-locks for the header and data sections. OSCache_mmap_header_1 and *_2 contain many
-of the same members but are slightly different. *_1 appears to contain some 'unused'
-padding that's probably used to make them the same size. Hmmm.. yeah, I dunno.
-Actually appears to have more to do with OSCache_header1 versus OSCache_header2.
-The mmap_header_*'s wrap one of each. Going by the #define's in OSCache.hpp, they
-appear to correspond to different cache generations.
+It also defines some OSCache_mmap_header structs, which contain (among
+other things) locks for the header and data
+sections. OSCache_mmap_header_1 and *_2 contain many of the same
+members but are slightly different. *_1 appears to contain some
+'unused' padding that's probably used to make them the same
+size. Hmmm.. yeah, I dunno.  Actually appears to have more to do with
+OSCache_header1 versus OSCache_header2.  The mmap_header_*'s wrap one
+of each. Going by the #define's in OSCache.hpp, they appear to
+correspond to different cache generations.
 
 OSCACHEFILE member variables:
 
 	IDATA _fileHandle;
 
-And that's it!! That's all the class wraps. It's a handle for a file. That is it.
+And that's it!! That's all the class wraps. It's a handle for a
+file. That is it.
 
 OSCACHEFILE member functions:
 
-'acquireHeaderWriteLock' reaches into the header, and grabs the header write lock,
-calling out to the j9file_lock/j9_file_async_blocking_lock primitives to acquire it.
-With traces and error handling, as always.
+'acquireHeaderWriteLock' reaches into the header, and grabs the header
+write lock, calling out to the j9file_lock/j9_file_async_blocking_lock
+primitives to acquire it.  With traces and error handling, as always.
 
-'getmmapHeaderFieldOffsetForGen' finds the byte offset of a given field (second argument)
-with the OSCache header, depending on the generation passed to it (first argument).
+'getmmapHeaderFieldOffsetForGen' finds the byte offset of a given
+field (second argument) with the OSCache header, depending on the
+generation passed to it (first argument).
 
 'releaseHeaderWriteLock'.. similar, analogous thing. Clear the lock.
 
-'tryAcquireAttachWriteLock' does.. pretty much the same as 'acquireHeaderWriteLock',
-only it gets the attach write lock.. to write to the attach region of the cache.
-I don't know what the 'attach region' is, exactly. I suppose we'll find out!
-But the logic is basically the same. I don't why the function name begins with 'try'
-and not 'acquire'.. there's nothing exceptional about it. No, I see the difference
-now. One of the flags has a NOWAIT stipulation. If the lock is held, it will immediately
-return to the caller.
+'tryAcquireAttachWriteLock' does.. pretty much the same as
+'acquireHeaderWriteLock', only it gets the attach write lock.. to
+write to the attach region of the cache.  I don't know what the
+'attach region' is, exactly. I suppose we'll find out!  But the logic
+is basically the same. I don't why the function name begins with 'try'
+and not 'acquire'.. there's nothing exceptional about it. No, I see
+the difference now. One of the flags has a NOWAIT stipulation. If the
+lock is held, it will immediately return to the caller.
 
-'checkCacheHeaderValid' checks that the cache header is well formed and forms
-a corruption context if it's not, and yadda yadda. Most of this stuff is straightforward
-and uninteresting!! Mostly has to do with acquiring and releasing locks. It assumes
-the cache is persistent, since, y'know, a cache formed at runtime must be valid, yes??
-There's no chance it was violated by openj9. I expect this to be the assumption.
+'checkCacheHeaderValid' checks that the cache header is well formed
+and forms a corruption context if it's not, and yadda yadda. Most of
+this stuff is straightforward and uninteresting!! Mostly has to do
+with acquiring and releasing locks. It assumes the cache is
+persistent, since, y'know, a cache formed at runtime must be valid,
+yes??  There's no chance it was violated by openj9. I expect this to
+be the assumption.
 
-`openCacheFile' opens the cache attached to the file header. Nothing interesting
-about it. Uses the _openMode flags and such. Blah.
+`openCacheFile' opens the cache attached to the file header. Nothing
+interesting about it. Uses the _openMode flags and such. Blah.
 
-'findfirst', 'findnext', and 'findclose' iterate through cache files in the cacheDir
-(a parameter for all three functions). There's a helper predicate that determines
-whether the files found are valid cache name files, and if they are, it returns the
-file handle of those files.
+'findfirst', 'findnext', and 'findclose' iterate through cache files
+in the cacheDir (a parameter for all three functions). There's a
+helper predicate that determines whether the files found are valid
+cache name files, and if they are, it returns the file handle of those
+files.
 
-And then we have two other functions checking cache access permissions attached
-to the file handle. These are static functions of OSCacheFile.
+And then we have two other functions checking cache access permissions
+attached to the file handle. These are static functions of
+OSCacheFile.
 
 And we're done! Easy.
 
 OSCACHESYSV
 
-Ok, in OSCachesysv.hpp, we have a few different header types corresponding to the
-various cache generations. Again, they are similar to the mmap headers we saw
-last time (defined in OSCacheFile.hpp, confusingly). This time, they contain things
-like semaphore IDS (but never shared memory segment IDs).
+Ok, in OSCachesysv.hpp, we have a few different header types
+corresponding to the various cache generations. Again, they are
+similar to the mmap headers we saw last time (defined in
+OSCacheFile.hpp, confusingly). This time, they contain things like
+semaphore IDS (but never shared memory segment IDs).
 
-REMEMBER, OSCachesysv is NOT inherited from OSCacheFile!! It's a shared memory region
-after all, not a cache.
+REMEMBER, OSCachesysv is NOT inherited from OSCacheFile!! It's a
+shared memory region after all, not a cache.
 
 OSCachesysv member variables:
 
@@ -791,7 +818,7 @@ Before examining methods, we should look to fields! Here they are.
 
 Now methods.
 
-'newInstance' is indeed static, belong to
+'newInstance' is indeed static, belonging to
 SH_SharedCacheHeaderInit. It's init method is virtual, and thus,
 instance-based. Uses placement new to construct a
 SH_CompositeCacheImpl(), and calls initializeWithCommonInfo() on it.
@@ -1547,14 +1574,14 @@ the comment preamble, it.. simply says more than my words ever could.
 /**
  * Check whether to use writeHash when loading classes
  *
- * This method helps answer the question: Is it worth us using writeHash when loading classes? 
- * The answer is: Yes if another VM has connected since us or if a VM previous to us has detected us 
+ * This method helps answer the question: Is it worth us using writeHash when loading classes?
+ * The answer is: Yes if another VM has connected since us or if a VM previous to us has detected us
  * and started writeHashing
- * 
+ *
  * Current thread should hold refresh mutex when entering this method.
  *
  * @param [in] currentThread  Points to the J9VMThread struct for the current thread
- * 
+ *
  * @return true if this VM should use writeHash while loading classes, false otherwise
  */
 
@@ -1570,7 +1597,7 @@ a writeHash has been recorded. It can't be 0, of course.
 
 'testAndSetWriteHash', according to the preamble, tests to see if the
 class (demarcated by the function parameter hashValue) is being loaded
-by another JVM. If not, set the write hash to that value. 
+by another JVM. If not, set the write hash to that value.
 
 Should be called if an attempt to find a class in the cache has
 failed.  If the hash field in the cache field is free (0), it is set,
@@ -1708,7 +1735,7 @@ SEGUPDATEPTR(_theca). If it does, use 'changePartialPageProtection' to
 protect it, too. Also update _scan to reflect the addition of the
 latest item. Remember, walking the cache items in the metadata area
 involves stepping *forward* through the metadata area, which allocates
-new items *backwards*. 
+new items *backwards*.
 
 'allocate' firsts starts by checking a NeverShouldHappen condition:
 
@@ -1939,7 +1966,7 @@ we're done. We return the result. Note that the result contains the
 metadata item entry. That's it! The pointers segmentBuffer and
 readWriteBuffer can return the addresses into the cache (usually,
 SEGUPDATEPTR(_theca), etc). They are BlockPtr*, which makes them
-pointers to pointers. 
+pointers to pointers.
 
 I think we're ready to look at 'allocateJIT' and 'allocateAOT' in a
 new light. The prototype of 'allocate' is this:
@@ -1949,7 +1976,7 @@ allocate(J9VMThread* currentThread, U_8 type, ShcItem* itemToWrite, U_32 codeDat
 
 'allocateJIT' initializes it as follows:
 
-return allocate(currentThread, ALLOCATE_TYPE_JIT, itemToWrite, dataBytes, 0, NULL, NULL, SHC_DOUBLEALIGN, 0);	
+return allocate(currentThread, ALLOCATE_TYPE_JIT, itemToWrite, dataBytes, 0, NULL, NULL, SHC_DOUBLEALIGN, 0);
 
 dataBytes could be the size of profiling data! Substituting for
 codeDataLen. separateBufferSize is 0, so we are allocating zilch
@@ -2024,7 +2051,7 @@ metadata area, and call allocateMetaDataEntry with an itemLen value
 equal to freeBlockBytes. Then we memset the data region with the
 constant J9SHR_DUMMY_DATA_BYTE, and call 'commitUpdateHelper' to
 broadcast the change to all VM's. Before that, we increment
-_storedMetaUsedBytes by itemLen, yes we do! 
+_storedMetaUsedBytes by itemLen, yes we do!
 
 The rest has to do with updating the cache full flags with
 'setCacheHeaderFullFlags'.
@@ -2606,8 +2633,8 @@ dataStart, codeStart, codeSize, and forceReplace.
 
 --
 
-Most of the work are delegated to the SH_Managers, whichever are
-appropriate for the desired data. So we should probably refer to them!
+Most of the work is delegated to the SH_Managers, whichever are
+appropriate for the target data. So we should probably refer to them!
 
 The ROMClassResourceManager, once SH_CacheMap->storeCompiledMethod
 gets it successfully, is passed to the cache map's
@@ -2691,7 +2718,7 @@ cache entries that were updated. If there was more than one update,
 and the new count of updates exceeds _oldUpdateCount, we update
 _oldUpdateCount now that we're finished. Then we call
 _debugData->processUpdates(currentThread, this). If we are protecting
-the cache area that contains ROM class (ie. the segment area, which is
+the cache area that contains the ROM class (ie. the segment area, which is
 flagged by the boolean _doSegmentProtect), we call
 this->notifyPagesRead(). And from there we're done.
 
@@ -2946,11 +2973,12 @@ And there's a lot more logic dealing with the ClasspathManager,
 marking previously stored versions of the class as stale if
 found. There's plenty of trace messages recording what's going on
 there. Either way though, we wind up calling 'allocateFromCache'.
+We allocate an item of TYPE_ORPHAN, an orphan ROM class.
 
 'allocateFromCache' checks some settings, emits some trace messages,
 and calls initBlockData and allocateWithSegment on the
 localCacheAreaForAllocate, which is returned from
-getCacheAreaForDataType. localCacheAreaForAllocate is indeed a
+'getCacheAreaForDataType'. localCacheAreaForAllocate is indeed a
 SH_CompositeCacheImpl*. We call
 allocateCacheAreaForAllocate->allocateWithSegment.
 
@@ -2992,3 +3020,189 @@ TODO: maybe answer this whole allocate JIT vs. allocate AOT thing??
 Yes? What the limitations of the JIT and AOT sections really mean,
 amid the structure of the composite cache? Also, getReaderCount!
 Where does _metadataSegmentPtr point to????
+
+--
+
+MUTEX NOTES:
+
+A comment points out that multiple readers can read concurrently!!
+Readers can also read at the same time a writer is writing! Of course,
+this is sort of the entire point of having distinct read and write
+mutexes. Locking prevents the write mutex from being claimed. Also,
+here's a blurb above enterWriteMutex:
+
+ * Allows only single-threaded writing to the cache.
+ * Write mutex allows multiple concurrent readers, unless lockCache
+
+Yeah, locking stops readers. Stops readers cold! But what if the cache
+is locked when 'enterWriteMutex' is called? No, 'enterWriteMutex' does
+not check to see that the cache is locked. Rather, it has the
+parameter lockCache, a bool, that indicates whether it should lock the
+cache also, to prevent readers from reading anything.
+
+Yeah, 'enterReadMutex' pussyfoots around the cache being locked. To
+lock the cache, we need the write mutex.. ergo, it suffices to wait
+for the thread that holds the write mutex (which therefore locked the
+cache!!) to relinquish the write mutex. Then the write mutex is
+released, and the reader count is decremented, and all that crap.
+
+_theca->readerCount, the atomic quantity incremented/decremented here,
+is something that we get through 'getReaderCount', and also something
+that 'doLockCache' cares about. While _theca->readerCount > 0, we wait
+out the patienceCntr in 'doLockCache'. If _theca->readerCount > 0
+after we've exceeded the patienceCntr, we set _theca->readerCount =
+0. Since the 'reader has almost certainly died.' We already called
+setIsLocked(true) ages ago, but we wait for the reader count to return
+to 0. Did you know the caller of 'doLockCache' must hold the write
+mutex! It's true. Notice that 'enterReadMutex' tries to sleep until
+the cache is unlocked, and the write mutex is released. Increasing the
+reader count is meant to prevent a lock from occurring (within
+reason), which is why 'enterReadMutex' increments the reader count
+before calling 'isLocked'. This is all in the comments! Note that
+multiple attempts to 'claim' the read mutex are not in fact mutually
+excluding.
+
+Any number of concurrent readers can proceed at once! They don't need
+the write mutex to read, either! If we want to prevent reading, we
+must lock the cache, which means waiting for the reader count to
+dwindle to 0. And for that, we must effectively be a writer, since we
+need to hold the write mutex, which is a write mutex in the true sense
+of the word, since it allows only single-threaded writing of the
+cache. 
+
+Where do we check to see if the cache is locked? Why, through
+'isLocked()', of course.. uhhh, nowhere I can tell, really. It's just
+a means to coordinate the read mutex, it looks like. Like, if we call
+'enterReadMutex' and find that the cache is locked, we're forced to
+wait until it's no longer locked. But then when we 'claim' the read
+mutex by the end of 'enterReadMutex', do we lock the cache? No, not
+exactly.. we don't wait for it to become unlocked, either. We wait
+until we claim the write mutex, we decrement the reader count, and
+then we relinquish the write mutex! Which is to say the cache is no
+longer locked at that point. It is only locked when the write mutex is
+held, as a necessary but insufficient condition. Uhhh... no, actually,
+it leaves the reader count incremented, and then returns.
+
+Finally, 'enterReadWriteAreaMutex'. We wrote it up earlier. The main
+thing to know is that it's a separate mutex acquired via
+oscacheToUse->acquireWriteLock(_commonCCInfo->readWriteAreaMutexID). That's
+about all! There's a bunch of other checks. See the earlier writeup of
+'enterReadWriteAreaMutex' if you need to know.
+
+When is 'doLockCache' called? And 'enterReadMutex' and
+'enterWriteMutex'? And 'enterReadWriteAreaMutex'? From nowhere in
+CompositeCache.cpp, except 'enterWriteMutex'.
+
+Let's look to CacheMap for these answers:
+
+'enterReadMutex' is used from these places:
+
+findROMClass, lines 2464, 2539
+findROMClassResource, line 2954
+findAttachedData, line 3469
+findSharedData, line 3979
+getCachedUTFString, line 5325
+
+'enterWriteMutex' is used from these places (the cache is not locked
+by the calls except where indicated):
+
+storeROMClassResource, line 2778
+updateROMClassResource, line 2868 (we lock the cache as well here!)
+storeSharedData, line 3825 (locks the cache if performing an overwrite
+of previous data)
+acquirePrivateSharedData, line 4033
+markStale, line 4288 (locks the cache)
+markItemStaleCheckMutex, line 4378
+destroy, 4395 (locks the cache)
+printAllCacheStats, line 4474
+getCachedUTFString, line 5349
+serializeSharedCache, line 6075
+startClassTransaction, line 6485
+aotMethodOperationHelper, line 6882 (locked if not simply finding
+methods)
+protectPartiallyFilledPages, line 7236
+
+'enterReadWriteAreaMutex' is used from these areas:
+
+enterStringTableMutex, line 5255
+createNewCachelet, line 5591 (obsolete, as cachelets are obsolete!)
+
+'doLockCache' is used from these areas:
+
+markStale, line 4283 (yes, this is in CacheMap)
+
+And that's all she wrote!!
+
+NOW CACHEMAP:
+
+CACHEMAP.HPP MEMBER VARIABLES:
+
+ 	SH_CompositeCacheImpl* _cc;					/* current cache */
+
+	/* See other _writeHash fields below. Put U_64 at the top so the debug
+	 * extensions can more easily mirror the shape.
+	 */
+	U_64 _writeHashStartTime;
+	OMRSharedClassConfig* _sharedClassConfig;
+
+	SH_CompositeCacheImpl* _ccHead;				/* head of supercache list */
+	SH_CompositeCacheImpl* _cacheletHead;		/* head of all known cachelets */
+	SH_CompositeCacheImpl* _ccCacheletHead;		/* head of cachelet list for current cache */
+	SH_CompositeCacheImpl* _cacheletTail;		/* tail of all known cachelets */
+	SH_CompositeCacheImpl* _prevCClastCachelet;	/* Reference to the last allocated cachelet in the last supercache */
+//	SH_ClasspathManager* _cpm;
+//	SH_TimestampManager* _tsm;
+//	SH_ROMClassManager* _rcm;
+	SH_ScopeManager* _scm;
+	SH_CompiledMethodManager* _cmm;
+  	SH_ByteDataManager* _bdm;
+	SH_AttachedDataManager* _adm;
+	OMRPortLibrary* _portlib;
+	omrthread_monitor_t _refreshMutex;
+	bool _cacheCorruptReported;
+	U_64* _runtimeFlags;
+	const char* _cacheName;
+	const char* _cacheDir;
+	UDATA _localCrashCntr;
+
+	UDATA _writeHashAverageTimeMicros;
+	UDATA _writeHashMaxWaitMicros;
+	UDATA _writeHashSavedMaxWaitMicros;
+	UDATA _writeHashContendedResetHash;
+	/* Also see U_64 _writeHashStartTime above */
+
+	UDATA _verboseFlags;
+	UDATA _bytesRead;
+	U_32 _actualSize;
+	UDATA _cacheletCntr;
+	J9Pool* _ccPool;
+	uintptr_t  _minimumAccessedShrCacheMetadata;
+	uintptr_t _maximumAccessedShrCacheMetadata;
+	bool _metadataReleased;
+
+	/* True iff (*_runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_NESTED). Set in startup().
+	 * This flag is a misnomer. It indicates the cache is growable (chained), which also
+	 * implies it contains cachelets. However, the cache may contain cachelets even
+	 * if this flag is not set.
+	 * NOT equivalent to SH_Manager::_isRunningNested.
+	 */
+	bool _runningNested;
+
+	/* True iff we allow growing the cache via chained supercaches. Set in startup().
+	 * _runningNested requests the growing capability, but _growEnabled controls the
+	 * support for it.
+	 * Currently always false, because cache growing is unstable.
+	 * Internal: Requires cachelets.
+	 */
+	bool _growEnabled;
+
+	/* For growable caches, the cache can only be serialized once, because serialization "corrupts"
+	 * the original cache and renders it unusable. e.g. We fix up offsets in AOT methods.
+	 * This flag indicates whether the cache has already been serialized.
+	 * Access to this is not currently synchronized.
+	 */
+	bool _isSerialized;
+
+	bool _isAssertEnabled; /* flag to turn on/off assertion before acquiring local mutex */
+
+	SH_Managers * _managers;
