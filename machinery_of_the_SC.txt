@@ -3076,7 +3076,7 @@ must lock the cache, which means waiting for the reader count to
 dwindle to 0. And for that, we must effectively be a writer, since we
 need to hold the write mutex, which is a write mutex in the true sense
 of the word, since it allows only single-threaded writing of the
-cache. 
+cache.
 
 Where do we check to see if the cache is locked? Why, through
 'isLocked()', of course.. uhhh, nowhere I can tell, really. It's just
@@ -3173,7 +3173,7 @@ CACHEMAP.HPP MEMBER VARIABLES:
 
 	Although it does have the functions
 	'notifyRefreshMutexEntered' and 'notifyRefreshMutexExited'.
-	*/	
+	*/
 	bool _cacheCorruptReported;
 	U_64* _runtimeFlags;
 	const char* _cacheName;
@@ -3235,7 +3235,7 @@ return clause.
 
 'enterRefreshMutex' calls 'enterReentrantLocalMutex' and examines the
 rc. If rc == 0, and _refreshMutex->count == 1, it calls
-_ccHead->notifyRefreshMutexEntered. 
+_ccHead->notifyRefreshMutexEntered.
 
 'exitRefreshMutex' asserts that we have the local mutex. Regardless of
 whether _isAssertEnabled is true, oddly. It checks to see if 1 ==
@@ -3349,7 +3349,7 @@ fails, after some trace messages. Then we return 0.
 /* Assume cc is intialized OK */
 /* THREADING: Only ever single threaded */
 /* Creates a new ROMClass memory segment and adds it to the avl tree */
-J9MemorySegment* 
+J9MemorySegment*
 SH_CacheMap::addNewROMImageSegment(J9VMThread* currentThread, U_8* segmentBase, U_8* segmentEnd)
 {
 	J9MemorySegment* romSegment = NULL;
@@ -3378,8 +3378,8 @@ MemorySegments. There you go! That's it.
 
 'createNewSegment' looks like this:
 
-J9MemorySegment* 
-SH_CacheMap::createNewSegment(J9VMThread* currentThread, UDATA type, J9MemorySegmentList* segmentList, 
+J9MemorySegment*
+SH_CacheMap::createNewSegment(J9VMThread* currentThread, UDATA type, J9MemorySegmentList* segmentList,
 		U_8* baseAddress, U_8* heapBase, U_8* heapTop, U_8* heapAlloc)
 {
 	J9MemorySegment* romSegment = NULL;
@@ -3414,7 +3414,7 @@ Then we iterate through the cache chain and call
 Again, if preemption is enabled, and we don't have the class segment
 mutex, and the class segment mutex is initialized, we call
 'exitLocalMutex'. This is to be called after a ROMClass has been added
-to the cache. 
+to the cache.
 
 In 'updateROMSegmentListForCache', we need to hold the class segment
 mutex. Going back to the code for 'updateROMSegmentList', there is an
@@ -3454,7 +3454,7 @@ Trc_SHR_Assert_ShouldNotHaveLocalMutex(classSegmentMutex);
 This mutex needs to be distinct from the local mutex!
 
 Ohh, no shit.. this refers to locally initialized mutexes! Like in all
-the previous cases we've seen. 
+the previous cases we've seen.
 
 Here's the type of config->cacheDescriptorList:
 
@@ -3615,10 +3615,10 @@ itemsRead.
 
 IDATA
 SH_CacheMap::resetAllManagers(J9VMThread* currentThread)
-{		
+{
 	SH_Manager* walkManager;
 	SH_Managers::ManagerWalkState state;
-	
+
 	walkManager = managers()->startDo(currentThread, 0, &state);
 	while (walkManager) {
 		if (walkManager->reset(currentThread)) {
@@ -3725,7 +3725,7 @@ itemInCache. If itemInCache == NULL, return NULL. Then we copy the
 scope argument..
 
 memcpy(ITEMDATA(itemInCache), scope, totalSizeNeeded);
-	
+
 into the itemInCache. We call localSCM->storeNew(..) to write
 itemInCache which is now in cacheForAllocate. we copy the result using
 
@@ -3770,7 +3770,7 @@ rc.
 
    If hasMutex is true, and the _ccHead isn't lock, call
    _ccHead->protectPartiallyFilledPages(..). Otherwise, call
-   
+
    _ccHead->protectPartiallyFilledPages(currentThread, true, false,
    true);
 
@@ -3782,8 +3782,8 @@ rc.
     */
 
    Uhhh.. ok? I don't remember enough about the function to make sense
-   of this. 
- 
+   of this.
+
    The declaration in CompositeCache.cpp looks like this:
 
    SH_CompositeCacheImpl::protectPartiallyFilledPages(J9VMThread
@@ -3862,7 +3862,7 @@ along with a few trace messages.
 about. Here's the comment preamble behind it:
 
 /**
- * If a new ROMClass is being stored with a token, then older ROMClasses 
+ * If a new ROMClass is being stored with a token, then older ROMClasses
  * with the same name stored against the same token should be marked stale.
  *
  * @param [in] currentThread the thread calling this function
@@ -3950,7 +3950,7 @@ _ccHead->rollbackClassDebugData.
 
 'commitClassDebugData' is this:
 
-void 
+void
 SH_CacheMap::commitClassDebugData(J9VMThread* currentThread, U_16 classnameLength, const char* classnameData)
 {
 	this->_ccHead->commitClassDebugData(currentThread, classnameLength, classnameData);
@@ -3958,7 +3958,7 @@ SH_CacheMap::commitClassDebugData(J9VMThread* currentThread, U_16 classnameLengt
 
 Blah! boring.
 
-void 
+void
 SH_CacheMap::commitClassDebugData(J9VMThread* currentThread, U_16 classnameLength, const char* classnameData)
 {
 	this->_ccHead->commitClassDebugData(currentThread, classnameLength, classnameData);
@@ -4005,12 +4005,12 @@ We check the ROMClass timestamp.. for whaaaat? The preamble is this:
 /*
  * Checks the timestamp of an individual ROMClass.
  * This function is only used for ROMClasses loaded from filesystem directories.
- * 
+ *
  * If the timestamp of the ROMClass has changed, a new timestamp is returned
  * and it is the responsibility of the caller to take appropriate action (mark stale).
  * If the romclass doesn't exist, -1 is always returned.
  * Otherwise, if there is no change, 0 is returned.
- * 
+ *
  * Parameters:
  *   className		Fully-qualified name of class to timestamp check
  *   cpei			Classpath entry that the class was found in
@@ -4033,7 +4033,7 @@ srcw.theCpOffset = (J9SRP)((BlockPtr) cpw - (BlockPtr) srcwInCache);
 /*Calc the J9SRP*/
 srcw.romClassOffset = (J9SRP)((BlockPtr) romClassBuffer - (BlockPtr) srcwInCache);
 
-if (useScope) {	
+if (useScope) {
    const J9UTF8* mcToUse = modContextInCache;
    const J9UTF8* ptToUse = partitionInCache;
 
@@ -4090,9 +4090,9 @@ potentially our responsibility within this function. Then mark the
 class stale if we need to.. if it exists under the same Token or
 whatever the hell.
 
-/* If we are storing using a Token and there is already a class of the same name stored under that token, mark the original one stale 
+/* If we are storing using a Token and there is already a class of the same name stored under that token, mark the original one stale
  * Note also that the locateROMClass call above will not necessarily find what we want. If another class is being added under the same token,
- * and the orphan has already been added, the above call will return the exact orphan match which is useful, but not what we need to do the stale mark 
+ * and the orphan has already been added, the above call will return the exact orphan match which is useful, but not what we need to do the stale mark
  */
 this->tokenStoreStaleCheckAndMark(currentThread,
 J9UTF8_LENGTH(romClassName), (const char*)J9UTF8_DATA(romClassName), cpw, partitionInCache, modContextInCache, helperID);
@@ -4318,4 +4318,1040 @@ ITEMDATA(itemInCache).
 Then we call cacheAreaForAllocate->commitUpdate, of course, and then
 we return the resultWrapper. We're done.
 
-'storeROMClassResource' 
+'storeROMClassResourceToCache' is protected by the cache write mutex!
+It takes these boi's as arguments:
+
+J9VMThread* currentThread,
+const void* romAddress,
+SH_ROMClassResourceManager* localRRM,
+SH_ROMClassResourceManager::SH_ResourceDescriptor* resourceDescriptor,
+const char** p_subcstr
+
+The address of the ROM class to which the resource belongs. The
+resource is described by the.. wait for it.. resourceDescriptor.
+
+As usual, we check _runtimeFlags to see that we're not contravening
+any user settings by storing this thing, and if not, it's off to the
+races.
+
+Then we call ccHead->initBlockData(..). This is all looking terribly
+familiar thus far!
+
+We get the cacheAreaForAllocate from 'getCacheAreaForDataType',
+obvy. If that doesn't work, we return J9SHR_RESOURCE_STORE_ERROR, of
+course. Then we check to see that the romAddress is within the cache's
+address range. Then we dispatch once more on the resourceType:
+
+
+	switch (resourceType) {
+	case TYPE_COMPILED_METHOD :
+		itemInCache = (ShcItem*)(cacheAreaForAllocate->allocateAOT(currentThread, itemPtr, dataLength));
+		break;
+	case TYPE_ATTACHED_DATA :
+		if ((J9SHR_ATTACHED_DATA_TYPE_JITPROFILE == resourceSubType) ||
+			(J9SHR_ATTACHED_DATA_TYPE_JITHINT == resourceSubType)
+		){
+			itemInCache = (ShcItem*)(cacheAreaForAllocate->allocateJIT(currentThread, itemPtr, dataLength));
+		}
+		break;
+	default :
+		itemInCache = (ShcItem*)(cacheAreaForAllocate->allocateBlock(currentThread, itemPtr, align, wrapperLength));
+		break;
+	}
+
+I don't even care about indentation anymore. This produces an
+itemInCache as you can see! The resourceDescriptor knows how to write
+to it via resourceDescriptor->writeDataToCache(..). And then we write
+it the localRRM->storeNew(..), and call
+cacheAreaForAllocate->commitUpdate(..). And we are done! Return the
+resultWrapper.
+
+'storeROMClassResource' is now the thing we are on. Apparently
+localRRM, the argument is a ROMClassResourceManager, and we need to
+call its permitAccessToResource member function on the
+currentThread.. which returns a bool called _accessPermitted.  Then we
+try to claim the composite cache's write mutex, through
+_ccHead->enterWriteMutex(..). And that's that, I'm afraid.
+
+Then we call 'runEntryPointChecks', followed by
+resourceDescriptor->generateKey(romAddress). Then
+localRRM->findResource(..).. if it doesn't return a resource wrapper,
+then it's not already in the cache! If it does return a resource
+wrapper, well.. we exit the write mutex, and return with a message
+indicating whether the store is invalidated or not (if the item type
+is TYPE_INVALIDATED_COMPILED_METHOD, for instance), or we return
+J9SHR_RESOURCE_STORE_EXISTS.
+
+Otherwise, no such resource exists. We call
+'addROMClassResourceToCache', as planned. We check to see that the
+store is not full, and that there was not an error. If
+_ccHead->isNewCache() is true, that's another condition that piles
+onto the previous ones. If so! .. and the persistent cache is
+enabled.. we call 'updateAccessedShrCacheMetadataBounds'. Then we call
+_ccHead->exitWriteMutex(..), and boom. We are finished.
+
+'updateROMClassResource' does much the same thing:
+
+1) _ccHead->enterWriteMutex(..) is called.
+2) 'runEntryPointChecks' is called.
+3) resourceDescriptor->generateKey(..) is called.
+4) localRRM->findResource(key) is called.
+4i) If the resource is found, check for errors in store
+representation! Like byte lengths not matching up. Otherwise, call
+resourceDescriptor->updateDataInCache and the like (sometimes
+resourceDescriptor->updateUDATAInCache(..)).
+4ii) If the resouces is not found, result becomes
+J9SHR_RESOURCE_STORE_ERROR.
+
+In any event we call _ccHead->exitWriteMutex(..), and are done.  We
+return the result.
+
+'findROMClassResource' also does super boring, typical things, such
+as:
+
+1) localRMM->permitAccessToResource(..) is called. If false, we're
+gone. Return NULL.
+
+2) if useReadMutex the bool parameter is true, call
+_ccHead->enterReadMutex(..). If that fails, return NULL.
+
+3) 'runEntryPointChecks' is called. If failed return NULL. Blah.
+
+4) generateKey and findResource are called on localRRM. If the
+resource isn't found, check to see if we've found an invalidated AOT
+method. Toggle the flags parameter accordingly.
+
+5) Release the read mutex and call 'updateBytesRead'.
+
+6) Return the result.
+
+'storeCompiledMethod' is mercifully just a wrapper around
+'storeROMClassResource', which creates a
+CompiledMethodResourceDescriptor object around the data and code
+passed to 'storeCompiledMethod'. It passes that shit along, you see.
+
+Here are.. some rad comments.
+
+/*
+ * This method adds the fixed data associated with a compiled method to the cache.
+ * The data defined by dataStart and dataSize and the data defined by codeStart and
+ * and codeSize are copied to the cache as a single contiguous block. The stored
+ * data is indexed by the romMethod's address. The return value is a pointer to the
+ * stored data or null in case of an error.
+ */
+
+'findCompiledMethod' finds the fixed data associated with the method!
+A J9ROMMethod* to be exact. As before, we initialized a
+CompiledMethodResourceDescriptor and get the CompiledMethodManager
+from the CacheMap. We use 'findROMClassResource' to get the thing!
+Oddly we don't feel the need to load the descriptor with any
+information whatsoever -- it's the J9ROMMethod* that's passed.
+
+If the result != NULL, we call
+vmFunctions->findROMClassFromPC(..). This a function internal to the
+VM, from currentThread->javaVM->internalVMFunctions. You know, to find
+the containing ROMClass from the program counter, I think, which the
+J9ROMMethod* effectively is. If we find it, we get the class name,
+method name, and method signature.. and use them to emit a trace
+message, nothing more, to indicate a successful metadata access.
+This is if the persistent cache is enabled. Seems to be purely for
+debugging purposes. We don't actually do anything further with the
+ROMClass that was retrieved.
+
+Turning back to the internals of 'getROMClassResource', though, we see
+that the romMethod pointer is interpreted as a key by the
+resourceDescriptor, which is then passed to the
+ROMClassResourceManager. It knows how to handle all that.
+
+Finally, we return the result.
+
+'updateAccessedShrCacheMetadataBounds'.. hoo man. Here's the comment
+preamble:
+
+/**
+ * Record the minimum and maximum addresses accessed in the shared classes cache.
+ * @param [in] metadataAddress address accessed in metadata
+ * @note an argument of 0 will reset the minimum and maximum
+ */
+
+This entire thing hinges on manipulating
+
+uintptr_t * updateAddress = (uintptr_t *)&_minimumAccessedShrCacheMetadata;
+
+as an atomic value. It reads the current value (just
+_minimumAccessedShrCacheMetadata)
+
+and sets newValue (a local) to equal the passed in value,
+metdataAddress (as a uintptr_t).
+
+If the currentValue is 0, as the preamble says, do:
+
+compareAndSwapUDATA(updateAddress,
+		    currentValue,
+		    newValue);
+
+Then currentValue is read in again. We enter a while loop when we
+check that newValue < currentValue as the loop condition. Clearly, it
+should be greater!! This is because currentValue is updated in the
+loop body, from _minimumAccessedShrCacheMetadata. Before that, we try
+to update _minimumAccessedShrCacheMetadata through another call to
+
+compareAndSwapUDATA(updateAddress,
+		    currentValue,
+		    newValue);
+
+We break once it finally succeeds. Then we do the same with
+_maximumAccessedShrCacheMetadata. Same thing, right down to
+updateAddress and currentValue, except this time, there is no check
+that 0 == currentValue.
+
+'storeAttachedData' takes a parameter called addressInCache,
+indicating that this data is attached to a method or class already in
+the cache. To attach it, we must know where that data resides in the
+cache. Other parameters: the data to store (a J9SharedDataDescriptor*,
+obviously); forceReplace, a bool that *forces* attached data to
+replace itself in the cache, regardless of whether it already exists
+there, marking the old data stale; aaaand, that's it. One of the more
+well-documented functions inside CacheMap.
+
+Here are the steps:
+
+1) get AttachedDataManager
+2) if we've enabled VERBOSE_JITDATA in the runtime flags:
+2i) call 'updateROMClassResource' with the
+addressInCache. updateAtOffset is a function argument.. the area
+within the addressAtCache we are updating. The descriptor is populated
+with the data length, address and type.
+
+Next, if the address is in the cache, call
+vmFunctions->findROMClassFromPC(..) again, and extract method names
+and data for debugging purposes only! This is the verbosity part.
+2ii) Otherwise, just call 'updateROMClassResource' as previously
+described without the massive amount of ceremony.
+
+Return the result. Fin.
+
+'updateAttachedUDATA' is a mirror copy of 'updateAttachedData', except
+the data argument is replaced by a UDATA parameter called value. We
+construct our own local J9SharedDataDescriptor called data, which
+value is used to populate (using its address, size, and the type
+argument).
+
+Then the action again boils down to using 'updateROMClassResource'
+again, with or without the verbosity cruft.
+
+And, return the result.
+
+'findAttachedDataAPI' has this purpose-explaining preamble written in
+it:
+
+/**
+* Find the data for the given shared cache address. If *corruptOffset is not -1,
+* a vm exit occurred while a call to j9shr_updateAttachedData() was in progress.
+* In such case, data->address is still filled with the corrupt data.
+* Corrupt data can be overwritten by a subsequent update.
+* If data->address was NULL on entry, then on return caller must free
+* a non-NULL data->address.
+
+This.. is somewhat confusing. The documentation on this thing sucks,
+of course, in general but especially for this function. I take it to
+mean that the corruptOffset records the offset of where data starts to
+be corrupted within the addressInCache, yes? At least the
+documentation is somewhat helpful in that corruptOffset is marked as a
+return value (an "out" parameter).
+
+And the function body is.. drum roll.. a big convoluted mess anchored
+by ENABLE_VERBOSE_JITDATA being set in _runtimeFlags, again. The core
+of the action is 'findAttachedData', which takes as parameters
+currentThread, addressInCache, data, corruptOffset, and a char** for a
+debug message.
+
+On to 'findAttachedData' then! Hopefully for some answers. It's much,
+much longer.
+
+First, we have
+
+*corruptOffset = -1;
+
+to mean that no such offset exists, yet. NULL has its own
+interpretation apart from that of -1. We call 'getAttachedDataManager'
+again, and then 'enterReadMutex'. If either fail, return NULL. Nothing
+new so far.
+
+Then we populate an AttachedDataResourceDescriptor with data->type,
+with the length and address fields being 0 and NULL respectively. We
+pass the descriptor to 'findROMClassResource'. So far, corruptOffset
+is untouched. If the result of the call to 'findROMClassResource' is
+!= NULL, we get an AttachedDataWrapper out of the result. If
+data->address != NULL, we do this:
+
+if (data->length < dataLength) {
+				result = (U_8 *)J9SHR_RESOURCE_STORE_ERROR;
+				if (NULL != p_subcstr) {
+					const char *tmpcstr = j9nls_lookup_message((J9NLS_INFO | J9NLS_DO_NOT_PRINT_MESSAGE_TAG), J9NLS_SHRC_CM_DATA_SIZE_LARGER, "data %d larger than available %d");
+					j9str_printf(PORTLIB, (char *)*p_subcstr, VERBOSE_BUFFER_SIZE, tmpcstr, dataLength, data->length);
+				}
+				goto _exitWithError;
+}
+
+Clearly, this is error checking code that modifies result accordingly.
+
+Otherwise, if data->address == NULL, we allocate a buffer at
+data->address using j9mem_allocate_memory. If it's still NULL, do the
+error dance again, jumping to _exit this time.
+
+Moving on, we check to see if the _ccHead->isRunningReadOnly() is
+true. If not, we copy the result to data->address, which is non-NULL
+now in any event, sugar. We set the local variable corrupt to
+
+corrupt = ADWCORRUPT(wrapper);
+
+I don't know what this wrapper does. It's this macro:
+
+#define ADWCORRUPT(adw) J9SHR_READMEM((adw)->corrupt)
+
+If corruptOffset != NULL, do
+
+*corruptOffset = corrupt;
+
+Uhh, when was corruptOffset touched in the intervening code? Never, as
+far as I can tell! It was dereferenced without so much as a nullity
+check.
+
+If on the other hand corrupt != -1, result = NULL and we goto _exit.
+
+Otherwise, _ccHead is running read only. We read the update count of
+the wrapper using ADWUPDATECOUNT on
+wrapper. VM_AtomicSupport::readBarrier() is used to establish a read
+barrier, to everyone's great shock. Then the data stuff is copied over
+from result once more:
+
+memcpy(data->address, result, dataLength);
+data->length = dataLength;
+result = data->address;
+
+VM_AtomicSupport::readBarrier();
+
+and notice how we follow without another readBarrier(). The
+readBarrier() is toggled off. Did I mention we are now in a do loop??
+It has to do with the managing the updateCountTryCount.. we get a
+limited number of retries. Why might the loop go round in another
+retry? Because the initialUpdateCount and the finalUpdateCount, before
+and after data is read from result, might be different. These update
+counts both come from ADWUPDATECOUNT, BTW. Once we've exceed our
+allotted number of retries, we goto _exitWithError, after setting
+result to NULL. The while condition is just true, BTW. It's an
+unconditional infinity loop until we break out.
+
+The rest of the function just looks like this:
+
+_exitWithError:
+	if (true == bufferAllocated) {
+		j9mem_free_memory(data->address);
+		data->address = NULL;
+	}
+_exit:
+	_ccHead->exitReadMutex(currentThread, fnName);
+	Trc_SHR_CM_findAttachedData_Exit3(currentThread, result);
+return result;
+
+And that is that confusing function! We really gained no insight at
+all on the function of corruptOffset. Perhaps later it will become
+clearer??
+
+'addByteDataToCache' does what it claims to do, boy howdy! I'm now
+sure how byte data differs from Attached data. I suppose we'll find
+out. These are its parameters:
+
+J9VMThread* currentThread, SH_Manager* localBDM, const J9UTF8* tokenKeyInCache,
+const J9SharedDataDescriptor* data, SH_CompositeCacheImpl* forceCache,
+bool writeWithoutMetadata
+
+We have a manager localBDM, a tokenKeyInCache, a
+J9SharedDataDescriptor*, a CompositeCacheImpl for some reason, and a
+boolean flag indicating whether we write with metadata.
+
+First is that we expect to hold the write mutex. A given at this
+point. The data has certain flags attached to it:
+
+1) whether it is read/write
+2) whether it is not indexed (whatever that might mean)
+3) whether it is private
+
+cacheForAllocate is either forceCache or _cc, based on whether
+forceCache is NULL.
+
+Then a few features of the wrapper are set up, namely its type and
+length, represented by the locals wrapperType and wrapperLength. The
+type pivots on dataNotIndexed: if true, the type is
+TYPE_UNINDEXED_BYTE_DATA; if false, TYPE_BYTE_DATA. wrapperLength is 0
+unless dataNotIndexed is false, in which case it's
+sizeof(ByteDataWrapper).
+
+Then this bit of mystifying code:
+
+if (J9_ARE_ANY_BITS_SET(*_runtimeFlags, RUNTIME_FLAGS_PREVENT_BLOCK_DATA_UPDATE)) {
+        if (J9_ARE_ALL_BITS_SET(data->flags, J9SHRDATA_USE_READWRITE)) {
+	   increaseUnstoredBytes(wrapperLength);
+        } else {
+           increaseUnstoredBytes(wrapperLength + (U_32)data->length);
+        }
+        Trc_SHR_CM_addByteDataToCache_Exit1(currentThread);
+	return NULL;
+}
+
+If we're interested in preventing *updates* to block data, and the
+data to be read/written, then we'd better increment the number of
+unstored bytes by the length of the wrapper, if we need to!
+
+If use read/write isn't flagged in data->flags (<-> !dataReadWrite),
+then check to ensure data->type != J9SHR_DATA_TYPE_CACHELET (it always
+is true, cachelets are gone!). We call _ccHead->initBlockData(..), and
+then
+
+cacheForAllocate = getCacheAreaForDataType(currentThread, wrapperType,
+_ccHead->getBytesRequiredForItemWithAlign(itemPtr, SHC_WORDALIGN,
+sizeof(ByteDataWrapper)));
+
+true to form. This is if !forceCache is true. In any event, we set
+itemInCache using this:
+
+if ((itemInCache = (ShcItem*)(cacheForAllocate->allocateBlock(currentThread, itemPtr, SHC_WORDALIGN, sizeof(ByteDataWrapper)))) == NULL) {
+   /* Not enough space in cache to accomodate this item. */
+   return NULL;
+}
+
+Else, if dataReadWrite is true, we do this (snipping the obsolete
+parts):
+
+_ccHead->initBlockData(&itemPtr, wrapperLength, wrapperType);
+itemInCache = (ShcItem*)(cacheForAllocate->allocateWithReadWriteBlock(currentThread, itemPtr, (U_32)data->length, &externalBlock));
+/* Expect readWrite to become full before the cache does - so don't
+report it */
+
+externalBlock is an internal BlockPtr that we are hoping to allocate,
+see. It will be allocated in the read/write area of the cache,
+following the documentation of allocateWithReadWriteBlock in
+CompositeCache.cpp. That is what dataReadWrite actually indicates!
+
+If the data is indexed (by a token key, it turns out) and the value of
+_cc changes out from under us (somehow? preCC certainly can't!) then
+we do this:
+
+if ((preCC != _cc) && (tokenKeyInCache != NULL) && !dataNotIndexed) {
+	/* Our token key is in a different supercache - we need to reallocate it */
+	tokenKeyToUse = addScopeToCache(currentThread, tokenKeyInCache);
+}
+
+It needs to be re-indexed, clearly! Or reallocated or something.
+
+If we are writing without metadata, and we got an externalBlock,
+memToSet = externalBlock. That's the thing to write to. Otherwise,
+memSet = (BlockPtr)itemInCache, the metadata item we allocated.
+
+Otherwise, if data isn't indexed (dataNotIndexed is true), memToSet
+becomes ITEMDATA(itemInCache). Else! If metadata is not being written
+and data is indexed, we do all this:
+
+if (itemInCache == NULL) {
+	Trc_SHR_CM_addByteDataToCache_Exit_Null(currentThread);
+	return NULL;
+}
+
+bdwInCache = (ByteDataWrapper*)ITEMDATA(itemInCache);
+bdwInCache->dataLength = (U_32)data->length;
+bdwInCache->tokenOffset = (J9SRP)((BlockPtr)tokenKeyToUse - (BlockPtr)bdwInCache);
+
+if (externalBlock) {
+	bdwInCache->externalBlockOffset = (J9SRP)((BlockPtr)externalBlock - (BlockPtr)bdwInCache);
+} else {
+	bdwInCache->externalBlockOffset = 0;
+}
+
+bdwInCache->dataType = (U_8)data->type;
+/* Only set privateOwnerID if the data is private - when JVM shuts down, all of its privateOwnerIDs are set to 0 */
+bdwInCache->privateOwnerID = (bdwInCache->inPrivateUse = (U_8)dataIsPrivate) ? _ccHead->getJVMID() : 0;
+memToSet = (BlockPtr)BDWDATA(bdwInCache);
+
+Then this crap:
+
+if (memToSet == NULL) {
+   Trc_SHR_CM_addByteDataToCache_Exit_Null(currentThread);
+   return NULL;
+}
+
+if (data->flags & J9SHRDATA_ALLOCATE_ZEROD_MEMORY) {
+   memset(memToSet, 0, data->length);
+} else {
+   memcpy(memToSet, data->address, data->length);
+}
+
+We set memToSet using data, which is the entire point of this
+function, in case you've forgotten. Then all of this:
+
+	/* storeNew is effectively a no-op for data marked as J9SHRDATA_NOT_INDEXED */
+	if (localWriteWithoutMetadata) {
+		result = memToSet;
+	} else if (localBDM->storeNew(currentThread, itemInCache, cacheForAllocate)) {
+		if (dataNotIndexed) {
+			result = (BlockPtr)ITEMDATA(itemInCache);
+		} else {
+			result = (BlockPtr)BDWDATA((ByteDataWrapper*)ITEMDATA(itemInCache));
+		}
+	}
+	cacheForAllocate->commitUpdate(currentThread, itemPtr->dataType == TYPE_CACHELET);
+
+	if ((NULL != bdwInCache) && (J9SHR_DATA_TYPE_AOTHEADER == bdwInCache->dataType)) {
+		this->_cc->setAOTHeaderPresent(currentThread);
+	}
+
+	Trc_SHR_Assert_True(_ccHead->hasWriteMutex(currentThread));
+	Trc_SHR_CM_addByteDataToCache_Exit(currentThread, result);
+	return result;
+
+Writing metadata if we have to, and so forth.
+
+Ok, 'storeSharedData' is a go now. Another monster of a function. This
+fucker of a function is easy to understand but has some complex
+behaviour, which might, y'know, account for its size:
+
+/**
+ * Stores data in the cache which against "key" which is a UTF8 string.
+ * If data of a different dataType uses the same key, this is added without affecting the other data stored under that key.
+ * If J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE is set, one store for that key/dataType combination is allowed. Subsequent stores will simply return the existing data.
+ * If J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE is not set, the following is true:
+ *   If data of the same dataType already exists for that key, the original data is marked "stale" and the new data is added.
+ *   If the exact same data already exists in the cache under the same key and dataType, the data is not duplicated and the cached version is returned.
+ *   If null is passed as the data argument, all existing data against that key is marked "stale".
+ * The function returns null if the cache is full, otherwise it returns a pointer to the shared location of the data.
+ *
+ * data->flags can be any of the following:
+ *   J9SHRDATA_IS_PRIVATE - the data is private to this JVM
+ *   J9SHRDATA_ALLOCATE_ZEROD_MEMORY - allocate zero'd space in the cache to be written into later
+ *      bear in mind that this should be either private memory which doesn't require locking, or read/write memory
+ *   J9SHRDATA_USE_READWRITE - allocate into the cache read/write area
+ *   J9SHRDATA_NOT_INDEXED - add the data, but don't index it (saves cache space)
+ *      data must therefore be referenced by other data as it can never be retrieved by findSharedData
+ *   J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE - only allow one store for a given key/type combination
+ *      subsequent stores return the existing data regardless of whether it matches the input data
+ *   J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE_OVERWRITE - Similar to J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE, only one record of key/dataType combination is allowed in the shared cache.
+ *   	subsequent stores overwite the existing data. This flag is ignored if J9SHRDATA_NOT_INDEXED, J9SHRDATA_ALLOCATE_ZEROD_MEMORY or J9SHRDATA_USE_READWRITE presents
+ */
+
+The function takes a simple const char* key, a keylen, and a
+J9SharedDataDescriptor*. Again, data might be indexed, or not. We once
+again have a dataNotIndexed flag, which pivots around data != NULL and
+data->flags & J9SHRDATA_NOT_INDEXED being true.
+
+Then key can't be NULL or of zero length either, or we return NULL.
+
+We call 'getByteDataManager' as you'd expect. If
+J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE_OVERWRITE is enabled in
+data->flags and the data is non NULL, then guess whaaat.. the local
+boolean overwrite is set to true.
+
+Then we call _ccHead->enterWriteMutex(..) and
+'runEntryPointChecks'. If that succeeds, we keep the write mutex, and
+on we go.
+
+if !dataNotIndexed, hoo, watch out. We have a long road of exposition
+ahead of us. If additionally data != NULL, we call
+localBDM->findSingleEntry(..). This returns bdwInCache. If data->type
+== J9SHR_DATA_TYPE_AOTHEADER, it's the header of an AOT datum?? And
+AOT headers are present in the _cc, whatever that means?? If so, we
+assert that bdwInCache != NULL.
+
+Then, if indeed bdwInCache != NULL, we read the result from the
+bdwInCache, as
+
+result = (const U_8*)BDWDATA(bdwInCache);
+
+if (data->address == NULL) {
+   /* We're being asked to allocate memory that has already been allocated */
+   if (data->flags & J9SHRDATA_ALLOCATE_ZEROD_MEMORY) {
+      goto _done;
+   }
+}
+
+which is as weird as it is interesting! The bulk of code is trapped in
+the else clause of the shown if. For we're doing a single store for a
+key of this type.. or an overwrite for a key of this type.. if
+data->type == J9SHR_DATA_TYPE_STARTUP_HINTS, we call
+'updateLocalHintsData'. Apparently these startup hints are folded away
+in _sharedClassConfig.. there are asserts verifying that the address
+of those hints match data->address. Seems rather specialized and
+important!
+
+If overwrite (the local bool) is true, we check that the data->length
+== foundDatalen. If so, copy result to data->address. If that
+fails, copy data->address to result instead.
+
+Otherwise, if neither SINGLE_STORE_FOR_KEY_TYPE nor
+SINGLE_STORE_FOR_TYPE_OVERWRITE is set, and data->length ==
+foundDatalen, we copy result to data->address, and if we do so
+successfully, we goto _done.
+
+If we did not goto _done in this branch, we mark the found bdw item as
+stale.
+
+Otherwise! If data == NULL, we call localBDM->markAllStaleForKey(..).
+
+Then we call 'getScopeManager'. If that fails, return NULL.
+
+Now, if
+
+(data != NULL) && (data->length > 0) && ((data->address != NULL) ||
+(data->flags & J9SHRDATA_ALLOCATE_ZEROD_MEMORY))
+
+we set the local (just declared) J9UTF8* tokenKey to NULL. If
+!dataNotIndexed, we copy the key into J9UTF* struct. Then we try to
+findScope for that UTF key struct:
+
+if (!(tokenKey = localSCM->findScopeForUTF(currentThread, utfKeyStruct))) {
+	if (!(tokenKey = addScopeToCache(currentThread, utfKeyStruct))) {
+		Trc_SHR_CM_storeSharedData_CannotAddScope(currentThread);
+		result = NULL;
+		goto _done;
+	}
+}
+
+We try to add the scope indicated by the computed key to the
+cache. Then, Once the if(!dataNotIndexed) { ... } branch is exited, we
+call
+
+result = (const U_8*)addByteDataToCache(currentThread, localBDM,
+tokenKey, data, NULL, false);
+
+Followed by this:
+
+_done:
+	if (utfKeyPtr && (utfKeyPtr != (char*)&utfKey)) {
+		j9mem_free_memory(utfKeyPtr);
+	}
+
+	_ccHead->exitWriteMutex(currentThread, fnName);
+
+	Trc_SHR_CM_storeSharedData_Exit3(currentThread, result);
+	return result;
+
+Onto 'findSharedData'. Again, we have a key, a keylen, a limitDataType
+(used only if what?? "If used, only data of the type constant
+specified is returned. If 0, all data stored under that key is
+returned"), includePrivateData( another UDATA, also mystifying), a
+J9SharedDataDescriptor* called firstItem, and a J9Pool* called
+descriptorPool.
+
+We start by calling 'getByteDataManager'. Again. Then
+_ccHead->enterReadMutex(..), then 'runEntryPointChecks'. The
+parameters passed to 'findSharedData' are fed into
+localBDM->find(..), even! So there meaning is not really expounded
+upon here, and because we're nearing closing time, I am grateful.
+The full bad boi looks like this:
+
+result = localBDM->find(currentThread, key, keylen, limitDataType, includePrivateData, firstItem, descriptorPool);
+
+Then we call _ccHead->exitReadMutex(..).
+
+Where does the pool come in?!? Here:
+
+if (result > 0) {
+	if (descriptorPool != NULL) {
+		pool_state state;
+		J9SharedDataDescriptor* anElement;
+
+		anElement = (J9SharedDataDescriptor*)pool_startDo((J9Pool*)descriptorPool, &state);
+		while (anElement) {
+			updateBytesRead(anElement->length);
+			anElement = (J9SharedDataDescriptor*)pool_nextDo(&state);
+		}
+	} else if (firstItem != NULL) {
+		updateBytesRead(firstItem->length);
+	}
+}
+
+So, if the result > 0, and the descriptorPool isn't NULL, we iterate
+through all elements of the pool, and call 'updateBytesRead' on each
+element in it. Otherwise, if the pool is NULL, we call
+'updateBytesRead' only on the firstItem retrieved by
+localBDM->find(..). The descriptorPool is populated by all the results
+found under that key, BTW, so of course we need to alert the cache of
+their being read.
+
+We should take a moment to examine the ByteDataManager and
+ScopeManager classes.
+
+Starting with ByteDataManager. In the abstract interface
+SH_ByteDataManager, we see a distinction between public and private
+members. Members are private in this sense if they are exclusive to a
+single JVM. By 'releasing' private members, they become public, which
+is to say, accessible to other JVMs. And then, of course, there's find
+and findSingleEntry. find fills the descriptorPool with the entries it
+finds.. findSingleEntry takes a jvmID in addition to key, keylen,
+dataType, and dataLen.. the datum found must uniquely match the key,
+dataType and jvmID.
+
+SH_ByteDataManagerImpl implements virtual overrides of all
+SH_ByteDataManager's pure virtual functions, but none of the Impl
+classes' prototypes are pure.
+
+Looking at storeNew, we see some first swirlings of indexed
+bytes. That whole notion. We're really just adding the length of the
+items to an array, _indexedBytesByType, which is indexed by the types
+denoted by the constants J9SHR_DATA_TYPE_*.
+
+releasePrivateEntry is called automatically on each private entry when
+a JVM shuts down.. is publicizes its private data.
+
+acquirePrivateEntry takes a public entry and makes it private,
+according to the JVM's ID.
+
+Ok, back to CacheMap. The next entry is
+'acquirePrivateSharedData'. This tries to transfer private shared data
+from another JVM to this one. 'getByteDataManager',
+_ccHead->enterWriteMutex(..), and localBDM->acquirePrivateEntry(..)
+are all there, operating on the lone argument, a
+J9SharedDataDescriptor* called data. That's it. We exit the write
+mutex when finished.
+
+'releasePrivateSharedData' calls releasePrivateEntry on the localBDM,
+and that's quite literally it. There's no need to claim the write
+mutex because we don't care about race conditions involved in making
+it private. The outcome is completely predictable with or without a
+race condition.
+
+'getJavacoreData' dumps many different cache stats to the struct
+J9SharedClassJavacoreDataDescriptor. This (the function
+'getJavacoreData') contains a useful index of byte data types. Many of
+the descriptor fields describe the number of certain kinds of entries
+and so on are initialized to 0 if the ByteDataManager hasn't been
+started yet. But the rest is just stats gathering with the help of the
+relevant managers. Nothing very relevatory or interesting.
+
+'markStale' needs to have the write mutex, as it will check via
+asserts. It will also lock the cache once it has the write mutex. The
+key to the thing being marked stale is a ClasspathEntryItem* called
+cpei. Also, the caller must have the classSegmentMutex belonging to
+the VM. Seems a little extreme, but ok.
+
+ We update the VM state to indicate that something in the shared class
+ cache is being marked stale. It's a VM wide event. While retryCount <
+ MARK_STALE_RETRY_TIMES (and it always is! retryCount is incremented
+ nowhere), we call 'runEntryPointChecks', _cc->startCriticalUpdate(..)
+ and _cc->findStart(..). Then we call
+ localCPM->markClasspathsStale(currentThread, cpei). Notice cpei being
+ passed in, there.
+
+Once that's done, we watch the composite cache using
+_cc->nextEntry(..). For each item that is a ROMClassWrapper, we get
+the ROMClass path with the macro RCWCLASSPATH(rcw). That is cast to a
+ClassPathWrapper*. The ClasspathWrapper is simply this:
+
+typedef struct ClasspathWrapper {
+	I_16 staleFromIndex;
+	U_32 classpathItemSize;	/* ClasspathItem follows directly after */
+} ClasspathWrapper;
+
+staleFromIndex is what? "All classpaths after this index are stale",
+perhaps? I have no clue how to interpret that. In this context, we
+have the check:
+
+if (((ClasspathWrapper*)RCWCLASSPATH(rcw))->staleFromIndex <= rcw->cpeIndex) {
+	markItemStale(currentThread, it, true);
+	++numMarked;
+}
+
+If the staleFromIndex is less than cpeIndex, ah! We mark it
+stale. Here's commentary from ClasspathManagerImpl2.cpp :
+
+ * The "staleFromIndex" of each ClasspathItem is set to the index of cpei in that classpath.
+ * After this function is called, the caller should test all ROMClasses in the cache to see if they now
+ * point to a stale classpath entry.
+
+The classpath is implemented as an array, meaning every entry
+in it has an index. 'markStale' is concerned precisely with testing
+all ROMClasses in the cache, to see if they are 'stale from that
+index.' That is, if they come after that index, they must be
+stale. This was my first interpretation of the thing, and we were
+correct it seems.. I still don't understand the logic of it. If the
+individual ClassPathEntryItem* cpei is marked as stale.. then so is
+everything after?? Why?
+
+Ok, a ClasspathItem is an individual sequence of paths making up part
+of the classpath, which can consist of many ClasspathEntryItem's. A
+ClasspathEntryItem is an individual path, and a pathLen, and a
+hashValue.. all that. A ClasspathWrapper is really just a header for a
+ClasspathItem, as the comments say. Each cpei has an index in the
+classpath as a 0-indexed sequence of ClasspathEntryItems, of course.
+
+SH_ClasspathManagerImpl2::markClasspathsStale(..) takes a classpath
+entry item, finds the classpath is belongs to, and walks the
+ClasspathItems making up that classpath. Specifically, it walks their
+wrappers (really, their headers.. it should have a more suitable
+name). It returns the index of the ClassPathItem *within* the
+classpath (a linked list, a CpLinkedList to be precise), and records
+*that* to cpw->staleFromIndex (cpw is the ClasspathWrapper,
+clearly). This is what it means to mark a classpath as stale,
+apparently! If you look back to CacheMap::addClasspathToCache, the
+classpath wrapper created there is set to CPW_NOT_STALE. It is defined
+as:
+
+#define CPW_NOT_STALE 0x7FFF
+
+which is 16 bits, reserving the top bit for 0. Probably a stale
+marker! But yeah, that's the greatest possible bound you can have, as
+far as the lengths of classpaths are concerned. If staleFromIndex to
+set to the cpeIndex, as it is in 'markClasspathsStale', that's a hint
+to 'markStale' in CacheMap, where we check that the Classpaths of the
+cache's ROMClasses have gone stale by comparing their wrapper's
+staleFromIndex attributes to their ROMClass's cpeIndex. If the
+classpath of the ROMClass is stale, guess what?? The ROMClass is stale!
+
+Then we end the critical update, exit from the write mutex.. all
+that. Restore the old VM state and return numMarked.
+
+Ok, 'markItemStale'. So minimal as to be completely boring! It asserts
+that the currentThread holds the write mutex. Then it calls
+_ccHead->markStale(..). It is passed a ShcItem* item and a bool
+isCacheLocked, and that's all.
+
+'markItemStaleCheckMutex' tries to _ccHead->markStale(..) if the write
+mutex is held. If not, it exits the read mutex,
+_ccHead->enterWriteMutex(..), then does _ccHead->markStale(..), then
+exits the write mutex. The only difference between this function and
+the previous one is that there's some extra bureaucracy around
+checking for the write mutex being held, and attempting to claim it if
+it isn't. A bit safer than markItemStale, obviously.
+
+'destroy' tries to destroy the entire cache! Just burn the entire
+thing down, is the whole idea. It does _ccHead->enterWriteMutex(..),
+'resetAllManagers', and then _ccHead->deleteCache(..), and that's it.
+
+'reportCorruptCache' is next. It checks whether currentThread owns the
+refresh mutex. If not, it tries to claim it. If it has the refresh
+mutex, it calls _ccHead->getCorruptionContext(..), and sets the write
+hash to 0 if REDUCE_STORE_CONTENTION is enabled. Then
+_cacheCorruptReported = true, and the _runtimeFlags are toggled so
+that we DENY_CACHE_ACCESS and DENY_CACHE_UPDATES, since, y'know, the
+cache is corrupt. Then we do 'exitRefreshMutex'.
+
+'resetCorruptState' toggles those same flags and settings off. It also
+makes sure to have the refresh mutex before attempting anything. Then
+'setCorruptionContext' is called to set the context to
+NO_CORRUPTION. Bah! Then we are done.
+
+'printAllCacheStats' is a beast I don't want to get into, ever. It is
+only every single threaded, it tries to claim the write mutex, aaaand,
+the rest appears to be logic to walk the cache,, using
+cache->findStart(..) (cache is a SH_CompositeCacheImpl* argument to
+the function, BTW). For each ShcItem* it claims in the walk, it
+dispatches on its ITEMTYPE in a big switch statement.
+
+Lots of uses of CACHEMAP_PRINT* here. Many, I would say! The clauses
+keep repeating the same syntactic pattern.. only the macros and
+constants being passed to the macros (which decide the text that they
+print) change.
+
+Oh, types of attached data, BTW: mainly they are 'attached' to
+compiled methods. They are ATTACHED_DATA_TYPE_JITPROFILE (JIT
+profiling info!) and ATTACHED_DATA_TYPE_JITHINT.
+
+Then call _ccHead->exitWriteMutex(..). Fini!
+
+'printCacheStats' prints the stats for *this* cache, rather than a
+cache specified by argument parameter. If fact, it calls
+'printAllCacheStats' for all cache chained to _cc, the 'head'
+cache. Then it calls 'getJavacoreData' and begins to print information
+from that. Java specific info! So there's some welcome segregation of
+Java material from the cache there, that we don't see often enough.
+
+Then there's some such about whether the cache is accessible and what
+kind of access is allowed. Here's the switch statement controlling it:
+
+switch (this->_cc->isCacheAccessible()) {
+case J9SH_CACHE_ACCESS_ALLOWED:
+	accessString = "true";
+	break;
+case J9SH_CACHE_ACCESS_ALLOWED_WITH_GROUPACCESS:
+	accessString = "only with 'groupAccess' option";
+	break;
+case J9SH_CACHE_ACCESS_ALLOWED_WITH_GROUPACCESS_READONLY:
+	accessString = "only with 'groupAccess' and 'readonly' option";
+	break;
+case J9SH_CACHE_ACCESS_NOT_ALLOWED:
+	accessString = "false";
+	break;
+default:
+	accessString = "false";
+	break;
+}
+
+Following by a CACHEMAP_PRINT1(...) in there, naturally.
+
+'isBytecodeAgentInstalled' just checks some bits in _runtimeFlags.
+
+'printShutdownStats' calls 'getUnstoredBytes' to report on the unused
+AOT, JIT and block storage.
+
+'runExitCode' calls 'printShutdownStats', calls
+walkManager->runExitCode() on each Manager instance it owns, and then
+calls cache->runExitCode() on each cache in the cache chain.
+
+'createPathString' takes a cpei, and a className and its len, as well
+as a buffer to contain a path. It's a static function, and its
+purpose seems to be creating a path string to a .class file within the
+filesystem (or at least, "classpath system", a Java-centric
+generalization of same).
+
+How does it doing? Using ugly C string manipulation, of course!! First
+it finds the address of the final '/' in the string, if there is
+one. It records it as lastSlashPos, which starts off as a NULL
+value. Ok. Next, we calculate the size we'll need to record the full
+path as a string. This is given in this equation:
+
+/* 2 = pathsep + \0 */
+sizeNeeded = cpeiPathLen + cNameLen + SHARE_CLASS_FILE_EXT_STRLEN + 2;
+
+The 2 is accounted by the pathsep and the null terminator, as the
+comment says.
+
+Yeah, the rest seems to be about copying the cpeiPath, and then the
+class name, in step with the calculation of sizeNeeded above. That's
+all. We return 0 to flag success.
+
+'getRomClassAreaBounds' is the next thing. Where does the
+romClassAreaStart, and where does romClassAreaEnd? these are void**
+parameters to 'getRomClassAreaBounds'. They end up being dereferenced,
+and _ccHead->getBaseAddress() and _ccHead->getSegmentAllocPtr(),
+usually.
+
+'enterStringTableMutex' gets the J9SharedInvariantInternTable* that is
+currentThread->javaVM->sharedInvariantInternTable. Call
+_ccHead->enterReadWriteAreaMutex(..), and off we go! If table isn't
+NULL.. we do some internal stuff involved in the table that I don't
+understand. I haven't studied it, it's an incredibly marginal part of
+the cache really, and yet.. it could be useful for us in our study of
+stuff, and things. Looks like it tries to initialize the 'head node'
+of the table if it's NULL, and likewise for the 'tail node' if it's
+NULL.
+
+'exitStringTableMutex' stores the table->headNode and table->tailNode
+pointers back into table->sharedHeadNodePtr and
+table->sharedTailNodePtr resp., if they changed. Then it calls
+_ccHead->exitReadWriteAreaMutex(..). Then return the result.
+
+'getCachedUTFString' has this comment preamble:
+
+/* Simple utility function which uses the scope manager to find/store UTF strings in the cache
+ * Searches for a matching string in the cache. If one is not found, it is added.
+ * Returns NULL if error or if the cache is full
+ * THREADING: Caller should not have either the read mutex or write mutex
+ */
+
+It takes a string, and tries to find the cached version of it. For
+some reason this is the responsibility of the ScopeManager. It checks
+to see that it has the write mutex before calling
+'getScopeManager'. Then _ccHead->enterReadMutex(..), and
+'runEntryPointChecks'. If PREVENT_BLOCK_DATA_UPDATE is enabled in
+_runtimeFlags, we set allowUpdate (a local variable) to be false.
+
+After this is all done, we copy local to tempstr using strncpy. Then
+we call
+
+pathUTF = localSCM->findScopeForUTF(currentThread, temputf);
+
+temputf is a pointer to temp, a stack allocated array of
+U_8's. tempstr in turn points to temputf (its data). Then we call
+
+_ccHead->exitReadMutex(currentThread, fnName);
+
+If pathUTF is NULL.. and allowUpdate is true.. we try to claim the
+write mutex by, how else, calling _ccHead->writeMutex(..). We try to
+detect that the string carried by local was not written to the cache
+by some other VM or thread in the intervening time. This involves the
+usual cocktail 'runEntryPointChecks', and if nothing new was read
+since claiming the write mutex (as told to us by
+'runEntryPointChecks') and pathUTF still wasn't initialized by a
+second call to localSCM->findScopeForUTF(..), we call
+'addScopeToCache' and write that result to pathUTF, once more.
+
+Then we call _ccHead->exitWriteMutex(..).
+
+If allowUpdate is false, but pathUTF is NULL, we call
+'increaseUnstoredBytes', adding the length of temputf + sizeof(struct
+J9UTF8).
+
+Then we return pathUTF.
+
+Now, 'notifyClasspathEntryStateChange'. We 'getClasspathManager'. Then
+we 'getCachedUTFString' on the path, a const char* passed to
+'notifyClasspathEntryStateChange'. The comment preamble says this, in
+case any of what I'm writing here sounds odd:
+
+/**
+ * Called when zip/jar files are opened or closed.
+ * Unlikely that we have the VM class segment mutex here.
+ */
+
+We cache the literal path of the classpath entry. Then we do this:
+
+   localCPM->notifyClasspathEntryStateChange(currentThread,
+	pathUTF, newState);
+
+'getCompositeCacheAPI' returns _ccHead as a SH_CompositeCache*
+pointer. When OpenJ9 terms something an 'API', it really refers to the
+practice of instantiating an object to the type of an abstract
+interface, by upcasting it.
+
+The 'getBlahManager' functions all follow the same template.. there is
+an attempt at calling 'startManager', which upon succeeding, results
+in that *Manager instance being returned.
+
+'startAllManagers' hides behind a J9SHR_CACHELET_SUPPORT #ifdef, which
+is somewhat shocking. That's really strange! I'm skipping it.
+
+Similarly, lines 5481 - 6439 are also hidden behind a
+J9SHR_CACHELET_SUPPORT #ifdef.
+
+'resetCacheDescriptorList' "frees an existing list and reinitializes
+it." Why you'd want to do that, I have no idea. It walks the
+descriptor list and calls j9mem_free_memory on each node as it is
+found. Also, we call 'enterLocalMutex' earlier than that if
+sharedClassConfig->configMonitor is initialized. I honestly don't see
+the reinitialization, but oh well.
+
+Then finally 'exitLocalMutex' is called.
+
+'startClassTransaction' .. starts a class transaction? It starts off
+with _ccHead->enterWriteMutex(..), and then 'runEntryPointChecks', and
+if that last one succeeds, it calls 'exitClassTranaction'. I guess the
+write mutex is relinquished inside 'exitClassTranaction', because it
+isn't here.
+
+That's precisely correct, actually. 'exitClassTransaction' consists
+entirely of _ccHead->exitWriteMutex(..).
+
+'isAddressInROMClassSegment' just delegates the address parameter out
+to _cc->isAddressInROMClassSegment. That's it.
+
+Same is true of 'setStringTableInitialized',
+'isStringTableInitialized', 'isAddressInCacheDebugArea',
+'getDebugBytes', and 'managers', which barely merit comment.
+
+'shutdownForStats' shutdowns the managers, destroys the _refreshMutex,
+and calls pool_kill on _ccPool. It also calls
+_ccHead->shutdownForStats(..) at some point along the way.
+
+'getSharedClassConfig' and 'getReadWriteBytes' are just a getter and a
+delegator resp.
+
+'attachedTypeString' return strings describing
+ATTACHED_DATA_TYPE's.. why the UDATA interpretations themselves
+shouldn't suffice, I have no clue.
+
+'isCacheCorruptReported' is a getter, nothing special or noteworthy.
+
+'formatAttachedDataString' 
+
+
+
+
