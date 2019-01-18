@@ -5350,8 +5350,435 @@ shouldn't suffice, I have no clue.
 
 'isCacheCorruptReported' is a getter, nothing special or noteworthy.
 
-'formatAttachedDataString' 
+'formatAttachedDataString' formats an attachedData datum into a
+string, as primitively as you can in C.
+
+'aotMethodOperation' takes some action, described here in the comment
+preamble, weird replicated spelling mistakes and all:
+
+ * @param[in] action SHR_FIND_AOT_METHOTHODS when listing the specified methods
+ * 		     SHR_INVALIDATE_AOT_METHOTHODS when invalidating the specified methods
+ * 		     SHR_REVALIDATE_AOT_METHOTHODS when revalidating the specified methods
+
+So, find, invalidate, revalidate.
+
+How does the function start? It initializes a MethodSpecTable.. called
+specTable. We initialize specTable to contain 0 everywhere, using
+memset. Then we call 'fillMethodSpecTable' with arguments specTable
+and optionStartPos. optionStartPos is the beginning char* to the char*
+methodSpecs, which was passed to us from the command line (I think).
+
+'fillMethodSpecTable' has this comment preamble:
+
+/**
+ * This function fills the method specification table with specifications passed in by "invalidateAotMethods/revalidateAotMethods/findAotMethods=" option
+ *
+ * @param[in] specTable The method specification table
+ * @param[in] inputOption Pointer to the method specification string
+ *
+ * @return the number of method specifications passed in or -1 on failure.
+ */
+
+That's uncharacteristically clear, I totally, totally get that.
+
+The function fails if numSpecs > SHR_METHOD_SPEC_TABLE_MAX_SIZE.
+
+If it does fail that check, it calls 'parseWildcardMethodSpecTable',
+using specTable, and numSpecs. 'parseWildcard' takes a wildcard
+pattern, and matches a substring against it for as long as the
+wildcard applies, according to the pattern string.
+
+'parseWildcardMethodSpecTable' matches up the entries of the spec
+table to match any wildcard patterns that occur in the class names. It
+does the same with method names and method signatures. Then it returns
+the result. If the call to 'parseWildcardMethodSpecTable' returns
+false, 'aotMethodOperation' fails with -1.
+
+If it succeeds, it calls 'aotMethodOperationHelper', then returns
+numMethods (the return value of 'aotMethodOperationHelper').
+
+As to 'aotMethodOperationHelper', by this point the specTable has been
+correctly parsed and populated, all that shit! We claim the write
+mutex by .. how else .. calling _ccHead->enterWriteMutex(..) with
+lockCache a bool determined by whether SHR_FIND_AOT_METHOTHODS !=
+action (!!). That is, finding an AOT method.. does not cause the cache
+to be locked, of course.. invalidating or revalidating one, does.
+
+Then we go with _ccHead->findStart(currentThread). We begin calling
+_ccHead->nextEntry(..) to iterate over ShcItem*'s in the metadata
+area. We have entered a do/while loop at this point. If the ITEMTYPE
+of the item is COMPILED_METHOD or INVALIDATED_COMPILED_METHOD, we get
+the ROMMethod object, the romClassName, the class loader, the ROM
+Class, and the name and signature of the ROM method.
+
+Then we call 'matchAotMethod' on specTable, numSpecs, romClassName,
+romMethodName, and romMethodSig. It purpose, according to its
+preamble, is just to see whether the method matches any of the
+specifications.
+
+If it returns true.. we first check to verify that romMethodName and
+romMethodSig aren't NULL. We check that the item is stale by called
+_ccHead->stale((BlockPtr)ITEMEND(it)).
+
+We check to see if the action was a FIND, and if the type of the item
+is an INVALIDATED_COMPILED_METHOD. If so, issue some trace messages.
+Moving along, if SHR_INVALIDATE_AOT_METHOTHODS == action, we set the
+item type to TYPE_INVALIDATED_COMPILED_METHOD. Otherwise, if it's
+SHR_REVALIDATE_AOT_METHOTHODS, ITEMTYPE(it) =
+TYPE_COMPILED_METHOD. THIS IS THE EASIEST, MOST COGENT CODE I HAVE YET
+SEEN IN THIS CODEBASE.
+
+Continue walking the cache until we're done! No use of hash tables or
+anything.
+
+_ccHead->exitMutex(..) is called. What else might you expect at this
+stage? And we return rc.
+
+'matchAotMethod' has already been described by me, why, it's
+elementary!
+
+Same thing with 'fillMethodSpecTable' and 'parseWildcardMethodSpecTable'.
+
+'protectPartiallyFilled' pages checks
+_ccHead->isMemProtectPartialPartialPagesEnabled() for the go ahead to
+do anything at all. If it is true, call _ccHead->enterWriteMutex(..),
+then _ccHead->protectPartiallyFilledPages(..), then
+_ccHead->exitWriteMutex(..). Then we return.
+
+'tryAdjustMinMaxSizes' and 'updateRuntimeFullFlags' are just wrappers
+around the equivalent CompositeCache functions.
+
+'increaseUnstoredBytes' takes blockBytes, aotBytes and jitBytes as
+arguments, and does some delegation out to
+_ccHead->increaseUnstoredBytes(..). It's a pretty uninteresting story
+that doesn't even involve the capture of any mutexes (read or write).
+
+'getUnstoredBytes' is just a bare, 1-1 delegator to CompositeCache.
+
+'updateLocalHintsData' .. what does it do??? According to the
+preamble, it updates the local startup hints, contained in
+_sharedClassConfig->localStartupHints, with the one in the shared
+cache. For some reason, we need to overwrite recorded heap sizes?? I
+have no clue why. This is if the flags
+
+J9SHR_LOCAL_STARTUPHINTS_FLAG_WRITE_HINTS
+
+or
+
+J9SHR_LOCAL_STARTUPHINTS_FLAG_OVERWRITE_HEAPSIZES
+
+and
+
+J9SHR_LOCAL_STARTUPHINTS_FLAG_STORE_HEAPSIZES
+
+are enabled. We want to store the heap sizes of the hints data, and we
+may want to overwrite them. We'll return to this some other time! I
+don't think it's important.
+
+SHRINIT.CPP
+===========
+
+Looking at 'j9shr_init' now. 
+
+The runtime flags, verbose flags, and print stat options are stored in
+the struct vm->sharedCacheAPI, which is an J9JavaVM*. The cacheName,
+modContext, expireTime and ctrlDirName all originate from there as
+well. Then there's this:
 
 
+if (FALSE == vm->sharedCacheAPI->xShareClassesPresent) {
+   Trc_SHR_Assert_True(vm->sharedCacheAPI->sharedCacheEnabled);
+   Trc_SHR_Assert_True(J9_ARE_ALL_BITS_SET(runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_NONFATAL));
+   Trc_SHR_Assert_True(J9_ARE_ALL_BITS_SET(runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_CACHEBOOTCLASSES));
+   Trc_SHR_Assert_True(J9_ARE_NO_BITS_SET(runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_CACHE_NON_BOOT_CLASSES));
+   Trc_SHR_Assert_True(0 == vm->sharedCacheAPI->verboseFlags);
+		Trc_SHR_INIT_j9shr_init_BootClassSharingEnabledByDefault(currentThread);
+}
+
+Shared classes have to be enabled, and we are caching boot classes,
+and also caching non boot classes! This is all supposed to be true if
+we attempt to initialize the cache. Then there's this crap to do with
+string tables:
+
+if (((0 != (runtimeFlags & J9SHR_RUNTIMEFLAG_CHECK_STRINGTABLE_RESET_READONLY)) ||
+     (0 != (runtimeFlags & J9SHR_RUNTIMEFLAG_CHECK_STRINGTABLE_RESET_READWRITE))) &&
+     (0 == (runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE)))
+{
+	/* CMVC 176498 : When testing string table reset,
+	 * ensure J9SHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE is set.
+	 */
+	SHRINIT_ERR_TRACE(verboseFlags, J9NLS_SHRC_SHRINIT_CHECK_STRINGTABLE_RESET_MISSING_FLAG);
+	goto _error;
+}
+
+And there's some memory protection logic:
+
+if (((runtimeFlags & J9SHR_RUNTIMEFLAG_VERIFY_TREE_AND_TREE_ACCESS) == J9SHR_RUNTIMEFLAG_VERIFY_TREE_AND_TREE_ACCESS) ||
+	(parseResult == RESULT_DO_TEST_INTERNAVL)
+) {
+	if ( runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_ALL ) {
+		runtimeFlags &= ~(J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_ALL | J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_RW);
+		runtimeFlags |= J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT;
+	} else if ( runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_RW ) {
+		runtimeFlags &= ~(J9SHR_RUNTIMEFLAG_ENABLE_MPROTECT_RW);
+	}
+}
+
+Yeah. Let's.. disable the ALL and RW flags and enable the more general
+ENABLE_MPROTECT flag.
+
+Then 'ensureCorrectCacheSizes' is called in light of the runtimeFlags,
+and verboseFlags. Similarly, the cacheType is determined by
+'getCacheTypeFromRuntimeFlags'. It discriminates between persistent
+and nonpersistent cache types.
+
+'modifyCacheName' add user name and group info to the naming of the
+cache. Nothing remarkable about it, particularly..
+
+This next block toggles a few options off if statistics are being
+gathered at all.
+
+if (parseResult==RESULT_DO_PRINTSTATS || 
+    parseResult==RESULT_DO_PRINTALLSTATS || 
+    parseResult==RESULT_DO_PRINTORPHANSTATS ||
+    parseResult==RESULT_DO_PRINTALLSTATS_EQUALS ||
+    parseResult==RESULT_DO_PRINTSTATS_EQUALS) {
+      doPrintStats = true;
+      
+      /* Do not try to kill a cache if we just want to get stats on it */
+      runtimeFlags |= J9SHR_RUNTIMEFLAG_ENABLE_STATS;
+      runtimeFlags &= ~J9SHR_RUNTIMEFLAG_ENABLE_REDUCE_STORE_CONTENTION;
+      runtimeFlags &= ~J9SHR_RUNTIMEFLAG_ENABLE_TEST_BAD_BUILDID;
+      runtimeFlags &= ~J9SHR_RUNTIMEFLAG_AUTOKILL_DIFF_BUILDID;
+     
+      /* Ignore incompatible options as we just want to get stats on it */
+      runtimeFlags &= ~(J9SHR_RUNTIMEFLAG_ENABLE_CACHERETRANSFORMED | J9SHR_RUNTIMEFLAG_ENABLE_BCI);
+}
+
+The next option tells us to ignore a readonly config being toggled if
+we are invalidate or revalidate AOT methods:
+
+if ((RESULT_DO_INVALIDATE_AOT_METHODS_EQUALS == parseResult)
+	|| (RESULT_DO_REVALIDATE_AOT_METHODS_EQUALS == parseResult)
+) {
+	/* ignore 'readOnly' when invalidate/revalidate AOT methods */
+	if (J9_ARE_ALL_BITS_SET(runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_READONLY)) {
+		const char* option = (RESULT_DO_INVALIDATE_AOT_METHODS_EQUALS == parseResult) ? OPTION_INVALIDATE_AOT_METHODS_EQUALS : OPTION_REVALIDATE_AOT_METHODS_EQUALS;
+		runtimeFlags &= ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
+		SHRINIT_WARNING_TRACE3(verboseFlags, J9NLS_SHRC_SHRINIT_OPTION_IGNORED_WARNING, OPTION_READONLY, option, OPTION_READONLY);
+		if (verboseFlags > 0) {
+			j9tty_printf(PORTLIB, "\n");
+		}
+	}
+}
+
+Then we check to see if we're resetting an existing cache for some
+reason, and if so, we jump to _error. But beyond that, we're finally
+done with the tedious checking of settings and shit, and on to
+allocating the actual cache. Behold this code:
 
 
+cmBytes = SH_CacheMap::getRequiredConstrBytes(false);
+nameBytes = (strlen(modifiedCacheNamePtr)+1) * sizeof(char);
+modContextBytes = modContext ? ((strlen(modContext) * sizeof(char)) + sizeof(J9UTF8)) : 0;
+memBytesNeeded = sizeof(J9SharedClassConfig) + sizeof(J9SharedClassCacheDescriptor) + cmBytes + nameBytes + modContextBytes;
+
+tempConfig = (J9SharedClassConfig*)j9mem_allocate_memory(memBytesNeeded, J9MEM_CATEGORY_CLASSES);
+if (!tempConfig) {
+	SHRINIT_ERR_TRACE(verboseFlags, J9NLS_SHRC_SHRINIT_FAILURE_ALLOCATING_CONFIG);
+	goto _error;
+}
+memset(tempConfig, 0, memBytesNeeded);
+
+tempConfig->ctrlDirName = ctrlDirName;
+
+
+cmBytes reflects the total size of the cache map we'll allocate.. then
+we compute the number of bytes needed for the name, the name of the
+modification context, and then factoring in the size of the
+J9SharedClassConfig, *CacheDescriptor, all of that.
+
+We allocate memBytesNeeded, and store *that* as J9SharedCacheConfig,
+although it includes memory for all the other aforementioned
+things. NOTE THAT WE HAVE NOT INTIALIZED ANYTHING YET *huff huff*.
+
+'performSharedClassesCommandLineAction' takes the SCC config, the vm,
+the cacheName, verboseFlags, and a command, and dispatches to other
+functions on the basis of that command through (how else?) a switch
+statement. Some of these flags are:
+
+RESULT_DO_HELP
+RESULT_DO_MORE_HELP
+RESULT_DO_DESTROY
+RESULT_DO_DESTROYALL
+RESULT_DO_DESTROYSNAPSHOT
+RESULT_DO_DESTROYALLSNAPSHOTS
+RESULT_DO_RESTORE_FROM_SNAPSHOT
+RESULT_DO_SNAPSHOTCACHE
+RESULT_DO_LISTALLCACHES
+RESULT_DO_EXPIRE
+RESULT_DO_PRINTSTATS
+RESULT_DO_PRINTALLSTATS
+RESULT_DO_PRINTORPHANSTATS
+RESULT_DO_PRINTALLSTATS_EQUALS
+RESULT_DO_PRINTSTATS_EQUALS
+RESULT_DO_PRINT_CACHENAME
+
+And others! Long list of dispatch that we don't need to get into right
+now.
+
+Back to j9shr_init. We have another incompatible options check
+following this.
+
+/* check for incompatible options */
+if ((0 != (runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_CACHERETRANSFORMED))
+	&& (0 != (runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_BCI))
+) {
+	SHRINIT_ERR_TRACE2(1, J9NLS_SHRC_SHRINIT_INCOMPATIBLE_OPTION, OPTION_ENABLE_BCI, OPTION_CACHERETRANSFORMED);
+	goto _error;
+}
+
+To actually initialize the cache, we bump the tempConfig pointer
+forward repeatedly by however much space we need:
+
+/* Initialize the cache */
+
+tempConfig->cacheDescriptorList = (J9SharedClassCacheDescriptor*)((UDATA)tempConfig + sizeof(J9SharedClassConfig));
+cmPtr = (SH_CacheMap*)((UDATA)tempConfig->cacheDescriptorList + sizeof(J9SharedClassCacheDescriptor));
+mcPtr = (J9UTF8*)((UDATA)cmPtr + cmBytes);
+copiedCacheName = (char*)((UDATA)mcPtr + modContextBytes);
+
+/* make this list circular */
+tempConfig->cacheDescriptorList->next = tempConfig->cacheDescriptorList;
+
+/* Copy the cache name */
+strcpy(copiedCacheName, modifiedCacheNamePtr);
+cacheName = copiedCacheName;
+
+
+We do this for everything. Then there's this:
+
+tempConfig->runtimeFlags = runtimeFlags;
+tempConfig->verboseFlags = verboseFlags;
+tempConfig->softMaxBytes = vm->sharedCacheAPI->softMaxBytes;
+tempConfig->minAOT = vm->sharedCacheAPI->minAOT;
+tempConfig->maxAOT = vm->sharedCacheAPI->maxAOT;
+tempConfig->minJIT = vm->sharedCacheAPI->minJIT;
+tempConfig->maxJIT = vm->sharedCacheAPI->maxJIT;
+
+Yeah. The next significant thing is that we try to claim the
+configMinotir and jclCacheMutex mutexes using
+'omrhtread_monitor_init', as we saw many times in CacheMap and
+CompositeCache. Over and over again, really.
+
+Finally, we call newInstance on the nascent cachemap:
+
+/*Add the cachemap before calling startup to enable debug extensions in jextract etc*/
+cm = SH_CacheMap::newInstance(vm, vm->sharedClassConfig, cmPtr, cacheName, cacheType);
+vm->sharedClassConfig->sharedClassCache = (void*)cm;
+
+If the parseResult (from the command line, natch) is
+RESULT_DO_RESTORE_FROM_SNAPSHOT, we call j9shr_restoreFromSnapshot!
+And do some routine error handling stuff. If not, we do this:
+
+rcStartup = cm->startup(currentThread, piconfig, cacheName,
+ctrlDirName, vm->sharedCacheAPI->cacheDirPerm, NULL,
+&cacheHasIntegrity);
+
+The startup! .. guy. If that fails, we go to _error.. if not, we carry
+on. Mostly this involves populating vm->sharedClassConfig with
+different pools ("caches" for the Java class library classpaths, and
+tokens, and URLs, and UTF8 strings) and a whole long ass procession of
+function pointers, pointing to functions that live inside
+j9shr_init. It is indeed a big list:
+
+config->getCacheSizeBytes = j9shr_getCacheSizeBytes;
+config->getTotalUsableCacheBytes = j9shr_getTotalUsableCacheBytes;
+config->getMinMaxBytes = j9shr_getMinMaxBytes;
+config->setMinMaxBytes = j9shr_setMinMaxBytes;
+config->increaseUnstoredBytes = j9shr_increaseUnstoredBytes;
+config->getUnstoredBytes = j9shr_getUnstoredBytes;
+config->getFreeSpaceBytes = j9shr_getFreeAvailableSpaceBytes;
+config->findSharedData = j9shr_findSharedData;
+config->storeSharedData = j9shr_storeSharedData;
+config->findCompiledMethodEx1 = j9shr_findCompiledMethodEx1;
+config->storeCompiledMethod = j9shr_storeCompiledMethod;
+config->storeAttachedData = j9shr_storeAttachedData;
+config->findAttachedData = j9shr_findAttachedData;
+config->updateAttachedData = j9shr_updateAttachedData;
+config->updateAttachedUDATA = j9shr_updateAttachedUDATA;
+config->freeAttachedDataDescriptor = j9shr_freeAttachedDataDescriptor;
+config->existsCachedCodeForROMMethod = j9shr_existsCachedCodeForROMMethod;
+config->acquirePrivateSharedData = j9shr_acquirePrivateSharedData;
+config->releasePrivateSharedData = j9shr_releasePrivateSharedData;
+config->isBCIEnabled = j9shr_isBCIEnabled;
+config->freeClasspathData = j9shr_freeClasspathData;
+config->jvmPhaseChange = j9shr_jvmPhaseChange;
+config->findGCHints = j9shr_findGCHints;
+config->storeGCHints = j9shr_storeGCHints;
+
+Well, it's not so big, perhaps. All these functions issue calls
+through the CacheMap class, which is hidden elsewhere in the
+J9SharedClassConfig C struct. Then there's this:
+
+config->sharedAPIObject = initializeSharedAPI(vm);
+if (config->sharedAPIObject == NULL) {
+	SHRINIT_ERR_TRACE(verboseFlags, J9NLS_SHRC_SHRINIT_API_CREATE_FAILURE);
+	goto _error;
+}
+
+I don't understand enough about string and class transactions. Truth
+be told, I've mostly ignored them up to this time. That will soon need
+to change. 
+
+'startClassTransaction' is seldom used anywhere in J9. Here are the
+places:
+
+1) the line of code in shrinit.cpp we are about to consider,
+2) in 'j9shr_stringTransaction_start'
+
+All it does is claim the SCC write mutex and call
+'runEntryPointChecks'. It is that simple.
+
+Anyway.. we enter the string table mutex after calling
+startClassTranaction on cm, the CacheMap object.
+
+Then there's a long, long-ass conditional toggling the string table
+off if print stats is on. In the body of that (which we enter
+*because* ENABLE_STATS is off), it goes on to allocate the shared
+string intern table. Then it's initialized with
+'initializeSharedStringTable'. Then before long it exits, and we are
+finished.
+
+Then it checks that parseResult == RESULT_DO_INVALIDATE_AOT_METHODS_EQUALS.
+This it delegates to j9shr_aotMethodOperation.. the thing we have sort
+of seen already.
+
+Similar with RESULT_DO_REVALIDATE_AOT_METHODS_EQUALS, and
+RESULT_DO_FIND_AOT_METHODS_EQUALS. For an example, see this (!) :
+
+if (RESULT_DO_SNAPSHOTCACHE == parseResult) {
+   *nonfatal = 0;
+   if (0 == j9shr_createCacheSnapshot(vm, cacheName)) {
+      SHRINIT_TRACE1(verboseFlags, J9NLS_SHRC_SHRINIT_SUCCESS_CREATE_SNAPSHOT, cacheName);
+   } else {
+      SHRINIT_ERR_TRACE1(verboseFlags, J9NLS_SHRC_SHRINIT_FAILURE_CREATE_SNAPSHOT, cacheName);
+   }
+   returnVal = J9VMDLLMAIN_SILENT_EXIT_VM;
+}
+
+and then this:
+
+if ((RESULT_DO_ADJUST_SOFTMX_EQUALS == parseResult)
+	|| (RESULT_DO_ADJUST_MINAOT_EQUALS == parseResult)
+	|| (RESULT_DO_ADJUST_MAXAOT_EQUALS == parseResult)
+	|| (RESULT_DO_ADJUST_MINJITDATA_EQUALS == parseResult)
+	|| (RESULT_DO_ADJUST_MAXJITDATA_EQUALS == parseResult)
+) {
+	/* There is no need to check the return value of tryAdjustMinMaxSizes(). JVM will always exit and the corresponding NLS message
+	 * will be printed out inside tryAdjustMinMaxSizes() no matter whether the softmx/minAOT/maxAOT/minJIT/maxJIT has been adjusted as requested */
+	cm->tryAdjustMinMaxSizes(currentThread);
+	returnVal = J9VMDLLMAIN_SILENT_EXIT_VM;
+}
+
+If we jump to _error, we try to free the allocated memory. 
