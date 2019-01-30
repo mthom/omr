@@ -178,7 +178,7 @@ class ResolvedMethod : public ResolvedMethodBase, public Method
    char *_name;
    char *_signature;
    char  _signatureChars[64];
-   char *_externalName;
+   char *_externalName = 0;
 
    int32_t          _numParms;
    TR::IlType    ** _parmTypes;
