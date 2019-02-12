@@ -94,6 +94,10 @@ public:
    //
    TR::DebugEnv debug;
 
+   // Shared cache class. Should be thread safe.
+   //
+   TR::SharedCache cache;
+   
    bool isInitialized() { return _initialized; }
 
    // --------------------------------------------------------------------------
@@ -111,7 +115,7 @@ protected:
    // Initialize 'target' environment for this compiler
    //
    void initializeTargetEnvironment();
-
+o
    // Initialize 'host' environment for this compiler
    //
    void initializeHostEnvironment();

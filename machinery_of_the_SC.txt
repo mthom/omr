@@ -1,7 +1,8 @@
-DISCLAIMER: This is a very rough set of notes on the implementation of the
-shared cache class. Our ambition is to transform it into a detailed, technically well-founded
-white paper on the shared cache class, which (presumably) will be released for the
-benefit of the general public (if not, at least internally to IBM and CASA). For now,
+DISCLAIMER: This is a very rough set of notes on the implementation of
+the shared cache class. Our ambition is to transform it into a
+detailed, technically well-founded white paper on the shared cache
+class, which (presumably) will be released for the benefit of the
+general public (if not, at least internally to IBM and CASA). For now,
 this document must remain INTERNAL TO CASA.
 
 --
@@ -71,7 +72,7 @@ We run down the list.
 	IDATA _errorCode; // the active error code? possibly an OK code?
 	const J9SharedClassPreinitConfig* _config; //
 	I_32 _openMode; // passed to j9file_open or j9file_blocking_async_open
-					// (platform dependent)
+			// (platform dependent)
 	bool _runningReadOnly; // cannot write? wouldn't it be handled by _openMode?
 	J9PortLibrary* _portLibrary; // the port library. platform dependent.
 	char* _cacheDirName; // The parent directory of the cache.

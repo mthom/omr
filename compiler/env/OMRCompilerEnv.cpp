@@ -52,6 +52,8 @@ OMR::CompilerEnv::initialize()
 
    om.initialize();
 
+   cache.initialize();
+
    _initialized = true;
    }
 
