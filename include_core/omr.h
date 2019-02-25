@@ -280,6 +280,10 @@ typedef struct OMR_VM {
 //        struct OMRSharedCacheAPI* sharedCacheAPI;
 //    	struct OMRSharedInvariantInternTable* sharedInvariantInternTable;
 //        struct OMRSharedCachePreinitConfig* sharedClassPreinitConfig;
+#if defined(OMR_GC_REALTIME)
+	omrthread_monitor_t _gcCycleOnMonitor;
+	uintptr_t _gcCycleOn;
+#endif /* defined(OMR_GC_REALTIME) */
 } OMR_VM;
 
 typedef struct OMR_VMThread {

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2017, 2018 IBM Corp. and others
+# Copyright (c) 2017, 2019 IBM Corp. and others
 #
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -48,6 +48,17 @@ add_tracegen(util.tdf omrutil)
 add_library(omrutil_obj OBJECT
   ut_j9utilcore.c
   ut_omrutil.c
+	${CMAKE_CURRENT_BINARY_DIR}/ut_j9utilcore.c
+)
+
+target_include_directories(omrutil_obj
+	PUBLIC
+		$<TARGET_PROPERTY:omr_base,INTERFACE_INCLUDE_DIRECTORIES>
+)
+
+target_compile_definitions(omrutil_obj
+	PUBLIC
+		$<TARGET_PROPERTY:omr_base,INTERFACE_COMPILE_DEFINITIONS>
 )
 
 list(APPEND VPATH .)
@@ -173,8 +184,10 @@ if(OMR_ENHANCED_WARNINGS)
 	target_compile_options(omrutil_obj PRIVATE ${OMR_ENHANCED_WARNING_FLAG})
 endif()
 
-target_link_libraries(omrutil PUBLIC
-	j9hashtable
+target_link_libraries(omrutil
+	PUBLIC
+		omr_base
+		j9hashtable
 )
 
 set_target_properties(omrutil_obj omrutil PROPERTIES FOLDER util)
