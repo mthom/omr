@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -35,16 +35,16 @@
 #include "omrthreadattr.h"
 #include "omrutilbase.h"
 #include "ut_j9thr.h"
+#include "thread_internal.h"
 
-void omrthread_init(omrthread_library_t lib);
-void omrthread_shutdown(void);
+static void omrthread_shutdown(void);
 
 static omrthread_t threadAllocate(omrthread_library_t lib, int globalIsLocked);
 static intptr_t threadCreate(omrthread_t *handle, const omrthread_attr_t *attr, uintptr_t suspend, omrthread_entrypoint_t entrypoint, void *entryarg, int globalIsLocked);
 static intptr_t threadDestroy(omrthread_t thread, int globalAlreadyLocked);
 static void threadFree(omrthread_t thread, int globalAlreadyLocked);
 static WRAPPER_TYPE thread_wrapper(WRAPPER_ARG arg);
-static void OMRNORETURN threadInternalExit(void);
+static void OMRNORETURN threadInternalExit(int globalAlreadyLocked);
 
 static void threadEnqueue(omrthread_t *queue, omrthread_t thread);
 static void threadDequeue(omrthread_t volatile *queue, omrthread_t thread);
@@ -529,7 +529,6 @@ init_threadParam(char *name, uintptr_t *pDefault)
 
 	ASSERT(name);
 	ASSERT(pDefault);
-	ASSERT(0 != *pDefault);
 
 	p = omrthread_global(name);
 	if (NULL == p) {
@@ -679,11 +678,17 @@ init_spinParameters(omrthread_library_t lib)
  *
  * @see omrthread_init
  */
-void
+static void
 omrthread_shutdown(void)
 {
 	omrthread_library_t lib = GLOBAL_DATA(default_library);
 	ASSERT(lib);
+	/* Acquire the global lock here to wait until all outstanding omrthread_exit calls
+	 * have completed. omrthread_exit holds the global lock until the thread is ready
+	 * to exit to the OS.
+	 */
+	GLOBAL_LOCK_SIMPLE(lib);
+	GLOBAL_UNLOCK_SIMPLE(lib);
 #if defined(OMR_PORT_NUMA_SUPPORT)
 	omrthread_numa_shutdown(lib);
 #endif /* OMR_PORT_NUMA_SUPPORT */
@@ -1178,11 +1183,12 @@ omrthread_attach(omrthread_t *handle)
 intptr_t
 omrthread_attach_ex(omrthread_t *handle, omrthread_attr_t *attr)
 {
-	intptr_t retVal = J9THREAD_SUCCESS;
+	intptr_t retVal = J9THREAD_ERR;
 	omrthread_t thread;
 	omrthread_library_t lib;
 
 	if (init_thread_library()) {
+		retVal = J9THREAD_ERR;
 		goto cleanup0;
 	}
 
@@ -1369,7 +1375,6 @@ void
 omrthread_detach(omrthread_t thread)
 {
 	uintptr_t destroy = 0;
-	uintptr_t attached = 0;
 
 	if (thread == NULL) {
 		thread = MACRO_SELF();
@@ -1386,7 +1391,7 @@ omrthread_detach(omrthread_t thread)
 				 * detached.  Mark it dead so that it can be destroyed.
 				 */
 				thread->flags |= J9THREAD_FLAG_DEAD;
-				attached = destroy = 1;
+				destroy = 1;
 			} else {
 				/* A j9-created thread should never be dead here */
 				destroy = thread->flags & J9THREAD_FLAG_DEAD;
@@ -1514,7 +1519,7 @@ thread_wrapper(WRAPPER_ARG arg)
 {
 	omrthread_t thread = (omrthread_t)arg;
 	omrthread_library_t lib = NULL;
-	uintptr_t flags;
+	int globalAlreadyLocked = GLOBAL_NOT_LOCKED;
 
 	ASSERT(thread);
 	lib = thread->library;
@@ -1532,7 +1537,7 @@ thread_wrapper(WRAPPER_ARG arg)
 
 
 	if (thread->flags & J9THREAD_FLAG_CANCELED) {
-		threadInternalExit();
+		threadInternalExit(globalAlreadyLocked);
 	}
 
 	increment_memory_counter(&lib->nativeStackCategory, thread->stacksize);
@@ -1550,7 +1555,6 @@ thread_wrapper(WRAPPER_ARG arg)
 		OMROSCOND_WAIT_LOOP();
 	}
 	thread->flags |= J9THREAD_FLAG_STARTED;
-	flags = thread->flags;
 
 	/* Set the numa affinity if it is pending on this thread */
 #if defined(OMR_PORT_NUMA_SUPPORT)
@@ -1569,17 +1573,22 @@ thread_wrapper(WRAPPER_ARG arg)
 				affinityCount += 1;
 			}
 		}
-		/* If the affinityCount is zero, this call will have the effect of clearing any affinity that the thread may have inherited
-		 * and it assuming the initial affinity that the process had (if reverting to that affinity isn't possible on the platform,
-		 * the call is supposed to do nothing).
+		/* if J9THREAD_LIB_FLAG_NO_DEFAULT_AFFINITY is set we only want to modify the affinity if
+		 * the caller provided us with a non-zero affinity
 		 */
-		omrthread_numa_set_node_affinity_nolock(thread, affinity, affinityCount, 0);
+		if ((affinityCount != 0) || OMR_ARE_NO_BITS_SET(lib->flags, J9THREAD_LIB_FLAG_NO_DEFAULT_AFFINITY)) {
+			/* If the affinityCount is zero, this call will have the effect of clearing any affinity that the thread may have inherited
+			* and it assuming the initial affinity that the process had (if reverting to that affinity isn't possible on the platform,
+			* the call is supposed to do nothing).
+			*/
+			omrthread_numa_set_node_affinity_nolock(thread, affinity, affinityCount, 0);
+		}
 	}
 #endif /* OMR_PORT_NUMA_SUPPORT */
 	THREAD_UNLOCK(thread);
 
 	if (thread->flags & J9THREAD_FLAG_CANCELED) {
-		threadInternalExit();
+		threadInternalExit(globalAlreadyLocked);
 	}
 
 	ENABLE_OS_THREAD_STATS(thread);
@@ -1594,14 +1603,19 @@ thread_wrapper(WRAPPER_ARG arg)
 		if (0 == setjmp(jumpBuffer)) {
 			thread->jumpBuffer = &jumpBuffer;
 			thread->entrypoint(thread->entryarg);
+			/* omrthread_exit not called */
+		} else {
+			/* omrthread_exit was called - global mutex was locked before longjmp to here */
+			globalAlreadyLocked = GLOBAL_IS_LOCKED;
 		}
 		thread->jumpBuffer = NULL;
 	}
 #else /* defined(LINUX) && !defined(OMRZTPF) */
 	thread->entrypoint(thread->entryarg);
+	/* omrthread_exit not called */
 #endif /* defined(LINUX) && !defined(OMRZTPF) */
 
-	threadInternalExit();
+	threadInternalExit(globalAlreadyLocked);
 	/* UNREACHABLE */
 	WRAPPER_RETURN();
 }
@@ -1678,6 +1692,14 @@ omrthread_exit(omrthread_monitor_t monitor)
 {
 	omrthread_t self = MACRO_SELF();
 
+	/* Hold the global lock before signalling the passed-in monitor until the point
+	 * where this thread exits to the OS. This (along with code in omrthread_shutdowm)
+	 * prevents the thread library from being shut down while any thread is running
+	 * omrthread_exit.
+	 */
+	omrthread_tls_finalize(self);
+	GLOBAL_LOCK(self, CALLER_INTERNAL_EXIT1);
+
 	if (monitor) {
 		omrthread_monitor_exit(monitor);
 	}
@@ -1687,7 +1709,7 @@ omrthread_exit(omrthread_monitor_t monitor)
 		omrthread_monitor_walk_state_t walkState;
 		omrthread_monitor_init_walk(&walkState);
 		monitor = NULL;
-		while (NULL != (monitor = omrthread_monitor_walk(&walkState))) {
+		while (NULL != (monitor = omrthread_monitor_walk_no_locking(&walkState))) {
 			if (monitor->owner == self) {
 				monitor->count = 1;	/* exit n-1 times */
 				omrthread_monitor_exit(monitor);
@@ -1708,7 +1730,7 @@ omrthread_exit(omrthread_monitor_t monitor)
 	}
 #endif /* defined(LINUX) */
 
-	threadInternalExit();
+	threadInternalExit(GLOBAL_IS_LOCKED);
 
 dontreturn:
 	goto dontreturn; /* avoid warnings */
@@ -1971,7 +1993,7 @@ threadAllocate(omrthread_library_t lib, int globalIsLocked)
  * If the thread is not already dead, the function fails.
  *
  * @param[in] thread thread to be destroyed
- * @param[in] globalAlreadyLocked indicated whether the thread library global mutex is already locked
+ * @param[in] globalAlreadyLocked indicates whether the thread library global mutex is already locked
  * @return 0 on success or negative value on failure.
  *
  * @see threadCreate
@@ -1979,11 +2001,13 @@ threadAllocate(omrthread_library_t lib, int globalIsLocked)
 static intptr_t
 threadDestroy(omrthread_t thread, int globalAlreadyLocked)
 {
+#if defined(OMR_OS_WINDOWS) || defined(THREAD_ASSERTS)
 	omrthread_library_t lib;
 
 	ASSERT(thread);
 	lib = thread->library;
 	ASSERT(lib);
+#endif /* defined(OMR_OS_WINDOWS) || defined(THREAD_ASSERTS) */
 
 	THREAD_LOCK(thread, CALLER_DESTROY);
 	if ((thread->flags & J9THREAD_FLAG_DEAD) == 0) {
@@ -2035,7 +2059,7 @@ threadDestroy(omrthread_t thread, int globalAlreadyLocked)
  * Return a omrthread_t to the threading library's monitor pool.
  *
  * @param[in] thread thread to be returned to the pool
- * @param[in] globalAlreadyLocked indicated whether the threading library global
+ * @param[in] globalAlreadyLocked indicates whether the threading library global
  * mutex is already locked
  * @return none
  *
@@ -2071,9 +2095,13 @@ threadFree(omrthread_t thread, int globalAlreadyLocked)
  * Exit from the current thread.
  *
  * If the thread has been detached it is destroyed.
+ *
+ * @param[in] globalAlreadyLocked indicates whether the thread library global mutex is already locked
+ *            Also implies that omrthread_tls_finalize was called before the global mutex was locked
+ * @return none
  */
 static void OMRNORETURN
-threadInternalExit(void)
+threadInternalExit(int globalAlreadyLocked)
 {
 	omrthread_t self = MACRO_SELF();
 	omrthread_library_t lib = NULL;
@@ -2083,9 +2111,10 @@ threadInternalExit(void)
 	lib = self->library;
 	ASSERT(lib);
 
-	omrthread_tls_finalize(self);
-
-	GLOBAL_LOCK(self, CALLER_INTERNAL_EXIT1);
+	if (!globalAlreadyLocked) {
+		omrthread_tls_finalize(self);
+		GLOBAL_LOCK(self, CALLER_INTERNAL_EXIT1);
+	}
 	THREAD_LOCK(self, CALLER_INTERNAL_EXIT1);
 	self->flags |= J9THREAD_FLAG_DEAD;
 	detached = (0 == self->attachcount);
@@ -2121,14 +2150,30 @@ threadInternalExit(void)
 		}
 	}
 
-	GLOBAL_UNLOCK_SIMPLE(lib);
-
-	/* We couldn't clear TLS earlier because the debug version of
-	 * GLOBAL_UNLOCK_SIMPLE() uses omrthread_self().
+#if defined(THREAD_ASSERTS)
+	/* We can't clear TLS before unlocking the global monitor because
+	 * the debug version of GLOBAL_UNLOCK_SIMPLE() uses omrthread_self().
+	 *
+	 * This opens up a small window of time where the thread library
+	 * could be shut down before this thread has completed exiting.
+	 * Fetch the TLS key under lock to minimize the chance of the
+	 * key being destroyed by omrthread_shutdown.
+	 *
+	 * This is only an issue if THREAD_ASSERTS is enabled.
 	 */
+	{
+		TLSKEY tlsKey = lib->self_ptr;
+		GLOBAL_UNLOCK_SIMPLE(lib);
+		if (detached) {
+			TLS_SET(tlsKey, NULL);
+		}
+	}
+#else /* THREAD_ASSERTS */
 	if (detached) {
 		TLS_SET(lib->self_ptr, NULL);
 	}
+	GLOBAL_UNLOCK_SIMPLE(lib);
+#endif /* THREAD_ASSERTS */
 
 	THREAD_EXIT();
 	ASSERT(0);
@@ -4983,12 +5028,15 @@ monitor_notify_three_tier(omrthread_t self, omrthread_monitor_t monitor, int not
 	MONITOR_LOCK(monitor, CALLER_NOTIFY_ONE_OR_ALL);
 	queue = monitor->waiting;
 	if (queue) {
+#if defined(THREAD_ASSERTS)
 		intptr_t state;
 
 		state = omrthread_spinlock_swapState(monitor, J9THREAD_MONITOR_SPINLOCK_EXCEEDED);
 		ASSERT((state == J9THREAD_MONITOR_SPINLOCK_OWNED)
 			|| (state == J9THREAD_MONITOR_SPINLOCK_EXCEEDED));
-
+#else
+		omrthread_spinlock_swapState(monitor, J9THREAD_MONITOR_SPINLOCK_EXCEEDED);
+#endif
 		if (notifyall) {
 			/* set all the thread flags */
 			do {

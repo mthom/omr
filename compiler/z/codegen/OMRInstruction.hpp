@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -35,18 +35,18 @@ namespace OMR { typedef OMR::Z::Instruction InstructionConnector; }
 
 #include "compiler/codegen/OMRInstruction.hpp"
 
-#include <stddef.h>                                    // for NULL
-#include <stdint.h>                                    // for uint32_t, etc
-#include "codegen/InstOpCode.hpp"                      // for InstOpCode, InstOpCode::Mnemonic
-#include "codegen/Register.hpp"                        // for Register
+#include <stddef.h>
+#include <stdint.h>
+#include "codegen/InstOpCode.hpp"
+#include "codegen/Register.hpp"
 #include "codegen/RegisterConstants.hpp"
-#include "compile/Compilation.hpp"                     // for Compilation, etc
-#include "cs2/arrayof.h"                               // for ArrayOf
-#include "cs2/hashtab.h"                               // for HashTable, etc
+#include "compile/Compilation.hpp"
+#include "cs2/arrayof.h"
+#include "cs2/hashtab.h"
 #include "cs2/sparsrbit.h"
-#include "env/TRMemory.hpp"                            // for Allocator, etc
-#include "infra/Assert.hpp"                            // for TR_ASSERT
-#include "infra/Flags.hpp"                             // for flags16_t
+#include "env/TRMemory.hpp"
+#include "infra/Assert.hpp"
+#include "infra/Flags.hpp"
 
 class TR_Debug;
 namespace TR { class S390ImmInstruction; }
@@ -125,12 +125,6 @@ class OMR_EXTENSIBLE Instruction : public OMR::Instruction
    bool isCCuseKnown() { return _flags.testAny(CCuseKnown); }
    void setCCuseKnown() {_flags.set(CCuseKnown);}
 
-   bool isStartInternalControlFlow(){ return _flags.testAny(StartInternalControlFlow); }
-   void setStartInternalControlFlow() {_flags.set(StartInternalControlFlow);}
-
-   bool isEndInternalControlFlow(){ return _flags.testAny(EndInternalControlFlow); }
-   void setEndInternalControlFlow() {_flags.set(EndInternalControlFlow);}
-
    // Region numbers start life as just the inline indexes
    // but are later extended by any optimization that duplicates
    // IL (e.g. loopCanonicalizer)
@@ -144,25 +138,16 @@ class OMR_EXTENSIBLE Instruction : public OMR::Instruction
    void setDebugHookOp() {_flags.set(DebugHookOp);}
 
    bool hasLongDisplacementSupport();
-   TR::InstOpCode::Mnemonic opCodeCanBeAdjustedTo(TR::InstOpCode::Mnemonic);
-   void attemptOpAdjustmentForLongDisplacement();
    TR::Register* getRegForBinaryEncoding(TR::Register* reg);
    void useRegister(TR::Register *reg, bool isDummy = false);
    bool matchesAnyRegister(TR::Register* reg, TR::Register* instReg);
    bool matchesAnyRegister(TR::Register* reg, TR::Register* instReg1, TR::Register* instReg2);
    bool isDefRegister(TR::Register * reg);
 
-   virtual bool getRegisters(TR::list<TR::Register *> &regs);
-   virtual bool getUsedRegisters(TR::list<TR::Register *> &usedRegs);
-   virtual bool getDefinedRegisters(TR::list<TR::Register *> &defedRegs);
-   virtual bool getKilledRegisters(TR::list<TR::Register *> &killedRegs);
-
    int32_t renameRegister(TR::Register *from, TR::Register *to);
 
    virtual Kind getKind() { return IsNotExtended; }
    virtual bool isRegInstruction() { return false; }
-
-   virtual void setKind(Kind kind) { TR_ASSERT(0, "Should not be called unless working with an RX, RS or RI instructions"); }
 
    virtual TR::MemoryReference* getMemoryReference()  {  return NULL; }
    virtual TR::MemoryReference* getMemoryReference2() {  return NULL; }
@@ -199,13 +184,10 @@ class OMR_EXTENSIBLE Instruction : public OMR::Instruction
    virtual bool isLabel()             { return _opcode.isLabel() > 0; }
    virtual bool isFloat()             { return _opcode.singleFPOp() > 0 || _opcode.doubleFPOp() > 0; }
    virtual bool isAdmin()             { return _opcode.isAdmin() > 0; }
-   virtual bool isBeginBlock()        { return _opcode.isBeginBlock() > 0; }
    virtual bool isDebugFence()        { return false; }
 
    virtual bool is4ByteLoad();
-   virtual bool isAsmGen();
    virtual bool isRet();
-   virtual bool isTailCall();
 
    virtual bool implicitlyUsesGPR0() { return _opcode.implicitlyUsesGPR0() > 0; }
    virtual bool implicitlyUsesGPR1() { return _opcode.implicitlyUsesGPR1() > 0; }
@@ -233,7 +215,6 @@ class OMR_EXTENSIBLE Instruction : public OMR::Instruction
    virtual bool usesOnlyRegister(TR::Register *reg);
    virtual bool usesRegister(TR::Register *reg);
    virtual bool containsRegister(TR::Register *reg);
-   virtual bool startOfLiveRange(TR::Register *reg); // True if virtual register is dead before current instruction
 
    virtual bool dependencyRefsRegister(TR::Register *reg);
 
@@ -290,7 +271,7 @@ class OMR_EXTENSIBLE Instruction : public OMR::Instruction
       CCuseKnown                          = 0x0100, ///< Usage of CC set by current instruction is known.
       CCused                              = 0x0200, ///< CC set by current instruction is used by subsequent instructions.
       OutOfLineEX                         = 0x0400, ///< TR::InstOpCode::EX instruction references a ConstantInstructionSnippet object
-                                                    ///< or an SS_FORMAT instruction is the target of an TR::InstOpCode::EX instruction
+                                                    ///< or an SSx instruction is the target of an TR::InstOpCode::EX instruction
       ThrowsImplicitException             = 0x0800,
       ThrowsImplicitNullPointerException  = 0x1000,
       StartInternalControlFlow            = 0x2000,

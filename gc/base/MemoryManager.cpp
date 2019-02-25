@@ -76,7 +76,7 @@ MM_MemoryManager::createVirtualMemoryForHeap(MM_EnvironmentBase* env, MM_MemoryH
 	uintptr_t allocateSize = size;
 
 	uintptr_t concurrentScavengerPageSize = 0;
-	if (extensions->isConcurrentScavengerEnabled()) {
+	if (extensions->isConcurrentScavengerHWSupported()) {
 		OMRPORT_ACCESS_FROM_ENVIRONMENT(env);
 		/*
 		 * Allocate extra memory to guarantee proper alignment regardless start address location
@@ -120,6 +120,18 @@ MM_MemoryManager::createVirtualMemoryForHeap(MM_EnvironmentBase* env, MM_MemoryH
 	if (NULL == ceiling) {
 		instance = MM_VirtualMemory::newInstance(env, heapAlignment, allocateSize, pageSize, pageFlags, tailPadding, preferredAddress,
 												 ceiling, mode, options, memoryCategory);
+
+#if defined(OMR_ENV_DATA64) && !defined(OMR_GC_COMPRESSED_POINTERS)
+		if (1 == extensions->fvtest_enableReadBarrierVerification) {
+			MM_VirtualMemory* instanceShadow = MM_VirtualMemory::newInstance(env, heapAlignment, allocateSize, pageSize, pageFlags,
+					tailPadding, preferredAddress, (void*)OMR_MIN(NON_SCALING_LOW_MEMORY_HEAP_CEILING,
+					(uintptr_t)ceiling), mode, options, memoryCategory);
+
+			extensions->shadowHeapBase = instanceShadow->getHeapBase();
+			extensions->shadowHeapTop = instanceShadow->getHeapTop();
+			extensions->shadowHeapHandle.setVirtualMemory(instanceShadow);
+		}
+#endif /* defined(OMR_ENV_DATA64) && !defined(OMR_GC_COMPRESSED_POINTERS) */
 	} else {
 #if defined(OMR_GC_COMPRESSED_POINTERS)
 		OMRPORT_ACCESS_FROM_ENVIRONMENT(env);
@@ -166,7 +178,7 @@ MM_MemoryManager::createVirtualMemoryForHeap(MM_EnvironmentBase* env, MM_MemoryH
 
 		void* requestedTopAddress = (void*)((uintptr_t)startAllocationAddress + allocateSize + tailPadding);
 
-		if (extensions->isConcurrentScavengerEnabled()) {
+		if (extensions->isConcurrentScavengerHWSupported()) {
 			void * ceilingToRequest = ceiling;
 			/* Requested top address might be higher then ceiling because of added chunk */
 			if ((requestedTopAddress > ceiling) && ((void *)((uintptr_t)requestedTopAddress - concurrentScavengerPageSize) <= ceiling)) {
@@ -303,7 +315,7 @@ MM_MemoryManager::createVirtualMemoryForHeap(MM_EnvironmentBase* env, MM_MemoryH
 		 * - current Nursery location has crossed Concurrent Scavenger Page boundary so it needs to be pushed higher to
 		 *   have Nursery low address to be aligned to Concurrent Scavenger Page
 		 */
-		if (extensions->isConcurrentScavengerEnabled()) {
+		if (extensions->isConcurrentScavengerHWSupported()) {
 			OMRPORT_ACCESS_FROM_ENVIRONMENT(env);
 			/* projected Nursery base and top */
 			/* assumed Nursery location in high addresses of the heap */
@@ -485,6 +497,23 @@ MM_MemoryManager::createVirtualMemoryForMetadata(MM_EnvironmentBase* env, MM_Mem
 	}
 
 	return NULL != handle->getVirtualMemory();
+}
+
+void
+MM_MemoryManager::destroyVirtualMemoryForHeap(MM_EnvironmentBase* env, MM_MemoryHandle* handle)
+{
+	destroyVirtualMemory(env, handle);
+
+#if defined(OMR_ENV_DATA64) && !defined(OMR_GC_COMPRESSED_POINTERS)
+	MM_GCExtensionsBase* extensions = env->getExtensions();
+	MM_VirtualMemory* shadowMemory = extensions->shadowHeapHandle.getVirtualMemory();
+	if (NULL != shadowMemory) {
+		shadowMemory->kill(env);
+		extensions->shadowHeapHandle.setVirtualMemory(NULL);
+		extensions->shadowHeapHandle.setMemoryBase(NULL);
+		extensions->shadowHeapHandle.setMemoryTop(NULL);
+	}
+#endif /* defined(OMR_ENV_DATA64) && !defined(OMR_GC_COMPRESSED_POINTERS) */
 }
 
 void

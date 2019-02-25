@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -23,12 +23,12 @@
 #define TR_S390_TREE_EVALUATOR_INCL
 
 
-#include <stddef.h>                   // for NULL, size_t
-#include <stdint.h>                   // for int32_t, int64_t, etc
-#include "codegen/InstOpCode.hpp"     // for InstOpCode, etc
-#include "env/jittypes.h"             // for uintptrj_t
-#include "il/ILOpCodes.hpp"           // for ILOpCodes
-#include "codegen/TreeEvaluator.hpp"  // for TR::TreeEvaluator
+#include <stddef.h>
+#include <stdint.h>
+#include "codegen/InstOpCode.hpp"
+#include "env/jittypes.h"
+#include "il/ILOpCodes.hpp"
+#include "codegen/TreeEvaluator.hpp"
 
 namespace TR { class CodeGenerator; }
 namespace TR { class Instruction; }
@@ -130,21 +130,13 @@ TR::Instruction * genLoadAddressConstantInSnippet(TR::CodeGenerator *cg, TR::Nod
 
 TR::MemoryReference * sstoreHelper(TR::Node * node, TR::CodeGenerator * cg, bool isReversed=false);
 TR::MemoryReference * istoreHelper(TR::Node * node, TR::CodeGenerator * cg, bool isReversed=false);
-TR::MemoryReference * lstoreHelper(TR::Node * node, TR::CodeGenerator * cg, bool isReversed=false);
 TR::MemoryReference * lstoreHelper64(TR::Node * node, TR::CodeGenerator * cg, bool isReversed=false);
 
 TR::Register * iloadHelper(TR::Node * node, TR::CodeGenerator * cg, TR::MemoryReference * tempMR, bool isReversed=false);
-TR::Register * lloadHelper(TR::Node * node, TR::CodeGenerator * cg, TR::MemoryReference * tempMR, bool isReversed=false);
 TR::Register * lloadHelper64(TR::Node * node, TR::CodeGenerator * cg, TR::MemoryReference * tempMR, bool isReversed=false);
 TR::Register * sloadHelper(TR::Node * node, TR::CodeGenerator * cg, TR::MemoryReference * tempMR, bool isReversed=false);
 
 TR::Register *getLitPoolBaseReg(TR::Node *node, TR::CodeGenerator * cg);
-
-TR::InstOpCode::S390BranchCondition intToBrCond(const int32_t brCondInt);
-int32_t brCondToInt(const TR::InstOpCode::S390BranchCondition brCond);
-TR::InstOpCode::S390BranchCondition getOppositeBranchCondition(TR::InstOpCode::S390BranchCondition brCond);
-void orInPlace(TR::InstOpCode::S390BranchCondition& brCond, const TR::InstOpCode::S390BranchCondition other);
-
 
 enum LoadForm
    {
@@ -224,25 +216,16 @@ extern template TR::Register * TR::TreeEvaluator::addressCastEvaluator<64, false
 
 TR::Register *getConditionCode(TR::Node *node, TR::CodeGenerator *cg, TR::Register *programRegister = NULL);
 TR::RegisterDependencyConditions *getGLRegDepsDependenciesFromIfNode(TR::CodeGenerator *cg, TR::Node* ificmpNode);
-void generateLongDoubleStore(TR::Node *node, TR::CodeGenerator *cg, TR::Register *reg, TR::Register *addressReg);
-
-#define VOID_BODY
-#define NULL_BODY
-#define BOOL_BODY
 
 class TR_S390ComputeCC : public TR::TreeEvaluator
    {
    public:
-   static bool setCarryBorrow(TR::Node *flagNode, bool invertValue, TR::CodeGenerator *cg) BOOL_BODY;
-   static void computeCC(TR::Node *node, TR::Register *ccReg, TR::CodeGenerator *cg) VOID_BODY;
-   static void computeCCLogical(TR::Node *node, TR::Register *ccReg, TR::Register *targetReg, TR::CodeGenerator *cg, bool is64Bit=false) VOID_BODY;
+   static bool setCarryBorrow(TR::Node *flagNode, bool invertValue, TR::CodeGenerator *cg);
+   static void computeCC(TR::Node *node, TR::Register *ccReg, TR::CodeGenerator *cg);
+   static void computeCCLogical(TR::Node *node, TR::Register *ccReg, TR::Register *targetReg, TR::CodeGenerator *cg, bool is64Bit=false);
    private:
-   static void saveHostCC(TR::Node *node, TR::Register *ccReg, TR::CodeGenerator *cg) VOID_BODY;
+   static void saveHostCC(TR::Node *node, TR::Register *ccReg, TR::CodeGenerator *cg);
    };
-
-#undef NULL_BODY
-#undef VOID_BODY
-
 
 TR::InstOpCode::S390BranchCondition getStandardIfBranchConditionForArraycmp(TR::Node * ifxcmpXXNode, TR::CodeGenerator *cg);
 
@@ -288,7 +271,6 @@ class arraycmpWithPadHelper
    void generateCLCLitPoolPadding();
    void generateCLCFoldedIfResult();
    void chooseCLCBranchConditions();
-   void setStartInternalControlFlow(TR::Instruction * cursor);
    TR::MemoryReference *  convertToShortDispMemRef(TR::Node * node,
                                                       TR::MemoryReference * largeDispMemRef,
                                                       TR::Register * &largeDispReg,

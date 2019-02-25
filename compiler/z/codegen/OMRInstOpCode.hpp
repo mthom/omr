@@ -340,11 +340,9 @@ namespace Z
 #define   I_FORMAT      3
 #define   IE_FORMAT     4
 #define   MII_FORMAT    5
-#define   RI_FORMAT     6  // TODO: This needs to be folded and reblaced by the 3 formats following it
 #define   RIa_FORMAT    7
 #define   RIb_FORMAT    8
 #define   RIc_FORMAT    9
-#define   RIE_FORMAT    10 // TODO: This needs to be folded and reblaced by the 7 formats following it
 #define   RIEa_FORMAT   11
 #define   RIEb_FORMAT   12
 #define   RIEc_FORMAT   13
@@ -352,7 +350,6 @@ namespace Z
 #define   RIEe_FORMAT   15
 #define   RIEf_FORMAT   16
 #define   RIEg_FORMAT   17
-#define   RIL_FORMAT    18 // TODO: This needs to be folded and reblaced by the 3 formats following it
 #define   RILa_FORMAT   19
 #define   RILb_FORMAT   20
 #define   RILc_FORMAT   21
@@ -360,31 +357,23 @@ namespace Z
 #define   RR_FORMAT     23
 #define   RRD_FORMAT    24
 #define   RRE_FORMAT    25
-#define   RRF_FORMAT    26 // TODO: This needs to be folded and reblaced by the 5 formats following it
-#define   RRF2_FORMAT   27 // TODO: This needs to be folded and reblaced by the 5 formats following it
-#define   RRF3_FORMAT   28 // TODO: This needs to be folded and reblaced by the 5 formats following it
 #define   RRFa_FORMAT   29
 #define   RRFb_FORMAT   30
 #define   RRFc_FORMAT   31
 #define   RRFd_FORMAT   32
 #define   RRFe_FORMAT   33
 #define   RRS_FORMAT    34
-#define   RS_FORMAT     35 // TODO: This needs to be folded and reblaced by the 2 formats following it
 #define   RSa_FORMAT    36
 #define   RSb_FORMAT    37
 #define   RSI_FORMAT    38
-#define   RSL_FORMAT    39 // TODO: This needs to be folded and reblaced by the 2 formats following it
 #define   RSLa_FORMAT   40 
 #define   RSLb_FORMAT   41
-#define   RSY_FORMAT    42 // TODO: This needs to be folded and reblaced by the 2 formats following it
 #define   RSYa_FORMAT   43
 #define   RSYb_FORMAT   44
-#define   RX_FORMAT     45 // TODO: This needs to be folded and reblaced by the 2 formats following it
 #define   RXa_FORMAT    46
 #define   RXb_FORMAT    47
 #define   RXE_FORMAT    48
 #define   RXF_FORMAT    49
-#define   RXY_FORMAT    50 // TODO: This needs to be folded and reblaced by the 2 formats following it
 #define   RXYa_FORMAT   51
 #define   RXYb_FORMAT   52
 #define   S_FORMAT      53
@@ -392,8 +381,6 @@ namespace Z
 #define   SIL_FORMAT    55
 #define   SIY_FORMAT    56
 #define   SMI_FORMAT    57
-#define   SS_FORMAT     58 // TODO: This needs to be folded and reblaced by the 6 formats following it
-#define   SS1_FORMAT    59 // TODO: This needs to be folded and reblaced by the 6 formats following it
 #define   SSa_FORMAT    60
 #define   SSb_FORMAT    61
 #define   SSc_FORMAT    62
@@ -463,11 +450,11 @@ namespace Z
 #define S390OpProp_SetsFPC                static_cast<uint64_t>(0x0000000040000000ull)
 // Available                              static_cast<uint64_t>(0x0000000080000000ull)
 #define S390OpProp_TargetHW               static_cast<uint64_t>(0x0000000100000000ull)
-#define S390OpProp_TargetLW               static_cast<uint64_t>(0x0000000200000000ull)
+// Available                              static_cast<uint64_t>(0x0000000200000000ull)
 #define S390OpProp_SrcHW                  static_cast<uint64_t>(0x0000000400000000ull)
-#define S390OpProp_SrcLW                  static_cast<uint64_t>(0x0000000800000000ull)
+// Available                              static_cast<uint64_t>(0x0000000800000000ull)
 #define S390OpProp_Src2HW                 static_cast<uint64_t>(0x0000001000000000ull)
-#define S390OpProp_Src2LW                 static_cast<uint64_t>(0x0000002000000000ull)
+// Available                              static_cast<uint64_t>(0x0000002000000000ull)
 #define S390OpProp_HasTwoMemoryReferences static_cast<uint64_t>(0x0000004000000000ull)
 #define S390OpProp_ImplicitlyUsesGPR0     static_cast<uint64_t>(0x0000008000000000ull)
 #define S390OpProp_ImplicitlyUsesGPR1     static_cast<uint64_t>(0x0000010000000000ull)
@@ -654,7 +641,6 @@ class InstOpCode: public OMR::InstOpCode
    uint32_t isAdmin();
    uint32_t isHighWordInstruction();
    uint64_t isOperandHW(uint32_t i);
-   uint64_t isOperandLW(uint32_t i);
    uint64_t setsOperand(uint32_t opNum);
 
    uint64_t singleFPOp() {return metadata[_mnemonic].properties & S390OpProp_SingleFP;}
@@ -714,7 +700,6 @@ class InstOpCode: public OMR::InstOpCode
    uint64_t setsFPC() {return metadata[_mnemonic].properties & S390OpProp_SetsFPC; }
 
    uint64_t isLabel() {return _mnemonic == LABEL;}
-   uint64_t isBeginBlock() {return _mnemonic == LABEL;}
 
    uint64_t usesM3() {return metadata[_mnemonic].properties & S390OpProp_UsesM3;}
    uint64_t usesM4() {return metadata[_mnemonic].properties & S390OpProp_UsesM4;}
@@ -739,6 +724,16 @@ class InstOpCode: public OMR::InstOpCode
    uint8_t getInstructionFormat() { return getInstructionFormat(_mnemonic);}
    const uint8_t * getOpCodeBinaryRepresentation() { return getOpCodeBinaryRepresentation(_mnemonic);}
 
+   /** \brief
+     *    Gets the 20-bit displacement mnemonic which is equivalent to a 12-bit displacement mnemonic.
+     *
+     *  \param op
+     *     The 12-bit displacement mnemonic for which to find an equivalent 20-bit displacement mnemonic.
+     *
+     *  \return
+     *     The 20-bit displacement mnemonic if it exists, otherwise `BAD` mnemonic.
+     */
+   static Mnemonic getEquivalentLongDisplacementMnemonic(Mnemonic op);
 
    /* Static methods for getting the correct opCode depending on platform (32bit, 64bit, etc.) */
    static Mnemonic getLoadOnConditionRegOpCode();
@@ -784,15 +779,14 @@ class InstOpCode: public OMR::InstOpCode
    static Mnemonic getXORRegOpCode();
    static Mnemonic getXORThreeRegOpCode();
    static Mnemonic getCmpTrapOpCode();
-   static Mnemonic getCmpWidenTrapOpCode();
    static Mnemonic getCmpImmOpCode();
    static Mnemonic getCmpImmTrapOpCode();
    static Mnemonic getCmpImmBranchRelOpCode();
    static Mnemonic getCmpLogicalTrapOpCode();
-   static Mnemonic getCmpLogicalWidenTrapOpCode();
    static Mnemonic getCmpLogicalImmTrapOpCode();
    static Mnemonic getCmpOpCode();
    static Mnemonic getCmpRegOpCode();
+   static Mnemonic getCmpRegAndBranchRelOpCode();
    static Mnemonic getCmpLogicalOpCode();
    static Mnemonic getCmpLogicalRegOpCode();
    static Mnemonic getCmpAndSwapOpCode();
@@ -800,6 +794,7 @@ class InstOpCode: public OMR::InstOpCode
    static Mnemonic getShiftLeftLogicalSingleOpCode();
    static Mnemonic getShiftRightLogicalSingleOpCode();
    static Mnemonic getAddHalfWordImmOpCode();
+   static Mnemonic getAddHalfWordImmDistinctOperandOpCode();
    static Mnemonic getAddLogicalOpCode();
    static Mnemonic getAddLogicalRegOpCode();
    static Mnemonic getBranchOnIndexHighOpCode();

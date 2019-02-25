@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2017, 2017 IBM Corp. and others
+# Copyright (c) 2017, 2019 IBM Corp. and others
 #
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -287,23 +287,35 @@ omr_find_files(resolvedPaths
 )
 
 include_directories(common)
+
 #TODO also should be able to build dynamic lib
+
 add_library(j9thr_obj OBJECT
 	${resolvedPaths}
-	ut_j9thr.c
+	${CMAKE_CURRENT_BINARY_DIR}/ut_j9thr.c
 )
+
+target_include_directories(j9thr_obj
+	PUBLIC
+		$<TARGET_PROPERTY:omr_base,INTERFACE_INCLUDE_DIRECTORIES>
+)
+
+target_compile_definitions(j9thr_obj
+	PUBLIC
+		$<TARGET_PROPERTY:omr_base,INTERFACE_COMPILE_DEFINITIONS>
+)
+
+if(OMR_WARNINGS_AS_ERRORS)
+	target_compile_options(j9thr_obj PRIVATE ${OMR_WARNING_AS_ERROR_FLAG})
+endif()
+
+if(OMR_ENHANCED_WARNINGS)
+	target_compile_options(j9thr_obj PRIVATE ${OMR_ENHANCED_WARNING_FLAG})
+endif()
 
 add_library(j9thrstatic STATIC
 	$<TARGET_OBJECTS:j9thr_obj>
 )
-
-if(OMR_WARNINGS_AS_ERRORS)
-	target_compile_options(j9thrstatic PRIVATE ${OMR_WARNING_AS_ERROR_FLAG})
-endif()
-
-if(OMR_ENHANCED_WARNINGS)
-	target_compile_options(j9thrstatic PRIVATE ${OMR_ENHANCED_WARNING_FLAG})
-endif()
 
 target_include_directories(j9thrstatic
 	INTERFACE
@@ -311,8 +323,10 @@ target_include_directories(j9thrstatic
 )
 
 target_link_libraries(j9thrstatic
-	j9pool
-	omrutil
+	PUBLIC
+		omr_base
+		j9pool
+		omrutil
+		${OMR_PLATFORM_THREAD_LIBRARY}
 )
 
-target_link_libraries(j9thrstatic ${OMR_PLATFORM_THREAD_LIBRARY})

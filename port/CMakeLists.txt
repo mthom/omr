@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2017, 2018 IBM Corp. and others
+# Copyright (c) 2017, 2019 IBM Corp. and others
 #
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -32,9 +32,18 @@ add_tracegen(common/omrport.tdf)
 # Logic below will set the target_includes, and supplement the
 # target_sources
 add_library(omrport_obj OBJECT
-	ut_omrport.c
+	${CMAKE_CURRENT_BINARY_DIR}/ut_omrport.c
 )
 
+target_include_directories(omrport_obj
+	PUBLIC
+		$<TARGET_PROPERTY:omr_base,INTERFACE_INCLUDE_DIRECTORIES>
+)
+
+target_compile_definitions(omrport_obj
+	PUBLIC
+		$<TARGET_PROPERTY:omr_base,INTERFACE_COMPILE_DEFINITIONS>
+)
 
 if(OMR_HOST_OS STREQUAL "aix")
 	list(APPEND OBJECTS omrgetsp.s)
@@ -351,11 +360,13 @@ if(OMR_ENHANCED_WARNINGS)
 endif()
 
 target_link_libraries(omrport
+	PUBLIC
+		omr_base
 	PRIVATE
-	j9avl
-	j9hashtable
-	j9pool
-	${OMR_THREAD_LIB}
+		j9avl
+		j9hashtable
+		j9pool
+		${OMR_THREAD_LIB}
 )
 
 target_include_directories(omrport_obj PRIVATE

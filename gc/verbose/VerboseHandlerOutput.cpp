@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2016 IBM Corp. and others
+ * Copyright (c) 1991, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -61,7 +61,7 @@ MM_VerboseHandlerOutput::MM_VerboseHandlerOutput(MM_GCExtensionsBase *extensions
 	,_mmPrivateHooks(NULL)
 	,_mmOmrHooks(NULL)
 	,_manager(NULL)
-{};
+{}
 
 bool
 MM_VerboseHandlerOutput::initialize(MM_EnvironmentBase *env, MM_VerboseManager *manager)
@@ -251,8 +251,15 @@ MM_VerboseHandlerOutput::handleInitialized(J9HookInterface** hook, uintptr_t eve
 	writer->formatAndOutput(env, 0, "<initialized %s>", tagTemplate);
 	writer->formatAndOutput(env, 1, "<attribute name=\"gcPolicy\" value=\"%s\" />", event->gcPolicy);
 #if defined(OMR_GC_CONCURRENT_SCAVENGER)
-	if (gc_policy_gencon == _extensions->configurationOptions._gcPolicy) {
-		writer->formatAndOutput(env, 1, "<attribute name=\"concurrentScavenger\" value=\"%s\" />", event->concurrentScavenger ? "true" : "false");
+	if (_extensions->isConcurrentScavengerEnabled()) {
+		writer->formatAndOutput(env, 1, "<attribute name=\"concurrentScavenger\" value=\"%s\" />",
+#if defined(S390)
+				_extensions->concurrentScavengerHWSupport ?
+				"enabled, with H/W assistance" :
+				"enabled, without H/W assistance");
+#else /* defined(S390) */
+				"enabled");
+#endif /* defined(S390) */
 	}
 #endif /* OMR_GC_CONCURRENT_SCAVENGER */
 	writer->formatAndOutput(env, 1, "<attribute name=\"maxHeapSize\" value=\"0x%zx\" />", event->maxHeapSize);
@@ -854,6 +861,33 @@ MM_VerboseHandlerOutput::handleConcurrentStart(J9HookInterface** hook, UDATA eve
 	exitAtomicReportingBlock();
 }
 
+
+void
+MM_VerboseHandlerOutput::handleConcurrentEndInternal(J9HookInterface** hook, UDATA eventNum, void* eventData)
+{
+	MM_ConcurrentPhaseEndEvent *event = (MM_ConcurrentPhaseEndEvent *)eventData;
+	MM_ConcurrentPhaseStatsBase *stats = (MM_ConcurrentPhaseStatsBase *)event->concurrentStats;
+	MM_VerboseWriterChain* writer = _manager->getWriterChain();
+	MM_EnvironmentBase *env = MM_EnvironmentBase::getEnvironment(event->currentThread);
+
+	const char *reasonForTermination = NULL;
+	if (stats->isTerminationRequested()) {
+		if (stats->isTerminationRequestExternal()) {
+			/* For example, Java JVMTI and similar. Unfortunately, we could not tell what. */
+			reasonForTermination = "termination requested externally";
+		} else {
+			/* Most interesting reason would be exhausted allocate/survivor, since it could mean that
+			 * tilting is too aggressive (and survival rate is jittery), and suggest tilt tuning/limiting.
+			 * There could be various other reasons, like STW global GC (system, end of concurrent mark etc.),
+			 * or even notorious 'exclusive VM access to satisfy allocate'.
+			 * Either way, the more detailed reason could be deduced from verbose GC.
+			 */
+			reasonForTermination = "termination requested by GC";
+		}
+		writer->formatAndOutput(env, 0, "<warning details=\"%s\" />", reasonForTermination, _extensions->gcExclusiveAccessThreadId);
+	}
+}
+
 void
 MM_VerboseHandlerOutput::handleConcurrentEnd(J9HookInterface** hook, UDATA eventNum, void* eventData)
 {
@@ -870,7 +904,7 @@ MM_VerboseHandlerOutput::handleConcurrentEnd(J9HookInterface** hook, UDATA event
 	writer->formatAndOutput(env, 0, "<concurrent-end %s>", tagTemplate);
 	handleConcurrentEndInternal(hook, eventNum, eventData);
 	handleConcurrentGCOpEnd(hook, eventNum, eventData);
-	writer->formatAndOutput(env, 0, "</concurrent-end>");
+	writer->formatAndOutput(env, 0, "</concurrent-end>\n");
 	writer->flush(env);
 	exitAtomicReportingBlock();
 }

@@ -57,7 +57,7 @@ MM_Dispatcher::initialize(MM_EnvironmentBase *env)
 }
 
 void
-MM_Dispatcher::prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task)
+MM_Dispatcher::prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t threadCount)
 {
 	task->setThreadCount(1);
 	_task = task;
@@ -89,22 +89,14 @@ MM_Dispatcher::cleanupAfterTask(MM_EnvironmentBase *env)
 void
 MM_Dispatcher::run(MM_EnvironmentBase *env, MM_Task *task, uintptr_t newThreadCount)
 {
-	uintptr_t defaultThreadCount = threadCount();
-	if (UDATA_MAX != newThreadCount) {
-		/* Let tasks run with different (typically reduced) thread count. */
-		setThreadCount(newThreadCount);
-	}
-
+	uintptr_t activeThreads = recomputeActiveThreadCountForTask(env, task, newThreadCount);
 	task->masterSetup(env);
-	prepareThreadsForTask(env, task);
+	prepareThreadsForTask(env, task, activeThreads);
 	acceptTask(env);
 	task->run(env);
 	completeTask(env);
 	cleanupAfterTask(env);
 	task->masterCleanup(env);
-
-	/* restore the default thread count */
-	setThreadCount(defaultThreadCount);
 }
 
 bool 
@@ -116,4 +108,10 @@ MM_Dispatcher::startUpThreads()
 void 
 MM_Dispatcher::shutDownThreads() 
 {
+}
+
+uintptr_t
+MM_Dispatcher::recomputeActiveThreadCountForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t newThreadCount)
+{
+	return 1;
 }

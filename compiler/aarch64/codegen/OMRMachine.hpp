@@ -43,7 +43,11 @@ namespace TR { class Instruction; }
 namespace TR { class Register; }
 
 #define NUM_ARM64_GPR 32
+#define MAX_ARM64_GLOBAL_GPRS 27 // excluding IP0, IP1, FP, LR, and SP
 #define NUM_ARM64_FPR 32
+#define MAX_ARM64_GLOBAL_FPRS 32
+
+#define NUM_ARM64_MAXR 32
 
 namespace OMR
 {
@@ -61,16 +65,6 @@ public:
     * @param[in] cg : the TR::CodeGenerator object
     */
    Machine(TR::CodeGenerator *cg);
-
-   /**
-    * @brief Converts RegNum to RealRegister
-    * @param[in] regNum : register number
-    * @return RealRegister for specified register number
-    */
-   TR::RealRegister *getARM64RealRegister(TR::RealRegister::RegNum regNum)
-      {
-      return _registerFile[regNum];
-      }
 
    /**
     * @brief Finds the best free register
@@ -151,6 +145,25 @@ public:
     */
    void restoreRegisterStateFromSnapShot();
 
+   /**
+    * @brief Answers global register table
+    * @return global register table
+    */
+   static uint32_t *getGlobalRegisterTable()
+      { return _globalRegisterNumberToRealRegisterMap; }
+   /**
+    * @brief Answers global register number of last GPR
+    * @return global register number
+    */
+   static TR_GlobalRegisterNumber getLastGlobalGPRRegisterNumber()
+      { return MAX_ARM64_GLOBAL_GPRS - 1; }
+   /**
+    * @brief Answers global register number of last FPR
+    * @return global register number
+    */
+   static TR_GlobalRegisterNumber getLastGlobalFPRRegisterNumber()
+      { return MAX_ARM64_GLOBAL_GPRS + MAX_ARM64_GLOBAL_FPRS - 1; }
+
 private:
 
    // For register snap shot
@@ -159,6 +172,9 @@ private:
    TR::Register               *_assignedRegisterSnapShot[TR::RealRegister::NumRegisters];
 
    void initializeRegisterFile();
+
+   // Tactical GRA
+   static uint32_t _globalRegisterNumberToRealRegisterMap[MAX_ARM64_GLOBAL_GPRS + MAX_ARM64_GLOBAL_FPRS];
 
    };
 }

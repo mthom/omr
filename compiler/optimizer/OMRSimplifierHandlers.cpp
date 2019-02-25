@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -29,22 +29,22 @@
 #include <math.h>
 #include "compile/Compilation.hpp"
 #include "codegen/CodeGenerator.hpp"
-#include "codegen/Linkage.hpp"                 // for Linkage
+#include "codegen/Linkage.hpp"
 #include "codegen/TreeEvaluator.hpp"
 #include "env/CompilerEnv.hpp"
-#include "env/IO.hpp"                          // for POINTER_PRINTF_FORMAT
+#include "env/IO.hpp"
 #include "env/jittypes.h"
 #include "il/AliasSetInterface.hpp"
 #include "il/Block.hpp"
-#include "il/DataTypes.hpp"                    // for getMinSigned, etc
+#include "il/DataTypes.hpp"
 #include "il/ILOpCodes.hpp"
 #include "il/Node.hpp"
 #include "il/Node_inlines.hpp"
 #include "il/SymbolReference.hpp"
 #include "il/TreeTop.hpp"
 #include "il/TreeTop_inlines.hpp"
-#include "il/symbol/LabelSymbol.hpp"           // for LabelSymbol
-#include "il/symbol/StaticSymbol.hpp"          // for StaticSymbol
+#include "il/symbol/LabelSymbol.hpp"
+#include "il/symbol/StaticSymbol.hpp"
 #include "infra/Bit.hpp"
 #include "infra/BitVector.hpp"
 #include "infra/Cfg.hpp"
@@ -334,7 +334,7 @@ static void setExprInvariant(TR_RegionStructure *region, TR::Node *node)
    }
 
 template <typename T>
-static void foldConstant(TR::Node *node, T value, TR::Simplifier *s, bool anchorChildrenP)
+inline void foldConstant(TR::Node *node, T value, TR::Simplifier *s, bool anchorChildrenP)
    {
    if (!performTransformationSimplifier(node, s)) return;
    if (anchorChildrenP) s->anchorChildren(node, s->_curTree);
@@ -3418,7 +3418,7 @@ static bool isLegalToMerge(TR::Node * node, TR::Block * block, TR::Block * nextB
       return false;
 
    blockIsEmpty = (block->getEntry() != NULL && block->getEntry()->getNextTreeTop() == block->getExit());
-   if (inEdge.empty() || !blockIsEmpty && (inEdge.front() != outEdge || (inEdge.size() > 1)))
+   if (inEdge.empty() || (!blockIsEmpty && (inEdge.front() != outEdge || (inEdge.size() > 1))))
       return false;
 
    //Can't merge block with nextBlock if block is entry point and inEdge has more than one edge
@@ -5686,7 +5686,7 @@ TR::Node *indirectStoreSimplifier(TR::Node * node, TR::Block * block, TR::Simpli
          }
       }
 
-   if ((node->getOpCodeValue() == TR::wrtbari) && 0 &&
+   if ((node->getOpCodeValue() == TR::awrtbari) && 0 &&
        !node->getSymbolReference()->getSymbol()->isArrayShadowSymbol())
       {
       TR::Node *valueChild = node->getSecondChild();
@@ -6833,24 +6833,12 @@ TR::Node *daddSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
 
 TR::Node *baddSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
    {
-   simplifyChildren(node, block, s);
-
-   TR::Node * firstChild = node->getFirstChild(), * secondChild = node->getSecondChild();
-
-   if (firstChild->getOpCode().isLoadConst() && secondChild->getOpCode().isLoadConst())
-      {
-      foldByteConstant(node, firstChild->getByte() + secondChild->getByte(), s, false /* !anchorChildren*/);
-      return node;
-      }
-
-   orderChildren(node, firstChild, secondChild, s);
-   BINARY_IDENTITY_OP(Byte, 0)
-   return node;
+   return addSimplifier <int8_t> (node, block, s);
    }
 
 TR::Node *saddSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
    {
-   return  addSimplifier <int16_t> (node, block, s);
+   return addSimplifier <int16_t> (node, block, s);
    }
 
 //---------------------------------------------------------------------
@@ -7925,23 +7913,12 @@ TR::Node *dsubSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
 
 TR::Node *bsubSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
    {
-   simplifyChildren(node, block, s);
-
-   TR::Node * firstChild = node->getFirstChild(), * secondChild = node->getSecondChild();
-
-   if (firstChild->getOpCode().isLoadConst() && secondChild->getOpCode().isLoadConst())
-      {
-      foldByteConstant(node, firstChild->getByte() - secondChild->getByte(), s, false /* !anchorChildren*/);
-      return node;
-      }
-
-   BINARY_IDENTITY_OP(Byte, 0)
-   return node;
+   return subSimplifier <int8_t> (node, block, s);
    }
 
 TR::Node *ssubSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
    {
-   return  subSimplifier <int16_t> (node, block, s);
+   return subSimplifier <int16_t> (node, block, s);
    }
 
 //---------------------------------------------------------------------
@@ -9805,12 +9782,12 @@ TR::Node *fnegSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
    // Make this  work for -(0-0)
    //
    if (firstChild->getOpCodeValue() == TR::fneg)
-     {
+      {
       if (performTransformation(s->comp(), "%sTransforming [" POINTER_PRINTF_FORMAT "] --A -> A\n", s->optDetailString(), node))
-        {
-        node= s->replaceNode(node,firstChild->getFirstChild(), s->_curTree); // remove neg
-        }
-     }
+         {
+         node= s->replaceNode(node,firstChild->getFirstChild(), s->_curTree); // remove neg
+         }
+      }
    // don't just do -A op B -> -(A op B) as not always a win, so catch opportunity here
    else if ((firstChild->getOpCodeValue() == TR::fmul ||
            firstChild->getOpCodeValue() == TR::fdiv ||
@@ -9835,14 +9812,14 @@ TR::Node *fnegSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
          childNo=1;
          }
       if (child2Change && child2Change->getReferenceCount() == 1 && performTransformation(s->comp(), "%sTransforming [" POINTER_PRINTF_FORMAT "] -(-A op B) -> A op B (op=*,/,%%)\n", s->optDetailString(), node))
-        {
-        // remove neg
-        TR::Node * newChild= s->replaceNode(child2Change,child2Change->getFirstChild(), s->_curTree);
-        firstChild->setChild(childNo,newChild);
-        // now replace current node with fmul,fdiv or frem
-        node= s->replaceNode(node,node->getFirstChild(), s->_curTree);
-        }
-   }
+         {
+         // remove neg
+         TR::Node * newChild= s->replaceNode(child2Change,child2Change->getFirstChild(), s->_curTree);
+         firstChild->setChild(childNo,newChild);
+         // now replace current node with fmul,fdiv or frem
+         node= s->replaceNode(node,node->getFirstChild(), s->_curTree);
+         }
+      }
    else if (s->comp()->cg()->supportsNegativeFusedMultiplyAdd())
       {
       // unless we've already got an inserted multiply, transformit
@@ -9889,11 +9866,17 @@ TR::Node *dnegSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
       }
 
    // Make this work for -(0-0)
-
-   if (s->comp()->cg()->supportsNegativeFusedMultiplyAdd())
+   if (firstChild->getOpCodeValue() == TR::dneg)
+      {
+      if (performTransformation(s->comp(), "%sTransforming [" POINTER_PRINTF_FORMAT "] --A -> A\n", s->optDetailString(), node))
+         {
+         node= s->replaceNode(node,firstChild->getFirstChild(), s->_curTree); // remove neg
+         }
+      }
+   else if (s->comp()->cg()->supportsNegativeFusedMultiplyAdd())
       {
       if ((firstChild->getOpCode().isAdd() || firstChild->getOpCode().isSub()) &&
-     !(firstChild->getFirstChild()->isFPStrictCompliant() || firstChild->getSecondChild()->isFPStrictCompliant()) &&
+          !(firstChild->getFirstChild()->isFPStrictCompliant() || firstChild->getSecondChild()->isFPStrictCompliant()) &&
           performTransformation(s->comp(), "%sTransforming [" POINTER_PRINTF_FORMAT "] -(-A +/- B) -> -((A*1)+/-B)\n", s->optDetailString(), node))
          {
          TR::Node * newConst = TR::Node::create(firstChild->getFirstChild(), TR::dconst, 0);
@@ -9907,7 +9890,7 @@ TR::Node *dnegSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
          newMul->setIsFPStrictCompliant(true);
          }
       else if (firstChild->getOpCode().isMul() &&
-          performTransformation(s->comp(), "%sTransforming [" POINTER_PRINTF_FORMAT "] -(A*B) -> -((A*B)-0)\n", s->optDetailString(), node))
+               performTransformation(s->comp(), "%sTransforming [" POINTER_PRINTF_FORMAT "] -(A*B) -> -((A*B)-0)\n", s->optDetailString(), node))
          {
          TR::Node * newConst = TR::Node::create(firstChild, TR::dconst, 0);
          TR::Node * newAdd = TR::Node::create(firstChild, TR::dsub, 2);
@@ -9962,28 +9945,56 @@ TR::Node *lconstSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * 
    return node;
    }
 
-TR::Node *iabsSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
+TR::Node *ilfdabsSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
    {
    simplifyChildren(node, block, s);
+
+   static bool AllowFlagBasedTransformationForFloatOrDouble = feGetEnv("TR_AllowFlagBasedTransformationForFloatOrDouble") != NULL;
+
+   TR::ILOpCodes abs = node->getOpCodeValue();
+   TR::ILOpCodes neg = TR::BadILOp;
+   bool performFlagBasedTransformation = false;
+   switch (abs)
+      {
+      case TR::iabs:
+         neg = TR::ineg;
+         performFlagBasedTransformation = true;
+         break;
+      case TR::labs:
+         neg = TR::lneg;
+         performFlagBasedTransformation = true;
+         break;
+      case TR::fabs:
+         neg = TR::fneg;
+         performFlagBasedTransformation = AllowFlagBasedTransformationForFloatOrDouble;
+         break;
+      case TR::dabs:
+         neg = TR::dneg;
+         performFlagBasedTransformation = AllowFlagBasedTransformationForFloatOrDouble;
+         break;
+      default:
+         TR_ASSERT(0, "unexpected opcode %d\n", node->getOpCodeValue());
+      }
    auto child = node->getChild(0);
    if (child->isNonNegative() &&
-       performTransformation(s->comp(), "%sSimplify iabs of non-negative child at [" POINTER_PRINTF_FORMAT "]\n",
-             s->optDetailString(), node))
+       performFlagBasedTransformation &&
+       performTransformation(s->comp(), "%sSimplify abs of non-negative child at [" POINTER_PRINTF_FORMAT "]\n", s->optDetailString(), node))
       {
       return s->replaceNodeWithChild(node, child, s->_curTree, block);
       }
-   return node;
-   }
-
-TR::Node *labsSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
-   {
-   simplifyChildren(node, block, s);
-   auto child = node->getChild(0);
-   if (child->isNonNegative() &&
-       performTransformation(s->comp(), "%sSimplify labs of non-negative child at [" POINTER_PRINTF_FORMAT "]\n",
-             s->optDetailString(), node))
+   else if (child->isNegative() &&
+            performFlagBasedTransformation &&
+            performTransformation(s->comp(), "%sSimplify abs of non-positive child at [" POINTER_PRINTF_FORMAT "]\n", s->optDetailString(), node))
       {
-      return s->replaceNodeWithChild(node, child, s->_curTree, block);
+      TR::Node::recreate(node, neg);
+      return s->simplify(node, block);
+      }
+   else if ((child->getOpCodeValue() == abs || child->getOpCodeValue() == neg) &&
+            performTransformation(s->comp(), "%sSimplify abs of abs/neg child at [" POINTER_PRINTF_FORMAT "]\n", s->optDetailString(), node))
+      {
+      node->setAndIncChild(0, child->getFirstChild());
+      child->recursivelyDecReferenceCount();
+      return s->simplify(node, block);
       }
    return node;
    }
@@ -11286,10 +11297,8 @@ TR::Node *lorSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
 
       }
 
-
-   // For 32 bit platforms (p and z), evaluator due to historical reasons, evaluator for rotate does not support 64 bit regs on a 32 bit platform by default
-   // Need to disable this transform until that support is added.
-   if((TR::Compiler->target.is64Bit() || s->comp()->cg()->use64BitRegsOn32Bit()) && checkAndReplaceRotation<int64_t>(node,block,s))
+   // Disable transformation if rotate evaluator does not support 64-bit registers on 32-bit platform
+   if ((TR::Compiler->target.is64Bit() || s->comp()->cg()->use64BitRegsOn32Bit()) && checkAndReplaceRotation<int64_t>(node,block,s))
       {
       return node;
       }
@@ -11607,10 +11616,8 @@ TR::Node *lxorSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
 
       }
 
-
-   // For 32 bit platforms (p and z), evaluator due to historical reasons, evaluator for rotate does not support 64 bit regs on a 32 bit platform by default
-   // Need to disable this transform until that support is added.
-   if( (TR::Compiler->target.is64Bit() || s->comp()->cg()->use64BitRegsOn32Bit()) && checkAndReplaceRotation<int64_t>(node,block,s))
+   // Disable transformation if rotate evaluator does not support 64-bit registers on 32-bit platform
+   if ((TR::Compiler->target.is64Bit() || s->comp()->cg()->use64BitRegsOn32Bit()) && checkAndReplaceRotation<int64_t>(node,block,s))
       {
       return node;
       }
@@ -11651,6 +11658,32 @@ TR::Node *sxorSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
    BINARY_IDENTITY_OP(ShortInt, 0)
 
    return node;
+   }
+
+//---------------------------------------------------------------------
+// Floating point square root
+//
+template <class T>
+inline TR::Node* sqrtSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
+   {
+   simplifyChildren(node, block, s);
+   TR::Node* child = node->getChild(0);
+   if (child->getOpCode().isLoadConst() &&
+       performTransformation(s->comp(), "%sSimplify sqrt of const child at [" POINTER_PRINTF_FORMAT "]\n", s->optDetailString(), node))
+      {
+      foldConstant<T>(node, TR::Compiler->arith.fpSquareRoot(child->getConst<T>()), s, false /* !anchorChilren */);
+      }
+   return node;
+   }
+
+TR::Node *fsqrtSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
+   {
+   return sqrtSimplifier<float>(node, block, s);
+   }
+
+TR::Node *dsqrtSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
+   {
+   return sqrtSimplifier<double>(node, block, s);
    }
 
 //---------------------------------------------------------------------

@@ -93,9 +93,9 @@ protected:
 
 	bool initialize(MM_EnvironmentBase *env);
 	
-	virtual void prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task);
+	virtual void prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t threadCount);
 	virtual void cleanupAfterTask(MM_EnvironmentBase *env);
-	virtual uintptr_t getThreadPriority(); 
+	virtual uintptr_t getThreadPriority();
 
 	/**
 	 * Decides whether the dispatcher also start a separate thread to be the master
@@ -107,9 +107,9 @@ protected:
 	virtual void acceptTask(MM_EnvironmentBase *env);
 	virtual void completeTask(MM_EnvironmentBase *env);
 	virtual void wakeUpThreads(uintptr_t count);
-
-	virtual void recomputeActiveThreadCount(MM_EnvironmentBase *env);
 	
+	virtual uintptr_t recomputeActiveThreadCountForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t newThreadCount); 
+
 	virtual void setThreadInitializationComplete(MM_EnvironmentBase *env);
 	
 	uintptr_t adjustThreadCount(uintptr_t maxThreadCount);

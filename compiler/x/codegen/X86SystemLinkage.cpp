@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2016 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,29 +21,29 @@
 
 #include "x/codegen/X86SystemLinkage.hpp"
 
-#include <stddef.h>                            // for NULL
-#include "codegen/CodeGenerator.hpp"           // for CodeGenerator
-#include "codegen/Instruction.hpp"             // for Instruction
-#include "codegen/Machine.hpp"                 // for Machine, etc
+#include <stddef.h>
+#include "codegen/CodeGenerator.hpp"
+#include "codegen/Instruction.hpp"
+#include "codegen/Machine.hpp"
 #include "codegen/MemoryReference.hpp"
-#include "codegen/RealRegister.hpp"            // for RealRegister, etc
-#include "compile/Compilation.hpp"             // for Compilation
+#include "codegen/RealRegister.hpp"
+#include "compile/Compilation.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
-#include "env/TRMemory.hpp"                    // for TR_Memory, etc
-#include "il/ILOpCodes.hpp"                    // for ILOpCodes::BBStart, etc
-#include "il/Node.hpp"                         // for Node
-#include "il/Node_inlines.hpp"                 // for Node::getChild, etc
-#include "il/Symbol.hpp"                       // for Symbol
-#include "il/symbol/AutomaticSymbol.hpp"       // for AutomaticSymbol
-#include "il/symbol/ParameterSymbol.hpp"       // for ParameterSymbol
-#include "il/symbol/ResolvedMethodSymbol.hpp"  // for ResolvedMethodSymbol
-#include "infra/Assert.hpp"                    // for TR_ASSERT
-#include "infra/BitVector.hpp"                 // for TR_BitVector
-#include "infra/List.hpp"                      // for ListIterator, List
-#include "ras/Debug.hpp"                       // for TR_DebugBase
-#include "codegen/X86Instruction.hpp"        // for TR::X86RegInstruction, etc
-#include "x/codegen/X86Ops.hpp"                // for TR_X86OpCodes, etc
+#include "env/TRMemory.hpp"
+#include "il/ILOpCodes.hpp"
+#include "il/Node.hpp"
+#include "il/Node_inlines.hpp"
+#include "il/Symbol.hpp"
+#include "il/symbol/AutomaticSymbol.hpp"
+#include "il/symbol/ParameterSymbol.hpp"
+#include "il/symbol/ResolvedMethodSymbol.hpp"
+#include "infra/Assert.hpp"
+#include "infra/BitVector.hpp"
+#include "infra/List.hpp"
+#include "ras/Debug.hpp"
+#include "codegen/X86Instruction.hpp"
+#include "x/codegen/X86Ops.hpp"
 #include "env/CompilerEnv.hpp"
 
 TR::X86SystemLinkage::X86SystemLinkage(TR::CodeGenerator *cg)
@@ -93,7 +93,7 @@ TR::Instruction *
 TR::X86SystemLinkage::copyParametersToHomeLocation(TR::Instruction *cursor)
    {
    TR::Machine *machine = cg()->machine();
-   TR::RealRegister *framePointer = machine->getX86RealRegister(TR::RealRegister::vfp);
+   TR::RealRegister *framePointer = machine->getRealRegister(TR::RealRegister::vfp);
 
    TR::ResolvedMethodSymbol             *bodySymbol = comp()->getJittedMethodSymbol();
    ListIterator<TR::ParameterSymbol>  paramIterator(&(bodySymbol->getParameterList()));
@@ -148,7 +148,7 @@ TR::X86SystemLinkage::copyParametersToHomeLocation(TR::Instruction *cursor)
             loadCursor = generateRegMemInstruction(
                loadCursor,
                TR::Linkage::movOpcodes(RegMem, movDataType),
-               machine->getX86RealRegister(ai),
+               machine->getRealRegister(ai),
                generateX86MemoryReference(framePointer, offset, cg()),
                cg()
                );
@@ -171,7 +171,7 @@ TR::X86SystemLinkage::copyParametersToHomeLocation(TR::Instruction *cursor)
                cursor,
                TR::Linkage::movOpcodes(MemReg, movDataType),
                generateX86MemoryReference(framePointer, offset, cg()),
-               machine->getX86RealRegister(sourceIndex),
+               machine->getRealRegister(sourceIndex),
                cg()
                );
             }
@@ -261,8 +261,8 @@ TR::X86SystemLinkage::copyParametersToHomeLocation(TR::Instruction *cursor)
             cursor = generateRegRegInstruction(
                cursor,
                TR::Linkage::movOpcodes(RegReg, movStatus[source].outgoingDataType),
-               machine->getX86RealRegister(regCursor),
-               machine->getX86RealRegister(source),
+               machine->getRealRegister(regCursor),
+               machine->getRealRegister(source),
                cg()
                );
             // Update movStatus as we go so we don't generate redundant movs
@@ -283,9 +283,8 @@ TR::X86SystemLinkage::copyParametersToHomeLocation(TR::Instruction *cursor)
 TR::Instruction *
 TR::X86SystemLinkage::savePreservedRegisters(TR::Instruction *cursor)
    {
-   // For IA32, if disableShrinkWrapping, usePushForPreservedRegs will be true; otherwise false;
-   //          For X64,  shrinkWraping is always on, and usePushForPreservedRegs always false;
-    // TR_ASSERT(!getProperties().getUsesPushesForPreservedRegs(), "assertion failure");
+   // For IA32 usePushForPreservedRegs will be true;
+   // For X64, usePushForPreservedRegs always false;
    TR::ResolvedMethodSymbol *bodySymbol = comp()->getJittedMethodSymbol();
    const int32_t localSize = getProperties().getOffsetToFirstLocal() - bodySymbol->getLocalMappingCursor();
    const int32_t pointerSize = getProperties().getPointerSize();
@@ -299,7 +298,7 @@ TR::X86SystemLinkage::savePreservedRegisters(TR::Instruction *cursor)
            pindex--)
          {
          TR::RealRegister::RegNum idx = _properties.getPreservedRegister((uint32_t)pindex);
-         TR::RealRegister *reg = machine()->getX86RealRegister(idx);
+         TR::RealRegister *reg = machine()->getRealRegister(idx);
          if (reg->getHasBeenAssignedInMethod() && reg->getState() != TR::RealRegister::Locked)
             {
             cursor = new (trHeapMemory()) TR::X86RegInstruction(cursor, PUSHReg, reg, cg());
@@ -308,25 +307,21 @@ TR::X86SystemLinkage::savePreservedRegisters(TR::Instruction *cursor)
       }
    else
       {
-      TR_BitVector *p = cg()->getPreservedRegsInPrologue();
       for (int32_t pindex = getProperties().getMaxRegistersPreservedInPrologue()-1;
            pindex >= 0;
            pindex--)
          {
          TR::RealRegister::RegNum idx = _properties.getPreservedRegister((uint32_t)pindex);
-         TR::RealRegister *reg = machine()->getX86RealRegister(getProperties().getPreservedRegister((uint32_t)pindex));
+         TR::RealRegister *reg = machine()->getRealRegister(getProperties().getPreservedRegister((uint32_t)pindex));
          if(reg->getHasBeenAssignedInMethod() && reg->getState() != TR::RealRegister::Locked)
             {
-            if (!p || p->get(idx))
-               {
-               cursor = generateMemRegInstruction(
-                  cursor,
-                  TR::Linkage::movOpcodes(MemReg, fullRegisterMovType(reg)),
-                  generateX86MemoryReference(machine()->getX86RealRegister(TR::RealRegister::vfp), offsetCursor, cg()),
-                  reg,
-                  cg()
-                  );
-               }
+            cursor = generateMemRegInstruction(
+               cursor,
+               TR::Linkage::movOpcodes(MemReg, fullRegisterMovType(reg)),
+               generateX86MemoryReference(machine()->getRealRegister(TR::RealRegister::vfp), offsetCursor, cg()),
+               reg,
+               cg()
+               );
             offsetCursor -= pointerSize;
             }
          }
@@ -426,7 +421,7 @@ TR::X86SystemLinkage::createPrologue(TR::Instruction *cursor)
    TR_DebugFrameSegmentInfo *debugFrameSlotInfo=NULL;
 #endif
 
-   TR::RealRegister *espReal = machine()->getX86RealRegister(TR::RealRegister::esp);
+   TR::RealRegister *espReal = machine()->getRealRegister(TR::RealRegister::esp);
 
    TR::ResolvedMethodSymbol *bodySymbol = comp()->getJittedMethodSymbol();
 
@@ -442,7 +437,7 @@ TR::X86SystemLinkage::createPrologue(TR::Instruction *cursor)
    int32_t pindex; // Preserved register index
    for (pindex = 0; pindex < properties.getMaxRegistersPreservedInPrologue(); pindex++)
       {
-      TR::RealRegister *reg = machine()->getX86RealRegister(properties.getPreservedRegister((uint32_t)pindex));
+      TR::RealRegister *reg = machine()->getRealRegister(properties.getPreservedRegister((uint32_t)pindex));
       if (reg->getHasBeenAssignedInMethod() && reg->getState() != TR::RealRegister::Locked)
          {
          preservedRegsSize += properties.getPointerSize();
@@ -492,14 +487,14 @@ TR::X86SystemLinkage::createPrologue(TR::Instruction *cursor)
       cursor = new (trHeapMemory()) TR::X86RegInstruction(
          cursor,
          PUSHReg,
-         machine()->getX86RealRegister(properties.getFramePointerRegister()),
+         machine()->getRealRegister(properties.getFramePointerRegister()),
          cg());
 
-      TR::RealRegister *stackPointerReg = machine()->getX86RealRegister(TR::RealRegister::esp);
+      TR::RealRegister *stackPointerReg = machine()->getRealRegister(TR::RealRegister::esp);
       cursor = new (trHeapMemory()) TR::X86RegRegInstruction(
          cursor,
          MOVRegReg(),
-         machine()->getX86RealRegister(properties.getFramePointerRegister()),
+         machine()->getRealRegister(properties.getFramePointerRegister()),
          stackPointerReg,
          cg());
 
@@ -569,7 +564,7 @@ TR::X86SystemLinkage::createPrologue(TR::Instruction *cursor)
       debugFrameSlotInfo = new (trHeapMemory()) TR_DebugFrameSegmentInfo(comp(),
          paramCursor->getOffset(), paramCursor->getSize(), "Parameter",
          debugFrameSlotInfo,
-         (ai==NOT_ASSIGNED)? NULL : machine()->getX86RealRegister(ai)
+         (ai==NOT_ASSIGNED)? NULL : machine()->getRealRegister(ai)
          );
       }
 
@@ -639,7 +634,7 @@ TR::X86SystemLinkage::restorePreservedRegisters(TR::Instruction *cursor)
            pindex++)
          {
          TR::RealRegister::RegNum idx = _properties.getPreservedRegister((uint32_t)pindex);
-         TR::RealRegister *reg = machine()->getX86RealRegister(idx);
+         TR::RealRegister *reg = machine()->getRealRegister(idx);
          if (reg->getHasBeenAssignedInMethod())
             {
             cursor = new (trHeapMemory()) TR::X86RegInstruction(cursor, POPReg, reg, cg());
@@ -649,31 +644,27 @@ TR::X86SystemLinkage::restorePreservedRegisters(TR::Instruction *cursor)
    else
       {
       int32_t offsetCursor = -localSize +  _properties.getOffsetToFirstLocal() - pointerSize;
-      TR_BitVector *p = cg()->getPreservedRegsInPrologue();
       for (int32_t pindex = _properties.getMaxRegistersPreservedInPrologue()-1;
            pindex >= 0;
            pindex--)
          {
          TR::RealRegister::RegNum idx = _properties.getPreservedRegister((uint32_t)pindex);
-         TR::RealRegister *reg = machine()->getX86RealRegister(idx);
+         TR::RealRegister *reg = machine()->getRealRegister(idx);
 
          if (comp()->getOption(TR_TraceCG))
             {
-            traceMsg(comp(), "reg %d, getHasBeenAssignedInMethod %d, p %x, p->get(idx) %d.\n", idx, reg->getHasBeenAssignedInMethod(), p, p ? p->get(idx) : -1);
+            traceMsg(comp(), "reg %d, getHasBeenAssignedInMethod %d\n", idx, reg->getHasBeenAssignedInMethod());
             }
 
          if (reg->getHasBeenAssignedInMethod())
             {
-            if (!p || p->get(idx))
-               {
-               cursor = generateRegMemInstruction(
-                  cursor,
-                  TR::Linkage::movOpcodes(RegMem, fullRegisterMovType(reg)),
-                  reg,
-                  generateX86MemoryReference(machine()->getX86RealRegister(TR::RealRegister::vfp), offsetCursor, cg()),
-                  cg()
-                  );
-               }
+            cursor = generateRegMemInstruction(
+               cursor,
+               TR::Linkage::movOpcodes(RegMem, fullRegisterMovType(reg)),
+               reg,
+               generateX86MemoryReference(machine()->getRealRegister(TR::RealRegister::vfp), offsetCursor, cg()),
+               cg()
+               );
             offsetCursor -= pointerSize;
             }
          }
@@ -686,7 +677,7 @@ TR::X86SystemLinkage::restorePreservedRegisters(TR::Instruction *cursor)
 void
 TR::X86SystemLinkage::createEpilogue(TR::Instruction *cursor)
    {
-   TR::RealRegister    *espReal      = machine()->getX86RealRegister(TR::RealRegister::esp);
+   TR::RealRegister    *espReal      = machine()->getRealRegister(TR::RealRegister::esp);
    TR::ResolvedMethodSymbol *bodySymbol = comp()->getJittedMethodSymbol();
 
    const int32_t localSize = _properties.getOffsetToFirstLocal() - bodySymbol->getLocalMappingCursor();
@@ -718,8 +709,8 @@ TR::X86SystemLinkage::createEpilogue(TR::Instruction *cursor)
       {
       // Restore stack pointer from frame pointer
       //
-      cursor = new (trHeapMemory()) TR::X86RegRegInstruction(cursor, MOVRegReg(), espReal, machine()->getX86RealRegister(_properties.getFramePointerRegister()), cg());
-      cursor = new (trHeapMemory()) TR::X86RegInstruction(cursor, POPReg, machine()->getX86RealRegister(_properties.getFramePointerRegister()), cg());
+      cursor = new (trHeapMemory()) TR::X86RegRegInstruction(cursor, MOVRegReg(), espReal, machine()->getRealRegister(_properties.getFramePointerRegister()), cg());
+      cursor = new (trHeapMemory()) TR::X86RegInstruction(cursor, POPReg, machine()->getRealRegister(_properties.getFramePointerRegister()), cg());
       }
    else if (allocSize == 0)
       {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2017 IBM Corp. and others
+ * Copyright (c) 1991, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -80,7 +80,7 @@ dispatcher_thread_proc2(OMRPortLibrary* portLib, void *info)
 	/* Signal that the thread was created succesfully */
 	slaveInfo->slaveFlags = SLAVE_INFO_FLAG_OK;
 
-	oldVMState = env->pushVMstate(J9VMSTATE_GC_DISPATCHER_IDLE);
+	oldVMState = env->pushVMstate(OMRVMSTATE_GC_DISPATCHER_IDLE);
 
 	/* Begin running the thread */
 	if (env->isMasterThread()) {
@@ -406,16 +406,30 @@ MM_ParallelDispatcher::setThreadCount(uintptr_t threadCount)
 /**
  * Decide how many threads should be active for a given task.
  */
-void
-MM_ParallelDispatcher::recomputeActiveThreadCount(MM_EnvironmentBase *env)
+uintptr_t
+MM_ParallelDispatcher::recomputeActiveThreadCountForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t threadCount)
 {
-	/* On entry _threadCount will be either:
-	 *  1) the value specified by user on -Xgcthreads
-	 *  2) the number of active CPU's at JVM startup 
-	 *  3) 1 if we have not yet started the GC helpers or are in process of  shutting down 
-	 *     the GC helper threads.
-	 */ 	
-	_activeThreadCount = adjustThreadCount(_threadCount);
+	/* Metronome recomputes the number of GC threads at the beginning of
+	 * a GC cycle. It may not be safe to do so at the beginning of a task
+	 */
+	if (!_extensions->isMetronomeGC()) {
+		/* On entry _threadCount will be either:
+		 *  1) the value specified by user on -Xgcthreads
+		 *  2) the number of active CPU's at JVM startup
+		 *  3) 1 if we have not yet started the GC helpers or are in process of  shutting down
+		 *     the GC helper threads.
+		 */
+		_activeThreadCount = adjustThreadCount(_threadCount);
+	}
+
+
+	/* Caller might have tried to override thread count for this task with an explicit value.
+	 * Obey it, only if <= than what we calculated it should be (there might not be more active threads
+	 * available and ready to run).
+	 */
+	uintptr_t taskActiveThreadCount = OMR_MIN(_activeThreadCount, threadCount);
+	task->setThreadCount(taskActiveThreadCount);
+ 	return taskActiveThreadCount;
 }
 
 uintptr_t 
@@ -450,7 +464,7 @@ MM_ParallelDispatcher::adjustThreadCount(uintptr_t maxThreadCount)
 }
 
 void
-MM_ParallelDispatcher::prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task)
+MM_ParallelDispatcher::prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t threadCount)
 {
 	omrthread_monitor_enter(_slaveThreadMutex);
 	
@@ -459,21 +473,13 @@ MM_ParallelDispatcher::prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *t
 	 */
 	_slaveThreadsReservedForGC = true; 
 
-	if (!_extensions->isMetronomeGC()) {
-		/* Metronome recomputes the number of GC threads at the beginning of
-		 * a GC cycle. It may not be safe to do so at the beginning of a task
-		 */	
-		recomputeActiveThreadCount(env);
-	}
-
-	task->setThreadCount(_activeThreadCount);
 	task->setSynchronizeMutex(_synchronizeMutex);
 	
-	for(uintptr_t index=0; index < _activeThreadCount; index++) {
+	for(uintptr_t index=0; index < threadCount; index++) {
 		_statusTable[index] = slave_status_reserved;
 		_taskTable[index] = task;
 	}
-	wakeUpThreads(_activeThreadCount);
+	wakeUpThreads(threadCount);
 	omrthread_monitor_exit(_slaveThreadMutex);
 }
 

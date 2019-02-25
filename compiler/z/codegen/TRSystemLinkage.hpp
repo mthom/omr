@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2016 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -24,17 +24,17 @@
 
 #include "codegen/TRzOSSystemLinkageBase.hpp"
 
-#include <stdint.h>                               // for uint32_t, int32_t, etc
+#include <stdint.h>
 #include "codegen/Linkage.hpp"
 #include "codegen/LinkageConventionsEnum.hpp"
 #include "codegen/RealRegister.hpp"
-#include "codegen/Register.hpp"                   // for Register
-#include "codegen/SystemLinkage.hpp"              // for SystemLinkage
-#include "cs2/arrayof.h"                          // for ArrayOf
-#include "env/TRMemory.hpp"                       // for GlobalAllocator
-#include "env/jittypes.h"                         // for intptrj_t
-#include "il/DataTypes.hpp"                       // for DataTypes
-#include "il/SymbolReference.hpp"                 // for SymbolReference
+#include "codegen/Register.hpp"
+#include "codegen/SystemLinkage.hpp"
+#include "cs2/arrayof.h"
+#include "env/TRMemory.hpp"
+#include "env/jittypes.h"
+#include "il/DataTypes.hpp"
+#include "il/SymbolReference.hpp"
 
 class TR_EntryPoint;
 namespace TR { class S390ConstantDataSnippet; }
@@ -98,7 +98,7 @@ public:
 
    virtual TR::RealRegister::RegNum setEnvironmentPointerRegister (TR::RealRegister::RegNum r) { return _environmentPointerRegister = r; }
    virtual TR::RealRegister::RegNum getEnvironmentPointerRegister() { return _environmentPointerRegister; }
-   virtual TR::RealRegister *getEnvironmentPointerRealRegister() {return getS390RealRegister(_environmentPointerRegister);}
+   virtual TR::RealRegister *getEnvironmentPointerRealRegister() {return getRealRegister(_environmentPointerRegister);}
 
    virtual int32_t getRegisterSaveOffset(TR::RealRegister::RegNum);
 
@@ -119,32 +119,6 @@ public:
    static uint32_t getFloatParmDescriptorFlag(uint32_t descriptorFields, int32_t floatParmNum)  { return  (descriptorFields >> (6*(3-floatParmNum))) & 0x3F; }
    uint32_t calculateReturnValueAdjustFlag(TR::DataType dataType, int32_t aggregateLength);
    static uint32_t isFloatDescriptorFlagUnprototyped(uint32_t flag)  { return flag == 0; }
-
-   virtual bool isEnvironmentSpecialArgumentRegister(int8_t linkageRegisterIndex)
-     {
-     bool result = isSpecialArgumentRegisters() &&
-                   (linkageRegisterIndex >= TR_FirstSpecialLinkageIndex) &&
-                   (linkageRegisterIndex - TR_FirstSpecialLinkageIndex) == 0 ;
-     return result;
-     }
-
-   virtual bool isSpecialNonVolatileArgumentRegister(int8_t linkageRegisterIndex)
-      {
-      return isCAASpecialArgumentRegister(linkageRegisterIndex);
-      }
-
-   virtual bool isCAASpecialArgumentRegister(int8_t linkageRegisterIndex)
-     {
-     bool result = isSpecialArgumentRegisters() &&
-                   (linkageRegisterIndex >= TR_FirstSpecialLinkageIndex) &&
-                   (linkageRegisterIndex - TR_FirstSpecialLinkageIndex) == 1 ;
-     return result;
-     }
-
-   virtual bool isParentDSASpecialArgumentRegister(int8_t linkageRegisterIndex)
-     {
-     return false;
-     }
 
    uint32_t calculateCallDescriptorFlags(TR::Node *callNode);
 
@@ -172,7 +146,7 @@ public:
 
    virtual void setGOTPointerRegister (TR::RealRegister::RegNum r)         { _GOTPointerRegister = r; }
    virtual TR::RealRegister::RegNum getGOTPointerRegister()         { return _GOTPointerRegister; }
-   virtual TR::RealRegister *getGOTPointerRealRegister() {return getS390RealRegister(_GOTPointerRegister);}
+   virtual TR::RealRegister *getGOTPointerRealRegister() {return getRealRegister(_GOTPointerRegister);}
    virtual int32_t getRegisterSaveOffset(TR::RealRegister::RegNum);
    virtual void initParamOffset(TR::ResolvedMethodSymbol * method, int32_t stackIndex, List<TR::ParameterSymbol> *parameterList=0);
 

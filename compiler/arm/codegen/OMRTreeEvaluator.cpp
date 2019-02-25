@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -35,8 +35,8 @@
 #include "codegen/Register.hpp"
 #include "codegen/RegisterPair.hpp"
 #include "codegen/TreeEvaluator.hpp"
-#include "compile/VirtualGuard.hpp"               // for TR_VirtualGuard
-#include "env/jittypes.h"                         // for intptrj_t
+#include "compile/VirtualGuard.hpp"
+#include "env/jittypes.h"
 #include "env/CompilerEnv.hpp"
 #include "il/Block.hpp"
 #include "il/Node.hpp"
@@ -543,7 +543,7 @@ TR::Register *OMR::ARM::TreeEvaluator::commonLoadEvaluator(TR::Node *node,  TR_A
    }
 
 #if J9_PROJECT_SPECIFIC
-TR::Register *OMR::ARM::TreeEvaluator::wrtbarEvaluator(TR::Node *node, TR::CodeGenerator *cg)
+TR::Register *OMR::ARM::TreeEvaluator::awrtbarEvaluator(TR::Node *node, TR::CodeGenerator *cg)
    {
    TR::MemoryReference *tempMR              = new (cg->trHeapMemory()) TR::MemoryReference(node, 4, cg);
    TR::Register            *destinationRegister = cg->evaluate(node->getSecondChild());
@@ -589,7 +589,7 @@ TR::Register *OMR::ARM::TreeEvaluator::wrtbarEvaluator(TR::Node *node, TR::CodeG
    return NULL;
    }
 
-TR::Register *OMR::ARM::TreeEvaluator::iwrtbarEvaluator(TR::Node *node, TR::CodeGenerator *cg)
+TR::Register *OMR::ARM::TreeEvaluator::awrtbariEvaluator(TR::Node *node, TR::CodeGenerator *cg)
    {
    TR::MemoryReference *tempMR              = new (cg->trHeapMemory()) TR::MemoryReference(node, 4, cg);
    TR::Register            *destinationRegister = cg->evaluate(node->getChild(2));
@@ -1362,8 +1362,10 @@ TR::Register *OMR::ARM::TreeEvaluator::BBStartEvaluator(TR::Node *node, TR::Code
    TR::Node * fenceNode = TR::Node::createRelative32BitFenceNode(node, &block->getInstructionBoundaries()._startPC);
    TR::Instruction * fence = generateAdminInstruction(cg, ARMOp_fence, node, deps, fenceNode);
 
-   if (block->isCatchBlock() && comp->getOption(TR_FullSpeedDebug))
-      fence->setNeedsGCMap(); // a catch entry is a gc point in FSD mode
+   if (block->isCatchBlock())
+      {
+      cg->generateCatchBlockBBStartPrologue(node, fence);
+      }
 
    return NULL;
    }

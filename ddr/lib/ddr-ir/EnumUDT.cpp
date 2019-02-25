@@ -21,8 +21,11 @@
 
 #include "ddr/ir/EnumUDT.hpp"
 
+#include "ddr/ir/EnumMember.hpp"
+
 EnumUDT::EnumUDT(unsigned int lineNumber)
 	: UDT(4, lineNumber)
+	, _enumMembers()
 {
 }
 

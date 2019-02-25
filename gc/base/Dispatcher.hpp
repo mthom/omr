@@ -54,11 +54,13 @@ private:
 	
 protected:
 	bool initialize(MM_EnvironmentBase *env);
-
-	virtual void prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task);
+	
+	virtual void prepareThreadsForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t threadCount);
 	virtual void acceptTask(MM_EnvironmentBase *env);
 	virtual void completeTask(MM_EnvironmentBase *env);
 	virtual void cleanupAfterTask(MM_EnvironmentBase *env);
+
+	virtual uintptr_t recomputeActiveThreadCountForTask(MM_EnvironmentBase *env, MM_Task *task, uintptr_t newThreadCount);
 
 public:
 	static MM_Dispatcher *newInstance(MM_EnvironmentBase *env);

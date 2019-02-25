@@ -97,6 +97,15 @@ DwarfScanner::getSourcelist(Dwarf_Die die)
 	_fileNamesTable = NULL;
 	_fileNameCount = 0;
 
+	/* Get the dwarf source file names. */
+	if (DW_DLV_ERROR == dwarf_srcfiles(die, &_fileNamesTable, &_fileNameCount, &error)) {
+		ERRMSG("Failed to get list of source files: %s\n", dwarf_errmsg(error));
+		goto Done;
+	} else if (_fileNameCount < 0) {
+		ERRMSG("List of source files has negative length: %lld\n", _fileNameCount);
+		goto Done;
+	}
+
 	if (!hasAttr) {
 		/* The DIE didn't have a compilationDirectory attribute so we can skip
 		 * over getting the absolute paths from the relative paths.  AIX does
@@ -104,15 +113,6 @@ DwarfScanner::getSourcelist(Dwarf_Die die)
 		 */
 		goto Done;
 	} else {
-		/* Get the dwarf source file names. */
-		if (DW_DLV_ERROR == dwarf_srcfiles(die, &_fileNamesTable, &_fileNameCount, &error)) {
-			ERRMSG("Failed to get list of source files: %s\n", dwarf_errmsg(error));
-			goto Done;
-		} else if (_fileNameCount < 0) {
-			ERRMSG("List of source files has negative length: %lld\n", _fileNameCount);
-			goto Done;
-		}
-
 		/* Get the CU directory. */
 		if (DW_DLV_ERROR == dwarf_attr(die, DW_AT_comp_dir, &attr, &error)) {
 			ERRMSG("Getting compilation directory attribute: %s\n", dwarf_errmsg(error));
@@ -463,10 +463,10 @@ DwarfScanner::getTypeInfo(Dwarf_Die die, Dwarf_Die *dieOut, string *typeName, Mo
 							break;
 						}
 						/* New array length is upperBound + 1. */
-						modifiers->_arrayLengths.push_back(upperBound + 1);
+						modifiers->addArrayDimension(upperBound + 1);
 					} else {
 						/* Arrays declared as "[]" have no size attributes. */
-						modifiers->_arrayLengths.push_back(0);
+						modifiers->addArrayDimension(0);
 					}
 				} while (DDR_RC_OK == getNextSibling(&child));
 				dwarf_dealloc(_debug, child, DW_DLA_DIE);
@@ -673,7 +673,7 @@ DwarfScanner::addDieToIR(Dwarf_Die die, Dwarf_Half tag, NamespaceUDT *outerUDT, 
 
 	rc = getOrCreateNewType(die, tag, &newType, outerUDT, &isNewType);
 
-	if ((DDR_RC_OK == rc) && isNewType) {
+	if ((DDR_RC_OK == rc) && isNewType && (NULL == outerUDT)) {
 		rc = blackListedDie(die, &dieBlackListed);
 	}
 
@@ -1182,15 +1182,21 @@ DwarfScanner::addClassField(Dwarf_Die die, ClassType *newClass, const string &fi
 
 		if (!newField->_isStatic) {
 			/* Get the offset (member_location) attribute. */
-			Dwarf_Bool hasAttr = false;
-			if (DW_DLV_ERROR == dwarf_hasattr(die, DW_AT_data_member_location, &hasAttr, &error)) {
+			Dwarf_Bool hasAttrBytes = false;
+			if (DW_DLV_ERROR == dwarf_hasattr(die, DW_AT_data_member_location, &hasAttrBytes, &error)) {
 				ERRMSG("Checking if die has offset attribute: %s\n", dwarf_errmsg(error));
 				goto AddUDTFieldDone;
 			}
-			if (hasAttr) {
+			Dwarf_Bool hasAttrBits = false;
+			if (DW_DLV_ERROR == dwarf_hasattr(die, DW_AT_data_bit_offset, &hasAttrBits, &error)) {
+				ERRMSG("Checking if die has bit offset attribute: %s\n", dwarf_errmsg(error));
+				goto AddUDTFieldDone;
+			}
+			if (hasAttrBytes || hasAttrBits) {
 				Dwarf_Attribute attr = NULL;
 				Dwarf_Unsigned offset = 0;
-				if (DW_DLV_ERROR == dwarf_attr(die, DW_AT_data_member_location, &attr, &error)) {
+				Dwarf_Half attrType = hasAttrBytes ? DW_AT_data_member_location : DW_AT_data_bit_offset;
+				if (DW_DLV_ERROR == dwarf_attr(die, attrType, &attr, &error)) {
 					ERRMSG("Getting offset attribute: %s\n", dwarf_errmsg(error));
 					goto AddUDTFieldDone;
 				}
@@ -1200,7 +1206,7 @@ DwarfScanner::addClassField(Dwarf_Die die, ClassType *newClass, const string &fi
 					ERRMSG("Getting value of offset attribute: %s\n", dwarf_errmsg(error));
 					goto AddUDTFieldDone;
 				}
-				newField->_offset = offset;
+				newField->_offset = hasAttrBytes ? offset : (offset / 8);
 			} else if ("union" != newClass->getSymbolKindName()) {
 				ERRMSG("Missing offset attribute for %s.%s\n", newClass->_name.c_str(), fieldName.c_str());
 				goto AddUDTFieldDone;

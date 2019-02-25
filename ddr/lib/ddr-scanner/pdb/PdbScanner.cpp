@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2015, 2018 IBM Corp. and others
+ * Copyright (c) 2015, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -143,7 +143,7 @@ PdbScanner::startScan(OMRPortLibrary *portLibrary, Symbol_IR *ir, vector<string>
 			const size_t len = file.length();
 			wchar_t *filename = new wchar_t[len + 1];
 			mbstowcs(filename, file.c_str(), len + 1);
-			rc = loadDataFromPdb(filename, &diaDataSource, &diaSession, &diaSymbol);
+			rc = loadDataFromBinary(filename, &diaDataSource, &diaSession, &diaSymbol);
 
 			if (DDR_RC_OK == rc) {
 				rc = addChildrenSymbols(diaSymbol, SymTagUDT, NULL);
@@ -189,9 +189,18 @@ PdbScanner::startScan(OMRPortLibrary *portLibrary, Symbol_IR *ir, vector<string>
 }
 
 DDR_RC
-PdbScanner::loadDataFromPdb(const wchar_t *filename, IDiaDataSource **dataSource, IDiaSession **session, IDiaSymbol **symbol)
+PdbScanner::loadDataFromBinary(const wchar_t *filename, IDiaDataSource **dataSource, IDiaSession **session, IDiaSymbol **symbol)
 {
 	DDR_RC rc = DDR_RC_OK;
+	bool isPDBFile = false;
+	/*  get location of the file extension */
+	const wchar_t *fileExtension = wcsrchr(filename, L'.');
+
+	/* check if file extension is '.pdb' */
+	if ((NULL!= fileExtension) && (0 == wcscmp(fileExtension, L".pdb"))){
+		isPDBFile = true;
+	}
+
 	/* Attemt to co-create the DiaSource instance. On failure to find the required
 	 * dll, instead attempt to find and load the dll first.
 	 */
@@ -231,9 +240,13 @@ PdbScanner::loadDataFromPdb(const wchar_t *filename, IDiaDataSource **dataSource
 	}
 
 	if (DDR_RC_OK == rc) {
-		hr = (*dataSource)->loadDataFromPdb(filename);
+		if(isPDBFile){
+			hr = (*dataSource)->loadDataFromPdb(filename);
+		} else {
+			hr = (*dataSource)->loadDataForExe(filename, NULL, NULL);
+		}
 		if (FAILED(hr)) {
-			ERRMSG("loadDataFromPdb() failed for file with HRESULT = %08lX. Ensure the input is a pdb and not an exe.\nFile: %ls", hr, filename);
+			ERRMSG("loadDataFromPdb() failed for file with HRESULT = %08lX.\nFile: %ls", hr, filename);
 			rc = DDR_RC_ERROR;
 		}
 	}
@@ -277,6 +290,7 @@ PdbScanner::updatePostponedFieldNames()
 			(*type)->_blacklisted = checkBlacklistedType((*type)->_name);
 		}
 	}
+	_postponedFields.clear();
 
 	return rc;
 }
@@ -399,7 +413,10 @@ PdbScanner::createTypedef(IDiaSymbol *symbol, NamespaceUDT *outerNamespace)
 		/* Get the base type. */
 		rc = setType(symbol, &newTypedef->_aliasedType, &newTypedef->_modifiers, NULL);
 		if (DDR_RC_OK == rc) {
-			newTypedef->_sizeOf = newTypedef->_aliasedType->_sizeOf;
+			Type *aliasedType = newTypedef->_aliasedType;
+			if (NULL != aliasedType) {
+				newTypedef->_sizeOf = aliasedType->_sizeOf;
+			}
 			addType(newTypedef, outerNamespace);
 		} else {
 			delete newTypedef;
@@ -546,7 +563,8 @@ PdbScanner::createEnumUDT(IDiaSymbol *symbol, NamespaceUDT *outerNamespace)
 			} else {
 				fullName = outerNamespace->getFullName() + "::" + name;
 			}
-			if (_typeMap.end() == _typeMap.find(fullName)) {
+			unordered_map<string, Type *>::const_iterator it = _typeMap.find(fullName);
+			if (_typeMap.end() == it) {
 				/* If this is a new enum, get its members and add it to the IR. */
 				EnumUDT *enumUDT = new EnumUDT;
 				enumUDT->_name = name;
@@ -561,13 +579,16 @@ PdbScanner::createEnumUDT(IDiaSymbol *symbol, NamespaceUDT *outerNamespace)
 					delete enumUDT;
 				}
 			} else {
-				EnumUDT *enumUDT = (EnumUDT *)getType(fullName);
-				if ((NULL != outerNamespace) && (NULL == enumUDT->_outerNamespace)) {
-					enumUDT->_outerNamespace = outerNamespace;
-					outerNamespace->_subUDTs.push_back(enumUDT);
-				}
-				if (enumUDT->_enumMembers.empty()) {
-					rc = addEnumMembers(symbol, enumUDT);
+				Type *existingType = it->second;
+				if ("enum" == existingType->getSymbolKindName()) {
+					EnumUDT *enumUDT = (EnumUDT *)existingType;
+					if ((NULL != outerNamespace) && (NULL == enumUDT->_outerNamespace)) {
+						enumUDT->_outerNamespace = outerNamespace;
+						outerNamespace->_subUDTs.push_back(enumUDT);
+					}
+					if (enumUDT->_enumMembers.empty()) {
+						rc = addEnumMembers(symbol, enumUDT);
+					}
 				}
 			}
 		}
@@ -1128,7 +1149,7 @@ PdbScanner::setSuperClassName(IDiaSymbol *symbol, ClassUDT *newUDT)
 
 	if (DDR_RC_OK == rc) {
 		/* Find the superclass UDT from the map by size and name.
-		 * If its not found, add it to a list to check later.
+		 * If it's not found, add it to a list to check later.
 		 */
 		if (!name.empty()) {
 			unordered_map<string, Type *>::const_iterator map_it = _typeMap.find(name);

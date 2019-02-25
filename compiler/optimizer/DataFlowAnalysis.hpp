@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -22,23 +22,23 @@
 #ifndef DFA_INCL
 #define DFA_INCL
 
-#include <stddef.h>                              // for NULL, size_t
-#include <stdint.h>                              // for int32_t, int8_t, etc
-#include "compile/Compilation.hpp"               // for Compilation
+#include <stddef.h>
+#include <stdint.h>
+#include "compile/Compilation.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
-#include "env/TRMemory.hpp"                      // for TR_Memory, etc
-#include "il/Node.hpp"                           // for Node, vcount_t
-#include "infra/Array.hpp"                       // for TR_Array
-#include "infra/Assert.hpp"                      // for TR_ASSERT
-#include "infra/BitVector.hpp"                   // for TR_BitVector
-#include "infra/Flags.hpp"                       // for flags16_t, flags8_t
-#include "infra/HashTab.hpp"                     // for TR_HashTab
+#include "env/TRMemory.hpp"
+#include "il/Node.hpp"
+#include "infra/Array.hpp"
+#include "infra/Assert.hpp"
+#include "infra/BitVector.hpp"
+#include "infra/Flags.hpp"
+#include "infra/HashTab.hpp"
 #include "infra/Link.hpp"
-#include "infra/List.hpp"                        // for List, etc
+#include "infra/List.hpp"
 #include "optimizer/Structure.hpp"
 #include "optimizer/LocalAnalysis.hpp"
-#include "optimizer/UseDefInfo.hpp"     // for TR_UseDefInfo, etc
+#include "optimizer/UseDefInfo.hpp"
 
 class Candidate;
 class FlushCandidate;
@@ -56,8 +56,6 @@ class TR_Latestness;
 class TR_LiveOnAllPaths;
 class TR_Liveness;
 class TR_RedundantExpressionAdjustment;
-class TR_RegisterAnticipatability;
-class TR_RegisterAvailability;
 namespace TR { class Block; }
 namespace TR { class CFG; }
 namespace TR { class CFGEdge; }
@@ -186,8 +184,6 @@ class TR_DataFlowAnalysis
    virtual TR_Liveness *asLiveness();
    virtual TR_LiveOnAllPaths *asLiveOnAllPaths();
    virtual TR_FlowSensitiveEscapeAnalysis *asFlowSensitiveEscapeAnalysis();
-   virtual TR_RegisterAnticipatability *asRegisterAnticipatability();
-   virtual TR_RegisterAvailability *asRegisterAvailability();
 
    void addToAnalysisQueue(TR_StructureSubGraphNode *, uint8_t);
    void removeHeadFromAnalysisQueue();
@@ -950,59 +946,6 @@ class TR_FlowSensitiveEscapeAnalysis : public TR_IntersectionBitVectorAnalysis
    List<TR_CFGEdgeAllocationPair> _flushEdges;
    List<TR::CFGNode> _splitBlocks;
    //TR_ScratchList<TR_DependentAllocations> _dependentAllocations;
-   };
-
-// First dataflow analysis for Shrink Wrapping
-//
-class TR_RegisterAnticipatability : public TR_BackwardIntersectionBitVectorAnalysis
-   {
-   public:
-   TR_RegisterAnticipatability(TR::Compilation *comp, TR::Optimizer *optimizer, TR_Structure *, TR_BitVector **, bool trace = false);
-
-   virtual Kind getKind();
-
-   virtual int32_t getNumberOfBits();
-   virtual void analyzeNode(TR::Node *, vcount_t, TR_BlockStructure *, TR_BitVector *);
-   virtual TR_RegisterAnticipatability *asRegisterAnticipatability();
-   // actually a misnomer for this analysis because there aren't any
-   // treetops to analyze by now
-   //
-   virtual void analyzeTreeTopsInBlockStructure(TR_BlockStructure *);
-   virtual bool postInitializationProcessing();
-
-   void initializeRegisterUsageInfo();
-
-   TR_BitVector **_outSetInfo;
-
-   private:
-   TR_BitVector **_registerUsageInfo;
-   };
-
-// Second dataflow analysis for Shrink Wrapping
-//
-class TR_RegisterAvailability : public TR_IntersectionBitVectorAnalysis
-   {
-   public:
-   TR_RegisterAvailability(TR::Compilation *comp, TR::Optimizer *optimizer, TR_Structure *, TR_BitVector **, bool trace = false);
-
-   virtual Kind getKind();
-
-   virtual int32_t getNumberOfBits();
-   virtual void analyzeNode(TR::Node *, vcount_t, TR_BlockStructure *, TR_BitVector *);
-   virtual TR_RegisterAvailability *asRegisterAvailability();
-   virtual void analyzeBlockZeroStructure(TR_BlockStructure *);
-   // again a misnomer for this analysis because there aren't any
-   // treetops to analyze by now
-   //
-   virtual void analyzeTreeTopsInBlockStructure(TR_BlockStructure *);
-   virtual bool postInitializationProcessing();
-
-   void initializeRegisterUsageInfo();
-
-   TR_BitVector **_inSetInfo;
-
-   private:
-   TR_BitVector **_registerUsageInfo;
    };
 
 #endif

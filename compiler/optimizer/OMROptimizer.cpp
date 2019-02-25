@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,19 +21,19 @@
 
 #include "optimizer/Optimizer.hpp"
 
-#include <limits.h>                                      // for INT_MAX
-#include <stddef.h>                                      // for size_t
-#include <stdint.h>                                      // for int32_t, etc
-#include <stdlib.h>                                      // for atoi
-#include <string.h>                                      // for NULL, etc
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include "codegen/CodeGenerator.hpp"
-#include "codegen/FrontEnd.hpp"                          // for TR_FrontEnd, etc
-#include "compile/Compilation.hpp"                       // for Compilation
-#include "compile/CompilationTypes.hpp"                  // for TR_Hotness, etc
-#include "compile/Method.hpp"                            // for TR_Method
+#include "codegen/FrontEnd.hpp"
+#include "compile/Compilation.hpp"
+#include "compile/CompilationTypes.hpp"
+#include "compile/Method.hpp"
 #include "compile/SymbolReferenceTable.hpp"
 #include "control/Options.hpp"
-#include "control/Options_inlines.hpp"                   // for TR::Options, etc
+#include "control/Options_inlines.hpp"
 #include "control/Recompilation.hpp"
 #ifdef J9_PROJECT_SPECIFIC
 #include "control/RecompilationInfo.hpp"
@@ -42,26 +42,26 @@
 #include "env/IO.hpp"
 #include "env/PersistentInfo.hpp"
 #include "env/StackMemoryRegion.hpp"
-#include "env/TRMemory.hpp"                              // for TR_Memory, etc
+#include "env/TRMemory.hpp"
 #include "env/jittypes.h"
-#include "il/Block.hpp"                                  // for Block
+#include "il/Block.hpp"
 #include "il/DataTypes.hpp"
 #include "il/ILOpCodes.hpp"
-#include "il/ILOps.hpp"                                  // for TR::ILOpCode, etc
-#include "il/Node.hpp"                                   // for Node, etc
-#include "il/NodePool.hpp"                               // for TR::NodePool
+#include "il/ILOps.hpp"
+#include "il/Node.hpp"
+#include "il/NodePool.hpp"
 #include "il/Node_inlines.hpp"
-#include "il/Symbol.hpp"                                 // for Symbol
+#include "il/Symbol.hpp"
 #include "il/SymbolReference.hpp"
-#include "il/TreeTop.hpp"                                // for TreeTop
+#include "il/TreeTop.hpp"
 #include "il/TreeTop_inlines.hpp"
 #include "il/symbol/ResolvedMethodSymbol.hpp"
-#include "infra/Assert.hpp"                              // for TR_ASSERT
+#include "infra/Assert.hpp"
 #include "infra/BitVector.hpp"
-#include "infra/Cfg.hpp"                                 // for CFG
-#include "infra/List.hpp"                                // for List, etc
+#include "infra/Cfg.hpp"
+#include "infra/List.hpp"
 #include "infra/SimpleRegex.hpp"
-#include "infra/CfgNode.hpp"                             // for CFGNode
+#include "infra/CfgNode.hpp"
 #include "infra/Timer.hpp"
 #include "optimizer/LoadExtensions.hpp"
 #include "optimizer/Optimization.hpp"
@@ -81,7 +81,7 @@
 #include "optimizer/CopyPropagation.hpp"
 #include "optimizer/ExpressionsSimplification.hpp"
 #include "optimizer/GeneralLoopUnroller.hpp"
-#include "optimizer/LocalCSE.hpp"                   // for LocalCSE
+#include "optimizer/LocalCSE.hpp"
 #include "optimizer/LocalDeadStoreElimination.hpp"
 #include "optimizer/LocalLiveRangeReducer.hpp"
 #include "optimizer/LocalOpts.hpp"
@@ -92,11 +92,10 @@
 #include "optimizer/LoopVersioner.hpp"
 #include "optimizer/OrderBlocks.hpp"
 #include "optimizer/RedundantAsyncCheckRemoval.hpp"
-#include "optimizer/ShrinkWrapping.hpp"
 #include "optimizer/Simplifier.hpp"
 #include "optimizer/VirtualGuardCoalescer.hpp"
 #include "optimizer/VirtualGuardHeadMerger.hpp"
-#include "optimizer/Inliner.hpp" // for OMR_InlinerPolicy
+#include "optimizer/Inliner.hpp"
 #include "ras/Debug.hpp"
 #include "optimizer/InductionVariable.hpp"
 #include "optimizer/GlobalValuePropagation.hpp"
@@ -111,6 +110,7 @@
 #include "optimizer/ReorderIndexExpr.hpp"
 #include "optimizer/GlobalRegisterAllocator.hpp"
 #include "optimizer/RecognizedCallTransformer.hpp"
+#include "optimizer/SwitchAnalyzer.hpp"
 #include "env/RegionProfiler.hpp"
 
 #if defined (_MSC_VER) && _MSC_VER < 1900
@@ -358,6 +358,7 @@ const OptimizationStrategy earlyLocalOpts[] =
    { localValuePropagation                },
    //{ localValuePropagationGroup           },
    { localReordering                      },
+   { switchAnalyzer,                      },
    { treeSimplification,        IfEnabled }, // simplify any exprs created by LCP/LCSE
 #ifdef J9_PROJECT_SPECIFIC
    { catchBlockRemoval                    }, // if all possible exceptions in a try were removed by inlining/LCP/LCSE
@@ -489,9 +490,6 @@ const OptimizationStrategy lateLocalOpts[] =
    { OMR::globalDeadStoreGroup,                    },
    { OMR::eachLocalAnalysisPassGroup               },
    { OMR::treeSimplification                       },
-#ifdef TR_HOST_S390
-   { OMR::longRegAllocation                        },
-#endif
    { OMR::endGroup                                 }
    };
 
@@ -799,8 +797,6 @@ OMR::Optimizer::Optimizer(TR::Compilation *comp, TR::ResolvedMethodSymbol *metho
       new (comp->allocator()) TR::OptimizationManager(self(), TR_LocalLiveRangeReduction::create, OMR::localLiveRangeReduction);
    _opts[OMR::localReordering] =
       new (comp->allocator()) TR::OptimizationManager(self(), TR_LocalReordering::create, OMR::localReordering);
-   _opts[OMR::longRegAllocation] =
-      new (comp->allocator()) TR::OptimizationManager(self(), TR_LongRegAllocation::create, OMR::longRegAllocation);
    _opts[OMR::loopCanonicalization] =
       new (comp->allocator()) TR::OptimizationManager(self(), TR_LoopCanonicalizer::create, OMR::loopCanonicalization);
    _opts[OMR::loopVersioner] =
@@ -817,8 +813,6 @@ OMR::Optimizer::Optimizer(TR::Compilation *comp, TR::ResolvedMethodSymbol *metho
       new (comp->allocator()) TR::OptimizationManager(self(), TR_EliminateRedundantGotos::create, OMR::redundantGotoElimination);
    _opts[OMR::rematerialization] =
       new (comp->allocator()) TR::OptimizationManager(self(), TR_Rematerialization::create, OMR::rematerialization);
-   _opts[OMR::shrinkWrapping] =
-      new (comp->allocator()) TR::OptimizationManager(self(), TR_ShrinkWrap::create, OMR::shrinkWrapping);
    _opts[OMR::treesCleansing] =
       new (comp->allocator()) TR::OptimizationManager(self(), TR_CleanseTrees::create, OMR::treesCleansing);
    _opts[OMR::treeSimplification] =
@@ -871,6 +865,8 @@ OMR::Optimizer::Optimizer(TR::Compilation *comp, TR::ResolvedMethodSymbol *metho
       new (comp->allocator()) TR::OptimizationManager(self(), TR_LoopSpecializer::create, OMR::loopSpecializer);
    _opts[OMR::recognizedCallTransformer] =
       new (comp->allocator()) TR::OptimizationManager(self(), TR::RecognizedCallTransformer::create, OMR::recognizedCallTransformer);
+   _opts[OMR::switchAnalyzer] =
+      new (comp->allocator()) TR::OptimizationManager(self(), TR::SwitchAnalyzer::create, OMR::switchAnalyzer);
 
    // NOTE: Please add new OMR optimizations here!
 
@@ -2334,31 +2330,6 @@ bool OMR::Optimizer::prepareForNodeRemoval(TR::Node *node , bool deferInvalidati
             useDefInfoAreInvalid = true;
       }
    return useDefInfoAreInvalid;
-   }
-
-void OMR::Optimizer::performVeryLateOpts()
-   {
-   // perform shrinkWrapping here
-   // possibly other late opts in the future
-   //
-   bool trace = comp()->getOption(TR_TraceOptDetails) || comp()->getOption(TR_TraceOptTrees);
-   if (!comp()->getOption(TR_DisableShrinkWrapping))
-      {
-      if (!comp()->getFlowGraph()->getStructure())
-         {
-         if (trace)
-            traceMsg(comp(), "   (Doing Structural Analysis)\n");
-         doStructuralAnalysis();
-         }
-      if (trace)
-         traceMsg(comp(), "\nPerforming shrinkWrapping\n");
-      TR::OptimizationManager *manager = getOptimization(shrinkWrapping);
-      TR_ASSERT(manager, "Shrink wrapping optimization should be initialized.");
-      TR::Optimization *opt = manager->factory()(manager);
-      opt->prePerform();
-      opt->perform();
-      opt->postPerform();
-      }
    }
 
 void OMR::Optimizer::getStaticFrequency(TR::Block *block, int32_t *currentWeight)

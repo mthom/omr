@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2017 IBM Corp. and others
+ * Copyright (c) 1991, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -71,8 +71,7 @@ typedef WRAPPER_TYPE (*WRAPPER_FUNC)(WRAPPER_ARG);
 #include <semaphore.h>
 typedef sem_t OSSEMAPHORE;
 #elif defined(OSX) /* defined(LINUX) || defined(AIXPPC) */
-#include <dispatch/dispatch.h>
-typedef dispatch_semaphore_t OSSEMAPHORE;
+typedef semaphore_t OSSEMAPHORE;
 #elif defined(J9ZOS390) /* defined(OSX) */
 typedef struct zos_sem_t {
 	int count;
@@ -336,11 +335,10 @@ extern pthread_condattr_t *defaultCondAttr;
 
 #if defined(LINUX) || defined(AIXPPC)
 #define SEM_INIT(sm, pshrd, inval)	\
-	(sem_init((sem_t*)(sm), pshrd, inval))
+	(sem_init((sem_t *)(sm), pshrd, inval))
 #elif defined(OSX)
-intptr_t dispatch_semaphore_init(j9sem_t s, int initValue);
 #define SEM_INIT(sm, pshrd, inval)	\
-	(dispatch_semaphore_init((sm),(inval)))
+	(semaphore_create(mach_task_self(), (semaphore_t *)(sm), SYNC_POLICY_FIFO, inval))
 #elif defined(J9ZOS390)
 #define SEM_INIT(sm,pshrd,inval)  (sem_init_zos(sm, pshrd, inval))
 #else /* defined(J9ZOS390) */
@@ -350,7 +348,10 @@ intptr_t dispatch_semaphore_init(j9sem_t s, int initValue);
 
 #if defined(LINUX) || defined(AIXPPC)
 #define SEM_DESTROY(sm)	\
-	(sem_destroy((sem_t*)(sm)))
+	(sem_destroy((sem_t *)(sm)))
+#elif defined(OSX)
+#define SEM_DESTROY(sm)	\
+	(semaphore_destroy(mach_task_self(), *(semaphore_t *)(sm)))
 #elif defined(J9ZOS390)
 #define SEM_DESTROY(sm)	\
 	(sem_destroy_zos(sm))
@@ -368,10 +369,10 @@ intptr_t dispatch_semaphore_init(j9sem_t s, int initValue);
 
 #if defined(LINUX) || defined(AIXPPC)
 #define SEM_POST(smP)	\
-	(sem_post((sem_t*)(smP)))
+	(sem_post((sem_t *)(smP)))
 #elif defined(OSX)
 #define SEM_POST(smP)	\
-	(dispatch_semaphore_signal((dispatch_semaphore_t)(smP)))
+	(semaphore_signal(*(semaphore_t *)(smP)))
 #elif defined(J9ZOS390)
 #define SEM_POST(smP)   (sem_post_zos(smP))
 #else
@@ -381,10 +382,10 @@ intptr_t dispatch_semaphore_init(j9sem_t s, int initValue);
 
 #if defined(LINUX) || defined(AIXPPC)
 #define SEM_WAIT(smP)	\
-	(sem_wait((sem_t*)(smP)))
+	(sem_wait((sem_t *)(smP)))
 #elif defined(OSX)
 #define SEM_WAIT(smP)	\
-	(dispatch_semaphore_wait((dispatch_semaphore_t)(smP), DISPATCH_TIME_FOREVER))
+	(semaphore_wait(*(semaphore_t *)(smP)))
 #elif defined(J9ZOS390)
 #define SEM_WAIT(smP)           (sem_wait_zos(smP))
 #else

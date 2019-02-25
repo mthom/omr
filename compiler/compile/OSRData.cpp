@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2016 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,31 +21,31 @@
 
 #include "compile/OSRData.hpp"
 
-#include <algorithm>                           // for std::max
-#include <stdint.h>                            // for int32_t, uint32_t
-#include <stdio.h>                             // for NULL, sprintf
+#include <algorithm>
+#include <stdint.h>
+#include <stdio.h>
 #include "codegen/CodeGenerator.hpp"
-#include "codegen/FrontEnd.hpp"                // for TR_FrontEnd, etc
-#include "codegen/Instruction.hpp"             // for Instruction
-#include "compile/Compilation.hpp"             // for Compilation
-#include "compile/ResolvedMethod.hpp"          // for TR_ResolvedMethod
-#include "compile/SymbolReferenceTable.hpp"    // for SymbolReferenceTable
+#include "codegen/FrontEnd.hpp"
+#include "codegen/Instruction.hpp"
+#include "compile/Compilation.hpp"
+#include "compile/ResolvedMethod.hpp"
+#include "compile/SymbolReferenceTable.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
-#include "env/ObjectModel.hpp"                 // for ObjectModel
+#include "env/ObjectModel.hpp"
 #include "env/StackMemoryRegion.hpp"
-#include "env/jittypes.h"                      // for intptrj_t
+#include "env/jittypes.h"
 #include "env/CompilerEnv.hpp"
-#include "il/Block.hpp"                        // for Block
-#include "il/Node.hpp"                         // for Node
-#include "il/Node_inlines.hpp"                 // for getInt
-#include "il/Symbol.hpp"                       // for Symbol
-#include "il/SymbolReference.hpp"              // for SymbolReference
-#include "il/TreeTop.hpp"                      // for TreeTop
-#include "il/symbol/ResolvedMethodSymbol.hpp"  // for ResolvedMethodSymbol
-#include "infra/Assert.hpp"                    // for TR_ASSERT
-#include "infra/Cfg.hpp"                       // for CFG
-#include "infra/List.hpp"                      // for List, ListIterator
+#include "il/Block.hpp"
+#include "il/Node.hpp"
+#include "il/Node_inlines.hpp"
+#include "il/Symbol.hpp"
+#include "il/SymbolReference.hpp"
+#include "il/TreeTop.hpp"
+#include "il/symbol/ResolvedMethodSymbol.hpp"
+#include "infra/Assert.hpp"
+#include "infra/Cfg.hpp"
+#include "infra/List.hpp"
 
 TR::Compilation& operator<< (TR::Compilation& out, const TR_OSRSlotSharingInfo* osrSlotSharingInfo);
 
@@ -104,7 +104,7 @@ TR_OSRCompilationData::addInstruction(TR::Instruction* instr)
    if (comp->getOSRMode() == TR::voluntaryOSR
        && !(node
          && node->getOpCode().hasSymbolReference()
-         && node->getSymbolReference()->getReferenceNumber() == TR_induceOSRAtCurrentPC))
+         && node->getSymbolReference()->isOSRInductionHelper()))
       return;
 
    int32_t instructionPC = instr->getBinaryEncoding() - instr->cg()->getCodeStart();
@@ -1490,9 +1490,12 @@ bool TR_OSRCompilationData::TR_ScratchBufferInfo::operator==(const TR_ScratchBuf
       scratchBufferOffset == info.scratchBufferOffset && symSize == info.symSize;
    }
 
-#if defined(TR_HOST_POWER) && defined(TR_TARGET_POWER) && defined(__IBMCPP__)
+#if (defined(TR_HOST_POWER) && defined(TR_TARGET_POWER)                       \
+           || defined(TR_HOST_S390) && defined(TR_TARGET_S390))               \
+        && defined(__IBMCPP__)
 __attribute__((__noinline__))
-//This tiny function when inlined by xlC 12 at -O3 breaks java -version
+//This tiny function when inlined by xlC 12 or later at -O3 breaks java -version
+//on Power and causes intermittent crashes on z/OS with xlC 2.1.1
 #endif
 int32_t TR_OSRCompilationData::TR_ScratchBufferInfo::writeToBuffer(uint8_t* buffer) const
    {

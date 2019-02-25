@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -35,47 +35,47 @@ namespace OMR { typedef OMR::Z::CodeGenerator CodeGeneratorConnector; }
 
 #include "compiler/codegen/OMRCodeGenerator.hpp"
 
-#include <stddef.h>                                 // for size_t, NULL
-#include <stdint.h>                                 // for int32_t, etc
-#include <string.h>                                 // for memcmp
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 #include "codegen/FrontEnd.hpp"
 #include "codegen/InstOpCode.hpp"
 #include "codegen/LinkageConventionsEnum.hpp"
-#include "codegen/Machine.hpp"                      // for Machine, etc
-#include "codegen/RealRegister.hpp"                 // for RealRegister, etc
-#include "codegen/RecognizedMethods.hpp"            // for RecognizedMethod
+#include "codegen/Machine.hpp"
+#include "codegen/RealRegister.hpp"
+#include "codegen/RecognizedMethods.hpp"
 #include "codegen/RegisterConstants.hpp"
 #include "codegen/ScratchRegisterManager.hpp"
-#include "codegen/Snippet.hpp"                      // for Snippet
-#include "codegen/TreeEvaluator.hpp"                // for TreeEvaluator
-#include "compile/Compilation.hpp"                  // for Compilation, etc
+#include "codegen/Snippet.hpp"
+#include "codegen/TreeEvaluator.hpp"
+#include "compile/Compilation.hpp"
 #include "compile/ResolvedMethod.hpp"
 #include "control/Options.hpp"
-#include "control/Options_inlines.hpp"              // for TR::Options, etc
-#include "cs2/arrayof.h"                            // for ArrayOf, etc
-#include "cs2/hashtab.h"                            // for HashTable, etc
+#include "control/Options_inlines.hpp"
+#include "cs2/arrayof.h"
+#include "cs2/hashtab.h"
 #include "env/CompilerEnv.hpp"
-#include "env/CPU.hpp"                              // for Cpu
-#include "env/jittypes.h"                           // for uintptrj_t
-#include "env/PersistentInfo.hpp"                   // for PersistentInfo
-#include "env/Processors.hpp"                       // for TR_Processor
-#include "env/TRMemory.hpp"                         // for Allocator, etc
-#include "il/Block.hpp"                             // for Block
-#include "il/DataTypes.hpp"                         // for DataTypes, etc
-#include "il/ILOpCodes.hpp"                         // for ILOpCodes, etc
-#include "il/ILOps.hpp"                             // for TR::ILOpCode, etc
-#include "il/Node.hpp"                              // for Node, etc
+#include "env/CPU.hpp"
+#include "env/jittypes.h"
+#include "env/PersistentInfo.hpp"
+#include "env/Processors.hpp"
+#include "env/TRMemory.hpp"
+#include "il/Block.hpp"
+#include "il/DataTypes.hpp"
+#include "il/ILOpCodes.hpp"
+#include "il/ILOps.hpp"
+#include "il/Node.hpp"
 #include "il/Node_inlines.hpp"
-#include "il/TreeTop.hpp"                           // for TreeTop
-#include "il/TreeTop_inlines.hpp"                   // for TreeTop::getNode
+#include "il/TreeTop.hpp"
+#include "il/TreeTop_inlines.hpp"
 #include "il/symbol/ResolvedMethodSymbol.hpp"
-#include "infra/Array.hpp"                          // for TR_Array
-#include "infra/Assert.hpp"                         // for TR_ASSERT
-#include "infra/BitVector.hpp"                      // for TR_BitVector
-#include "infra/Flags.hpp"                          // for flags32_t
-#include "infra/List.hpp"                           // for List
+#include "infra/Array.hpp"
+#include "infra/Assert.hpp"
+#include "infra/BitVector.hpp"
+#include "infra/Flags.hpp"
+#include "infra/List.hpp"
 #include "optimizer/DataFlowAnalysis.hpp"
-#include "ras/Debug.hpp"                            // for TR_DebugBase
+#include "ras/Debug.hpp"
 #include "runtime/Runtime.hpp"
 #include "env/IO.hpp"
 
@@ -95,12 +95,9 @@ namespace TR { class S390ConstantDataSnippet; }
 namespace TR { class S390ConstantInstructionSnippet; }
 namespace TR { class S390EyeCatcherDataSnippet; }
 namespace TR { class S390ImmInstruction; }
-namespace TR { class S390LabelTableSnippet; }
-namespace TR { class S390LookupSwitchSnippet; }
 class TR_S390OutOfLineCodeSection;
 namespace TR { class S390PrivateLinkage; }
 class TR_S390ScratchRegisterManager;
-namespace TR { class S390TargetAddressSnippet; }
 namespace TR { class S390WritableDataSnippet; }
 class TR_StorageReference;
 namespace OMR { class Linkage; }
@@ -130,17 +127,10 @@ extern int64_t getIntegralValue(TR::Node* node);
 #endif
 
 // Multi Code Cache Routines for checking whether an entry point is within reach of a BASRL.
-#define NEEDS_TRAMPOLINE(target, rip, cg) (cg->alwaysUseTrampolines() || !CHECK_32BIT_TRAMPOLINE_RANGE(target,rip))
+#define NEEDS_TRAMPOLINE(target, rip, cg) (cg->directCallRequiresTrampoline((intptrj_t)target, (intptrj_t)rip))
 
-#define TR_MAX_MVO_PRECISION 31
-#define TR_MAX_MVO_SIZE 16
-#define TR_MAX_SRP_SIZE 16
-#define TR_MAX_SRP_PRECISION 31
-#define TR_MAX_SRP_SHIFT 31
 #define TR_MAX_MVC_SIZE 256
-#define TR_MAX_OC_NC_XC_SIZE 256
 #define TR_MAX_CLC_SIZE 256
-#define TR_MAX_SS1_SIZE 256
 #define TR_MIN_SS_DISP 0
 #define TR_MAX_SS_DISP 4095
 #define TR_MIN_RX_DISP 0
@@ -152,26 +142,7 @@ extern int64_t getIntegralValue(TR::Node* node);
 #define TR_MEMCPY_PAD_EQU_LEN_INDEX 6
 #define MVCL_THRESHOLD 16777216
 
-// functional thresholds
-#define TR_MAX_FROM_TO_LOOP_STRING_SIZE (TR_MAX_SS1_SIZE)
-#define TR_MAX_FROM_TO_TABLE_STRING_SIZE 1      // i.e. only TR one byte to one byte translations supported
-#define TR_MAX_SIMD_LOOP_OPERAND_STRING_SIZE 8
-#define TR_MAX_NUM_TALLY_TRIPLES_BY_LOOP 2
-#define TR_MAX_NUM_TALLY_TRIPLES_BY_SIMD_LOOP 1
-#define TR_MAX_NUM_TRANSLATE_QUADS_BY_LOOP 1    // note: for isInspectConvertingOp operations the length of the from/to strings is the # of 'all' replaces
-#define TR_MAX_NUM_TRANSLATE_QUADS_BY_SIMD_LOOP 1
-#define TR_MAX_SEARCH_STRING_SIZE (TR_MAX_SS1_SIZE)
-#define TR_MAX_REPLACE_CHAR_STRING_SIZE 1
-#define TR_MAX_BEFORE_AFTER_SIZE 1
-
-// performance thresholds -- until SRST and similar instructions are used inline
-#define TR_MAX_REPLACE_ALL_LOOP_PERF 150              // search > 1 byte (otherwise it is table lookup)
-#define TR_MAX_TALLY_ALL_WIDE_LOOP_PERF 150           // search > 1 byte
-#define TR_MIN_BM_SEARCH_PATTERN_SIZE 4
-#define TR_MIN_BM_SEARCH_TEXT_SIZE 16
-
 #define USE_CURRENT_DFP_ROUNDING_MODE (uint8_t)0x0
-
 
 enum TR_MemCpyPadTypes
    {
@@ -181,9 +152,6 @@ enum TR_MemCpyPadTypes
    ND_TwoByte,
    InvalidType
    };
-
-#define TR_INVALID_REGISTER -1
-
 
 struct TR_S390BinaryEncodingData : public TR_BinaryEncodingData
    {
@@ -245,6 +213,17 @@ public:
    bool hasWarmCallsBeforeReturn();
 
    /**
+    * @brief Answers whether a trampoline is required for a direct call instruction to
+    *           reach a target address.
+    *
+    * @param[in] targetAddress : the absolute address of the call target
+    * @param[in] sourceAddress : the absolute address of the call instruction
+    *
+    * @return : true if a trampoline is required; false otherwise.
+    */
+   bool directCallRequiresTrampoline(intptrj_t targetAddress, intptrj_t sourceAddress);
+
+   /**
     * \brief Tells the optimzers and codegen whether a load constant node should be rematerialized.
     *
     * \details Large constants should be materialized (constant node should be commoned up)
@@ -257,17 +236,6 @@ public:
    bool shouldValueBeInACommonedNode(int64_t value);
    int64_t getLargestNegConstThatMustBeMaterialized() {return ((-1ll) << 31) - 1;}   // min 32bit signed integer minus 1
    int64_t getSmallestPosConstThatMustBeMaterialized() {return ((int64_t)0x000000007FFFFFFF) + 1;}   // max 32bit signed integer plus 1
-
-   void setNodeAddressOfCachedStaticTree(TR::Node *n) { _nodeAddressOfCachedStatic=n; }
-   TR::Node *getNodeAddressOfCachedStatic() { return _nodeAddressOfCachedStatic; }
-
-   TR::SparseBitVector & getBucketPlusIndexRegisters()  { return _bucketPlusIndexRegisters; }
-
-   // For hanging multiple loads from register symbols onto one common DEPEND
-   TR::Instruction *getCurrentDEPEND() {return _currentDEPEND; }
-   void setCurrentDEPEND(TR::Instruction *instr) { _currentDEPEND=instr; }
-
-   void changeRegisterKind(TR::Register * temp, TR_RegisterKinds rk);
 
    void beginInstructionSelection();
    void endInstructionSelection();
@@ -294,9 +262,6 @@ public:
    bool supportsInliningOfIsInstance();
    bool supports32bitAiadd() {return TR::Compiler->target.is64Bit();}
 
-   void setLabelHashTable(TR_HashTab *notPrintLabelHashTab) {_notPrintLabelHashTab = notPrintLabelHashTab;}
-   TR_HashTab * getLabelHashTable() {return _notPrintLabelHashTab;}
-
    void addPICsListForInterfaceSnippet(TR::S390ConstantDataSnippet * ifcSnippet, TR::list<TR_OpaqueClassBlock*> * PICSlist);
    TR::list<TR_OpaqueClassBlock*> * getPICsListForInterfaceSnippet(TR::S390ConstantDataSnippet * ifcSnippet);
 
@@ -312,7 +277,6 @@ public:
    void doBinaryEncoding();
    void doPreRAPeephole();
    void doPostRAPeephole();
-   void setUseDefRegisters(bool resetRegs);
 
    void AddFoldedMemRefToStack(TR::MemoryReference * mr);
    void RemoveMemRefFromStack(TR::MemoryReference * mr);
@@ -320,12 +284,11 @@ public:
 
    bool supportsMergingGuards();
 
+   bool supportsNonHelper(TR::SymbolReferenceTable::CommonNonhelperSymbol symbol);
+
    bool supportsDirectJNICallsForAOT() { return true;}
 
    bool shouldYankCompressedRefs() { return true; }
-
-   TR::RegisterIterator *getARegisterIterator()                             {return  _aRegisterIterator;          }
-   TR::RegisterIterator *setARegisterIterator(TR::RegisterIterator *iter)    {return _aRegisterIterator = iter;  }
 
    TR::RegisterIterator *getHPRegisterIterator()                            {return  _hpRegisterIterator;         }
    TR::RegisterIterator *setHPRegisterIterator(TR::RegisterIterator *iter)   {return _hpRegisterIterator = iter; }
@@ -338,9 +301,7 @@ public:
 
    bool supportsTrapsInTMRegion()
       {
-      if(!TR::Compiler->target.isZOS())
-         return false;
-      return true;
+      return TR::Compiler->target.isZOS();
       }
 
    bool inlineNDmemcpyWithPad(TR::Node * node, int64_t * maxLengthPtr = NULL);
@@ -377,15 +338,10 @@ public:
    void genMemClear(TR::MemoryReference *targetMR, TR::Node *targetNode, int64_t clearSize);
 
    void genCopyFromLiteralPool(TR::Node *node, int32_t bytesToCopy, TR::MemoryReference *targetMR, size_t litPoolOffset, TR::InstOpCode::Mnemonic op = TR::InstOpCode::MVC);
-   int32_t biasDecimalFloatFrac(TR::DataType dt, int32_t frac);
 
-
-   bool isMemcpyWithPadIfFoldable(TR::Node *node, TR_MemCpyPadTypes type);
    bool useMVCLForMemcpyWithPad(TR::Node *node, TR_MemCpyPadTypes type);
    bool isValidCompareConst(int64_t compareConst);
    bool isIfFoldable(TR::Node *node, int64_t compareConst);
-
-   bool mayImmedInstructionCauseOverFlow(TR::Node * node);
 
    TR::Instruction *genLoadAddressToRegister(TR::Register *reg, TR::MemoryReference *origMR, TR::Node *node, TR::Instruction *preced=NULL);
 
@@ -429,7 +385,6 @@ public:
    TR::RealRegister::RegNum getEntryPointRegister();
    TR::RealRegister::RegNum getReturnAddressRegister();
 
-   TR::RealRegister *getExtCodeBaseRealRegister();
    TR::RealRegister *getMethodMetaDataRealRegister();
    TR::RealRegister *getLitPoolRealRegister();
 
@@ -508,9 +463,6 @@ public:
    void setEnableBranchPreloadForCalls()          {_cgFlags.set(S390CG_enableBranchPreloadForCalls);}
    void setDisableBranchPreloadForCalls()          {_cgFlags.reset(S390CG_enableBranchPreloadForCalls);}
 
-   bool getExtCodeBaseRegisterIsFree()         {return _cgFlags.testAny(S390CG_extCodeBaseRegisterIsFree);}
-   void setExtCodeBaseRegisterIsFree(bool val) {return _cgFlags.set(S390CG_extCodeBaseRegisterIsFree, val);}
-
    bool isOutOfLineHotPath() {return _cgFlags.testAny(S390CG_isOutOfLineHotPath);}
    void setIsOutOfLineHotPath(bool val) {_cgFlags.set(S390CG_isOutOfLineHotPath, val);}
 
@@ -525,8 +477,6 @@ public:
    void setEnableTLHPrefetching() { _cgFlags.set(S390CG_enableTLHPrefetching);}
 
    // Query to codegen to know if regs are available or not
-   //
-   bool isExtCodeBaseFreeForAssignment();
    bool isLitPoolFreeForAssignment();
 
    // zGryphon HPR
@@ -577,15 +527,9 @@ public:
                                    TR::RealRegister::RegNum realNum);
    bool isGlobalRegisterAvailable(TR_GlobalRegisterNumber i, TR::DataType dt);
 
-   // Used to model register liveness without Future Use Count.
-   virtual bool isInternalControlFlowReg(TR::Register *reg);
-   virtual void startInternalControlFlow(TR::Instruction *instr);
-   virtual void endInternalControlFlow(TR::Instruction *instr) { _internalControlFlowRegisters.clear(); }
-
    bool doRematerialization() {return true;}
 
    void dumpDataSnippets(TR::FILE *outFile);
-   void dumpTargetAddressSnippets(TR::FILE *outFile);
 
    bool getSupportsBitOpCodes() { return true;}
 
@@ -606,22 +550,7 @@ public:
 
    uint8_t getRCondMoveBranchOpCond() { return 0xF - fCondMoveBranchOpCond; }
 
-   /** Support for shrinkwrapping */
-   bool processInstruction(TR::Instruction *instr, TR_BitVector **registerUsageInfo, int32_t &blockNum, int32_t &isFence, bool traceIt); // virt
-   uint32_t isPreservedRegister(int32_t regIndex);
-   bool isReturnInstruction(TR::Instruction *instr);
-   bool isBranchInstruction(TR::Instruction *instr);
-   bool isLabelInstruction(TR::Instruction *instr);
-   int32_t isFenceInstruction(TR::Instruction *instr);
-   bool isAlignmentInstruction(TR::Instruction *instr);
-   TR::Instruction *splitEdge(TR::Instruction *cursor, bool isFallThrough, bool needsJump, TR::Instruction *newSplitLabel, TR::list<TR::Instruction*> *jmpInstrs, bool firstJump = false);
-   TR::Instruction *splitBlockEntry(TR::Instruction *instr);
-   int32_t computeRegisterSaveDescription(TR_BitVector *regs, bool populateInfo = false);
-   void processIncomingParameterUsage(TR_BitVector **registerUsageInfo, int32_t blockNum);
-   void updateSnippetMapWithRSD(TR::Instruction *cur, int32_t rsd);
-   bool isTargetSnippetOrOutOfLine(TR::Instruction *instr, TR::Instruction **start, TR::Instruction **end);
    bool canUseImmedInstruction(int64_t v);
-   void ensure64BitRegister(TR::Register *reg);
 
    virtual bool isAddMemoryUpdate(TR::Node * node, TR::Node * valueChild);
 
@@ -711,7 +640,7 @@ public:
    /** First Snippet (can be AddressSnippet or ConstantSnippet) */
    TR::Snippet *getFirstSnippet();
    // Constant Data List functions
-   int32_t setEstimatedOffsetForConstantDataSnippets(int32_t targetAddressSnippetSize);
+   int32_t setEstimatedOffsetForConstantDataSnippets();
    int32_t setEstimatedLocationsForDataSnippetLabels(int32_t estimatedSnippetStart);
    void emitDataSnippets();
    bool hasDataSnippets() { return (_constantList.empty() && _writableList.empty() && _snippetDataList.empty() && _constantHash.IsEmpty()) ? false : true; }
@@ -733,8 +662,6 @@ public:
    TR::S390ConstantDataSnippet *CreateConstant(TR::Node *, void *c, uint16_t size, bool writable);
    TR::S390ConstantDataSnippet *getFirstConstantData();
 
-   TR::S390LabelTableSnippet *createLabelTable(TR::Node *, int32_t);
-
    // Writable Data List functions
    bool hasWritableDataSnippets() { return _writableList.empty() ? false : true; }
    TR::S390WritableDataSnippet *CreateWritableConstant(TR::Node *);
@@ -754,18 +681,6 @@ public:
    // Snippet Data functions
    void addDataConstantSnippet(TR::S390ConstantDataSnippet * snippet);
 
-   // Target Address List functions
-   int32_t setEstimatedOffsetForTargetAddressSnippets();
-   int32_t setEstimatedLocationsForTargetAddressSnippetLabels(int32_t estimatedSnippetStart);
-   void emitTargetAddressSnippets();
-   bool hasTargetAddressSnippets() { return _targetList.empty() ? false : true; }
-   TR::S390LookupSwitchSnippet  *CreateLookupSwitchSnippet(TR::Node *,  TR::Snippet* s);
-   TR::S390TargetAddressSnippet *CreateTargetAddressSnippet(TR::Node *, TR::Snippet* s);
-   TR::S390TargetAddressSnippet *CreateTargetAddressSnippet(TR::Node *, TR::LabelSymbol * s);
-   TR::S390TargetAddressSnippet *CreateTargetAddressSnippet(TR::Node *, TR::Symbol* s);
-   TR::S390TargetAddressSnippet *findOrCreateTargetAddressSnippet(TR::Node *, uintptrj_t s);
-   TR::S390TargetAddressSnippet *getFirstTargetAddress();
-
    // Transient Long Registers
 
    TR_Array<TR::Register *> &getTransientLongRegisters() {return _transientLongRegisters;}
@@ -784,10 +699,6 @@ public:
 
    bool supportsFusedMultiplyAdd() {return true;}
    bool supportsSinglePrecisionSQRT() {return true;}
-   bool supportsLongRegAllocation()
-      {
-      return TR::Compiler->target.isZOS() && TR::Compiler->target.is32Bit();
-      }
 
    bool isAddressScaleIndexSupported(int32_t scale) { if (scale <= 2) return true; return false; }
    using OMR::CodeGenerator::getSupportsConstantOffsetInAddressing;
@@ -801,9 +712,6 @@ public:
    virtual void setGlobalStaticBaseRegisterOnFlag();
    virtual void setGlobalPrivateStaticBaseRegisterOn(bool val)     { _cgFlags.set(S390CG_globalPrivateStaticBaseRegisterOn, val); }
    virtual bool isGlobalPrivateStaticBaseRegisterOn () { return _cgFlags.testAny(S390CG_globalPrivateStaticBaseRegisterOn); }
-
-   bool isAddressOfStaticSymRefWithLockedReg(TR::SymbolReference *symRef);
-   bool isAddressOfPrivateStaticSymRefWithLockedReg(TR::SymbolReference *symRef);
 
    bool canUseRelativeLongInstructions(int64_t value);
    bool supportsOnDemandLiteralPool();
@@ -864,7 +772,7 @@ public:
 
    void deleteInst(TR::Instruction* old);
 
-   bool ilOpCodeIsSupported(TR::ILOpCodes);
+   static bool isILOpCodeSupported(TR::ILOpCodes);
 
    void setUsesZeroBasePtr( bool v = true );
    bool getUsesZeroBasePtr();
@@ -924,8 +832,6 @@ public:
    int32_t                        _extentOfLitPool;  // excludes snippets
    uint64_t                       _availableHPRSpillMask;
 
-   TR::list<TR::S390TargetAddressSnippet*> _targetList;
-
 protected:
    TR::list<TR::S390ConstantDataSnippet*>  _constantList;
    TR::list<TR::S390ConstantDataSnippet*>  _snippetDataList;
@@ -946,10 +852,8 @@ private:
    TR_ConstantSnippetHash _constantHash;
    TR_ConstHashCursor     _constantHashCur;
 
-   TR_HashTab * _notPrintLabelHashTab;
    TR_HashTab * _interfaceSnippetToPICsListHashTab;
 
-   TR::RegisterIterator            *_aRegisterIterator;
    TR::RegisterIterator            *_hpRegisterIterator;
    TR::RegisterIterator            *_vrfRegisterIterator;
 
@@ -982,8 +886,6 @@ private:
 
    TR::SymbolReference* _reusableTempSlot;
 
-   TR::list<TR::Register *> _internalControlFlowRegisters;
-
    CS2::HashTable<ncount_t, bool, TR::Allocator> _nodesToBeEvaluatedInRegPairs;
 
 protected:
@@ -993,7 +895,7 @@ protected:
    typedef enum
       {
       // Available                       = 0x00000001,
-      S390CG_extCodeBaseRegisterIsFree   = 0x00000002,
+      // Available                       = 0x00000002,
       // Available                       = 0x00000004,
       S390CG_addStorageReferenceHints    = 0x00000008,
       S390CG_isOutOfLineHotPath          = 0x00000010,
@@ -1015,17 +917,8 @@ protected:
       S390CG_enableBranchPreloadForCalls = 0x00100000,
       S390CG_globalPrivateStaticBaseRegisterOn = 0x00200000
       } TR_S390CGFlags;
-private:
-
-   TR::Node *_nodeAddressOfCachedStatic;
-   protected:
-
-   TR::SparseBitVector _bucketPlusIndexRegisters;
-   TR::Instruction *_currentDEPEND;
    };
-
 }
-
 }
 
 class TR_S390ScratchRegisterManager : public TR_ScratchRegisterManager

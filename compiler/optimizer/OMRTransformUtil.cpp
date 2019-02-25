@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -393,4 +393,63 @@ OMR::TransformUtil::transformCallNodeToPassThrough(TR::Optimization* opt, TR::No
    opt->anchorAllChildren(node, anchorTree);
    node->removeAllChildren();
    node = TR::Node::recreateWithoutProperties(node, TR::PassThrough, 1, child);
+   }
+
+void
+OMR::TransformUtil::createConditionalAlternatePath(TR::Compilation* comp,
+                                                   TR::TreeTop *ifTree,
+                                                   TR::TreeTop *thenTree,
+                                                   TR::Block* elseBlock,
+                                                   TR::Block* mergeBlock,
+                                                   TR::CFG *cfg,
+                                                   bool markCold)
+   {
+   cfg->setStructure(0);
+
+   bool mergeToElseBlock = (elseBlock == mergeBlock);
+
+   TR::Block* ifBlock = elseBlock;
+   ifBlock->prepend(ifTree);
+   elseBlock = ifBlock->split(ifTree->getNextTreeTop(), cfg, false /*fixupCommoning*/, true /*copyExceptionSuccessors*/);
+
+   // Since `elseBlock` is changed above, update `mergeBlock`
+   if (mergeToElseBlock)
+      mergeBlock = elseBlock;
+
+   TR::Block * thenBlock = TR::Block::createEmptyBlock(thenTree->getNode(), comp, 0, elseBlock);
+   if (markCold)
+      {
+      thenBlock->setFrequency(UNKNOWN_COLD_BLOCK_COUNT);
+      thenBlock->setIsCold();
+      }
+   else
+      {
+      thenBlock->setFrequency(elseBlock->getFrequency());
+      }
+
+   cfg->addNode(thenBlock);
+
+   TR::Block *cursorBlock = mergeBlock;
+   while (cursorBlock && cursorBlock->canFallThroughToNextBlock())
+      {
+      cursorBlock = cursorBlock->getNextBlock();
+      }
+
+   if (cursorBlock)
+      {
+      TR::TreeTop *cursorTree = cursorBlock->getExit();
+      TR::TreeTop *nextTree = cursorTree->getNextTreeTop();
+      cursorTree->join(thenBlock->getEntry());
+      thenBlock->getExit()->join(nextTree);
+      }
+   else
+      cfg->findLastTreeTop()->join(thenBlock->getEntry());
+
+
+   thenBlock->append(thenTree);
+   thenBlock->append(TR::TreeTop::create(comp, TR::Node::create(thenTree->getNode(), TR::Goto, 0, mergeBlock->getEntry())));
+   ifTree->getNode()->setBranchDestination(thenBlock->getEntry());
+   cfg->addEdge(TR::CFGEdge::createEdge(thenBlock, mergeBlock, comp->trMemory()));
+   cfg->addEdge(TR::CFGEdge::createEdge(ifBlock, thenBlock, comp->trMemory()));
+   cfg->copyExceptionSuccessors(elseBlock, thenBlock);
    }

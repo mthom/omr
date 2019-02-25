@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -23,8 +23,8 @@
 #define X86DATASNIPPET_INCL
 
 #include "codegen/Snippet.hpp"
-#include "infra/vector.hpp"    // for TR::vector
-#include <stdint.h>            // for uint8_t, int32_t, int64_t, etc
+#include "infra/vector.hpp"
+#include <stdint.h>
 
 namespace TR { class CodeGenerator; }
 namespace TR { class Node; }
@@ -35,23 +35,22 @@ class X86DataSnippet : public TR::Snippet
    {
    public:
 
-   X86DataSnippet(TR::CodeGenerator *cg, TR::Node *, void *c, uint8_t size);
+   X86DataSnippet(TR::CodeGenerator *cg, TR::Node *, void *c, size_t size);
 
-   virtual Kind getKind() { return IsData; }
-   uint8_t* getRawData()  { return _data.data(); }
-   virtual uint8_t *emitSnippetBody();
-   virtual uint8_t getDataSize() const { return _data.size(); }
-   virtual void print(TR::FILE* pOutFile, TR_Debug* debug);
-   virtual void printValue(TR::FILE* pOutFile, TR_Debug* debug);
-   virtual uint32_t getLength(int32_t estimatedSnippetStart) { return _data.size(); }
-   virtual bool setClassAddress(bool isClassAddress) { return _isClassAddress = isClassAddress;}
+   virtual Kind                   getKind()                                { return IsData; }
+   uint8_t*                       getRawData()                             { return _data.data(); }
+   virtual size_t                 getDataSize() const                      { return _data.size(); }
+   virtual uint32_t               getLength(int32_t estimatedSnippetStart) { return getDataSize(); }
+   virtual bool                   setClassAddress(bool isClassAddress)     { return _isClassAddress = isClassAddress;}
+   template <typename T> inline T getData()                                { return *((T*)getRawData()); }
 
-   void addMetaDataForCodeAddress(uint8_t *cursor);
-
-   template <typename T> inline T getData() { return *((T*)getRawData()); }
+   virtual uint8_t*               emitSnippetBody();
+   virtual void                   print(TR::FILE* pOutFile, TR_Debug* debug);
+   virtual void                   printValue(TR::FILE* pOutFile, TR_Debug* debug);
+   void                           addMetaDataForCodeAddress(uint8_t *cursor);
 
    private:
-   bool    _isClassAddress;
+   bool                _isClassAddress;
    TR::vector<uint8_t> _data;
    };
 

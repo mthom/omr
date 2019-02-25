@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2017 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -34,12 +34,12 @@ namespace OMR { typedef OMR::Linkage LinkageConnector; }
 #include "infra/List.hpp"
 #include "il/symbol/ParameterSymbol.hpp"
 
-#include <stddef.h>                            // for NULL
-#include <stdint.h>                            // for uint32_t, uint8_t, etc
-#include "codegen/RegisterConstants.hpp"       // for TR_RegisterKinds, etc
-#include "env/TRMemory.hpp"                    // for TR_Memory, etc
-#include "infra/Assert.hpp"                    // for TR_ASSERT
-#include "infra/Annotations.hpp"               // for OMR_EXTENSIBLE
+#include <stddef.h>
+#include <stdint.h>
+#include "codegen/RegisterConstants.hpp"
+#include "env/TRMemory.hpp"
+#include "infra/Assert.hpp"
+#include "infra/Annotations.hpp"
 
 class TR_BitVector;
 namespace TR { class AutomaticSymbol; }
@@ -81,8 +81,6 @@ class OMR_EXTENSIBLE Linkage
    virtual int32_t numArgumentRegisters(TR_RegisterKinds kind) = 0;
    virtual TR_RegisterKinds argumentRegisterKind(TR::Node *argumentNode);
 
-   virtual bool useCachedStaticAreaAddresses(TR::Compilation *c) { return false; }
-
    virtual void setParameterLinkageRegisterIndex(TR::ResolvedMethodSymbol *method)
       {
       TR_ASSERT(0, "setParameterLinkageRegisterIndex(2) has to be implemented for this linkage\n");
@@ -96,13 +94,7 @@ class OMR_EXTENSIBLE Linkage
       {
       return NULL;
       }
-
-   virtual bool mapPreservedRegistersToStackOffsets(int32_t *mapRegsToStack, int32_t &numPreserved, TR_BitVector *&) { return false; }
-   virtual TR::Instruction *savePreservedRegister(TR::Instruction *cursor, int32_t regIndex, int32_t offset)    {return NULL; }
-   virtual TR::Instruction *restorePreservedRegister(TR::Instruction *cursor, int32_t regIndex, int32_t offset) {return NULL; }
-   virtual int32_t getRegisterSaveSize() { return 0; }
-   virtual TR::Instruction *composeSavesRestores(TR::Instruction *start, int32_t firstReg, int32_t lastReg, int32_t offset, int32_t numRegs, bool doSaves) { return NULL; }
-
+   
    virtual bool isSpecialNonVolatileArgumentRegister(int8_t) { return false; }
 
    };

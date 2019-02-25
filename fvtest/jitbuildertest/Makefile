@@ -33,15 +33,18 @@ OBJECTS := \
 	AnonymousTest \
 	ControlFlowTest \
 	SystemLinkageTest \
+	NegateTest \
 	WorklistTest \
-	IfThenElseTest
+	IfThenElseTest \
+	CallReturnTest \
+	FieldNameTest \
+	ConvertBitsTest
 
 OBJECTS := $(addsuffix $(OBJEXT),$(OBJECTS))
 
 MODULE_INCLUDES += \
   ../util \
-  $(top_srcdir)/jitbuilder/release/include/compiler \
-  $(top_srcdir)/jitbuilder/release/include
+  $(top_srcdir)/jitbuilder/release/cpp/include/
 MODULE_INCLUDES += $(OMR_GTEST_INCLUDES)
 MODULE_CXXFLAGS += -std=c++0x $(OMR_GTEST_CXXFLAGS)
 
@@ -57,7 +60,7 @@ MODULE_STATIC_LIBS += \
   j9hookstatic
 
 MODULE_LIBPATH += \
-  $(top_srcdir)/jitbuilder/release \
+  $(top_srcdir)/jitbuilder/release/cpp \
   $(top_srcdir)/lib
 
 MODULE_CXXFLAGS += "-Wno-unused-variable"

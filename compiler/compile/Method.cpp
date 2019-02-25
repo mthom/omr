@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,18 +21,18 @@
 
 #include "compile/Method.hpp"
 
-#include <string.h>                            // for memchr
-#include "compile/Compilation.hpp"             // for Compilation
-#include "compile/ResolvedMethod.hpp"          // for TR_ResolvedMethod
-#include "compile/SymbolReferenceTable.hpp"    // for SymbolReferenceTable
+#include <string.h>
+#include "compile/Compilation.hpp"
+#include "compile/ResolvedMethod.hpp"
+#include "compile/SymbolReferenceTable.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
-#include "env/jittypes.h"                      // for intptrj_t, uintptrj_t
-#include "il/SymbolReference.hpp"              // for classNameToSignature
-#include "il/symbol/ParameterSymbol.hpp"       // for ParameterSymbol
-#include "il/symbol/ResolvedMethodSymbol.hpp"  // for ResolvedMethodSymbol
-#include "infra/List.hpp"                      // for ListAppender
-#include "runtime/Runtime.hpp"                 // for TR_RuntimeHelper
+#include "env/jittypes.h"
+#include "il/SymbolReference.hpp"
+#include "il/symbol/ParameterSymbol.hpp"
+#include "il/symbol/ResolvedMethodSymbol.hpp"
+#include "infra/List.hpp"
+#include "runtime/Runtime.hpp"
 
 class TR_FrontEnd;
 class TR_OpaqueMethodBlock;
@@ -385,6 +385,7 @@ bool         TR_ResolvedMethod::isPublic()                                 { not
 bool         TR_ResolvedMethod::isFinal()                                  { notImplemented("isFinal"); return false; }
 bool         TR_ResolvedMethod::isStrictFP()                               { notImplemented("isStrictFP"); return false; }
 bool         TR_ResolvedMethod::isInterpreted()                            { notImplemented("isInterpreted"); return false; }
+bool         TR_ResolvedMethod::isInterpretedForHeuristics()               { notImplemented("isInterpretedForHeuristics"); return false; }
 bool         TR_ResolvedMethod::hasBackwardBranches()                      { notImplemented("hasBackwardBranches"); return false; }
 bool         TR_ResolvedMethod::isObjectConstructor()                      { notImplemented("isObjectConstructor"); return false; }
 bool         TR_ResolvedMethod::isNonEmptyObjectConstructor()              { notImplemented("isNonEmptyObjectConstructor"); return false; }
@@ -426,6 +427,10 @@ float *      TR_ResolvedMethod::floatConstant(int32_t)                     { not
 double *     TR_ResolvedMethod::doubleConstant(int32_t, TR_Memory *)       { notImplemented("doubleConstant"); return 0; }
 void *       TR_ResolvedMethod::stringConstant(int32_t)                    { notImplemented("stringConstant"); return 0; }
 bool         TR_ResolvedMethod::isUnresolvedString(int32_t, bool optimizeForAOT)                { notImplemented("isUnresolvedString"); return false; }
+void *       TR_ResolvedMethod::getConstantDynamicTypeFromCP(int32_t cpIndex)   { notImplemented("ConstantDynamic"); return 0; }
+bool         TR_ResolvedMethod::isConstantDynamic(int32_t cpIndex)            { notImplemented("ConstantDynamic"); return false; }
+bool         TR_ResolvedMethod::isUnresolvedConstantDynamic(int32_t cpIndex)  { notImplemented("ConstantDynamic"); return false; }
+void *       TR_ResolvedMethod::dynamicConstant(int32_t cpIndex)              { notImplemented("ConstantDynamic"); return 0; }
 void *       TR_ResolvedMethod::methodTypeConstant(int32_t)                { notImplemented("methodTypeConstant"); return 0; }
 bool         TR_ResolvedMethod::isUnresolvedMethodType(int32_t)            { notImplemented("isUnresolvedMethodType"); return false; }
 void *       TR_ResolvedMethod::methodHandleConstant(int32_t)              { notImplemented("methodHandleConstant"); return 0; }

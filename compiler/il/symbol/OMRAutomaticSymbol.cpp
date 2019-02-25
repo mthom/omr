@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2017 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,17 +21,17 @@
 
 #include "il/symbol/OMRAutomaticSymbol.hpp"
 
-#include <stddef.h>                           // for NULL, size_t
-#include <stdint.h>                           // for uint32_t, int32_t
-#include "codegen/RegisterConstants.hpp"      // for TR_RegisterKinds
-#include "env/TRMemory.hpp"                   // for PERSISTENT_NEW_DECLARE
-#include "il/ILOpCodes.hpp"                   // for ILOpCodes::newarray, etc
-#include "il/Node.hpp"                        // for rcount_t
-#include "il/symbol/AutomaticSymbol.hpp"      // for AutomaticSymbolBase, etc
-#include "infra/Assert.hpp"                   // for TR_ASSERT
-#include "infra/Flags.hpp"                    // for flags8_t, flags32_t
-#include "infra/IGNode.hpp"                   // for UNCOLOURED, etc
-#include "infra/InterferenceGraph.hpp"        // for TR_InterferenceGraph
+#include <stddef.h>
+#include <stdint.h>
+#include "codegen/RegisterConstants.hpp"
+#include "env/TRMemory.hpp"
+#include "il/ILOpCodes.hpp"
+#include "il/Node.hpp"
+#include "il/symbol/AutomaticSymbol.hpp"
+#include "infra/Assert.hpp"
+#include "infra/Flags.hpp"
+#include "infra/IGNode.hpp"
+#include "infra/InterferenceGraph.hpp"
 
 class TR_FrontEnd;
 namespace TR { class Node; }
@@ -92,7 +92,7 @@ OMR::AutomaticSymbol::init()
    }
 
 TR::ILOpCodes
-OMR::AutomaticSymbol::getKind()
+OMR::AutomaticSymbol::getOpCodeKind()
   {
   TR_ASSERT(self()->isLocalObject(), "Should be local object");
   return _kind;
@@ -229,15 +229,6 @@ TR::AutomaticSymbol * OMR::AutomaticSymbol::create(AllocatorType t,  TR::DataTyp
    }
 
 template <typename AllocatorType>
-TR::AutomaticSymbol * OMR::AutomaticSymbol::createMarker(AllocatorType m, const char * name)
-   {
-   TR::AutomaticSymbol * sym = new (m) TR::AutomaticSymbol();
-   sym->_name = name;
-   sym->setAutoMarkerSymbol();
-   return sym;
-   }
-
-template <typename AllocatorType>
 TR::AutomaticSymbol * OMR::AutomaticSymbol::createLocalObject(AllocatorType m, int32_t arrayType, TR::DataType d, uint32_t s, TR_FrontEnd * fe)
    {
    TR::AutomaticSymbol * sym   = new (m) TR::AutomaticSymbol(d, s);
@@ -309,7 +300,6 @@ TR::AutomaticSymbol * OMR::AutomaticSymbol::createVariableSized(AllocatorType m,
 // Explicit instantiations.
 
 
-template TR::AutomaticSymbol * OMR::AutomaticSymbol::createMarker(TR_HeapMemory m, const char * name) ;
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createLocalObject(TR_HeapMemory m, int32_t arrayType, TR::DataType d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createLocalObject(TR_HeapMemory m, TR::ILOpCodes kind, TR::SymbolReference * classSymRef, TR::DataType d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createInternalPointer(TR_HeapMemory m, TR::AutomaticSymbol *pinningArrayPointer);
@@ -317,7 +307,6 @@ template TR::AutomaticSymbol * OMR::AutomaticSymbol::createInternalPointer(TR_He
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createInternalPointer(TR_HeapMemory m, TR::DataType d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createVariableSized(TR_HeapMemory m, uint32_t s);
 
-template TR::AutomaticSymbol * OMR::AutomaticSymbol::createMarker(TR_StackMemory m, const char * name) ;
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createLocalObject(TR_StackMemory m, int32_t arrayType, TR::DataType   d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createLocalObject(TR_StackMemory m, TR::ILOpCodes kind, TR::SymbolReference * classSymRef, TR::DataType d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createInternalPointer(TR_StackMemory m, TR::AutomaticSymbol *pinningArrayPointer);
@@ -325,7 +314,6 @@ template TR::AutomaticSymbol * OMR::AutomaticSymbol::createInternalPointer(TR_St
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createInternalPointer(TR_StackMemory m, TR::DataType d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createVariableSized(TR_StackMemory m, uint32_t s);
 
-template TR::AutomaticSymbol * OMR::AutomaticSymbol::createMarker(PERSISTENT_NEW_DECLARE m, const char * name) ;
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createLocalObject(PERSISTENT_NEW_DECLARE m, int32_t arrayType, TR::DataType d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createLocalObject(PERSISTENT_NEW_DECLARE m, TR::ILOpCodes kind, TR::SymbolReference * classSymRef, TR::DataType d, uint32_t s, TR_FrontEnd * fe);
 template TR::AutomaticSymbol * OMR::AutomaticSymbol::createInternalPointer(PERSISTENT_NEW_DECLARE m, TR::AutomaticSymbol *pinningArrayPointer);

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2015, 2015 IBM Corp. and others
+# Copyright (c) 2015, 2019 IBM Corp. and others
 # 
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,7 +20,15 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 ###############################################################################
 
-GLOBAL_CPPFLAGS+=-I$(top_srcdir)/util/a2e/headers
+# If --enable-native-encoding was not passed to configure,
+# force USE_NATIVE_ENCODING to 0
+ifneq ($(OMR_ALLOW_NATIVE_ENCODING),1)
+  USE_NATIVE_ENCODING := 0
+endif
+
+ifneq ($(USE_NATIVE_ENCODING), 1)
+  GLOBAL_CPPFLAGS+=-I$(top_srcdir)/util/a2e/headers
+endif
 
 # Specify the minimum arch for 64-bit programs
 GLOBAL_CFLAGS+=-Wc,ARCH\(7\)
@@ -58,7 +66,7 @@ GLOBAL_CFLAGS+=$(COPTFLAGS)
 GLOBAL_CXXFLAGS+=$(COPTFLAGS)
 
 # Preprocessor Flags
-GLOBAL_CPPFLAGS+=-DJ9ZOS390 -DLONGLONG -DJ9VM_TIERED_CODE_CACHE -D_ALL_SOURCE -D_XOPEN_SOURCE_EXTENDED -DIBM_ATOE -D_POSIX_SOURCE 
+GLOBAL_CPPFLAGS+=-DJ9ZOS390 -DLONGLONG -DJ9VM_TIERED_CODE_CACHE -D_ALL_SOURCE -D_XOPEN_SOURCE_EXTENDED -D_POSIX_SOURCE
 
 # Global Flags
 # xplink   Link with the xplink calling convention
@@ -69,7 +77,14 @@ GLOBAL_CPPFLAGS+=-DJ9ZOS390 -DLONGLONG -DJ9VM_TIERED_CODE_CACHE -D_ALL_SOURCE -D
 # a,goff   Assemble into GOFF object files
 # NOANSIALIAS Do not generate ALIAS binder control statements
 # TARGET   Generate code for the target operating system
-GLOBAL_FLAGS+=-Wc,xplink,convlit\(ISO8859-1\),rostring,FLOAT\(IEEE,FOLD,AFP\),enum\(4\) -Wa,goff -Wc,NOANSIALIAS -Wc,TARGET\(zOSV1R13\)
+GLOBAL_FLAGS+=-Wc,xplink,rostring,FLOAT\(IEEE,FOLD,AFP\),enum\(4\) -Wa,goff -Wc,NOANSIALIAS -Wc,TARGET\(zOSV1R13\)
+
+ifneq (1,$(USE_NATIVE_ENCODING))
+  GLOBAL_CPPFLAGS+=-DIBM_ATOE
+  GLOBAL_FLAGS+=-Wc,convlit\(ISO8859-1\)
+else
+  GLOBAL_CPPFLAGS+=-DOMR_EBCDIC
+endif
 
 ifeq (1,$(OMR_ENV_DATA64))
   GLOBAL_CPPFLAGS+=-DJ9ZOS39064
@@ -79,7 +94,7 @@ else
 endif
 
 GLOBAL_CFLAGS+=-Wc,"langlvl(extc99)" $(GLOBAL_FLAGS)
-GLOBAL_CXXFLAGS+=-Wc,"langlvl(extended)" -+ $(GLOBAL_FLAGS)
+GLOBAL_CXXFLAGS+=-Wc,"langlvl(extended0x)" -+ $(GLOBAL_FLAGS)
 
 ifneq (,$(findstring archive,$(ARTIFACT_TYPE)))
   DO_LINK:=0
@@ -93,7 +108,7 @@ ifeq (1,$(DO_LINK))
 
   # This is the first option applied to the C++ linking command.
   # It is not applied to the C linking command.
-  OMR_MK_CXXLINKFLAGS=-Wc,"langlvl(extended)" -+ 
+  OMR_MK_CXXLINKFLAGS=-Wc,"langlvl(extended0x)" -+ 
 
   ifneq (,$(findstring shared,$(ARTIFACT_TYPE)))
     GLOBAL_LDFLAGS+=-Wl,xplink,dll
@@ -108,7 +123,9 @@ ifeq (1,$(DO_LINK))
 
   # always link a2e last, unless we are creating the a2e library
   ifneq (j9a2e,$(MODULE_NAME))
-    GLOBAL_SHARED_LIBS+=j9a2e
+    ifneq (1,$(USE_NATIVE_ENCODING))
+      GLOBAL_SHARED_LIBS+=j9a2e
+    endif
   endif
 endif
 

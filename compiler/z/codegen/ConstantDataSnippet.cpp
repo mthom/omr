@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,53 +21,53 @@
 
 #include "z/codegen/ConstantDataSnippet.hpp"
 
-#include <stddef.h>                             // for NULL
-#include <stdint.h>                             // for uint8_t, uint32_t, etc
-#include <string.h>                             // for memcpy, strlen
-#include <algorithm>                            // for std::find
-#include "codegen/CodeGenerator.hpp"            // for CodeGenerator
-#include "codegen/FrontEnd.hpp"                 // for TR_FrontEnd
-#include "codegen/InstOpCode.hpp"               // for InstOpCode
-#include "codegen/Instruction.hpp"              // for Instruction
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+#include <algorithm>
+#include "codegen/CodeGenerator.hpp"
+#include "codegen/FrontEnd.hpp"
+#include "codegen/InstOpCode.hpp"
+#include "codegen/Instruction.hpp"
 #include "codegen/Relocation.hpp"
 #include "codegen/Snippet.hpp"
 #include "codegen/UnresolvedDataSnippet.hpp"
-#include "compile/Compilation.hpp"              // for Compilation
-#include "compile/Method.hpp"                   // for TR_Method
-#include "compile/ResolvedMethod.hpp"           // for TR_ResolvedMethod
+#include "compile/Compilation.hpp"
+#include "compile/Method.hpp"
+#include "compile/ResolvedMethod.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "env/CompilerEnv.hpp"
 #ifdef J9_PROJECT_SPECIFIC
-#include "env/CHTable.hpp"                      // for TR_PatchJNICallSite
+#include "env/CHTable.hpp"
 #endif
 #include "env/IO.hpp"
-#include "env/ObjectModel.hpp"                  // for ObjectModel
+#include "env/ObjectModel.hpp"
 #include "env/TRMemory.hpp"
-#include "env/jittypes.h"                       // for intptrj_t, uintptrj_t
+#include "env/jittypes.h"
 #include "il/DataTypes.hpp"
-#include "il/ILOpCodes.hpp"                     // for ILOpCodes::aconst
-#include "il/Node.hpp"                          // for Node
+#include "il/ILOpCodes.hpp"
+#include "il/Node.hpp"
 #include "il/Node_inlines.hpp"
-#include "il/Symbol.hpp"                        // for Symbol
-#include "il/SymbolReference.hpp"               // for SymbolReference
-#include "il/TreeTop.hpp"                       // for TreeTop
-#include "il/TreeTop_inlines.hpp"               // for TreeTop::getNode
-#include "il/symbol/LabelSymbol.hpp"            // for LabelSymbol
-#include "il/symbol/ResolvedMethodSymbol.hpp"   // for ResolvedMethodSymbol
-#include "il/symbol/StaticSymbol.hpp"           // for StaticSymbol
-#include "infra/Assert.hpp"                     // for TR_ASSERT
-#include "infra/Link.hpp"                       // for TR_Pair
-#include "infra/List.hpp"                       // for List, ListIterator
-#include "ras/Debug.hpp"                        // for TR_Debug
+#include "il/Symbol.hpp"
+#include "il/SymbolReference.hpp"
+#include "il/TreeTop.hpp"
+#include "il/TreeTop_inlines.hpp"
+#include "il/symbol/LabelSymbol.hpp"
+#include "il/symbol/ResolvedMethodSymbol.hpp"
+#include "il/symbol/StaticSymbol.hpp"
+#include "infra/Assert.hpp"
+#include "infra/Link.hpp"
+#include "infra/List.hpp"
+#include "ras/Debug.hpp"
 #include "runtime/Runtime.hpp"
 
 #if defined(TR_HOST_S390)
-#include <time.h>                               // for NULL
+#include <time.h>
 #endif
 
 TR::S390ConstantDataSnippet::S390ConstantDataSnippet(TR::CodeGenerator * cg, TR::Node * n, void * c, uint16_t size) :
-   TR::Snippet(cg, n, TR::LabelSymbol::create(cg->trHeapMemory(),cg), false)
+   TR::Snippet(cg, n, generateLabelSymbol(cg), false)
    {
 
    if (c)
@@ -76,21 +76,7 @@ TR::S390ConstantDataSnippet::S390ConstantDataSnippet(TR::CodeGenerator * cg, TR:
    _length = size;
    _symbolReference = NULL;
    _reloType = 0;
-   _isString = false;
    }
-
-TR::S390ConstantDataSnippet::S390ConstantDataSnippet(TR::CodeGenerator * cg, TR::Node * n, char* c) :
-   TR::Snippet(cg, n, TR::LabelSymbol::create(cg->trHeapMemory(),cg), false)
-   {
-   _length = strlen(c);
-   _string = (char *) cg->trMemory()->allocateMemory(_length, heapAlloc);
-   memcpy(_string, c, strlen(c));
-   _unresolvedDataSnippet = NULL;
-   _symbolReference = NULL;
-   _reloType = 0;
-   _isString = true;
-   }
-
 
 void
 TR::S390ConstantDataSnippet::addMetaDataForCodeAddress(uint8_t *cursor)
@@ -98,7 +84,7 @@ TR::S390ConstantDataSnippet::addMetaDataForCodeAddress(uint8_t *cursor)
    TR::Compilation *comp = cg()->comp();
 
    uint32_t reloType = getReloType();
-
+   TR::SymbolType symbolKind = TR::SymbolType::typeClass;
    switch (reloType)
       {
       case 0:
@@ -106,6 +92,33 @@ TR::S390ConstantDataSnippet::addMetaDataForCodeAddress(uint8_t *cursor)
 
       case TR_ClassAddress:
       case TR_ClassObject:
+         {
+         AOTcgDiag3(comp, "add relocation (%d) cursor=%x symbolReference=%x\n", reloType, cursor, getSymbolReference());
+         TR::SymbolReference *reloSymRef= (reloType==TR_ClassAddress)?getNode()->getSymbolReference():getSymbolReference();
+         if (cg()->comp()->getOption(TR_UseSymbolValidationManager))
+            {
+            TR_ASSERT_FATAL(getDataAs8Bytes(), "Static Sym can not be NULL");
+
+            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,
+                                                                                       (uint8_t *) getDataAs8Bytes(),
+                                                                                       (uint8_t *) TR::SymbolType::typeClass,
+                                                                                       TR_SymbolFromManager,
+                                                                                       cg()),
+                                                                                       __FILE__, __LINE__, getNode());
+
+            }
+         else
+            {
+            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, (uint8_t *) reloSymRef,
+                                                                                 getNode() ? (uint8_t *)(intptr_t)getNode()->getInlinedSiteIndex() : (uint8_t *)-1,
+                                                                                 (TR_ExternalRelocationTargetKind) reloType, cg()),
+                                                                                 __FILE__, __LINE__, getNode());
+
+            }
+
+
+         }
+         break;
       case TR_MethodObject:
          {
          AOTcgDiag3(comp, "add relocation (%d) cursor=%x symbolReference=%x\n", reloType, cursor, getSymbolReference());
@@ -184,24 +197,38 @@ TR::S390ConstantDataSnippet::addMetaDataForCodeAddress(uint8_t *cursor)
 
       case TR_RamMethod:
       case TR_MethodPointer:
+         symbolKind = TR::SymbolType::typeMethod;
+         // intentional fall through
       case TR_ClassPointer:
-         {
          AOTcgDiag2(comp, "add relocation (%d) cursor=%x\n", reloType, cursor);
-         TR::Relocation *relo;
-         //for optimizations where we are trying to relocate either profiled j9class or getfrom signature we can't use node to get the target address
-         //so we need to pass it to relocation in targetaddress2 for now
-         //two instances where use this relotype in such way are: profile checkcast and arraystore check object check optimiztaions
-         uint8_t * targetAdress2 = NULL;
-         if (getNode()->getOpCodeValue() != TR::aconst)
+         if (cg()->comp()->getOption(TR_UseSymbolValidationManager))
             {
-            if (TR::Compiler->target.is64Bit())
-               targetAdress2 = (uint8_t *) *((uint64_t*) cursor);
-            else
-               targetAdress2 = (uint8_t *) *((uintptrj_t*) cursor);
+            TR_ASSERT_FATAL(getDataAs8Bytes(), "Static Sym can not be NULL");
+            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,
+                                                                                 (uint8_t *) getDataAs8Bytes(),
+                                                                                 (uint8_t *)symbolKind,
+                                                                                 TR_SymbolFromManager,
+                                                                                 cg()),
+                                                                              __FILE__, __LINE__,
+                                                                              getNode());
             }
-         relo = new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, (uint8_t *) getNode(), targetAdress2, (TR_ExternalRelocationTargetKind) reloType, cg());
-         cg()->addExternalRelocation(relo, __FILE__, __LINE__, getNode());
-         }
+         else
+            {
+            TR::Relocation *relo;
+            //for optimizations where we are trying to relocate either profiled j9class or getfrom signature we can't use node to get the target address
+            //so we need to pass it to relocation in targetaddress2 for now
+            //two instances where use this relotype in such way are: profile checkcast and arraystore check object check optimiztaions
+            uint8_t * targetAdress2 = NULL;
+            if (getNode()->getOpCodeValue() != TR::aconst)
+               {
+               if (TR::Compiler->target.is64Bit())
+                  targetAdress2 = (uint8_t *) *((uint64_t*) cursor);
+               else
+                  targetAdress2 = (uint8_t *) *((uintptrj_t*) cursor);
+               }
+            relo = new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, (uint8_t *) getNode(), targetAdress2, (TR_ExternalRelocationTargetKind) reloType, cg());
+            cg()->addExternalRelocation(relo, __FILE__, __LINE__, getNode());
+            }
          break;
 
       case TR_DebugCounter:
@@ -332,7 +359,6 @@ TR::S390ConstantInstructionSnippet::S390ConstantInstructionSnippet(TR::CodeGener
    {
    _instruction = instr;
    setLength(instr->getOpCode().getInstructionLength());
-   setIsRefed(true);
    }
 
 uint8_t *
@@ -388,443 +414,6 @@ TR::S390WritableDataSnippet::S390WritableDataSnippet(TR::CodeGenerator * cg, TR:
    : TR::S390ConstantDataSnippet(cg, n, c, size)
    {
    }
-
-//////////////////////////////////////////////////////////////////////////////////////
-// TR::S390TargetAddressSnippet member functions
-//////////////////////////////////////////////////////////////////////////////////////
-TR::S390TargetAddressSnippet::S390TargetAddressSnippet(TR::CodeGenerator * cg, TR::Node * n, TR::LabelSymbol * targetLabel)
-   : TR::Snippet(cg, n, TR::LabelSymbol::create(cg->trHeapMemory(),cg), false), _targetsnippet(NULL), _targetaddress(0), _targetsym(NULL),
-   _targetlabel(targetLabel)
-   {
-   }
-
-TR::S390TargetAddressSnippet::S390TargetAddressSnippet(TR::CodeGenerator * cg, TR::Node * n, TR::Snippet * s)
-   : TR::Snippet(cg, n, TR::LabelSymbol::create(cg->trHeapMemory(),cg), false), _targetsnippet(s), _targetaddress(0), _targetsym(NULL), _targetlabel(NULL)
-   {
-   }
-
-TR::S390TargetAddressSnippet::S390TargetAddressSnippet(TR::CodeGenerator * cg, TR::Node * n, uintptrj_t addr)
-   : TR::Snippet(cg, n, TR::LabelSymbol::create(cg->trHeapMemory(),cg), false), _targetsnippet(NULL), _targetaddress(addr), _targetsym(NULL),
-   _targetlabel(NULL)
-   {
-   }
-
-TR::S390TargetAddressSnippet::S390TargetAddressSnippet(TR::CodeGenerator * cg, TR::Node * n, TR::Symbol * sym)
-   : TR::Snippet(cg, n, TR::LabelSymbol::create(cg->trHeapMemory(),cg), false), _targetsnippet(NULL), _targetaddress(0), _targetsym(sym), _targetlabel(NULL)
-   {
-   }
-
-uint8_t *
-TR::S390TargetAddressSnippet::emitSnippetBody()
-   {
-   uint8_t * cursor = cg()->getBinaryBufferCursor();
-   AOTcgDiag1(cg()->comp(), "TR::S390TargetAddressSnippet::emitSnippetBody cursor=%x\n", cursor);
-   getSnippetLabel()->setCodeLocation(cursor);
-   TR::Compilation* comp = cg()->comp();
-
-   if (_targetsnippet != NULL)
-      {
-      *(intptrj_t *) cursor = 0;
-      AOTcgDiag1(comp, "add TR_AbsoluteMethodAddress cursor=%x\n", cursor);
-      cg()->addRelocation(new (cg()->trHeapMemory()) TR::LabelAbsoluteRelocation(cursor, _targetsnippet->getSnippetLabel()));
-      cg()->addProjectSpecializedRelocation(cursor, NULL, NULL, TR_AbsoluteMethodAddress,
-                                __FILE__, __LINE__, getNode());
-      }
-   else if (_targetlabel != NULL)
-      {
-      *(intptrj_t *) cursor = 0;
-      if (_targetlabel->getCodeLocation() != NULL)
-         {
-         *(intptrj_t *) cursor = (intptrj_t) (_targetlabel->getCodeLocation());
-         }
-      else
-         {
-         AOTcgDiag1(comp, "add TR_AbsoluteMethodAddress cursor=%x\n", cursor);
-         cg()->addRelocation(new (cg()->trHeapMemory()) TR::LabelAbsoluteRelocation(cursor, _targetlabel));
-         cg()->addProjectSpecializedRelocation(cursor, NULL, NULL, TR_AbsoluteMethodAddress,
-                                   __FILE__, __LINE__, getNode());
-         }
-      }
-   else
-      {
-      if (_targetsym != NULL)
-         {
-         TR_ResolvedMethod * resolvedMethod = _targetsym->getResolvedMethodSymbol()->getResolvedMethod();
-
-         if (resolvedMethod != NULL && resolvedMethod->isSameMethod(comp->getCurrentMethod()))
-            {
-            uint8_t * jitTojitStart = cg()->getCodeStart();
-
-            // Calculate jit-to-jit entry point
-            jitTojitStart += ((*(intptrj_t *) (jitTojitStart - 4)) >> 16) & 0x0000ffff;
-            *(intptrj_t *) cursor = (intptrj_t) jitTojitStart;
-            }
-         }
-      else
-         {
-         *(intptrj_t *) cursor = _targetaddress;
-         }
-      }
-   cursor += sizeof(uintptrj_t);
-
-   return cursor;
-   }
-
-uint32_t
-TR::S390TargetAddressSnippet::getLength(int32_t  estimatedSnippetStart)
-   {
-   return sizeof(uintptrj_t);
-   }
-
-//////////////////////////////////////////////////////////////////////////////////////
-
-TR::S390LookupSwitchSnippet::S390LookupSwitchSnippet(TR::CodeGenerator * cg, TR::Node * switchNode)
-   : TR::S390TargetAddressSnippet(cg, switchNode, TR::LabelSymbol::create(cg->trHeapMemory(),cg))
-   {
-   // *this   swipeable for debugger
-   }
-
-
-uint8_t *
-TR::S390LookupSwitchSnippet::emitSnippetBody()
-   {
-   int32_t numChildren = getNode()->getCaseIndexUpperBound() - 1;
-   uint8_t * cursor = cg()->getBinaryBufferCursor();
-   TR::Compilation* comp = cg()->comp();
-
-   AOTcgDiag1(comp, "TR::S390LookupSwitchSnippet::emitSnippetBody cursor=%x\n", cursor);
-   getSnippetLabel()->setCodeLocation(cursor);
-
-   for (int32_t i = 1; i <= numChildren; i++)
-      {
-      // Each case stmt is described by a node on the child
-      TR::Node * caseKeyNode = getNode()->getChild(i);
-      CASECONST_TYPE caseKeyValue = caseKeyNode->getCaseConstant();
-      intptrj_t caseKeyTarget = (intptrj_t) caseKeyNode->getBranchDestination()->getNode()->getLabel()->getCodeLocation();
-
-      *(int32_t *) cursor = caseKeyValue;
-      cursor += 4;
-      *(intptrj_t *) cursor = caseKeyTarget;
-      cursor += TR::Compiler->om.sizeofReferenceAddress();
-      }
-
-   *(int32_t *) cursor = 0;
-   cursor += 4;
-
-   return cursor;
-   }
-
-uint32_t
-TR::S390LookupSwitchSnippet::getLength(int32_t  estimatedSnippetStart)
-   {
-   TR::Compilation* comp = cg()->comp();
-   return (getNode()->getCaseIndexUpperBound() - 1) * (sizeof(int32_t) + TR::Compiler->om.sizeofReferenceAddress());
-   }
-
-///////////////////////////////////////////////////////////////////////////////
-// TR::S390InterfaceCallDataSnippet member functions
-///////////////////////////////////////////////////////////////////////////////
-TR::S390InterfaceCallDataSnippet::S390InterfaceCallDataSnippet(TR::CodeGenerator * cg,
-                                                                 TR::Node * node,
-                                                                 uint8_t n,
-                                                                 bool useCLFIandBRCL)
-   : TR::S390ConstantDataSnippet(cg,node,TR::LabelSymbol::create(cg->trHeapMemory(),cg),0),
-     _numInterfaceCallCacheSlots(n),
-     _codeRA(NULL),
-     thunkAddress(NULL),
-     _useCLFIandBRCL(useCLFIandBRCL)
-   {
-   }
-
-TR::S390InterfaceCallDataSnippet::S390InterfaceCallDataSnippet(TR::CodeGenerator * cg,
-                                                                 TR::Node * node,
-                                                                 uint8_t n,
-                                                                 uint8_t *thunkPtr,
-                                                                 bool useCLFIandBRCL)
-   : TR::S390ConstantDataSnippet(cg,node,TR::LabelSymbol::create(cg->trHeapMemory(),cg),0),
-     _numInterfaceCallCacheSlots(n),
-     _codeRA(NULL),
-     thunkAddress(thunkPtr),
-     _useCLFIandBRCL(useCLFIandBRCL)
-   {
-   }
-
-uint8_t *
-TR::S390InterfaceCallDataSnippet::emitSnippetBody()
-   {
-
-//  64-Bit Layout.
-//  0x00000100211cfe58     DC  0x100211cf58a    ; Call Site RA
-//  0x00000100211cfe60     DC  0x8020b380       ; Address Of Constant Pool
-//  0x00000100211cfe68     DC  0x00000040       ; CP Index
-//  0x00000100211cfe70     DC  0x00000000       ; Interface class
-//  0x00000100211cfe78     DC  0x00000000       ; Method Index
-//
-//  0x00000100211cfe80     DC  0x00000000       ; Flags (resolved)
-//  0x00000100211cfe88     DC  0x100211cfe90    ; lastCachedSlotField
-//
-//  0x00000100211cfe90     DC  0x100211cfea0    ; firstSlotField
-//  0x00000100211cfe98     DC  0x100211cfed0    ; lastSlotField
-//
-
-//  If we use L/C/BR sequence:
-
-//  0x00000100211cfea0     DC  0x00000000       ; Cached Class1
-//  0x00000100211cfea8     DC  0x00000000       ; Cached Method1
-//
-//  0x00000100211cfeb0     DC  0x00000000       ; Cached Class2
-//  0x00000100211cfeb8     DC  0x00000000       ; Cached Method2
-//
-//  0x00000100211cfec0     DC  0x00000000       ; Cached Class3
-//  0x00000100211cfec8     DC  0x00000000       ; Cached Method3
-//
-//  0x00000100211cfed0     DC  0x00000000       ; Cached Class4
-//  0x00000100211cfed8     DC  0x00000000       ; Cached Method4
-//
-//  and so on...
-
-// If we use CLFI / BRCL
-//  0x00000100211cfea0     DC  0x00000000       ; Patch slot of the first CLFI (Class 1)
-//  0x00000100211cfea0     DC  0x00000000       ; Patch slot of the second CLFI (Class 2)
-//  0x00000100211cfea0     DC  0x00000000       ; Patch slot of the third CLFI (Class 3)
-// and so on ...
-
-//  31-Bit Layout.
-//  0x00000000211cfe50     DC  0x0000610ff8     ; Address Of Dispatch Glue
-//  0x00000000211cfe54     DC  0x00211cf58a     ; Call Site RA
-//  0x00000000211cfe58     DC  0x2020b380       ; Address Of Constant Pool
-//  0x00000000211cfe5c     DC  0x00000040       ; CP Index
-//  0x00000000211cfe60     DC  0x00000000       ; Interface class
-//  0x00000000211cfe64     DC  0x00000000       ; Method Index
-//
-//  0x00000000211cfe68     DC  0x00000000       ; Cached Class1
-//  0x00000000211cfe6c     DC  0x00000000       ; Cached Method1
-//
-//  0x00000000211cfe70     DC  0x00000000       ; Flags (resolved)
-
-   TR::Compilation *comp = cg()->comp();
-   int32_t i = 0;
-   uint8_t * cursor = cg()->getBinaryBufferCursor();
-   AOTcgDiag1(comp, "TR::S390InterfaceCallDataSnippet::emitSnippetBody cursor=%x\n", cursor);
-
-   // Class Pointer must be double word aligned.
-   int32_t padBytes = ((intptrj_t)cursor + 5 * sizeof(intptrj_t) + 7) / 8 * 8 - ((intptrj_t)cursor + 5 * sizeof(intptrj_t));
-   cursor += padBytes;
-
-   getSnippetLabel()->setCodeLocation(cursor);
-   TR::Node * callNode = getNode();
-
-   intptrj_t snippetStart = (intptrj_t)cursor;
-
-   // code cache RA
-   TR_ASSERT(_codeRA != NULL, "Interface Call Data Constant's code return address not initialized.\n");
-   *(uintptrj_t *) cursor = (uintptrj_t)_codeRA;
-   AOTcgDiag1(comp, "add TR_AbsoluteMethodAddress cursor=%x\n", cursor);
-   cg()->addProjectSpecializedRelocation(cursor, NULL, NULL, TR_AbsoluteMethodAddress,
-                             __FILE__, __LINE__, callNode);
-   cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-   // constant pool
-   *(uintptrj_t *) cursor = (uintptrj_t) callNode->getSymbolReference()->getOwningMethod(comp)->constantPool();
-
-   AOTcgDiag1(comp, "add TR_Thunks cursor=%x\n", cursor);
-   cg()->addProjectSpecializedRelocation(cursor, *(uint8_t **)cursor, callNode ? (uint8_t *)(intptr_t)callNode->getInlinedSiteIndex() : (uint8_t *)-1, TR_Thunks,
-                             __FILE__, __LINE__, callNode);
-   cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-   //  save CPIndex as sign extended 8 byte value on 64bit as it's assumed in J9 helpers
-   // cp index
-   *(intptrj_t *) cursor = (intptrj_t) callNode->getSymbolReference()->getCPIndex();
-   cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-   //interface class
-   *(uintptrj_t *) cursor = 0;
-   cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-   // method index
-   *(intptrj_t *) cursor = 0;
-   cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-   if (getNumInterfaceCallCacheSlots() == 0)
-      {
-      // Flags
-      *(intptrj_t *) (cursor) = 0;
-      cursor += TR::Compiler->om.sizeofReferenceAddress();
-      return cursor;
-      }
-   uint8_t * cursorlastCachedSlot = 0;
-   if (!comp->getOption(TR_enableInterfaceCallCachingSingleDynamicSlot))
-      {
-      // Flags
-      *(intptrj_t *) (cursor) = 0;
-      cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-      // lastCachedSlot
-      cursorlastCachedSlot = cursor;
-      *(intptrj_t *) (cursor) =  snippetStart + getFirstSlotOffset() - (2 * TR::Compiler->om.sizeofReferenceAddress());
-      AOTcgDiag1(comp, "add TR_AbsoluteMethodAddress cursor=%x\n", cursor);
-      cg()->addProjectSpecializedRelocation(cursor, NULL, NULL, TR_AbsoluteMethodAddress,
-                                __FILE__, __LINE__, callNode);
-      cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-      // firstSlot
-      *(intptrj_t *) (cursor) = snippetStart + getFirstSlotOffset();
-      AOTcgDiag1(comp, "add TR_AbsoluteMethodAddress cursor=%x\n", cursor);
-      cg()->addProjectSpecializedRelocation(cursor, NULL, NULL, TR_AbsoluteMethodAddress,
-                                __FILE__, __LINE__, callNode);
-      cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-      // lastSlot
-      *(intptrj_t *) (cursor) =  snippetStart + getLastSlotOffset();
-      AOTcgDiag1(comp, "add TR_AbsoluteMethodAddress cursor=%x\n", cursor);
-      cg()->addProjectSpecializedRelocation(cursor, NULL, NULL, TR_AbsoluteMethodAddress,
-                                __FILE__, __LINE__, callNode);
-      cursor += TR::Compiler->om.sizeofReferenceAddress();
-      }
-
-    // Cursor must be double word aligned by this point.
-    TR_ASSERT( (intptrj_t)cursor % 8 == 0, "Interface Call Data Snippet Class Ptr is not double word aligned.");
-
-    bool updateField = false;
-     int32_t numInterfaceCallCacheSlots = getNumInterfaceCallCacheSlots();
-     TR::list<TR_OpaqueClassBlock*> * profiledClassesList = cg()->getPICsListForInterfaceSnippet(this);
-     if (profiledClassesList)
-        {
-        for (auto valuesIt = profiledClassesList->begin(); valuesIt != profiledClassesList->end(); ++valuesIt)
-           {
-           TR::SymbolReference *methodSymRef = callNode->getSymbolReference();
-           TR_ResolvedMethod * profiledMethod = methodSymRef->getOwningMethod(comp)->getResolvedInterfaceMethod(comp,
-                 (TR_OpaqueClassBlock *)(*valuesIt), methodSymRef->getCPIndex());
-           numInterfaceCallCacheSlots--;
-           updateField = true;
-           if (TR::Compiler->target.is64Bit() && TR::Compiler->om.generateCompressedObjectHeaders())
-              *(uintptrj_t *) cursor = (uintptrj_t) (*valuesIt) << 32;
-           else
-              *(uintptrj_t *) cursor = (uintptrj_t) (*valuesIt);
-
-           if (comp->getOption(TR_EnableHCR))
-              {
-              cg()->jitAddPicToPatchOnClassRedefinition(*valuesIt, (void *) cursor);
-              }
-
-           if (cg()->fe()->isUnloadAssumptionRequired((TR_OpaqueClassBlock *)(*valuesIt), comp->getCurrentMethod()))
-              {
-              cg()->jitAddPicToPatchOnClassUnload(*valuesIt, (void *) cursor);
-              }
-
-           cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-           // Method Pointer
-           *(uintptrj_t *) (cursor) = (uintptrj_t)profiledMethod->startAddressForJittedMethod();
-           cursor += TR::Compiler->om.sizeofReferenceAddress();
-           }
-
-        }
-
-     // Skip the top cache slots that are filled with IProfiler data by setting the cursorlastCachedSlot to point to the fist dynamic cache slot
-     if (updateField)
-        {
-        *(intptrj_t *) (cursorlastCachedSlot) =  snippetStart + getFirstSlotOffset() + ((getNumInterfaceCallCacheSlots()-numInterfaceCallCacheSlots-1)*2 * TR::Compiler->om.sizeofReferenceAddress());
-        }
-
-     for (i = 0; i < numInterfaceCallCacheSlots; i++)
-      {
-      if (isUseCLFIandBRCL())
-         {
-         // Get Address of CLFI's immediate field (2 bytes into CLFI instruction).
-         // jitAddPicToPatchOnClassUnload is called by PicBuilder code when the cache is populated.
-         *(intptrj_t*) cursor = (intptrj_t)(getFirstCLFI()->getBinaryEncoding() ) + (intptrj_t)(i * 12 + 2);
-         cursor += TR::Compiler->om.sizeofReferenceAddress();
-         }
-      else
-         {
-         // Class Pointer - jitAddPicToPatchOnClassUnload is called by PicBuilder code when the cache is populated.
-         *(intptrj_t *) cursor = 0;
-         cursor += TR::Compiler->om.sizeofReferenceAddress();
-
-         // Method Pointer
-         *(intptrj_t *) (cursor) = 0;
-         cursor += TR::Compiler->om.sizeofReferenceAddress();
-         }
-      }
-
-   if (comp->getOption(TR_enableInterfaceCallCachingSingleDynamicSlot))
-      {
-      // Flags
-      *(intptrj_t *) (cursor) = 0;
-      cursor += TR::Compiler->om.sizeofReferenceAddress();
-      }
-
-   return cursor;
-   }
-
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getCallReturnAddressOffset()
-   {
-   return 0;
-   }
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getSingleDynamicSlotOffset()
-   {
-   return getCallReturnAddressOffset() + 5 * TR::Compiler->om.sizeofReferenceAddress();
-   }
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getLastCachedSlotFieldOffset()
-   {
-   return getCallReturnAddressOffset() + 6 * TR::Compiler->om.sizeofReferenceAddress();
-   }
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getFirstSlotFieldOffset()
-   {
-   return getLastCachedSlotFieldOffset() + TR::Compiler->om.sizeofReferenceAddress();
-   }
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getLastSlotFieldOffset()
-   {
-   return getFirstSlotFieldOffset() + TR::Compiler->om.sizeofReferenceAddress();
-   }
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getFirstSlotOffset()
-   {
-   return getLastSlotFieldOffset() + TR::Compiler->om.sizeofReferenceAddress();
-   }
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getLastSlotOffset()
-   {
-   return (getFirstSlotOffset() +
-          (getNumInterfaceCallCacheSlots() - 1) *
-             ((isUseCLFIandBRCL()?1:2) * TR::Compiler->om.sizeofReferenceAddress()));
-   }
-
-uint32_t
-TR::S390InterfaceCallDataSnippet::getLength(int32_t)
-   {
-   TR::Compilation *comp = cg()->comp();
-   // the 1st item is for padding...
-   if (getNumInterfaceCallCacheSlots()== 0)
-      return 2 * TR::Compiler->om.sizeofReferenceAddress() + 8 * TR::Compiler->om.sizeofReferenceAddress();
-
-   if (comp->getOption(TR_enableInterfaceCallCachingSingleDynamicSlot))
-      return 2 * TR::Compiler->om.sizeofReferenceAddress() + getSingleDynamicSlotOffset() + 4 * TR::Compiler->om.sizeofReferenceAddress();
-
-   if (getNumInterfaceCallCacheSlots() > 0)
-      return 2 * TR::Compiler->om.sizeofReferenceAddress() + getLastSlotOffset() + TR::Compiler->om.sizeofReferenceAddress();
-
-   TR_ASSERT(0,"Interface Call Data Snippet has 0 size.");
-   return 0;
-   }
-
-
-///////////////////////////////////////////////////////////////////////////////
-// TR::S390InterfaceCallDataSnippet member functions
-///////////////////////////////////////////////////////////////////////////////
 
 uint32_t
 TR::S390JNICallDataSnippet::getJNICallOutFrameFlagsOffset()
@@ -895,7 +484,7 @@ TR::S390JNICallDataSnippet::getLength(int32_t estimatedSnippetStart)
 
 TR::S390JNICallDataSnippet::S390JNICallDataSnippet(TR::CodeGenerator * cg,
                                TR::Node * node)
-: TR::S390ConstantDataSnippet(cg, node, TR::LabelSymbol::create(cg->trHeapMemory(),cg),0),
+: TR::S390ConstantDataSnippet(cg, node, generateLabelSymbol(cg),0),
  _baseRegister(0),
  _ramMethod(0),
  _JNICallOutFrameFlags(0),
@@ -1103,54 +692,6 @@ TR::S390JNICallDataSnippet::print(TR::FILE *pOutFile, TR_Debug *debug)
    bufferPos += sizeof(intptrj_t);
 }
 
-
-void
-TR_Debug::print(TR::FILE *pOutFile, TR::S390TargetAddressSnippet * snippet)
-   {
-   // *this   swipeable for debugger
-   if (pOutFile == NULL)
-      {
-      return;
-      }
-
-   uint8_t * bufferPos = snippet->getSnippetLabel()->getCodeLocation();
-   printSnippetLabel(pOutFile, snippet->getSnippetLabel(), bufferPos, "Target Address Snippet");
-   printPrefix(pOutFile, NULL, bufferPos, sizeof(uintptrj_t));
-
-   if (snippet->getTargetSnippet() != NULL)
-      {
-      print(pOutFile, snippet->getTargetSnippet()->getSnippetLabel());
-      }
-   else
-      {
-      trfprintf(pOutFile, "DC   \t%p", snippet->getTargetAddress());
-      }
-   }
-
-void
-TR_Debug::print(TR::FILE *pOutFile, TR::S390LookupSwitchSnippet * snippet)
-   {
-   int upperBound = snippet->getNode()->getCaseIndexUpperBound();
-   uint8_t * bufferPos = snippet->getSnippetLabel()->getCodeLocation();
-
-   printSnippetLabel(pOutFile, snippet->getSnippetLabel(), bufferPos, "Lookup Switch Table");
-
-   for (int i = 1; i < upperBound; i++)
-      {
-      // Each case stmt is described by a node on the child
-      TR::Node * caseKeyNode = snippet->getNode()->getChild(i);
-      int32_t caseKeyValue = caseKeyNode->getCaseConstant();
-      int32_t caseKeyTarget = (intptrj_t) caseKeyNode->getBranchDestination()->getNode()->getLabel()->getCodeLocation();
-
-      printPrefix(pOutFile, NULL, bufferPos, 4);
-      trfprintf(pOutFile, "DC   \t %p", caseKeyValue);
-      bufferPos += 4;
-      printPrefix(pOutFile, NULL, bufferPos, 4);
-      trfprintf(pOutFile, "DC   \t %p", caseKeyTarget);
-      bufferPos += 4;
-      }
-   }
-
 void
 TR_Debug::print(TR::FILE *pOutFile, TR::S390ConstantDataSnippet * snippet)
    {
@@ -1179,135 +720,11 @@ TR_Debug::print(TR::FILE *pOutFile, TR::S390ConstantDataSnippet * snippet)
       print(pOutFile, ((TR::S390ConstantInstructionSnippet *)snippet)->getInstruction());
       return;
       }
-   else if (snippet->getKind() == TR::Snippet::IsLabelTable)
-      {
-      printSnippetLabel(pOutFile, snippet->getSnippetLabel(), bufferPos, "Label Table Snippet");
-      trfprintf(pOutFile, "\n");
-      TR::S390LabelTableSnippet *labelTable = (TR::S390LabelTableSnippet *) snippet;
-      for (int32_t i = 0; i < labelTable->getSize(); i++)
-         {
-         TR::LabelSymbol *label = labelTable->getLabel(i);
-         if (label)
-            {
-            trfprintf(pOutFile, "[");
-            print(pOutFile, label);
-            trfprintf(pOutFile, "] ");
-            }
-         else
-            trfprintf(pOutFile, "[NULL] ");
-         }
-      return;
-      }
    else if (snippet->getKind() == TR::Snippet::IsInterfaceCallData)
       {
-      // This follows the snippet format in TR::S390InterfaceCallDataSnippet::emitSnippetBody
-      uint8_t refSize = TR::Compiler->om.sizeofReferenceAddress();
-
-      printSnippetLabel(pOutFile, snippet->getSnippetLabel(), bufferPos, "Interface call cache data snippet");
-      printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-      trfprintf(pOutFile, "DC   \t0x%016lx  # Call site RA", *(intptrj_t*)bufferPos);
-      bufferPos += refSize;
-
-      printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-      trfprintf(pOutFile, "DC   \t0x%016lx  # Address of constant pool", *(intptrj_t*)bufferPos);
-      bufferPos += refSize;
-
-      printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-      trfprintf(pOutFile, "DC   \t0x%016lx  # CP index", *(intptrj_t*)bufferPos);
-      bufferPos += refSize;
-
-      printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-      trfprintf(pOutFile, "DC   \t0x%016lx  # Interface class", *(intptrj_t*)bufferPos);
-      bufferPos += refSize;
-
-      printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-      trfprintf(pOutFile, "DC   \t0x%016lx  # Method index", *(intptrj_t*)bufferPos);
-      bufferPos += refSize;
-
-      // zero cache slot
-      if (static_cast<TR::S390InterfaceCallDataSnippet*>(snippet)->getNumInterfaceCallCacheSlots() == 0)
-         {
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t0x%016lx  # flags", *(intptrj_t*)bufferPos);
-         bufferPos += refSize;
-         }
-
-      // non-single cache slots
-      bool isSingleDynamicSlot = comp()->getOption(TR_enableInterfaceCallCachingSingleDynamicSlot);
-      if (!isSingleDynamicSlot)
-         {
-         // flags
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t0x%016lx  # flags", *(intptrj_t*)bufferPos);
-         bufferPos += refSize;
-
-         // lastCachedSlot
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t0x%016lx  # last cached slot", *(intptrj_t*)bufferPos);
-         bufferPos += refSize;
-
-         // firstSlot
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t0x%016lx  # first slot", *(intptrj_t*)bufferPos);
-         bufferPos += refSize;
-
-         // lastSlot
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t0x%016lx  # last slot", *(intptrj_t*)bufferPos);
-         bufferPos += refSize;
-         }
-
-      // print profiled class list
-      int32_t numInterfaceCallCacheSlots = static_cast<TR::S390InterfaceCallDataSnippet*>(snippet)->getNumInterfaceCallCacheSlots();
-      bool isUseCLFIandBRCL = static_cast<TR::S390InterfaceCallDataSnippet*>(snippet)->isUseCLFIandBRCL();
-      TR::list<TR_OpaqueClassBlock*> * profiledClassesList = comp()->cg()->getPICsListForInterfaceSnippet(snippet);
-
-      if (profiledClassesList)
-         {
-         for (auto iter = profiledClassesList->begin(); iter != profiledClassesList->end(); ++iter)
-            {
-            numInterfaceCallCacheSlots--;
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t0x%016lx  # profiled class", *(intptrj_t*)bufferPos);
-            bufferPos += refSize;
-
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t0x%016lx  # profiled method", *(intptrj_t*)bufferPos);
-            bufferPos += refSize;
-            }
-         }
-
-      // print remaining class list
-      for (uint32_t i = 0; i < numInterfaceCallCacheSlots; i++)
-         {
-         if (isUseCLFIandBRCL)
-            {
-            // address of CLFI's immediate field
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t0x%016lx  # address of CLFI's immediate field", *(intptrj_t*)bufferPos);
-            bufferPos += refSize;
-            }
-         else
-            {
-            // class pointer
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t0x%016lx  # class pointer %d", *(intptrj_t*)bufferPos, i);
-            bufferPos += refSize;
-
-            // method pointer
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t0x%016lx  # method pointer %d", *(intptrj_t*)bufferPos, i);
-            bufferPos += refSize;
-            }
-         }
-
-      if (isSingleDynamicSlot)
-         {
-         // flags
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t0x%016lx # method pointer", *(intptrj_t*)bufferPos);
-         bufferPos += refSize;
-         }
+#ifdef J9_PROJECT_SPECIFIC
+      print(pOutFile, reinterpret_cast<TR::J9S390InterfaceCallDataSnippet*>(snippet));
+#endif
       return;
       }
    else
@@ -1350,129 +767,4 @@ TR_Debug::print(TR::FILE *pOutFile, TR::S390ConstantDataSnippet * snippet)
             }
          }
       }
-   }
-
-
-void
-TR_Debug::print(TR::FILE *pOutFile, TR::S390InterfaceCallDataSnippet * snippet)
-   {
-   uint8_t * bufferPos = snippet->getSnippetLabel()->getCodeLocation();
-
-   int isSingleDynamicSlot = 0;
-   int i = 0;
-
-   if (snippet->getLength(0) == 6 * sizeof(intptrj_t) + snippet->getSingleDynamicSlotOffset())
-      {
-      isSingleDynamicSlot = 1;
-      }
-
-   printSnippetLabel(pOutFile, snippet->getSnippetLabel(), bufferPos, "Interface Call Data Snippet");
-
-   printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-   trfprintf(pOutFile, "DC   \t%p \t\t# Call Site RA", *((intptrj_t*)bufferPos));
-   bufferPos += sizeof(intptrj_t);
-
-   printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-   trfprintf(pOutFile, "DC   \t%p \t\t# Address Of Constant Pool", *((intptrj_t*)bufferPos));
-   bufferPos += sizeof(intptrj_t);
-
-   printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-   trfprintf(pOutFile, "DC   \t%p \t\t# CP Index", *((intptrj_t*)bufferPos));
-   bufferPos += sizeof(intptrj_t);
-
-   printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-   trfprintf(pOutFile, "DC   \t%p \t\t# Interface Class",*((intptrj_t*)bufferPos));
-   bufferPos += sizeof(intptrj_t);
-
-   printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-   trfprintf(pOutFile, "DC   \t%p \t\t# Method Index",*((intptrj_t*)bufferPos));
-   bufferPos += sizeof(intptrj_t);
-
-   if (snippet->getNumInterfaceCallCacheSlots() == 0)
-      {
-   printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-      trfprintf(pOutFile, "DC   \t%p \t\t# Resolved Flag",*((intptrj_t*)bufferPos));
-      }
-   else
-      {
-      if (!isSingleDynamicSlot)
-         {
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t%p \t\t# Resolved Flag",*((intptrj_t*)bufferPos));
-         bufferPos += sizeof(intptrj_t);
-
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t%p \t\t# lastCachedSlotField", *((intptrj_t*)bufferPos));
-         bufferPos += sizeof(intptrj_t);
-
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t%p \t\t# firstSlotField",*((intptrj_t*)bufferPos));
-         bufferPos += sizeof(intptrj_t);
-
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t%p \t\t# lastSlotField",*((intptrj_t*)bufferPos));
-         bufferPos += sizeof(intptrj_t);
-         }
-
-      for (i=0;i<snippet->getNumInterfaceCallCacheSlots();i++)
-         {
-         if (snippet->isUseCLFIandBRCL())
-            {
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t%p \t\t# Addr of CLFI immed field for cached class %d",*((intptrj_t*)bufferPos),i+1);
-            bufferPos += sizeof(intptrj_t);
-            }
-         else
-            {
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t%p \t\t# cached class%d",*((intptrj_t*)bufferPos),i+1);
-            bufferPos += sizeof(intptrj_t);
-
-            printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-            trfprintf(pOutFile, "DC   \t%p \t\t# cached method%d",*((intptrj_t*)bufferPos),i+1);
-            bufferPos += sizeof(intptrj_t);
-            }
-         }
-      if (isSingleDynamicSlot)
-         {
-         printPrefix(pOutFile, NULL, bufferPos, sizeof(intptrj_t));
-         trfprintf(pOutFile, "DC   \t%p \t\t# Resolved Flag",*((intptrj_t*)bufferPos));
-         bufferPos += sizeof(intptrj_t);
-         }
-      }
-   }
-
-
-TR::S390LabelTableSnippet::S390LabelTableSnippet(TR::CodeGenerator *cg, TR::Node *node, uint32_t size)
-   : TR::S390ConstantDataSnippet(cg, node, NULL, 0), _size(size)
-   {
-   TR_ASSERT(TR::Compiler->target.is32Bit(), "only 31bit mode supported for TR::S390LabelTableSnippet\n");
-   _labelTable = (TR::LabelSymbol **) cg->trMemory()->allocateMemory(sizeof(TR::LabelSymbol *) * size, heapAlloc);
-   setLength(0);
-   }
-
-uint8_t *
-TR::S390LabelTableSnippet::emitSnippetBody()
-   {
-   uint8_t * snip = cg()->getBinaryBufferCursor();
-   getSnippetLabel()->setCodeLocation(snip);
-   uint8_t * cursor = snip;
-   for (int32_t i = 0; i < _size; i++)
-      {
-      if (_labelTable[i])
-         {
-         cg()->addRelocation(new (cg()->trHeapMemory()) TR::LabelTable32BitRelocation(cursor, _labelTable[i]));
-         *(uint32_t *) cursor = cursor - snip;
-         }
-      else
-         *(uint32_t *) cursor = 0xdeadbeaf;
-      cursor += 4;
-      }
-   return cursor;
-   }
-
-uint32_t
-TR::S390LabelTableSnippet::getLength(int32_t estimatedSnippetStart)
-   {
-   return _size * 4;
    }

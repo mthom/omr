@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -31,21 +31,21 @@ namespace TR { class S390SystemLinkage; }
 namespace OMR { typedef TR::S390SystemLinkage SystemLinkageConnector; }
 #endif
 
-#include <stddef.h>                            // for NULL, size_t
-#include <stdint.h>                            // for int32_t, uintptr_t, etc
-#include "codegen/InstOpCode.hpp"              // for InstOpCode, etc
-#include "codegen/Linkage.hpp"                 // for TR_S390AutoMarkers, etc
-#include "codegen/LinkageConventionsEnum.hpp"  // for TR_LinkageConventions, etc
-#include "codegen/RealRegister.hpp"            // for RealRegister, etc
-#include "codegen/Register.hpp"                // for Register
-#include "compile/Compilation.hpp"             // for Compilation
-#include "env/TRMemory.hpp"                    // for Allocator, etc
-#include "env/jittypes.h"                      // for intptrj_t
-#include "il/Symbol.hpp"                       // for Symbol
-#include "il/SymbolReference.hpp"              // for SymbolReference
-#include "il/symbol/AutomaticSymbol.hpp"       // for AutomaticSymbol
-#include "infra/Array.hpp"                     // for TR_Array
-#include "infra/Assert.hpp"                    // for TR_ASSERT
+#include <stddef.h>
+#include <stdint.h>
+#include "codegen/InstOpCode.hpp"
+#include "codegen/Linkage.hpp"
+#include "codegen/LinkageConventionsEnum.hpp"
+#include "codegen/RealRegister.hpp"
+#include "codegen/Register.hpp"
+#include "compile/Compilation.hpp"
+#include "env/TRMemory.hpp"
+#include "env/jittypes.h"
+#include "il/Symbol.hpp"
+#include "il/SymbolReference.hpp"
+#include "il/symbol/AutomaticSymbol.hpp"
+#include "infra/Array.hpp"
+#include "infra/Assert.hpp"
 
 namespace TR { class S390JNICallDataSnippet; }
 namespace TR { class Block; }
@@ -90,7 +90,6 @@ class S390SystemLinkage : public TR::Linkage
    int32_t _varArgOffsetInParmArea;
    int32_t _varArgRegSaveAreaOffset;
    int32_t _parmOffsetInLocalArea;
-   TR_Array<TR::SymbolReference*> *_autoMarkerSymbols; // symbols that mark points in stackframe
 
 protected:
    int32_t _StackFrameSize;
@@ -214,23 +213,17 @@ public:
 
    virtual TR::RealRegister::RegNum setNormalStackPointerRegister  (TR::RealRegister::RegNum r) { return _normalStackPointerRegister = r; }
    virtual TR::RealRegister::RegNum getNormalStackPointerRegister()   { return _normalStackPointerRegister; }
-   virtual TR::RealRegister *getNormalStackPointerRealRegister() {return getS390RealRegister(_normalStackPointerRegister);}
+   virtual TR::RealRegister *getNormalStackPointerRealRegister() {return getRealRegister(_normalStackPointerRegister);}
 
    virtual TR::RealRegister::RegNum setAlternateStackPointerRegister  (TR::RealRegister::RegNum r) { return _alternateStackPointerRegister = r; }
    virtual TR::RealRegister::RegNum getAlternateStackPointerRegister()   { return _alternateStackPointerRegister; }
-   virtual TR::RealRegister *getAlternateStackPointerRealRegister() {return getS390RealRegister(_alternateStackPointerRegister);}
+   virtual TR::RealRegister *getAlternateStackPointerRealRegister() {return getRealRegister(_alternateStackPointerRegister);}
    virtual void initParamOffset(TR::ResolvedMethodSymbol * method, int32_t stackIndex, List<TR::ParameterSymbol> *parameterList=0);
 
    // Register used for EX instructions for debug hooks - set by notifyHasHooks
    virtual TR::RealRegister::RegNum setDebugHooksRegister(TR::RealRegister::RegNum r) { return _debugHooksRegister = r; }
    virtual TR::RealRegister::RegNum getDebugHooksRegister()   { return _debugHooksRegister; }
-   virtual TR::RealRegister *getDebugHooksRealRegister() {return getS390RealRegister(_debugHooksRegister);}
-
-   virtual TR::SymbolReference *createAutoMarkerSymbol(TR_S390AutoMarkers markerType);
-   virtual void setAutoMarkerSymbols(TR_Array<TR::SymbolReference*> *symbols) { _autoMarkerSymbols = symbols; }
-   virtual TR::SymbolReference *getAutoMarkerSymbol(TR_S390AutoMarkers markerType) { return _autoMarkerSymbols ? (*_autoMarkerSymbols)[markerType] : 0; }
-   virtual void setAutoMarkerSymbolOffset(TR_S390AutoMarkers markerType, int32_t offset) { getAutoMarkerSymbol(markerType)->getSymbol()->castToAutoSymbol()->setOffset(offset); }
-
+   virtual TR::RealRegister *getDebugHooksRealRegister() {return getRealRegister(_debugHooksRegister);}
 
    // == General utilities (linkage independent)
    virtual TR::Instruction *addImmediateToRealRegister(TR::RealRegister * targetReg, int32_t immediate, TR::RealRegister *tempReg, TR::Node *node, TR::Instruction *cursor, bool *checkTempNeeded=NULL);

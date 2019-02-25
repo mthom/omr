@@ -37,6 +37,7 @@ namespace OMR { typedef OMR::ARM64::MemoryReference MemoryReferenceConnector; }
 
 #include <stddef.h>
 #include <stdint.h>
+#include "codegen/InstOpCode.hpp"
 #include "codegen/Register.hpp"
 #include "env/TRMemory.hpp"
 #include "il/SymbolReference.hpp"
@@ -118,6 +119,23 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
          TR::Register *br,
          int32_t disp,
          TR::CodeGenerator *cg);
+
+   /**
+    * @brief Constructor
+    * @param[in] node : load or store node
+    * @param[in] len : length
+    * @param[in] cg : CodeGenerator object
+    */
+   MemoryReference(TR::Node *node, uint32_t len, TR::CodeGenerator *cg);
+
+   /**
+    * @brief Constructor
+    * @param[in] node : node
+    * @param[in] symRef : symbol reference
+    * @param[in] len : length
+    * @param[in] cg : CodeGenerator object
+    */
+   MemoryReference(TR::Node *node, TR::SymbolReference *symRef, uint32_t len, TR::CodeGenerator *cg);
 
    /**
     * @brief Gets base register
@@ -208,16 +226,65 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
 
    /**
     * @brief Gets offset
+    * @param[in] withRegSym : add offset of register mapped symbol if true
     * @return offset
     */
-   int32_t getOffset()
+   int32_t getOffset(bool withRegSym = false)
       {
       int32_t displacement = _offset;
-      if (_symbolReference->getSymbol() != NULL &&
+      if (withRegSym &&
+          _symbolReference->getSymbol() != NULL &&
           _symbolReference->getSymbol()->isRegisterMappedSymbol())
          displacement += _symbolReference->getSymbol()->getOffset();
 
       return displacement;
+      }
+   /**
+    * @brief Sets offset
+    * @param[in] o : offset
+    * @return offset
+    */
+   int32_t setOffset(int32_t o) {return _offset = o;}
+
+   /**
+    * @brief Answers if MemoryReference refs specified register
+    * @param[in] reg : register
+    * @return true if MemoryReference refs the register, false otherwise
+    */
+   bool refsRegister(TR::Register *reg)
+      {
+      return (reg == _baseRegister ||
+              reg == _indexRegister);
+      }
+
+   /**
+    * @brief Blocks registers used by MemoryReference
+    */
+   void blockRegisters()
+      {
+      if (_baseRegister != NULL)
+         {
+         _baseRegister->block();
+         }
+      if (_indexRegister != NULL)
+         {
+         _indexRegister->block();
+         }
+      }
+
+   /**
+    * @brief Unblocks registers used by MemoryReference
+    */
+   void unblockRegisters()
+      {
+      if (_baseRegister != NULL)
+         {
+         _baseRegister->unblock();
+         }
+      if (_indexRegister != NULL)
+         {
+         _indexRegister->unblock();
+         }
       }
 
    /**
@@ -275,10 +342,61 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
    TR::SymbolReference *getSymbolReference() {return _symbolReference;}
 
    /**
+    * @brief Sets symbol
+    * @param[in] symbol : symbol to be set
+    * @param[in] cg : CodeGenerator
+    */
+   void setSymbol(TR::Symbol *symbol, TR::CodeGenerator *cg);
+
+   /**
+    * @brief Adds to offset
+    * @param[in] node : node
+    * @param[in] amount : amount to be added to offset
+    * @param[in] cg : CodeGenerator
+    */
+   void addToOffset(TR::Node *node, intptrj_t amount, TR::CodeGenerator *cg);
+
+   /**
+    * @brief Decrements node reference counts
+    * @param[in] cg : CodeGenerator
+    */
+   void decNodeReferenceCounts(TR::CodeGenerator *cg);
+
+   /**
+    * @brief Populates memory reference
+    * @param[in] subTree : sub-tree node
+    * @param[in] cg : CodeGenerator
+    */
+   void populateMemoryReference(TR::Node *subTree, TR::CodeGenerator *cg);
+
+   /**
+    * @brief Consolidates registers
+    * @param[in] srcReg : source register
+    * @param[in] srcTree : source tree node
+    * @param[in] srcModifiable : true if modifiable
+    * @param[in] cg : CodeGenerator
+    */
+   void consolidateRegisters(TR::Register *srcReg, TR::Node *srcTree, bool srcModifiable, TR::CodeGenerator *cg);
+
+   /**
+    * @brief Increment totalUseCounts of registers in MemoryReference
+    * @param[in] cg : CodeGenerator
+    */
+   void incRegisterTotalUseCounts(TR::CodeGenerator *cg);
+
+   /**
+    * @brief Assigns registers
+    * @param[in] currentInstruction : current instruction
+    * @param[in] cg : CodeGenerator
+    */
+   void assignRegisters(TR::Instruction *currentInstruction, TR::CodeGenerator *cg);
+
+   /**
     * @brief Estimates the length of generated binary
+    * @param[in] op : opcode of the instruction to attach this memory reference to
     * @return estimated binary length
     */
-   uint32_t estimateBinaryLength();
+   uint32_t estimateBinaryLength(TR::InstOpCode op);
 
    /**
     * @brief Generates binary encoding

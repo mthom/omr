@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,79 +21,79 @@
 
 #include "optimizer/LocalOpts.hpp"
 
-#include <algorithm>                           // for std::max, etc
-#include <limits.h>                            // for INT_MAX, UINT_MAX, etc
-#include <math.h>                              // for exp
-#include <stddef.h>                            // for size_t
-#include <stdint.h>                            // for int32_t, uint32_t, etc
-#include <stdio.h>                             // for printf, fflush, etc
-#include <stdlib.h>                            // for atoi
-#include <string.h>                            // for NULL, strncmp, strcmp, etc
-#include "codegen/CodeGenerator.hpp"           // for CodeGenerator, etc
-#include "codegen/FrontEnd.hpp"                // for TR_FrontEnd, feGetEnv, etc
-#include "env/KnownObjectTable.hpp"        // for KnownObjectTable, etc
-#include "codegen/Linkage.hpp"                 // for Linkage
-#include "codegen/RecognizedMethods.hpp"       // for RecognizedMethod, etc
+#include <algorithm>
+#include <limits.h>
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "codegen/CodeGenerator.hpp"
+#include "codegen/FrontEnd.hpp"
+#include "env/KnownObjectTable.hpp"
+#include "codegen/Linkage.hpp"
+#include "codegen/RecognizedMethods.hpp"
 #include "codegen/RegisterConstants.hpp"
-#include "compile/Compilation.hpp"             // for Compilation, comp, etc
-#include "compile/Method.hpp"                  // for TR_Method
-#include "compile/ResolvedMethod.hpp"          // for TR_ResolvedMethod
-#include "compile/SymbolReferenceTable.hpp"    // for SymbolReferenceTable, etc
-#include "compile/VirtualGuard.hpp"            // for TR_VirtualGuard
+#include "compile/Compilation.hpp"
+#include "compile/Method.hpp"
+#include "compile/ResolvedMethod.hpp"
+#include "compile/SymbolReferenceTable.hpp"
+#include "compile/VirtualGuard.hpp"
 #include "control/Options.hpp"
-#include "control/Options_inlines.hpp"         // for TR::Options, etc
+#include "control/Options_inlines.hpp"
 #include "control/Recompilation.hpp"
-#include "cs2/bitvectr.h"                      // for ABitVector
-#include "cs2/hashtab.h"                       // for HashTable, HashIndex
-#include "cs2/llistof.h"                       // for QueueOf
-#include "cs2/sparsrbit.h"                     // for ASparseBitVector, etc
+#include "cs2/bitvectr.h"
+#include "cs2/hashtab.h"
+#include "cs2/llistof.h"
+#include "cs2/sparsrbit.h"
 #include "env/CompilerEnv.hpp"
-#include "env/PersistentInfo.hpp"              // for PersistentInfo
+#include "env/PersistentInfo.hpp"
 #include "env/StackMemoryRegion.hpp"
-#include "env/TRMemory.hpp"                    // for SparseBitVector, etc
-#include "env/jittypes.h"                      // for TR_ByteCodeInfo, etc
+#include "env/TRMemory.hpp"
+#include "env/jittypes.h"
 #include "il/AliasSetInterface.hpp"
-#include "il/Block.hpp"                        // for Block, toBlock, etc
-#include "il/DataTypes.hpp"                    // for TR::DataType, etc
-#include "il/ILOpCodes.hpp"                    // for ILOpCodes::treetop, etc
-#include "il/ILOps.hpp"                        // for ILOpCode, TR::ILOpCode
-#include "il/Node.hpp"                         // for Node, etc
-#include "il/NodePool.hpp"                     // for TR::NodePool
-#include "il/Node_inlines.hpp"                 // for Node::getFirstChild, etc
-#include "il/Symbol.hpp"                       // for Symbol, etc
-#include "il/SymbolReference.hpp"              // for SymbolReference, etc
-#include "il/TreeTop.hpp"                      // for TreeTop
-#include "il/TreeTop_inlines.hpp"              // for TreeTop::getNode, etc
-#include "il/symbol/MethodSymbol.hpp"          // for MethodSymbol, etc
-#include "il/symbol/ParameterSymbol.hpp"       // for ParameterSymbol
-#include "il/symbol/ResolvedMethodSymbol.hpp"  // for ResolvedMethodSymbol
-#include "il/symbol/StaticSymbol.hpp"          // for StaticSymbol
-#include "ilgen/IlGenRequest.hpp"              // for IlGenRequest
+#include "il/Block.hpp"
+#include "il/DataTypes.hpp"
+#include "il/ILOpCodes.hpp"
+#include "il/ILOps.hpp"
+#include "il/Node.hpp"
+#include "il/NodePool.hpp"
+#include "il/Node_inlines.hpp"
+#include "il/Symbol.hpp"
+#include "il/SymbolReference.hpp"
+#include "il/TreeTop.hpp"
+#include "il/TreeTop_inlines.hpp"
+#include "il/symbol/MethodSymbol.hpp"
+#include "il/symbol/ParameterSymbol.hpp"
+#include "il/symbol/ResolvedMethodSymbol.hpp"
+#include "il/symbol/StaticSymbol.hpp"
+#include "ilgen/IlGenRequest.hpp"
 #include "ilgen/IlGeneratorMethodDetails.hpp"
-#include "infra/Array.hpp"                     // for TR_Array
-#include "infra/Assert.hpp"                    // for TR_ASSERT
-#include "infra/Bit.hpp"                       // for isPowerOf2, etc
-#include "infra/BitVector.hpp"                 // for TR_BitVector, etc
-#include "infra/Cfg.hpp"                       // for CFG, etc
+#include "infra/Array.hpp"
+#include "infra/Assert.hpp"
+#include "infra/Bit.hpp"
+#include "infra/BitVector.hpp"
+#include "infra/Cfg.hpp"
 #include "infra/ILWalk.hpp"
-#include "infra/Link.hpp"                      // for TR_LinkHeadAndTail, etc
-#include "infra/List.hpp"                      // for List, TR_ScratchList, etc
-#include "optimizer/Inliner.hpp"               // for TR_InlineCall, etc
-#include "infra/Stack.hpp"                     // for TR_Stack
-#include "infra/CfgEdge.hpp"                   // for CFGEdge
-#include "infra/CfgNode.hpp"                   // for CFGNode
-#include "optimizer/Optimization.hpp"          // for Optimization
+#include "infra/Link.hpp"
+#include "infra/List.hpp"
+#include "optimizer/Inliner.hpp"
+#include "infra/Stack.hpp"
+#include "infra/CfgEdge.hpp"
+#include "infra/CfgNode.hpp"
+#include "optimizer/Optimization.hpp"
 #include "optimizer/Optimization_inlines.hpp"
-#include "optimizer/OptimizationManager.hpp"   // for OptimizationManager
+#include "optimizer/OptimizationManager.hpp"
 #include "optimizer/Optimizations.hpp"
-#include "optimizer/Optimizer.hpp"             // for Optimizer
-#include "optimizer/OrderBlocks.hpp"           // for TR_OrderBlocks
-#include "optimizer/PreExistence.hpp"          // for TR_PrexArgument, etc
-#include "optimizer/Structure.hpp"             // for TR_RegionStructure, etc
+#include "optimizer/Optimizer.hpp"
+#include "optimizer/OrderBlocks.hpp"
+#include "optimizer/PreExistence.hpp"
+#include "optimizer/Structure.hpp"
 #include "optimizer/TransformUtil.hpp"
-#include "optimizer/UseDefInfo.hpp"            // for TR_UseDefInfo
-#include "ras/Debug.hpp"                       // for TR_DebugBase
-#include "ras/DebugCounter.hpp"                // for TR::DebugCounter, etc
+#include "optimizer/UseDefInfo.hpp"
+#include "ras/Debug.hpp"
+#include "ras/DebugCounter.hpp"
 #include "ras/ILValidator.hpp"
 #include "ras/ILValidationStrategies.hpp"
 #include "runtime/Runtime.hpp"
@@ -102,9 +102,9 @@
 #include "control/RecompilationInfo.hpp"
 #include "runtime/J9ValueProfiler.hpp"
 #include "runtime/J9Profiler.hpp"
-#include "env/CHTable.hpp"                     // for TR_CHTable, etc
-#include "env/ClassTableCriticalSection.hpp"   // for ClassTableCriticalSection
-#include "env/PersistentCHTable.hpp"           // for TR_PersistentCHTable
+#include "env/CHTable.hpp"
+#include "env/ClassTableCriticalSection.hpp"
+#include "env/PersistentCHTable.hpp"
 #include "env/RuntimeAssumptionTable.hpp"
 #include "env/VMJ9.h"
 #include "runtime/RuntimeAssumptions.hpp"
@@ -271,7 +271,7 @@ int32_t TR_ExtendBasicBlocks::orderBlocksWithoutFrequencyInfo()
                    //(blockHotness != unknownHotness) && (bestHotness != unknownHotness))
                   {
                   //if (((bestHotness == deadCold) && (blockHotness != deadCold)) || (blockHotness > (bestHotness + 1)))
-                  if (((bestFreq == (MAX_COLD_BLOCK_COUNT+1)) && (blockFreq != (MAX_COLD_BLOCK_COUNT+1)) || (blockFreq > bestFreq + 100)))
+                  if ((((bestFreq == (MAX_COLD_BLOCK_COUNT+1)) && (blockFreq != (MAX_COLD_BLOCK_COUNT+1))) || (blockFreq > bestFreq + 100)))
                      {
                      //bestExtension = NULL;
                      continue;
@@ -3000,8 +3000,8 @@ int32_t TR_SimplifyAnds::process(TR::TreeTop *startTree, TR::TreeTop *endTree)
                      TR::Node *treeBeforeLastRealNode = treeBefore->getNode();
                      TR::Node *firstNode = firstTree->getNode();
                      if (firstNode->getOpCode().isStoreDirect() &&
-                         (firstNode->getFirstChild()->getOpCode().isAdd() ||
-                          firstNode->getFirstChild()->getOpCode().isSub() &&
+                         ((firstNode->getFirstChild()->getOpCode().isAdd() ||
+                          firstNode->getFirstChild()->getOpCode().isSub()) &&
                           firstNode->getFirstChild()->getReferenceCount() == 1) &&
                          ((firstNode->getType().isInt32() ||
                           firstNode->getType().isInt64())
@@ -4278,11 +4278,9 @@ TR_ProfiledNodeVersioning::optDetailString() const throw()
    return "O^O PROFILED NODE VERSIONING: ";
    }
 
-TR_Rematerialization::TR_Rematerialization(TR::OptimizationManager *manager, bool onlyLongReg)
+TR_Rematerialization::TR_Rematerialization(TR::OptimizationManager *manager)
    : TR::Optimization(manager), _prefetchNodes(trMemory())
-   {
-   setOnlyRunLongRegHeuristic(onlyLongReg);
-   }
+   {}
 
 void TR_Rematerialization::rematerializeSSAddress(TR::Node *parent, int32_t addrChildIndex)
    {
@@ -4293,8 +4291,8 @@ void TR_Rematerialization::rematerializeSSAddress(TR::Node *parent, int32_t addr
          addressNode->getSymbolReference()->getSymbol()->isAutoOrParm())
         ||
         (addressNode->getOpCode().isArrayRef() &&
-         addressNode->getSecondChild()->getOpCode().isLoadConst()) &&
-         cg()->getSupportsConstantOffsetInAddressing(addressNode->getSecondChild()->get64bitIntegralValue())))
+         addressNode->getSecondChild()->getOpCode().isLoadConst() &&
+         cg()->getSupportsConstantOffsetInAddressing(addressNode->getSecondChild()->get64bitIntegralValue()))))
 
       {
       if (performTransformation(comp(), "%sRematerializing SS address %s (%p)\n", optDetailString(),addressNode->getOpCode().getName(),addressNode))
@@ -4342,8 +4340,8 @@ void TR_Rematerialization::rematerializeAddresses(TR::Node *indirectNode, TR::Tr
                  node->getNumChildren() == 2 &&
                  (!node->getSecondChild()->getOpCode().isLoadConst() ||
                   (cg()->isMaterialized(node->getSecondChild()) ||
-                        cg()->getSupportsConstantOffsetInAddressing() &&
-                        cg()->getSupportsConstantOffsetInAddressing(node->getSecondChild()->get64bitIntegralValue())))) ||
+                        (cg()->getSupportsConstantOffsetInAddressing() &&
+                        cg()->getSupportsConstantOffsetInAddressing(node->getSecondChild()->get64bitIntegralValue()))))) ||
                 (node->getReferenceCount() == 1 &&
                  node->isInternalPointer() &&
                  node->getNumChildren() == 2 &&
@@ -4553,12 +4551,6 @@ void TR_Rematerialization::prePerformOnBlocks()
    {
    _counter = 0;
    _curBlock = NULL;
-
-   if (shouldOnlyRunLongRegHeuristic())
-      {
-      setLongRegDecision(false);
-      initLongRegData();
-      }
    }
 
 class TR_RematAdjustments
@@ -4646,19 +4638,6 @@ TR::Node * rematerializeNode(TR::Compilation * comp, TR::Node * node)
 
 int32_t TR_Rematerialization::process(TR::TreeTop *startTree, TR::TreeTop *endTree)
    {
-   if (shouldOnlyRunLongRegHeuristic())
-      {
-      makeEarlyLongRegDecision();
-      if (longRegDecisionMade())
-        return 0;
-      }
-
-   if (!shouldOnlyRunLongRegHeuristic())
-      {
-      if (debug("NRematerialization"))
-         return 0;
-      }
-
    _underGlRegDeps = false;
 
    vcount_t visitCount = comp()->incOrResetVisitCount();
@@ -4673,66 +4652,14 @@ int32_t TR_Rematerialization::process(TR::TreeTop *startTree, TR::TreeTop *endTr
       // Get information about this block
       //
       TR::Node *node = treeTop->getNode();
-      if (!shouldOnlyRunLongRegHeuristic())
-         rematerializeAddresses(node, treeTop, visitCount);
-      else
-         {
-         _curLongOps=0; //reset for this node
-         _curOps=0; //reset for this node
 
-         if (!(node->getOpCodeValue() == TR::BBStart  ||
-            node->getOpCodeValue() == TR::BBEnd  ||
-            node->getOpCodeValue() == TR::asynccheck))
-            {
-            if (performTransformation(comp(), "%s Counting ops for node [%p]\n", optDetailString(), node))
-               {
-               examineLongRegNode(node, comp()->getVisitCount(), false);
-               _numLongOps += _curLongOps;
-               _numOps += _curOps;
-               if (_curLongOps > 0)
-                  {
-                  int32_t nWeight = 1;
-                  bool isInLoop = (NULL != treeTop->getEnclosingBlock()->getStructureOf()->getContainingLoop());
-                  if (isInLoop)
-                     {
-                     TR_RegionStructure * region = treeTop->getEnclosingBlock()->getParentStructureIfExists(comp()->getFlowGraph());
-                     if (trace())
-                        traceMsg(comp(), "\tNode [%p] is in a loop\n", node);
-
-                     //calculate freq of exec (will take care of loops and nesting in loops)
-                     if (region)
-                        {
-                        _numLongLoopOps+=_curLongOps;
-                        _numLoopOps+=_curOps;
-
-                        region->calculateFrequencyOfExecution(&nWeight);
-                        int8_t level = getLoopNestingLevel(nWeight);
-
-                        // add to tally of level
-                        if (level == 5)
-                           _numLongNestedLoopOps[level-1] += _curLongOps*2;
-                        else
-                           _numLongNestedLoopOps[level] += _curLongOps;
-
-                        if (trace())
-                           traceMsg(comp(), "\tLoop node [%p] has %d longs at level %d\n", node, _curLongOps, level);
-
-                        }
-                     }
-                  }
-               }
-            }
-         }
+      rematerializeAddresses(node, treeTop, visitCount);
       }
 
-   if (!shouldOnlyRunLongRegHeuristic())
-      {
-      if ((!cg()->doRematerialization()) &&
-          !comp()->containsBigDecimalLoad() &&
-          !comp()->getSymRefTab()->findPrefetchSymbol())
-         return 0;
-      }
-
+   if ((!cg()->doRematerialization()) &&
+       !comp()->containsBigDecimalLoad() &&
+       !comp()->getSymRefTab()->findPrefetchSymbol())
+      return 0;
 
    _nodeCount = comp()->getNodeCount();
    _heightArray = (int32_t *)trMemory()->allocateStackMemory(_nodeCount*sizeof(int32_t));
@@ -5195,51 +5122,6 @@ bool TR_Rematerialization::examineNode(TR::TreeTop *treeTop, TR::Node *parent, T
          isCallDirect = true;
       }
 
-   if (shouldOnlyRunLongRegHeuristic())
-      {
-      int32_t curLiveLongs=0;
-      int32_t nWeight=1;
-      if (isCall || isCallDirect)
-         {
-         ListIterator<TR::Node> nodesIt(&(state->_currentlyCommonedNodes));
-         TR::Node *commonedNode = NULL;
-         for (commonedNode = nodesIt.getFirst(); commonedNode; commonedNode = nodesIt.getNext())
-            {
-            if (commonedNode->uses64BitGPRs())
-               {
-               curLiveLongs++;
-               if (trace())
-                  traceMsg(comp(), "\tLocated long commoned node [%p]\n", commonedNode);
-               }
-            }
-            if (trace())
-               traceMsg(comp(), "\tCall node [%p] has %d live longs\n", node, curLiveLongs);
-
-            bool isInLoop = (NULL != treeTop->getEnclosingBlock()->getStructureOf()->getContainingLoop());
-            if (isInLoop)
-               {
-               TR_RegionStructure * region = NULL;
-               region = treeTop->getEnclosingBlock()->getParentStructureIfExists(comp()->getFlowGraph());
-               if (trace())
-                  traceMsg(comp(), "\tCall node [%p] is in a loop\n", node);
-
-               //calculate freq of exec (will take care of loops and nesting in loops)
-               if (region)
-                  {
-                  region->calculateFrequencyOfExecution(&nWeight);
-                  int8_t level = getLoopNestingLevel(nWeight)+1;
-                  if (trace())
-                     traceMsg(comp(), "\tCall node [%p] in loop with nesting=%d\n", node, level);
-                  curLiveLongs*=2*level;
-                  if (trace())
-                     traceMsg(comp(), "\tCall node [%p] in loop weighted live longs=%d\n", node, curLiveLongs);
-                  }
-               }
-         //add this node's commoned live long contribution
-         _numCallLiveLongs+=curLiveLongs;
-         }
-      }
-
    if (isCall ||
        isSimilarToCall)
       {
@@ -5306,57 +5188,47 @@ bool TR_Rematerialization::examineNode(TR::TreeTop *treeTop, TR::Node *parent, T
          }
        }
 
-
-    if (!shouldOnlyRunLongRegHeuristic())
+    if (trace())
        {
-       if (trace() && !shouldOnlyRunLongRegHeuristic())
-          {
-          traceMsg(comp(), "At node %p parent %p GPR pressure is %d (child adjust %d parent adjust %d) limit is %d\n", node, parent, numRegisters + childAdjustment + adjustments.adjustmentFromParent, childAdjustment, adjustments.adjustmentFromParent, (cg()->getMaximumNumbersOfAssignableGPRs()-1));
-          traceMsg(comp(), "candidate nodes size %d candidate loads size %d\n", state->_currentlyCommonedCandidates.getSize(), state->_currentlyCommonedLoads.getSize());
-          }
-
-       if ((!considerRegPressure ||
-           ((state->_currentlyCommonedNodes.getSize() + childAdjustment + adjustments.adjustmentFromParent) > (cg()->getMaximumNumbersOfAssignableGPRs() /* -1 */ ))) &&
-           (!state->_currentlyCommonedCandidates.isEmpty() || !state->_currentlyCommonedLoads.isEmpty()))
-          {
-          //_counter++;
-          //printf("Rematerializing in %s\n", comp()->signature());
-          rematerializeNode(treeTop, parent, node, visitCount, &state->_currentlyCommonedNodes, &state->_currentlyCommonedCandidates, &state->_parents, &state->_currentlyCommonedLoads, &state->_parentsOfCommonedLoads, &state->_loadsAlreadyVisited, &state->_loadsAlreadyVisitedThatCannotBeRematerialized, rematSpecialNode);
-          }
+       traceMsg(comp(), "At node %p parent %p GPR pressure is %d (child adjust %d parent adjust %d) limit is %d\n", node, parent, numRegisters + childAdjustment + adjustments.adjustmentFromParent, childAdjustment, adjustments.adjustmentFromParent, (cg()->getMaximumNumbersOfAssignableGPRs()-1));
+       traceMsg(comp(), "candidate nodes size %d candidate loads size %d\n", state->_currentlyCommonedCandidates.getSize(), state->_currentlyCommonedLoads.getSize());
        }
 
-      if (trace() && !shouldOnlyRunLongRegHeuristic() && node->getOpCode().isFloatingPoint())
+    if ((!considerRegPressure ||
+        ((state->_currentlyCommonedNodes.getSize() + childAdjustment + adjustments.adjustmentFromParent) > (cg()->getMaximumNumbersOfAssignableGPRs() /* -1 */ ))) &&
+        (!state->_currentlyCommonedCandidates.isEmpty() || !state->_currentlyCommonedLoads.isEmpty()))
+       {
+       //_counter++;
+       //printf("Rematerializing in %s\n", comp()->signature());
+       rematerializeNode(treeTop, parent, node, visitCount, &state->_currentlyCommonedNodes, &state->_currentlyCommonedCandidates, &state->_parents, &state->_currentlyCommonedLoads, &state->_parentsOfCommonedLoads, &state->_loadsAlreadyVisited, &state->_loadsAlreadyVisitedThatCannotBeRematerialized, rematSpecialNode);
+       }
+
+      if (trace() && node->getOpCode().isFloatingPoint())
       {
       traceMsg(comp(), "At node %p FPR pressure is %d (child adjust %d parent adjust %d) limit is %d\n", node, state->_currentlyCommonedFPNodes.getSize() + fpChildAdjustment + adjustments.fpAdjustmentFromParent, fpChildAdjustment, adjustments.fpAdjustmentFromParent, (cg()->getMaximumNumbersOfAssignableFPRs()-1));
       traceMsg(comp(), "candidate nodes size %d candidate loads size %d\n", state->_currentlyCommonedFPCandidates.getSize(), state->_currentlyCommonedFPLoads.getSize());
       }
 
-   if (!shouldOnlyRunLongRegHeuristic())
+   if ((!considerRegPressure || ((state->_currentlyCommonedFPNodes.getSize() + fpChildAdjustment + adjustments.fpAdjustmentFromParent) > cg()->getMaximumNumbersOfAssignableFPRs() /* -1 */)) &&
+      (!state->_currentlyCommonedFPCandidates.isEmpty() || !state->_currentlyCommonedFPLoads.isEmpty()))
       {
-      if ((!considerRegPressure || ((state->_currentlyCommonedFPNodes.getSize() + fpChildAdjustment + adjustments.fpAdjustmentFromParent) > cg()->getMaximumNumbersOfAssignableFPRs() /* -1 */)) &&
-         (!state->_currentlyCommonedFPCandidates.isEmpty() || !state->_currentlyCommonedFPLoads.isEmpty()))
-         {
-         //_counter++;
-         //printf("Rematerializing FP node in %s\n", comp()->signature());
-         rematerializeNode(treeTop, parent, node, visitCount, &state->_currentlyCommonedFPNodes, &state->_currentlyCommonedFPCandidates, &state->_fpParents, &state->_currentlyCommonedFPLoads, &state->_parentsOfCommonedFPLoads, &state->_fpLoadsAlreadyVisited, &state->_fpLoadsAlreadyVisitedThatCannotBeRematerialized, rematSpecialNode);
-         }
+      //_counter++;
+      //printf("Rematerializing FP node in %s\n", comp()->signature());
+      rematerializeNode(treeTop, parent, node, visitCount, &state->_currentlyCommonedFPNodes, &state->_currentlyCommonedFPCandidates, &state->_fpParents, &state->_currentlyCommonedFPLoads, &state->_parentsOfCommonedFPLoads, &state->_fpLoadsAlreadyVisited, &state->_fpLoadsAlreadyVisitedThatCannotBeRematerialized, rematSpecialNode);
       }
 
-      if (trace() && !shouldOnlyRunLongRegHeuristic() && node->getOpCode().isVector())
+      if (trace() && node->getOpCode().isVector())
       {
       traceMsg(comp(), "At node %p VSR pressure is %d (child adjust %d parent adjust %d) limit is %d\n", node, state->_currentlyCommonedVector128Nodes.getSize() + vector128ChildAdjustment + adjustments.vector128AdjustmentFromParent, vector128ChildAdjustment, adjustments.vector128AdjustmentFromParent, vector128ChildAdjustment + adjustments.vector128AdjustmentFromParent);
       traceMsg(comp(), "candidate nodes size %d candidate loads size %d\n", state->_currentlyCommonedVector128Candidates.getSize(), state->_currentlyCommonedVector128Loads.getSize());
       }
 
-   if (!shouldOnlyRunLongRegHeuristic())
+   if ((!considerRegPressure || ((state->_currentlyCommonedVector128Nodes.getSize() + vector128ChildAdjustment + adjustments.vector128AdjustmentFromParent) > cg()->getMaximumNumbersOfAssignableVRs() )) &&
+      (!state->_currentlyCommonedVector128Candidates.isEmpty() || !state->_currentlyCommonedVector128Loads.isEmpty()))
       {
-      if ((!considerRegPressure || ((state->_currentlyCommonedVector128Nodes.getSize() + vector128ChildAdjustment + adjustments.vector128AdjustmentFromParent) > cg()->getMaximumNumbersOfAssignableVRs() )) &&
-         (!state->_currentlyCommonedVector128Candidates.isEmpty() || !state->_currentlyCommonedVector128Loads.isEmpty()))
-         {
-         //_counter++;
-         //printf("Rematerializing Vector128 node in %s\n", comp()->signature());
-         rematerializeNode(treeTop, parent, node, visitCount, &state->_currentlyCommonedVector128Nodes, &state->_currentlyCommonedVector128Candidates, &state->_vector128Parents, &state->_currentlyCommonedVector128Loads, &state->_parentsOfCommonedVector128Loads, &state->_vector128LoadsAlreadyVisited, &state->_vector128LoadsAlreadyVisitedThatCannotBeRematerialized, rematSpecialNode);
-         }
+      //_counter++;
+      //printf("Rematerializing Vector128 node in %s\n", comp()->signature());
+      rematerializeNode(treeTop, parent, node, visitCount, &state->_currentlyCommonedVector128Nodes, &state->_currentlyCommonedVector128Candidates, &state->_vector128Parents, &state->_currentlyCommonedVector128Loads, &state->_parentsOfCommonedVector128Loads, &state->_vector128LoadsAlreadyVisited, &state->_vector128LoadsAlreadyVisitedThatCannotBeRematerialized, rematSpecialNode);
       }
 
    if ((node->getFutureUseCount() & 0x7fff) > 0)
@@ -5698,324 +5570,6 @@ void TR_Rematerialization::rematerializeNode(TR::TreeTop *treeTop, TR::Node *par
      parentsOfNodes->setListHead(parentsOfNodes->getListHead()->getNextElement());
      currentlyCommonedNodes->remove(nodeToBeRematerialized);
      }
-   }
-
-void TR_Rematerialization::calculateLongRegWeight(bool childOfCall, bool isLongNode)
-   {
-   _curOps++;
-   if (isLongNode)
-      {
-      _curLongOps++;
-      if (childOfCall)
-         _numLongOutArgs++;
-      }
-   }
-
-// return number of long ops on this node
-// keep track of total ops on this node as well
-void TR_Rematerialization::examineLongRegNode(TR::Node * node, vcount_t visitCount, bool childOfCall)
-   {
-   bool isLongNode = node->uses64BitGPRs();
-
-   //avoid infinite recursion but take into account that
-   //the node might be commoned... so treat the entire tree
-   //as one
-   if (node->getVisitCount() == visitCount)
-      {
-      calculateLongRegWeight(childOfCall, isLongNode);
-      return;
-      }
-
-   node->setVisitCount(visitCount);
-
-   // recurse on all children
-   bool isCall = (node->getOpCode().isCall() == true);
-   for (int i=0; i < node->getNumChildren(); i++)
-      {
-      //if we've seen a call already, don't modify the call param
-      //since we want it to propogate all the way down the call nodes
-      if (!childOfCall)
-         examineLongRegNode(node->getChild(i), visitCount, isCall);
-      else
-         examineLongRegNode(node->getChild(i), visitCount, childOfCall);
-      }
-
-   // return right away for a call node (already weighted the children)
-   if (isCall)
-      return;
-
-   //return base-weights
-   calculateLongRegWeight(childOfCall, isLongNode);
-   return;
-   }
-
-TR_LongRegAllocation::TR_LongRegAllocation(TR::OptimizationManager *manager)
-   : TR_Rematerialization(manager, true)
-   {}
-
-void TR_LongRegAllocation::printStats()
-   {
-   traceMsg(comp(), "\tLongRegStats\n");
-   traceMsg(comp(), "\t---------------------------\n");
-   traceMsg(comp(), "\tTotal number of long PARMS=%d\n", getNumLongParms());
-   traceMsg(comp(), "\tTotal number of ops=%d\n", getNumOps());
-   traceMsg(comp(), "\tTotal number of long ops=%d\n", getNumLongOps());
-   traceMsg(comp(), "\tTotal number of LOOP ops=%d\n", getNumLoopOps());
-   traceMsg(comp(), "\tTotal number of long LOOP ops=%d\n", getNumLongLoopOps());
-   for (int i=0; i < LONGREG_NEST; i++)
-      traceMsg(comp(), "\tTotal number of longs at nesting %d is %d\n", i, getNumLongAtNesting(i));
-   traceMsg(comp(), "\tTotal number of long OUTGOING args=%d\n", getNumLongOutArgs());
-   traceMsg(comp(), "\tTotal number of long LIVE=%d\n", getNumCallLiveLongs());
-   }
-
-void TR_LongRegAllocation::postPerformOnBlocks()
-   {
-   //if decision to use was already made, we're done
-   if (!longRegDecisionMade())
-      {
-      _numLongParms = getNumLongParms();
-
-      if (trace())
-         printStats();
-
-      //perform the decision making process here
-      makeLongRegDecision();
-      if (comp()->useLongRegAllocation())
-         {
-         if (trace())
-            traceMsg(comp(), "\tHeuristic decides to use 64-bit regs\n");
-         }
-      else
-         {
-         if (trace())
-            traceMsg(comp(), "\tHeuristic decides not to use 64-bit regs\n");
-         }
-      }
-   else
-      {
-      if (trace())
-         traceMsg(comp(), "\tEarly heuristic decision was made: %d\n", comp()->useLongRegAllocation());
-      }
-   }
-
-//#define LONGREG_TOTAL_LOW_WATERMARK 5
-#define LONGREG_TOTAL_HIGH_WATERMARK 10
-#define LONGREG_LOOP_LOW_WATERMARK 1
-#define LONGREG_LOOP_HIGH_WATERMARK 10
-#define LONGREG_LOOP_TOTAL_WATERMARK 10
-#define LONGREG_NESTING_LOW_WATERMARK 5
-#define LONGREG_NESTING_HIGH_WATERMARK 15
-#define LONGREG_LIVE_THRESHOLD 35
-#define LONGREG_SPILL_THRESHOLD 25
-#define LONGREG_ARG_THRESHOLD 10
-
-void TR_LongRegAllocation::makeLongRegDecision()
-   {
-
-   //TODO:  Incorporate num parms... not yet done so
-
-   int8_t testNum=0;
-   double numLongOps = (double)getNumLongOps();
-   double numOps = (double)getNumOps();
-   double numCallLiveLongs = (double)getNumCallLiveLongs();
-   double numLongOutArgs = (double)getNumLongOutArgs();
-
-   double totalRatio = 0.0;
-   double spillRatio = 0.0;
-   double argRatio = 0.0;
-
-   if (numOps > 0)
-      {
-      totalRatio = numLongOps/numOps*100;
-      }
-   if (numLongOps > 0)
-      {
-      spillRatio = numCallLiveLongs/numLongOps*100;
-      argRatio = numLongOutArgs/numLongOps*100;
-      }
-
-   if (trace())
-      {
-      traceMsg(comp(), "\ttotalRatio=%f\n",totalRatio);
-      traceMsg(comp(), "\tspillRatio=%f\n",spillRatio);
-      traceMsg(comp(), "\targRatio=%f\n",argRatio);
-      }
-
-   testNum++;
-   /*if (totalRatio < LONGREG_TOTAL_LOW_WATERMARK)
-      {
-      if(trace())
-         traceMsg(comp(), "\tFails test %d\n", testNum);
-      return ;
-      }
-   else*/ if (totalRatio > LONGREG_TOTAL_HIGH_WATERMARK &&
-            spillRatio < LONGREG_SPILL_THRESHOLD &&
-            argRatio < LONGREG_ARG_THRESHOLD)
-      {
-      if (trace())
-         traceMsg(comp(), "\tPasses test %d\n", testNum);
-      comp()->setUseLongRegAllocation(true);
-      return;
-      }
-
-   // At this point, we know we are between total watermarks OR
-   // we are above our spill threshhold OR
-   // we are above are argument ratio
-
-   double numLoopOps = (double)getNumLoopOps();
-   if (numLoopOps > 0)
-      {
-      double numLongLoopOps = (double)getNumLongLoopOps();
-      double loopRatio = numLongLoopOps/numLoopOps*100;
-
-      if (trace())
-         traceMsg(comp(), "\tloopRatio=%f\n", loopRatio);
-
-      testNum++;
-      if (loopRatio < LONGREG_LOOP_LOW_WATERMARK)
-         {
-         if(trace())
-            traceMsg(comp(), "\tFails test %d\n", testNum);
-         return;
-         }
-      else if (loopRatio > LONGREG_LOOP_HIGH_WATERMARK)
-         {
-         if (trace())
-            traceMsg(comp(), "\tPasses test %d\n", testNum);
-         comp()->setUseLongRegAllocation(true);
-         return;
-        }
-
-      // At this point, we know  we're between loop watermarks
-      // what percentage of the long ops in the method occur in loops?
-      double longLoopRatio = 0.0;
-      if (numLongOps > 0)
-         longLoopRatio = numLongLoopOps/numLongOps*100;
-      if (trace())
-         traceMsg(comp(), "\tTotalLongLoopRatio=%f\n", longLoopRatio);
-
-      testNum++;
-      if (longLoopRatio > LONGREG_LOOP_TOTAL_WATERMARK)
-         {
-         if (trace())
-            traceMsg(comp(), "\tPasses test %d\n", testNum);
-         comp()->setUseLongRegAllocation(true);
-         return;
-         }
-
-      // At this point, we want to see if we have more long ops
-      // at deeper loop nesting levels than at nesting level 1
-
-      if (getNumLongAtNesting(1) > 0)
-         {
-         double nestedLoopSum=0;
-         for (int8_t i=2 ; i < LONGREG_NEST; i++)
-            nestedLoopSum+=(double)getNumLongAtNesting(i);
-
-         double nestingRatio = nestedLoopSum/((double)getNumLongAtNesting(1))*100;
-
-         if (trace())
-            traceMsg(comp(), "\tnestingRatio=%f\n", nestingRatio);
-
-         testNum++;
-         if (nestingRatio < LONGREG_NESTING_LOW_WATERMARK)
-            {
-            if(trace())
-               traceMsg(comp(), "\tFails test %d\n", testNum);
-            return;
-            }
-         else if (nestingRatio > LONGREG_NESTING_HIGH_WATERMARK)
-            {
-         if (trace())
-            traceMsg(comp(), "\tPasses test %d\n", testNum);
-            comp()->setUseLongRegAllocation(true);
-            return;
-            }
-
-         // At this point, we are between are nesting loop watermarks
-         }
-      }
-
-   if (trace())
-      traceMsg(comp(), "\tDidn't pass any tests\n");
-
-   return;
-   }
-
-// calculate the cost of storing/restoring long params
-// coming in as register pairs
-int32_t TR_LongRegAllocation::getNumLongParms()
-   {
-   int32_t parms=0;
-
-   TR::ResolvedMethodSymbol   *methodSymbol = comp()->getJittedMethodSymbol();
-   ListIterator<TR::ParameterSymbol> parmIt(&methodSymbol->getParameterList());
-   for (TR::ParameterSymbol *p = parmIt.getFirst(); p; p = parmIt.getNext())
-      {
-      if (p->getDataType() == TR::Int64)
-         if (p->isParmPassedInRegister())
-            parms++;
-      }
-   return parms;
-   }
-
-const char *
-TR_LongRegAllocation::optDetailString() const throw()
-   {
-   return "O^O LONG REG ALLOCATION: ";
-   }
-
-int8_t TR_Rematerialization::getLoopNestingLevel(int32_t weight)
-   {
-   if (weight == 1)
-      weight=0;
-
-   switch(weight)
-      {
-      case 0: return 0;
-      case 10: return 1;
-      case 100: return 2;
-      case 1000: return 3;
-      case 10000: return 4;
-      default: return 5;
-      }
-   }
-
-void TR_Rematerialization::makeEarlyLongRegDecision()
-   {
-   if (comp()->getOption(TR_Disable64BitRegsOn32Bit) ||
-       !cg()->supportsLongRegAllocation() ||
-       !comp()->getJittedMethodSymbol()->mayHaveLongOps())
-      {
-      //keep the decision to false
-      setLongRegDecision(true);
-      dumpOptDetails(comp(), "\tEarly decision - not longRegAllocable\n");
-      return;
-      }
-
-   if (!comp()->getOption(TR_Disable64BitRegsOn32Bit) &&
-        comp()->getOption(TR_Disable64BitRegsOn32BitHeuristic))
-       {
-       comp()->setUseLongRegAllocation(true);
-       setLongRegDecision(true);
-       dumpOptDetails(comp(), "\tEarly decision - unconditionally longRegAllocable\n");
-       }
-   return;
-   }
-
-void TR_Rematerialization::initLongRegData()
-   {
-   comp()->setUseLongRegAllocation(false);
-   setLongRegDecision(false);
-
-   _numLongOps=0;
-   _numOps=0;
-   for (int8_t i =0; i < LONGREG_NEST; i++)
-      _numLongNestedLoopOps[i]=0;
-   _numLongLoopOps=0;
-   _numLoopOps=0;
-   _numLongOutArgs=0;
-   _numCallLiveLongs=0;
    }
 
 const char *
@@ -7727,20 +7281,6 @@ void TR_InvariantArgumentPreexistence::processIndirectCall(TR::Node *node, TR::T
          if ((receiverInfo.classIsRefined() && receiverInfo.classIsFixed()) || receiverInfo.classIsCurrentlyFinal())
             fixedOrFinalInfoExists = true;
 
-         if (!isInterface && fixedOrFinalInfoExists)
-            {
-            TR_OpaqueClassBlock *clazz = resolvedMethod->containingClass();
-            if (clazz)
-               {
-               TR_OpaqueClassBlock *thisClazz = receiverInfo.getClass();
-               if (thisClazz)
-                  {
-                  TR_YesNoMaybe isInstance = fe()->isInstanceOf(thisClazz, clazz, true);
-                  if (isInstance == TR_yes)
-                     devirtualize = true;
-                  }
-               }
-            }
          }
       }
 
@@ -7763,12 +7303,22 @@ void TR_InvariantArgumentPreexistence::processIndirectCall(TR::Node *node, TR::T
          }
 
       receiverInfo.setClassIsFixed();
+      fixedOrFinalInfoExists = true;
+      }
 
-      // If the receiver is a known object, we can always devirtualize as long
-      // as the method is resolved.
-      //
-      if (methodSymbol->isVirtual())
-         devirtualize = true;
+   if (methodSymbol->isVirtual() && fixedOrFinalInfoExists)
+      {
+      TR_OpaqueClassBlock *clazz = resolvedMethod->containingClass();
+      if (clazz)
+         {
+         TR_OpaqueClassBlock *thisClazz = receiverInfo.getClass();
+         if (thisClazz)
+            {
+            TR_YesNoMaybe isInstance = fe()->isInstanceOf(thisClazz, clazz, true);
+            if (isInstance == TR_yes)
+               devirtualize = true;
+            }
+         }
       }
 
    //
@@ -8504,7 +8054,9 @@ TR_ColdBlockMarker::hasNotYetRun(TR::Node *node)
       TR::SymbolReference *symRef = node->getSymbolReference();
       bool isUnresolved;
 
-      if (comp()->compileRelocatableCode() && !comp()->getOption(TR_DisablePeekAOTResolutions))
+      if (comp()->compileRelocatableCode() &&
+          !comp()->getOption(TR_UseSymbolValidationManager) &&
+          !comp()->getOption(TR_DisablePeekAOTResolutions))
          isUnresolved = symRef->isUnresolvedMethodInCP(comp());
       else
          isUnresolved = symRef->isUnresolved();
@@ -8536,7 +8088,9 @@ TR_ColdBlockMarker::hasNotYetRun(TR::Node *node)
          }
       else
          {
-         if (comp()->compileRelocatableCode() && !comp()->getOption(TR_DisablePeekAOTResolutions))
+         if (comp()->compileRelocatableCode() &&
+             !comp()->getOption(TR_UseSymbolValidationManager) &&
+             !comp()->getOption(TR_DisablePeekAOTResolutions))
             {
             bool isUnresolved = node->getSymbolReference()->isUnresolvedFieldInCP(comp());
             //currentely node->hasUnresolvedSymbolReference() returns true more often for AOT than non-AOT beacause of
@@ -8550,7 +8104,15 @@ TR_ColdBlockMarker::hasNotYetRun(TR::Node *node)
             return isUnresolved;
             }
          else
+            {
+            if (comp()->compileRelocatableCode()
+                && comp()->getOption(TR_UseSymbolValidationManager)
+                && node->getSymbol()->isConstString())
+               {
+               return false;
+               }
             return true;
+            }
          }
       }
    return false;
@@ -8817,9 +8379,6 @@ TR_TrivialDeadTreeRemoval::preProcessTreetop(TR::TreeTop *treeTop, List<TR::Tree
       if (firstChild->getReferenceCount() == 1)
          {
          if (!firstChild->getOpCode().hasSymbolReference() &&
-#ifdef J9_PROJECT_SPECIFIC
-             !firstChild->getOpCode().isPackedExponentiation() && // pdexp has a possible message side effect in truncating or no significant digits left cases
-#endif
              performTransformation(comp, "%sUnlink trivial %s (%p) of %s (%p) with refCount==1\n",
                 optDetails, treeTop->getNode()->getOpCode().getName(),treeTop->getNode(),firstChild->getOpCode().getName(),firstChild))
             {

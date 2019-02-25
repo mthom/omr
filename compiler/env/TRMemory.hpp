@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -54,22 +54,22 @@
 #ifndef jitmemory_h
 #define jitmemory_h
 
-#include <new>                          // for bad_alloc
-#include <stddef.h>                     // for size_t
-#include <stdint.h>                     // for uint32_t, int32_t, uint64_t, etc
-#include <stdio.h>                      // for sprintf, NULL, printf
-#include <string.h>                     // for memset, memcpy, strcpy, etc
-#include "cs2/allocator.h"              // for shared_allocator, etc
-#include "cs2/bitvectr.h"               // for ABitVector
-#include "cs2/sparsrbit.h"              // for ASparseBitVector
-#include "cs2/timer.h"                  // for LexicalBlockProfiler, etc
-#include "env/FilePointerDecl.hpp"      // for FILE
-#include "env/PersistentAllocator.hpp"  // for PersistentAllocator
-#include "env/PersistentInfo.hpp"       // for PersistentInfo
-#include "env/defines.h"                // for TR_HOST_64BIT
-#include "infra/Assert.hpp"             // for TR_ASSERT
-#include "infra/ReferenceWrapper.hpp"   // for reference_wrapper
-#include "env/Region.hpp"               // for Region
+#include <new>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "cs2/allocator.h"
+#include "cs2/bitvectr.h"
+#include "cs2/sparsrbit.h"
+#include "cs2/timer.h"
+#include "env/FilePointerDecl.hpp"
+#include "env/PersistentAllocator.hpp"
+#include "env/PersistentInfo.hpp"
+#include "env/defines.h"
+#include "infra/Assert.hpp"
+#include "infra/ReferenceWrapper.hpp"
+#include "env/Region.hpp"
 
 #include <stdlib.h>
 #include "cs2/bitmanip.h"
@@ -175,12 +175,10 @@ class TR_MemoryBase
    {
 protected:
 
-   TR_MemoryBase(void * jitConfig) :
-      _jitConfig(jitConfig)
+   TR_MemoryBase()
       {}
 
-   TR_MemoryBase(const TR_MemoryBase &prototype) :
-      _jitConfig(prototype._jitConfig)
+   TR_MemoryBase(void * jitConfig)
       {}
 
 public:
@@ -258,7 +256,6 @@ public:
       LocalOpts,
       LocalReordering,
       LocalLiveRangeReduction,
-      LongRegAllocation,
       LoopAliasRefiner,
       LoopTransformer,
       MonitorElimination,
@@ -278,7 +275,6 @@ public:
       InterProceduralAnalyzer,
       InductionVariableAnalysis,
       CoarseningInterProceduralAnalyzer,
-      ShrinkWrapping,
 
       AheadOfTimeCompile,
 
@@ -452,6 +448,8 @@ public:
       ClientSessionData,
       ROMClass,
 
+      SymbolValidationManager,
+
       NumObjectTypes,
       // If adding new object types above, add the corresponding names
       // to objectName[] array defined in TRMemory.cpp
@@ -461,16 +459,16 @@ public:
    static void *  jitPersistentAlloc(size_t size, ObjectType = UnknownType);
    static void    jitPersistentFree(void *mem);
 
-   protected:
-
-   void *    _jitConfig;
-
    };
 
 class TR_PersistentMemory : public TR_MemoryBase
    {
 public:
    static const uintptr_t MEMINFO_SIGNATURE = 0x1CEDD1CE;
+
+   TR_PersistentMemory (
+      TR::PersistentAllocator &persistentAllocator
+      );
 
    TR_PersistentMemory (
       void * jitConfig,
@@ -683,8 +681,6 @@ operator new[](size_t size, TR_StackMemory stackMemory) { return stackMemory.all
 
 inline void *
 operator new[](size_t size, PERSISTENT_NEW_DECLARE) { return TR_Memory::jitPersistentAlloc(size, TR_MemoryBase::UnknownType); }
-
-
 
 
 /*
@@ -1030,7 +1026,7 @@ namespace TR
       {
       return GlobalAllocator(GlobalSingletonAllocator::instance());
       }
- 
+
    /*
     * some common CS2 datatypes
     */

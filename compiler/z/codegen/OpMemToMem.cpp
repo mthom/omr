@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,29 +21,30 @@
 
 #include "z/codegen/OpMemToMem.hpp"
 
-#include <limits.h>                                // for INT_MAX
-#include <stdio.h>                                 // for printf
-#include "codegen/CodeGenerator.hpp"               // for CodeGenerator, etc
-#include "codegen/FrontEnd.hpp"                    // for feGetEnv, etc
-#include "codegen/Linkage.hpp"                     // for Linkage
-#include "codegen/RealRegister.hpp"                // for RealRegister, etc
-#include "codegen/Register.hpp"                    // for Register
+#include <limits.h>
+#include <stdio.h>
+#include "codegen/CodeGenerator.hpp"
+#include "codegen/FrontEnd.hpp"
+#include "codegen/Linkage.hpp"
+#include "codegen/RealRegister.hpp"
+#include "codegen/Register.hpp"
 #include "codegen/RegisterDependency.hpp"
-#include "codegen/TreeEvaluator.hpp"               // for generateLoad32BitConstant, etc
+#include "codegen/TreeEvaluator.hpp"
 #include "codegen/S390Evaluator.hpp"
 #include "compile/SymbolReferenceTable.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "env/CompilerEnv.hpp"
-#include "env/jittypes.h"                          // for intptrj_t, uintptrj_t
+#include "env/jittypes.h"
 #include "il/AliasSetInterface.hpp"
 #include "il/ILOpCodes.hpp"
-#include "il/ILOps.hpp"                            // for ILOpCode
-#include "il/Node.hpp"                             // for Node
-#include "il/Symbol.hpp"                           // for Symbol, etc
-#include "il/SymbolReference.hpp"                  // for SymbolReference
+#include "il/ILOps.hpp"
+#include "il/Node.hpp"
+#include "il/Symbol.hpp"
+#include "il/SymbolReference.hpp"
+#include "il/symbol/LabelSymbol.hpp"
 #include "il/symbol/ResolvedMethodSymbol.hpp"
-#include "infra/List.hpp"                          // for List
+#include "infra/List.hpp"
 #include "runtime/Runtime.hpp"
 #include "z/codegen/S390GenerateInstructions.hpp"
 #include "z/codegen/S390OutOfLineCodeSection.hpp"
@@ -101,7 +102,7 @@ MemToMemVarLenMacroOp::generateLoop()
       if (_lengthMinusOne)
          generateRRInstruction(_cg, TR::InstOpCode::LTR, _rootNode, _regLen, _regLen); //Because transformLengthMinusOneForMemoryOps uses TR::iadd
 
-      _doneLabel  = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+      _doneLabel  = generateLabelSymbol(_cg);
       _startControlFlow = generateS390BranchInstruction(_cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BL, _rootNode, _doneLabel);
       }
    if (getKind() == MemToMemMacroOp::IsMemInit)
@@ -109,8 +110,8 @@ MemToMemVarLenMacroOp::generateLoop()
 
    if (!needsLoop()) return NULL;
 
-   TR::LabelSymbol * topOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * bottomOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+   TR::LabelSymbol * topOfLoop = generateLabelSymbol(_cg);
+   TR::LabelSymbol * bottomOfLoop = generateLabelSymbol(_cg);
 
    //
    // But first, load up the branch address into raReg for two reasons:
@@ -410,8 +411,8 @@ MemToMemConstLenMacroOp::generateLoop()
    //
    // At this point, we need to generate a loop since the length is large
    //
-   TR::LabelSymbol * topOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * bottomOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+   TR::LabelSymbol * topOfLoop = generateLabelSymbol(_cg);
+   TR::LabelSymbol * bottomOfLoop = generateLabelSymbol(_cg);
 
    if (_itersReg == NULL)
       _itersReg = (_tmpReg == NULL ? _cg->allocateRegister() : _tmpReg);
@@ -450,7 +451,7 @@ MemToMemConstLenMacroOp::generateRemainder()
    uint64_t len = (uint64_t)_length;
    TR::Instruction * cursor = (_cursor == NULL ? _cg->getAppendInstruction() : _cursor);
 
-   if ((len >= (uint64_t)(_cg->getS390Linkage())->getLengthStartForSSInstruction()) && len > 0)
+   if (len >= MemToMemMacroOp::MIN_LENGTH_FOR_SS_INSTRUCTION)
       {
       cursor = generateInstruction(_offset, len, cursor);
       }
@@ -535,8 +536,8 @@ MemInitConstLenMacroOp::generateLoop()
    //
    // At this point, we need to generate a loop since the length is large
    //
-   TR::LabelSymbol * topOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * bottomOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+   TR::LabelSymbol * topOfLoop = generateLabelSymbol(_cg);
+   TR::LabelSymbol * bottomOfLoop = generateLabelSymbol(_cg);
 
    if (_itersReg == NULL)
       _itersReg = (_tmpReg == NULL ? _cg->allocateRegister() : _tmpReg);
@@ -576,7 +577,7 @@ MemInitConstLenMacroOp::generateRemainder()
    uint64_t len = (uint64_t)_length;
    TR::Instruction * cursor = (_cursor == NULL ? _cg->getAppendInstruction() : _cursor);
 
-   if ((len >= (uint64_t)(_cg->getS390Linkage())->getLengthStartForSSInstruction()) && len > 0)
+   if (len >= MemToMemMacroOp::MIN_LENGTH_FOR_SS_INSTRUCTION)
       {
       cursor = generateInstruction(_offset, len, cursor);
       }
@@ -1033,7 +1034,7 @@ MemToMemVarLenMacroOp::generateRemainder()
       }
    else
       {
-      TR::LabelSymbol *remainderDoneLabel = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+      TR::LabelSymbol *remainderDoneLabel = generateLabelSymbol(_cg);
       if (TR::Compiler->target.is64Bit())
          generateShiftAndKeepSelected64Bit(_rootNode, _cg, _regLen, _regLen, 52, 59, 4, true, false);
       else
@@ -1076,7 +1077,7 @@ MemInitVarLenMacroOp::generateRemainder()
          generateInstruction(0, 1);
 
       if (!_doneLabel)
-         _doneLabel  = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+         _doneLabel  = generateLabelSymbol(_cg);
 
       if(TR::Compiler->target.is64Bit())
          generateS390CompareAndBranchInstruction(_cg, TR::InstOpCode::CG, _rootNode, _regLen, (int32_t)0, TR::InstOpCode::COND_BNH, _doneLabel, false, false);
@@ -1109,7 +1110,7 @@ MemInitVarLenMacroOp::generateRemainder()
       generateRIInstruction(_cg, TR::Compiler->target.is64Bit() ? TR::InstOpCode::AGHI : TR::InstOpCode::AHI, _rootNode, _regLen, -1);
 
       if (!_doneLabel)
-         _doneLabel  = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+         _doneLabel  = generateLabelSymbol(_cg);
 
       generateS390BranchInstruction(_cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNH, _rootNode, _doneLabel);
 
@@ -1405,9 +1406,9 @@ MemInitVarLenMacroOp::generateInstruction(int32_t offset, int64_t length)
       else
          cursor = generateRXInstruction(_cg, TR::InstOpCode::STC, _rootNode, _initReg, new (_cg->trHeapMemory()) TR::MemoryReference(_dstReg, offset, _cg));
 
-	   _firstByteInitialized=true;
-	  length--;
-	  }
+     _firstByteInitialized=true;
+    length--;
+    }
 
    if (length > 0)
       {
@@ -1550,9 +1551,14 @@ MemCmpVarLenMacroOp::generate(TR::Register* dstReg, TR::Register* srcReg, TR::Re
      }
    if(_startControlFlow != _cursor)
      {
-     _startControlFlow->setDependencyConditions(dependencies);
-     _cursor->setEndInternalControlFlow();
-     _startControlFlow->setStartInternalControlFlow();
+      TR::LabelSymbol * cFlowRegionStart = generateLabelSymbol(_cg);
+      TR::LabelSymbol * cFlowRegionEnd = generateLabelSymbol(_cg);
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionStart, dependencies, _startControlFlow->getPrev());
+      cFlowRegionStart->setStartInternalControlFlow();
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionEnd, _cursor->getPrev());
+      cFlowRegionEnd->setEndInternalControlFlow();
      }
    return _cursor;
    }
@@ -1587,9 +1593,14 @@ MemCmpConstLenMacroOp::generate(TR::Register* dstReg, TR::Register* srcReg, TR::
      }
    if(_startControlFlow != _cursor)
      {
-     _startControlFlow->setDependencyConditions(dependencies);
-     _cursor->setEndInternalControlFlow();
-     _startControlFlow->setStartInternalControlFlow();
+      TR::LabelSymbol * cFlowRegionStart = generateLabelSymbol(_cg);
+      TR::LabelSymbol * cFlowRegionEnd = generateLabelSymbol(_cg);
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionStart, dependencies, _startControlFlow->getPrev());
+      cFlowRegionStart->setStartInternalControlFlow();
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionEnd, _cursor->getPrev());
+      cFlowRegionEnd->setEndInternalControlFlow();
      }
 
    return _cursor;
@@ -1676,9 +1687,14 @@ MemCmpVarLenSignMacroOp::generate(TR::Register* dstReg, TR::Register* srcReg, TR
      }
    if(_startControlFlow != _cursor)
      {
-     _startControlFlow->setDependencyConditions(dependencies);
-     _cursor->setEndInternalControlFlow();
-     _startControlFlow->setStartInternalControlFlow();
+      TR::LabelSymbol * cFlowRegionStart = generateLabelSymbol(_cg);
+      TR::LabelSymbol * cFlowRegionEnd = generateLabelSymbol(_cg);
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionStart, dependencies, _startControlFlow->getPrev());
+      cFlowRegionStart->setStartInternalControlFlow();
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionEnd, _cursor->getPrev());
+      cFlowRegionEnd->setEndInternalControlFlow();
      }
 
    return _cursor;
@@ -1720,9 +1736,14 @@ MemCmpConstLenSignMacroOp::generate(TR::Register* dstReg, TR::Register* srcReg, 
      }
    if(_startControlFlow != _cursor)
      {
-     _startControlFlow->setDependencyConditions(dependencies);
-     _cursor->setEndInternalControlFlow();
-     _startControlFlow->setStartInternalControlFlow();
+      TR::LabelSymbol * cFlowRegionStart = generateLabelSymbol(_cg);
+      TR::LabelSymbol * cFlowRegionEnd = generateLabelSymbol(_cg);
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionStart, dependencies, _startControlFlow->getPrev());
+      cFlowRegionStart->setStartInternalControlFlow();
+
+      generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, cFlowRegionEnd, _cursor->getPrev());
+      cFlowRegionEnd->setEndInternalControlFlow();
      }
 
    return _cursor;
@@ -1786,11 +1807,14 @@ TR::Instruction *
 MemToMemTypedVarLenMacroOp::generateLoop()
    {
    TR::Instruction * cursor;
-   TR::Instruction * startControlFlow;
 
    // Skip the loop if length is zero.
-   TR::LabelSymbol * doneLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   startControlFlow = generateS390CompareAndBranchInstruction(_cg, TR::InstOpCode::getCmpOpCode(), _dstNode, _lenReg, (int32_t)0, TR::InstOpCode::COND_BNH, doneLoop, false, false);
+   TR::LabelSymbol * cFlowRegionStart = generateLabelSymbol(_cg);
+   TR::LabelSymbol * doneLoop = generateLabelSymbol(_cg);
+
+   generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _dstNode, cFlowRegionStart);
+   cFlowRegionStart->setStartInternalControlFlow();
+   generateS390CompareAndBranchInstruction(_cg, TR::InstOpCode::getCmpOpCode(), _dstNode, _lenReg, (int32_t)0, TR::InstOpCode::COND_BNH, doneLoop, false, false);
 
    if (_isForward)
       {
@@ -1802,7 +1826,7 @@ MemToMemTypedVarLenMacroOp::generateLoop()
       generateRIInstruction(_cg, TR::InstOpCode::getAddHalfWordImmOpCode(), _dstNode, _startReg, -1 * strideSize());
       generateRRInstruction(_cg, TR::InstOpCode::getAddRegWidenOpCode(), _dstNode, _startReg, _lenReg);
 
-      TR::LabelSymbol * topOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+      TR::LabelSymbol * topOfLoop = generateLabelSymbol(_cg);
       generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _dstNode, topOfLoop);
 
       generateInstruction();
@@ -1833,14 +1857,14 @@ MemToMemTypedVarLenMacroOp::generateLoop()
          generateRRInstruction(_cg, TR::InstOpCode::getAddRegWidenOpCode(), _srcNode, _srcReg, _strideReg);
          }
 
-      TR::LabelSymbol * topOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+      TR::LabelSymbol * topOfLoop = generateLabelSymbol(_cg);
       generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _dstNode, topOfLoop);
 
       generateInstruction();
 
       if (_srcReg != _startReg)
          {
-         generateRXYInstruction(_cg, TR::InstOpCode::LAY, _srcNode, _srcReg, new (_cg->trHeapMemory()) TR::MemoryReference(_srcReg, -1 * strideSize(), _cg));
+         generateRXInstruction(_cg, TR::InstOpCode::LAY, _srcNode, _srcReg, new (_cg->trHeapMemory()) TR::MemoryReference(_srcReg, -1 * strideSize(), _cg));
          }
 
       // _dstReg is decremented as part of BRXH
@@ -1849,8 +1873,7 @@ MemToMemTypedVarLenMacroOp::generateLoop()
    cursor = generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _dstNode, doneLoop);
 
    createLoopDependencies(cursor);
-   cursor->setEndInternalControlFlow();
-   startControlFlow->setStartInternalControlFlow();
+   doneLoop->setEndInternalControlFlow();
 
    return cursor;
    }
@@ -1906,15 +1929,7 @@ MemInitVarLenTypedMacroOp::generateInstruction()
          cursor = generateRXInstruction(_cg, TR::InstOpCode::ST, _dstNode, _initReg, newMR);
          break;
       case TR::Int64:
-         if (TR::Compiler->target.is64Bit() || _cg->use64BitRegsOn32Bit())
-            {
-            cursor = generateRXInstruction(_cg, TR::InstOpCode::STG, _dstNode, _initReg, newMR);
-            }
-         else
-            {
-            cursor = generateRSInstruction(_cg, TR::InstOpCode::STM, _dstNode, (TR::RegisterPair *) _initReg, newMR);
-            }
-
+         cursor = generateRXInstruction(_cg, TR::InstOpCode::STG, _dstNode, _initReg, newMR);
          break;
       case TR::Float:
          cursor = generateRXInstruction(_cg, TR::InstOpCode::STE, _dstNode, _initReg, newMR);
@@ -1923,10 +1938,7 @@ MemInitVarLenTypedMacroOp::generateInstruction()
          cursor = generateRXInstruction(_cg, TR::InstOpCode::STD, _dstNode, _initReg, newMR);
          break;
       default:
-         if (TR::Compiler->target.is64Bit() || _cg->use64BitRegsOn32Bit())
-            cursor = generateRXInstruction(_cg, TR::InstOpCode::STG, _dstNode, _initReg, newMR);
-         else
-            cursor = generateRXInstruction(_cg, TR::InstOpCode::ST, _dstNode, _initReg, newMR);
+         cursor = generateRXInstruction(_cg, TR::InstOpCode::STG, _dstNode, _initReg, newMR);
          break;
       }
    newMR->stopUsingMemRefRegister(_cg);
@@ -1936,40 +1948,9 @@ MemInitVarLenTypedMacroOp::generateInstruction()
 void
 MemInitVarLenTypedMacroOp::createLoopDependencies(TR::Instruction * cursor)
    {
-   TR::RegisterDependencyConditions * loopDep;
    int32_t core = numCoreDependencies();
-   switch (_destType)
-      {
-      case TR::Int8:
-      case TR::Int16:
-      case TR::Int32:
-      case TR::Float:
-      case TR::Double:
-         loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
-         loopDep->addPostCondition(_initReg, TR::RealRegister::AssignAny);
-         break;
-
-      case TR::Int64:
-         if (TR::Compiler->target.is64Bit() || _cg->use64BitRegsOn32Bit())
-            {
-            loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
-            loopDep->addPostCondition(_initReg, TR::RealRegister::AssignAny);
-            }
-         else
-            {
-            TR::RegisterPair * valueReg = (TR::RegisterPair *) _initReg;
-            loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 3, _cg);
-            loopDep->addPostCondition(valueReg, TR::RealRegister::EvenOddPair);
-            loopDep->addPostCondition(valueReg->getHighOrder(), TR::RealRegister::LegalEvenOfPair);
-            loopDep->addPostCondition(valueReg->getLowOrder(), TR::RealRegister::LegalOddOfPair);
-            }
-         break;
-
-      default:
-         loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
-         loopDep->addPostCondition(_initReg, TR::RealRegister::AssignAny);
-         break;
-      }
+   TR::RegisterDependencyConditions * loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
+   loopDep->addPostCondition(_initReg, TR::RealRegister::AssignAny);
 
    addCoreDependencies(loopDep);
    if (_applyDepLocally)
@@ -2007,23 +1988,15 @@ MemCpyVarLenTypedMacroOp::generateInstruction()
          break;
       case TR::Int64:
       case TR::Double:
-         if (TR::Compiler->target.is64Bit() || _cg->use64BitRegsOn32Bit())
-            {
-            cursor = generateRXInstruction(_cg, TR::InstOpCode::LG, _srcNode, _workReg, srcMR);
-            cursor = generateRXInstruction(_cg, TR::InstOpCode::STG, _dstNode, _workReg, dstMR);
-            }
-         else // needs Reg. Pair on 32bit
-            {
-            cursor = generateRSInstruction(_cg, TR::InstOpCode::LM, _srcNode, _workReg, srcMR);
-            cursor = generateRSInstruction(_cg, TR::InstOpCode::STM, _dstNode, _workReg, dstMR);
-            }
+         cursor = generateRXInstruction(_cg, TR::InstOpCode::LG, _srcNode, _workReg, srcMR);
+         cursor = generateRXInstruction(_cg, TR::InstOpCode::STG, _dstNode, _workReg, dstMR);
          break;
       case TR::Address:
          if (TR::Compiler->target.is64Bit() && !comp->useCompressedPointers())
             {
             if (_needsGuardedLoad)
                {
-               cursor = generateRXYInstruction(_cg, TR::InstOpCode::LGG, _srcNode, _workReg, srcMR);
+               cursor = generateRXInstruction(_cg, TR::InstOpCode::LGG, _srcNode, _workReg, srcMR);
                }
             else
                {
@@ -2036,7 +2009,7 @@ MemCpyVarLenTypedMacroOp::generateInstruction()
             if (_needsGuardedLoad)
                {
                int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
-               cursor = generateRXYInstruction(_cg, TR::InstOpCode::LLGFSG, _srcNode, _workReg, srcMR);
+               cursor = generateRXInstruction(_cg, TR::InstOpCode::LLGFSG, _srcNode, _workReg, srcMR);
                if (shiftAmount != 0)
                   {
                   cursor = generateRSInstruction(_cg, TR::InstOpCode::SRLG, _srcNode, _workReg, _workReg, shiftAmount);
@@ -2061,74 +2034,15 @@ MemCpyVarLenTypedMacroOp::generateInstruction()
 void
 MemCpyVarLenTypedMacroOp::allocWorkReg()
    {
-   switch (_destType)
-      {
-      case TR::Int8:
-      case TR::Int16:
-      case TR::Int32:
-      case TR::Float:
-         _workReg = _cg->allocateRegister();
-         break;
-
-      case TR::Int64:
-      case TR::Double:
-         if (TR::Compiler->target.is64Bit() || _cg->use64BitRegsOn32Bit())
-            {
-            _workReg = _cg->allocateRegister();
-            }
-         else //needs Reg. Pair on 32bit platform
-         {
-            TR::Register * lowRegister = _cg->allocateRegister();
-            TR::Register * highRegister = _cg->allocateRegister();
-
-            _workReg = _cg->allocateConsecutiveRegisterPair(lowRegister, highRegister);
-            }
-         break;
-
-      default:
-         _workReg = _cg->allocateRegister();
-         break;
-      }
+   _workReg = _cg->allocateRegister();
    }
 
 void
 MemCpyVarLenTypedMacroOp::createLoopDependencies(TR::Instruction * cursor)
    {
-   TR::RegisterDependencyConditions * loopDep;
-
    int32_t core = numCoreDependencies();
-   switch (_destType)
-      {
-      case TR::Int8:
-      case TR::Int16:
-      case TR::Int32:
-      case TR::Float:
-         loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
-         loopDep->addPostCondition(_workReg, TR::RealRegister::AssignAny);
-         break;
-
-      case TR::Int64:
-      case TR::Double:
-         if (TR::Compiler->target.is64Bit() || _cg->use64BitRegsOn32Bit())
-            {
-            loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
-            loopDep->addPostCondition(_workReg, TR::RealRegister::AssignAny);
-            }
-         else // needs Reg. Pair on 32bit
-         {
-            TR::RegisterPair * valuePair = (TR::RegisterPair *) _workReg;
-            loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 3, _cg);
-            loopDep->addPostCondition(valuePair, TR::RealRegister::EvenOddPair);
-            loopDep->addPostCondition(valuePair->getHighOrder(), TR::RealRegister::LegalEvenOfPair);
-            loopDep->addPostCondition(valuePair->getLowOrder(), TR::RealRegister::LegalOddOfPair);
-            }
-         break;
-
-      default:
-         loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
-         loopDep->addPostCondition(_workReg, TR::RealRegister::AssignAny);
-         break;
-      }
+   TR::RegisterDependencyConditions * loopDep = new (_cg->trHeapMemory()) TR::RegisterDependencyConditions(core, core + 1, _cg);
+   loopDep->addPostCondition(_workReg, TR::RealRegister::AssignAny);
 
    addCoreDependencies(loopDep);
    if (_applyDepLocally)
@@ -2197,8 +2111,8 @@ TR::Instruction * MemCpyAtomicMacroOp::generateSTXLoop(int32_t strideSize, TR::I
       cursor = generateRIInstruction(_cg, TR::InstOpCode::getLoadHalfWordImmOpCode(), _dstNode, _strideReg, _unrollFactor * strideSize);
       }
 
-   TR::LabelSymbol * topOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * endOfLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+   TR::LabelSymbol * topOfLoop = generateLabelSymbol(_cg);
+   TR::LabelSymbol * endOfLoop = generateLabelSymbol(_cg);
    cursor = generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _dstNode, topOfLoop);
 
    cursor = generateS390CompareAndBranchInstruction(_cg, TR::InstOpCode::getCmpOpCode(), _lenNode, _lenReg, strideSize * _unrollFactor, TR::InstOpCode::COND_BL, endOfLoop);
@@ -2297,7 +2211,7 @@ MemCpyAtomicMacroOp::generateOneSTXthenSTYLoopLabel(TR::LabelSymbol * oolStartLa
 
    cursor = generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _rootNode, oolStartLabel);
 
-   TR::LabelSymbol * skipRoutineLabel = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+   TR::LabelSymbol * skipRoutineLabel = generateLabelSymbol(_cg);
    cursor = generateS390CompareAndBranchInstruction(_cg, TR::InstOpCode::getCmpOpCode(), _lenNode, _lenReg, strideSize1, TR::InstOpCode::COND_BL, skipRoutineLabel);
 
    // Initialize _startReg to _endReg here
@@ -2393,7 +2307,6 @@ MemCpyAtomicMacroOp::generateLoop()
    if (_trace)
       traceMsg(comp, "MemCpyAtomicMacroOp: generateLoop\n");
    TR::Instruction * cursor;
-   TR::Instruction * startControlFlow;
 
    static char * traceACM = feGetEnv("TR_ArrayCopyMethods");
    if (traceACM)
@@ -2404,23 +2317,25 @@ MemCpyAtomicMacroOp::generateLoop()
    static char * singular = feGetEnv("TR_ArrayCopySingular");
 
    // Skip the loop if length is zero.
-   TR::LabelSymbol * doneArrayCopyLabel = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * remainderLabel = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * preDoneCopyLabel1 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * preDoneCopyLabel2 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * preDoneCopyLabel3 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * preDoneCopyLabel4 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * preDoneCopyLabel5 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * preDoneCopyLabel6 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * oolStartLabel1 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * oolStartLabel2 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * oolStartLabel3 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * oolStartLabel4 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * oolStartLabel5 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-   TR::LabelSymbol * oolStartLabel6 = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+   TR::LabelSymbol * cFlowRegionStart = generateLabelSymbol(_cg);
+   TR::LabelSymbol * doneArrayCopyLabel = generateLabelSymbol(_cg);
+   TR::LabelSymbol * remainderLabel = generateLabelSymbol(_cg);
+   TR::LabelSymbol * preDoneCopyLabel1 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * preDoneCopyLabel2 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * preDoneCopyLabel3 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * preDoneCopyLabel4 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * preDoneCopyLabel5 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * preDoneCopyLabel6 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * oolStartLabel1 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * oolStartLabel2 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * oolStartLabel3 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * oolStartLabel4 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * oolStartLabel5 = generateLabelSymbol(_cg);
+   TR::LabelSymbol * oolStartLabel6 = generateLabelSymbol(_cg);
 
-   // If length <= 0, skip to doneArrayCopyLabel
-   startControlFlow = cursor = generateS390CompareAndBranchInstruction(_cg, TR::InstOpCode::getCmpOpCode(), _dstNode, _lenReg, (int32_t) 0, TR::InstOpCode::COND_BNH, doneArrayCopyLabel, false, false);
+   generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _dstNode, cFlowRegionStart);
+   cFlowRegionStart->setStartInternalControlFlow();
+   generateS390CompareAndBranchInstruction(_cg, TR::InstOpCode::getCmpOpCode(), _dstNode, _lenReg, (int32_t) 0, TR::InstOpCode::COND_BNH, doneArrayCopyLabel, false, false);
 
    // backwards array copy
    // update end reg and start reg to be added with length
@@ -2476,9 +2391,9 @@ MemCpyAtomicMacroOp::generateLoop()
       // else
       // into STC loop
 
-      TR::LabelSymbol * fourByteLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-      TR::LabelSymbol * twoByteLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
-      TR::LabelSymbol * oneByteLoop = TR::LabelSymbol::create(_cg->trHeapMemory(),_cg);
+      TR::LabelSymbol * fourByteLoop = generateLabelSymbol(_cg);
+      TR::LabelSymbol * twoByteLoop = generateLabelSymbol(_cg);
+      TR::LabelSymbol * oneByteLoop = generateLabelSymbol(_cg);
       if (_trace)
          traceMsg(comp, "MemCpyAtomicMacroOp: unknown type routine\n");
 
@@ -2666,7 +2581,7 @@ MemCpyAtomicMacroOp::generateLoop()
          cursor = generateSTXLoop(strideSize(), unalignedLoadOp, unalignedStoreOp, false);
          break;
       default:
-         if ((TR::Compiler->target.is64Bit() || _cg->use64BitRegsOn32Bit()) && !comp->useCompressedPointers())
+         if (!comp->useCompressedPointers())
             {
             cursor = generateSTXLoop(8, TR::InstOpCode::LG, TR::InstOpCode::STG, false);
             }
@@ -2681,8 +2596,7 @@ MemCpyAtomicMacroOp::generateLoop()
    cursor = generateS390LabelInstruction(_cg, TR::InstOpCode::LABEL, _dstNode, doneArrayCopyLabel);
 
    createLoopDependencies(cursor);
-   cursor->setEndInternalControlFlow();
-   startControlFlow->setStartInternalControlFlow();
+   doneArrayCopyLabel->setEndInternalControlFlow();
 
    return cursor;
    }

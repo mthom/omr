@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -23,7 +23,7 @@
 
 #include "codegen/CodeGenerator.hpp"
 #include "env/CompilerEnv.hpp"
-#include "il/Node.hpp"                                         // for Node
+#include "il/Node.hpp"
 #include "il/Node_inlines.hpp"
 
 const OMR::Z::InstOpCode::OpCodeMetaData OMR::Z::InstOpCode::metadata[NumOpCodes] =
@@ -59,17 +59,13 @@ OMR::Z::InstOpCode::hasBypass()
 uint32_t
 OMR::Z::InstOpCode::isAdmin()
    {
-   return (_mnemonic == DIRECTIVE ||
-           _mnemonic == RET ||
+   return (_mnemonic == RET ||
            _mnemonic == ASSOCREGS ||
            _mnemonic == DEPEND ||
            _mnemonic == FENCE ||
-           _mnemonic == SCHEDFENCE ||
            _mnemonic == PROC ||
            _mnemonic == DC ||
            _mnemonic == DC2 ||
-           _mnemonic == ASM ||
-           _mnemonic == DS ||
            _mnemonic == DCB);
    }
 
@@ -131,15 +127,6 @@ OMR::Z::InstOpCode::isOperandHW(uint32_t i)
    return metadata[_mnemonic].properties & mask;
    }
 
-uint64_t
-OMR::Z::InstOpCode::isOperandLW(uint32_t i)
-    {
-    uint64_t mask = ((i==1)? S390OpProp_TargetLW : 0) | ((i==2)? S390OpProp_SrcLW : 0) | ((i==3)? S390OpProp_Src2LW : 0);
-    return metadata[_mnemonic].properties & mask;
-    }
-
-
-
 /* Static Methods */
 
 void
@@ -152,7 +139,6 @@ OMR::Z::InstOpCode::copyBinaryToBufferWithoutClear(uint8_t *cursor, TR::InstOpCo
      {
      switch (getInstructionFormat(i_opCode))
         {
-        case RIE_FORMAT:
         case RIEa_FORMAT:
         case RIEb_FORMAT:
         case RIEc_FORMAT:
@@ -162,15 +148,12 @@ OMR::Z::InstOpCode::copyBinaryToBufferWithoutClear(uint8_t *cursor, TR::InstOpCo
         case RIEg_FORMAT:
         case RIS_FORMAT:
         case RRS_FORMAT:
-        case RSL_FORMAT:
         case RSLa_FORMAT:
         case RSLb_FORMAT:
-        case RSY_FORMAT:
         case RSYa_FORMAT:
         case RSYb_FORMAT:
         case RXE_FORMAT:
         case RXF_FORMAT:
-        case RXY_FORMAT:
         case RXYa_FORMAT:
         case RXYb_FORMAT:
         case SIY_FORMAT:
@@ -259,6 +242,100 @@ OMR::Z::InstOpCode::getInstructionLength(TR::InstOpCode::Mnemonic i_opCode)
 
   return 0;
   }
+
+TR::InstOpCode::Mnemonic
+OMR::Z::InstOpCode::getEquivalentLongDisplacementMnemonic(TR::InstOpCode::Mnemonic op)
+   {
+   switch (op)
+      {
+      case TR::InstOpCode::A:
+         return TR::InstOpCode::AY;
+      case TR::InstOpCode::AL:
+         return TR::InstOpCode::ALY;
+      case TR::InstOpCode::AH:
+         return TR::InstOpCode::AHY;
+      case TR::InstOpCode::C:
+         return TR::InstOpCode::CY;
+      case TR::InstOpCode::CH:
+         return TR::InstOpCode::CHY;
+      case TR::InstOpCode::CL:
+         return TR::InstOpCode::CLY;
+      case TR::InstOpCode::IC:
+         return TR::InstOpCode::ICY;
+      case TR::InstOpCode::L:
+         return TR::InstOpCode::LY;
+      case TR::InstOpCode::LA:
+         return TR::InstOpCode::LAY;
+      case TR::InstOpCode::LAE:
+         return TR::InstOpCode::LAEY;
+      case TR::InstOpCode::LRA:
+         return TR::InstOpCode::LRAY;
+      case TR::InstOpCode::LH:
+         return TR::InstOpCode::LHY;
+      case TR::InstOpCode::MS:
+         return TR::InstOpCode::MSY;
+      case TR::InstOpCode::M:
+         return TR::InstOpCode::MFY;
+      case TR::InstOpCode::MH:
+         return TR::InstOpCode::MHY;
+      case TR::InstOpCode::N:
+         return TR::InstOpCode::NY;
+      case TR::InstOpCode::NI:
+         return TR::InstOpCode::NIY;
+      case TR::InstOpCode::O:
+         return TR::InstOpCode::OY;
+      case TR::InstOpCode::OI:
+         return TR::InstOpCode::OIY;
+      case TR::InstOpCode::S:
+         return TR::InstOpCode::SY;
+      case TR::InstOpCode::SH:
+         return TR::InstOpCode::SHY;
+      case TR::InstOpCode::SL:
+         return TR::InstOpCode::SLY;
+      case TR::InstOpCode::ST:
+         return TR::InstOpCode::STY;
+      case TR::InstOpCode::STC:
+         return TR::InstOpCode::STCY;
+      case TR::InstOpCode::STH:
+         return TR::InstOpCode::STHY;
+      case TR::InstOpCode::X:
+         return TR::InstOpCode::XY;
+      case TR::InstOpCode::XI:
+         return TR::InstOpCode::XIY;
+      case TR::InstOpCode::LE:
+         return TR::InstOpCode::LEY;
+      case TR::InstOpCode::LD:
+         return TR::InstOpCode::LDY;
+      case TR::InstOpCode::STE:
+         return TR::InstOpCode::STEY;
+      case TR::InstOpCode::STD:
+         return TR::InstOpCode::STDY;
+      case TR::InstOpCode::LM:
+         return TR::InstOpCode::LMY;
+      case TR::InstOpCode::STM:
+         return TR::InstOpCode::STMY;
+      case TR::InstOpCode::STCM:
+         return TR::InstOpCode::STCMY;
+      case TR::InstOpCode::ICM:
+         return TR::InstOpCode::ICMY;
+      case TR::InstOpCode::TM:
+         return TR::InstOpCode::TMY;
+      case TR::InstOpCode::MVI:
+         return TR::InstOpCode::MVIY;
+      case TR::InstOpCode::CLI:
+         return TR::InstOpCode::CLIY;
+      case TR::InstOpCode::CVB:
+         return TR::InstOpCode::CVBY;
+      case TR::InstOpCode::CVD:
+         return TR::InstOpCode::CVDY;
+      case TR::InstOpCode::CS:
+         return TR::InstOpCode::CSY;
+      case TR::InstOpCode::CDS:
+         return TR::InstOpCode::CDSY;
+      default:
+         return TR::InstOpCode::BAD;
+      }
+   }
 
 TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getLoadOnConditionRegOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::LOCGR : TR::InstOpCode::LOCR; }
@@ -387,9 +464,6 @@ TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getCmpTrapOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CGRT : TR::InstOpCode::CRT; }
 
 TR::InstOpCode::Mnemonic
-OMR::Z::InstOpCode::getCmpWidenTrapOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CGFRT : TR::InstOpCode::CRT; }
-
-TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getCmpImmOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CGFI : TR::InstOpCode::CFI; }
 
 TR::InstOpCode::Mnemonic
@@ -400,9 +474,6 @@ OMR::Z::InstOpCode::getCmpImmBranchRelOpCode() { return TR::Compiler->target.is6
 
 TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getCmpLogicalTrapOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CLGRT : TR::InstOpCode::CLRT; }
-
-TR::InstOpCode::Mnemonic
-OMR::Z::InstOpCode::getCmpLogicalWidenTrapOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CLGFRT : TR::InstOpCode::CLRT; }
 
 TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getCmpLogicalImmTrapOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CLGIT : TR::InstOpCode::CLFIT; }
@@ -435,6 +506,9 @@ TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getAddHalfWordImmOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::AGHI : TR::InstOpCode::AHI; }
 
 TR::InstOpCode::Mnemonic
+OMR::Z::InstOpCode::getAddHalfWordImmDistinctOperandOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::AGHIK : TR::InstOpCode::AHIK; }
+
+TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getAddLogicalOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::ALG : TR::InstOpCode::AL; }
 
 TR::InstOpCode::Mnemonic
@@ -451,7 +525,6 @@ OMR::Z::InstOpCode::getBranchRelIndexHighOpCode() { return TR::Compiler->target.
 
 TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getBranchRelIndexEqOrLowOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::BRXLG : TR::InstOpCode::BRXLE; }
-
 
 TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getLoadWidenOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::LGF : TR::InstOpCode::L; }
@@ -479,6 +552,9 @@ OMR::Z::InstOpCode::getCmpWidenOpCode() { return TR::Compiler->target.is64Bit() 
 
 TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getCmpRegWidenOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CGFR : TR::InstOpCode::CR; }
+
+TR::InstOpCode::Mnemonic
+OMR::Z::InstOpCode::getCmpRegAndBranchRelOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CGRJ : TR::InstOpCode::CRJ; }
 
 TR::InstOpCode::Mnemonic
 OMR::Z::InstOpCode::getCmpLogicalWidenOpCode() { return TR::Compiler->target.is64Bit() ? TR::InstOpCode::CLGF : TR::InstOpCode::CL; }
@@ -515,17 +591,10 @@ OMR::Z::InstOpCode::getLoadRegOpCodeFromNode(TR::CodeGenerator *cg, TR::Node *no
    {
    if (node->getType().isAddress())
       {
-      if (TR::Compiler->target.is64Bit())
-         return TR::InstOpCode::LGR;
-      else
-         return TR::InstOpCode::LR;
+      return TR::Compiler->target.is64Bit() ? TR::InstOpCode::LGR : TR::InstOpCode::LR;
       }
 
-   if ((TR::Compiler->target.is64Bit() || cg->use64BitRegsOn32Bit()) && node->getType().isInt64())
-      {
-      return TR::InstOpCode::LGR;
-      }
-   return TR::InstOpCode::LR;
+   return node->getType().isInt64() ? TR::InstOpCode::LGR : TR::InstOpCode::LR;
    }
 
 

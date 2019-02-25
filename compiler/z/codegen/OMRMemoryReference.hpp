@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2016 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -35,22 +35,22 @@ namespace OMR { typedef OMR::Z::MemoryReference MemoryReferenceConnector; }
 
 #include "compiler/codegen/OMRMemoryReference.hpp"
 
-#include <stddef.h>                         // for NULL
-#include <stdint.h>                         // for int32_t, uint8_t, etc
-#include "codegen/CodeGenerator.hpp"        // for CodeGenerator
+#include <stddef.h>
+#include <stdint.h>
+#include "codegen/CodeGenerator.hpp"
 #include "codegen/ConstantDataSnippet.hpp"
-#include "codegen/InstOpCode.hpp"           // for InstOpCode, etc
-#include "codegen/Register.hpp"             // for Register
-#include "codegen/Snippet.hpp"              // for Snippet
-#include "compile/Compilation.hpp"          // for Compilation
-#include "env/TRMemory.hpp"                 // for TR_Memory, etc
-#include "env/jittypes.h"                   // for intptrj_t
-#include "il/DataTypes.hpp"                 // for DataTypes
-#include "il/Symbol.hpp"                    // for Symbol
-#include "il/SymbolReference.hpp"           // for SymbolReference
-#include "infra/Assert.hpp"                 // for TR_ASSERT
-#include "infra/Flags.hpp"                  // for flags32_t, flags16_t
-#include "infra/List.hpp"                   // for List
+#include "codegen/InstOpCode.hpp"
+#include "codegen/Register.hpp"
+#include "codegen/Snippet.hpp"
+#include "compile/Compilation.hpp"
+#include "env/TRMemory.hpp"
+#include "env/jittypes.h"
+#include "il/DataTypes.hpp"
+#include "il/Symbol.hpp"
+#include "il/SymbolReference.hpp"
+#include "infra/Assert.hpp"
+#include "infra/Flags.hpp"
+#include "infra/List.hpp"
 
 class TR_StorageReference;
 namespace TR { class Instruction; }
@@ -60,9 +60,7 @@ namespace TR { class ParameterSymbol; }
 namespace TR { class UnresolvedDataSnippet; }
 
 #define S390MemRef_UnresolvedDataSnippet         0x01
-#define MemRef_TargetAddressSnippet              0x02
 #define MemRef_ConstantDataSnippet               0x04
-#define MemRef_LookupSwitchSnippet               0x08
 #define DisplacementAdjusted                     0x10
 #define PseudoLive                               0x20
 #define CheckForLongDispSlot                     0x40
@@ -85,7 +83,6 @@ namespace TR { class UnresolvedDataSnippet; }
 * this happens during doInstructionSelection when we don't have stack frame, so we need to update the memory reference during binary generation */
 #define MemRefCreatedDuringInstructionSelection 0x1000000
 #define TR_S390MemRef_ForceFirstTimeFolding     0x2000000
-#define TR_BucketBaseRegMemRef                  0x8000000
 
 namespace OMR
 {
@@ -116,9 +113,12 @@ private:
 TR::Instruction           *_targetSnippetInstruction;
 TR::Snippet                   *_targetSnippet;
 flags32_t                 _flags;
-/** PLX literal Format I_SYMBOL_FLAGS */
-int32_t                   _displacement;
-int64_t                   _offset;
+
+/** \brief
+  *     The offset of the memory reference relative to the entity being referenced.
+  */
+intptrj_t _offset;
+
 TR_StorageReference       *_storageReference;
 
 /**
@@ -195,8 +195,20 @@ TR::Register *setIndexRegister(TR::Register *ir) {return _indexRegister = ir;}
 TR::Node *getIndexNode()            {return _indexNode;}
 TR::Node *setIndexNode(TR::Node *in) {return _indexNode = in;}
 
+/** \brief
+  *    Gets the offset of the memory reference relative to the entity being referenced.
+  *
+  * \note
+  *    The offset may not represent the final displacement which will be used to encode the memory reference until the
+  *    binary encoding of this memory reference is generated.
+  */
 intptrj_t getOffset() {return _offset;}
+
+/** \brief
+  *    Sets the offset of the memory reference relative to the entity being referenced.
+  */
 void setOffset(intptrj_t amount) {_offset = amount;}
+
 void addToOffset(intptrj_t amount) {_offset += amount;}
 
 /**
@@ -213,18 +225,9 @@ TR::Instruction *setTargetSnippetInstruction(TR::Instruction *i)
    return _targetSnippetInstruction = i;
    }
 
-TR::S390TargetAddressSnippet *getTargetAddressSnippet();
-
-TR::S390TargetAddressSnippet *setTargetAddressSnippet(TR::S390TargetAddressSnippet *s);
-
 TR::S390ConstantDataSnippet *getConstantDataSnippet();
 
 TR::S390ConstantDataSnippet *setConstantDataSnippet(TR::S390ConstantDataSnippet *s);
-
-TR::S390LookupSwitchSnippet *getLookupSwitchSnippet();
-
-TR::S390LookupSwitchSnippet *setLookupSwitchSnippet(TR::S390LookupSwitchSnippet *s);
-
 
 TR_StorageReference *getStorageReference()                           { return _storageReference; }
 TR_StorageReference *setStorageReference(TR_StorageReference *ref)   { return _storageReference=ref; }
@@ -278,6 +281,32 @@ void setLeftAlignMemRef(int32_t leftMostByte);
 
 bool isAligned();
 
+/** \brief
+ *     Determines whether this memory reference may require long displacement (as defined by PoPs).
+ *
+ * \return
+ *    `true` if this memory reference requires long displacement; `false` if long displacement may not be required.
+ *
+ * \note
+ *    A return value of `false` does not imply long displacement is not required. This is because the displacement of
+ *    this memory reference is not fully known until binary encoding. Only after the binary encoding of this memory
+ *    reference will a return value of `false` indicate that long displacement is not required. The offset may increase
+ *    by some amount during code generation, however it will never decrease. This is why a return value of `true` 
+ *    always implies long displacement will be required.
+ */
+const bool isLongDisplacementRequired();
+
+/** \brief
+ *     Determines whether this memory reference may require huge displacement.
+ *
+ * \return
+ *    `true` if this memory reference requires huge displacement; `false` if huge displacement may not be required.
+ *
+ * \note
+ *    \see isLongDisplacementRequired notes section.
+ */
+const bool isHugeDisplacementRequired();
+
 bool forceEvaluation()        { return _flags.testAny(TR_S390MemRef_ForceEvaluation); }
 void setForceEvaluation()
    {
@@ -326,26 +355,14 @@ bool refsRegister(TR::Register *reg)
    return false;
    }
 
-int32_t getDisp()          {return _displacement;}
-void setDisp(int32_t f)    {_displacement=f;}
-
 bool isUnresolvedDataSnippet()  {return _flags.testAny(S390MemRef_UnresolvedDataSnippet);}
 void setUnresolvedDataSnippet() {_flags.set(S390MemRef_UnresolvedDataSnippet);}
-
-bool isTargetAddressSnippet()  {return _flags.testAny(MemRef_TargetAddressSnippet);}
-void setTargetAddressSnippet() {_flags.set(MemRef_TargetAddressSnippet);}
 
 bool isConstantDataSnippet()  {return _flags.testAny(MemRef_ConstantDataSnippet);}
 void setConstantDataSnippet() {_flags.set(MemRef_ConstantDataSnippet);}
 
-bool isLookupSwitchSnippet()  {return _flags.testAny(MemRef_LookupSwitchSnippet);}
-void setLookupSwitchSnippet() {_flags.set(MemRef_LookupSwitchSnippet);}
-
 bool isMemRefMustNotSpill()   {return _flags.testAny(MemRefMustNotSpill);}
 void setMemRefMustNotSpill()  {_flags.set(MemRefMustNotSpill);}
-
-bool isBucketBaseRegMemRef()  {return _flags.testAny(TR_BucketBaseRegMemRef);}
-void setBucketBaseRegMemRef() {_flags.set(TR_BucketBaseRegMemRef);}
 
 bool ZeroBasePtr_EvaluateSubtree(TR::Node * subTree, TR::CodeGenerator * cg, MemoryReference * mr);
 
@@ -396,7 +413,6 @@ bool doEvaluate(TR::Node * subTree, TR::CodeGenerator * cg);
 TR::Snippet * getSnippet();
 int32_t generateBinaryEncoding(uint8_t *modRM, TR::CodeGenerator *cg, TR::Instruction *instr);
 int32_t estimateBinaryLength(int32_t currentEstimate, TR::CodeGenerator *cg, TR::Instruction *instr);
-uint8_t *generateBinaryEncoding2(uint8_t *modRM, TR::CodeGenerator *cg);
 int32_t generateBinaryEncodingTouchUpForLongDisp(uint8_t *modRM, TR::CodeGenerator *cg, TR::Instruction *instr);
 
 void blockRegisters()

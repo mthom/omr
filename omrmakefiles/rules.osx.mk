@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2016, 2016 IBM Corp. and others
+# Copyright (c) 2016, 2019 IBM Corp. and others
 # 
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -29,7 +29,7 @@ GLOBAL_CPPFLAGS += -DOSX -DJ9HAMMER -D_REENTRANT -D_FILE_OFFSET_BITS=64
 # Compile without exceptions
 
 ifeq (1,$(OMR_RTTI))
-    GLOBAL_CXXFLAGS+=-fno-exceptions -fno-threadsafe-statics
+    GLOBAL_CXXFLAGS+=-fno-exceptions -fno-threadsafe-statics -std=c++0x
 else
     GLOBAL_CXXFLAGS+=-fno-exceptions -fno-rtti -fno-threadsafe-statics
 endif
@@ -69,7 +69,7 @@ endif
 ifneq (,$(findstring executable,$(ARTIFACT_TYPE)))
   # Default Libraries
   GLOBAL_SHARED_LIBS+=m pthread c dl util
-  GLOBAL_LDFLAGS+=-Wl,-rpath,\$$ORIGIN
+  GLOBAL_LDFLAGS+=-Wl,-rpath,@loader_path
 endif
 
 ###
@@ -125,13 +125,13 @@ ifeq (1,$(OMR_DEBUG))
 ifeq (1,$(USE_GNU_DEBUG))
 
 define LINK_C_SHARED_COMMAND
-$(CCLINKSHARED) -o $@ $(OBJECTS) $(LDFLAGS) $(MODULE_LDFLAGS) $(GLOBAL_LDFLAGS) -install_name lib$(MODULE_NAME).dylib
-cp $@ $@.dbg
+$(CCLINKSHARED) -o $@ $(OBJECTS) $(LDFLAGS) $(MODULE_LDFLAGS) $(GLOBAL_LDFLAGS) -install_name @rpath/lib$(MODULE_NAME).dylib
+dsymutil -f $@ -o $@.dbg
 endef
 
 define LINK_CXX_SHARED_COMMAND
-$(CXXLINKSHARED) -o $@ $(OBJECTS) $(LDFLAGS) $(MODULE_LDFLAGS) $(GLOBAL_LDFLAGS) -install_name lib$(MODULE_NAME).dylib
-cp $@ $@.dbg
+$(CXXLINKSHARED) -o $@ $(OBJECTS) $(LDFLAGS) $(MODULE_LDFLAGS) $(GLOBAL_LDFLAGS) -install_name @rpath/lib$(MODULE_NAME).dylib
+dsymutil -f $@ -o $@.dbg
 endef
 
 ## Files to clean

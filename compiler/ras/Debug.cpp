@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,75 +21,75 @@
 
 #include "ras/Debug.hpp"
 
-#include <algorithm>                                  // for std::max, etc
-#include <ctype.h>                                    // for isprint
-#include <stdarg.h>                                   // for va_list
-#include <stddef.h>                                   // for size_t
-#include <stdint.h>                                   // for int32_t, etc
-#include <stdio.h>                                    // for sprintf, NULL, etc
-#include <stdlib.h>                                   // for qsort, calloc, etc
-#include <string.h>                                   // for strlen, memcpy, etc
+#include <algorithm>
+#include <ctype.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "codegen/BackingStore.hpp"
-#include "codegen/CodeGenPhase.hpp"                   // for CodeGenPhase, etc
-#include "codegen/CodeGenerator.hpp"                  // for CodeGenerator, etc
-#include "codegen/FrontEnd.hpp"                       // for feGetEnv, etc
-#include "codegen/GCStackAtlas.hpp"                   // for GCStackAtlas
-#include "codegen/GCStackMap.hpp"                     // for TR_GCStackMap, etc
-#include "codegen/InstOpCode.hpp"                     // for InstOpCode, etc
-#include "codegen/Instruction.hpp"                    // for Instruction
+#include "codegen/CodeGenPhase.hpp"
+#include "codegen/CodeGenerator.hpp"
+#include "codegen/FrontEnd.hpp"
+#include "codegen/GCStackAtlas.hpp"
+#include "codegen/GCStackMap.hpp"
+#include "codegen/InstOpCode.hpp"
+#include "codegen/Instruction.hpp"
 #include "env/KnownObjectTable.hpp"
 #include "codegen/LinkageConventionsEnum.hpp"
 #include "codegen/LiveRegister.hpp"
 #include "codegen/Machine.hpp"
 #include "codegen/RealRegister.hpp"
-#include "codegen/Register.hpp"                       // for Register
+#include "codegen/Register.hpp"
 #include "codegen/RegisterConstants.hpp"
 #include "codegen/RegisterIterator.hpp"
-#include "codegen/RegisterPair.hpp"                   // for RegisterPair
+#include "codegen/RegisterPair.hpp"
 #include "codegen/RegisterRematerializationInfo.hpp"
-#include "codegen/Snippet.hpp"                        // for Snippet
-#include "compile/Compilation.hpp"                    // for Compilation, etc
-#include "compile/Method.hpp"                         // for TR_Method
+#include "codegen/Snippet.hpp"
+#include "compile/Compilation.hpp"
+#include "compile/Method.hpp"
 #include "compile/ResolvedMethod.hpp"
 #include "compile/SymbolReferenceTable.hpp"
 #include "compile/VirtualGuard.hpp"
 #include "control/Options.hpp"
-#include "control/Options_inlines.hpp"                // for TR::Options, etc
+#include "control/Options_inlines.hpp"
 #include "control/Recompilation.hpp"
 #include "cs2/bitvectr.h"
-#include "cs2/hashtab.h"                              // for HashTable, etc
+#include "cs2/hashtab.h"
 #include "cs2/sparsrbit.h"
 #include "env/CompilerEnv.hpp"
-#include "env/IO.hpp"                                 // for IO
+#include "env/IO.hpp"
 #include "env/RawAllocator.hpp"
 #include "env/StackMemoryRegion.hpp"
-#include "env/TRMemory.hpp"                           // for TR_Memory, etc
+#include "env/TRMemory.hpp"
 #include "env/jittypes.h"
-#include "il/Block.hpp"                               // for Block
-#include "il/DataTypes.hpp"                           // for TR::DataType, etc
+#include "il/Block.hpp"
+#include "il/DataTypes.hpp"
 #include "il/ILOpCodes.hpp"
-#include "il/ILOps.hpp"                               // for ILOpCode, etc
-#include "il/Node.hpp"                                // for Node
+#include "il/ILOps.hpp"
+#include "il/Node.hpp"
 #include "il/Node_inlines.hpp"
-#include "il/Symbol.hpp"                              // for Symbol, etc
+#include "il/Symbol.hpp"
 #include "il/SymbolReference.hpp"
-#include "il/TreeTop.hpp"                             // for TreeTop
+#include "il/TreeTop.hpp"
 #include "il/TreeTop_inlines.hpp"
 #include "il/symbol/AutomaticSymbol.hpp"
-#include "il/symbol/LabelSymbol.hpp"                  // for LabelSymbol
-#include "il/symbol/MethodSymbol.hpp"                 // for MethodSymbol, etc
+#include "il/symbol/LabelSymbol.hpp"
+#include "il/symbol/MethodSymbol.hpp"
 #include "il/symbol/ParameterSymbol.hpp"
 #include "il/symbol/RegisterMappedSymbol.hpp"
 #include "il/symbol/ResolvedMethodSymbol.hpp"
-#include "il/symbol/StaticSymbol.hpp"                 // for StaticSymbol, etc
-#include "infra/Array.hpp"                            // for TR_Array
-#include "infra/Assert.hpp"                           // for TR_ASSERT
-#include "infra/BitVector.hpp"                        // for TR_BitVector, etc
-#include "infra/List.hpp"                             // for ListIterator, etc
+#include "il/symbol/StaticSymbol.hpp"
+#include "infra/Array.hpp"
+#include "infra/Assert.hpp"
+#include "infra/BitVector.hpp"
+#include "infra/List.hpp"
 #include "infra/SimpleRegex.hpp"
-#include "infra/CfgNode.hpp"                          // for CFGNode
+#include "infra/CfgNode.hpp"
 #include "optimizer/Optimizations.hpp"
-#include "optimizer/Optimizer.hpp"                    // for Optimizer
+#include "optimizer/Optimizer.hpp"
 #include "optimizer/PreExistence.hpp"
 #include "optimizer/Structure.hpp"
 #include "ras/CallStackIterator.hpp"
@@ -97,8 +97,8 @@
 #include "runtime/Runtime.hpp"
 
 #ifdef J9_PROJECT_SPECIFIC
-#include "env/CHTable.hpp"                            // for TR_CHTable, etc
-#include "env/VMAccessCriticalSection.hpp"            // for VMAccessCriticalSection
+#include "env/CHTable.hpp"
+#include "env/VMAccessCriticalSection.hpp"
 #include "env/VMJ9.h"
 #endif
 
@@ -111,21 +111,17 @@
 #endif
 
 #ifdef LINUX
-#include <arpa/inet.h>                                // for inet_addr
-#include <dlfcn.h>                                    // for dlsym, dlerror, etc
-#include <netdb.h>                                    // for gethostbyname, etc
+#include <arpa/inet.h>
+#include <dlfcn.h>
+#include <netdb.h>
 #endif
 
 #if defined(J9ZOS390) || defined(AIXPPC) || defined(LINUX)
-#include <unistd.h>                                   // for intptr_t, etc
+#include <unistd.h>
 #endif
 
 #ifdef J9OS_I5
 #include "Xj9I5OSJitDebug.H"
-#endif
-
-#ifdef RUBY_PROJECT_SPECIFIC
-#include "ruby/config.h"
 #endif
 
 // -----------------------------------------------------------------------------
@@ -751,14 +747,14 @@ TR_Debug::printPrefix(TR::FILE *pOutFile, TR::Instruction *instr, uint8_t *curso
       char *p0 = prefix;
       char *p1 = prefix + strlen(prefix);
 
-      // Print machine code in bytes on X86, in words on PPC,ARM
+      // Print machine code in bytes on X86, in words on PPC,ARM,ARM64
       // Stop if we try to run over the buffer.
       if (TR::Compiler->target.cpu.isX86())
          {
          for (int i = 0; i < size && p1 - p0 + 3 < prefixWidth; i++, p1 += 3)
             sprintf(p1, " %02x", *cursor++);
          }
-      else if (TR::Compiler->target.cpu.isPower() || TR::Compiler->target.cpu.isARM())
+      else if (TR::Compiler->target.cpu.isPower() || TR::Compiler->target.cpu.isARM() || TR::Compiler->target.cpu.isARM64())
          {
          for (int i = 0; i < size && p1 - p0 + 9 < prefixWidth; i += 4, p1 += 9, cursor += 4)
             sprintf(p1, " %08x", *((uint32_t *)cursor));
@@ -1639,22 +1635,26 @@ TR_Debug::getName(TR::SymbolReference * symRef)
             return "<usesAllMethod>";
          case TR::SymbolReferenceTable::synchronizedFieldLoadSymbol:
             return "<synchronizedFieldLoad>";
-         case TR::SymbolReferenceTable::atomicAdd32BitSymbol:
-             return "<atomicAdd32Bit>";
-         case TR::SymbolReferenceTable::atomicAdd64BitSymbol:
-             return "<atomicAdd64Bit>";
+         case TR::SymbolReferenceTable::atomicAddSymbol:
+             return "<atomicAdd>";
+         case TR::SymbolReferenceTable::atomicFetchAndAddSymbol:
+             return "<atomicFetchAndAdd>";
          case TR::SymbolReferenceTable::atomicFetchAndAdd32BitSymbol:
              return "<atomicFetchAndAdd32Bit>";
          case TR::SymbolReferenceTable::atomicFetchAndAdd64BitSymbol:
              return "<atomicFetchAndAdd64Bit>";
+         case TR::SymbolReferenceTable::atomicSwapSymbol:
+             return "<atomicSwap>";
          case TR::SymbolReferenceTable::atomicSwap32BitSymbol:
              return "<atomicSwap32Bit>";
          case TR::SymbolReferenceTable::atomicSwap64BitSymbol:
              return "<atomicSwap64Bit>";
-         case TR::SymbolReferenceTable::atomicCompareAndSwap32BitSymbol:
-             return "<atomicCompareAndSwap32Bit>";
-         case TR::SymbolReferenceTable::atomicCompareAndSwap64BitSymbol:
-             return "<atomicCompareAndSwap64Bit>";
+         case TR::SymbolReferenceTable::atomicCompareAndSwapSymbol:
+             return "<atomicCompareAndSwap>";
+         case TR::SymbolReferenceTable::potentialOSRPointHelperSymbol:
+             return "<potentialOSRPointHelper>";
+         case TR::SymbolReferenceTable::osrFearPointHelperSymbol:
+             return "<osrFearPointHelper>";
          }
       }
 
@@ -1774,11 +1774,6 @@ TR_Debug::getAutoName(TR::SymbolReference * symRef)
       else
          sprintf(name, "<%s " POINTER_PRINTF_FORMAT ">", symName, symRef->getSymbol());
       }
-   else if (symRef->getSymbol()->isAutoMarkerSymbol())
-       {
-       TR::AutomaticSymbol *symbol = symRef->getSymbol()->castToAutoMarkerSymbol();
-       sprintf(name, "<auto marker symbol " POINTER_PRINTF_FORMAT ": %s>", symbol, symbol->getName());
-       }
    else if (symRef->isTempVariableSizeSymRef())
       {
       TR_ASSERT(symRef->getSymbol()->isVariableSizeSymbol(),"symRef #%d must contain a variable size symbol\n",symRef->getReferenceNumber());
@@ -1914,6 +1909,8 @@ TR_Debug::getStaticName(TR::SymbolReference * symRef)
          }
       return "unknown class object";
       }
+   else if (sym->isConstantPoolAddress())
+      return "<constant pool address>";
    else if (symRef->getCPIndex() >= 0)
       {
       if (sym->isAddressOfClassObject())
@@ -2085,6 +2082,8 @@ static const char *commonNonhelperSymbolNames[] =
    "<osrScratchBuffer>",
    "<osrFrameIndex>",
    "<osrReturnAddress>",
+   "<potentialOSRPointHelper>",
+   "<osrFearPointHelper>",
    "<lowTenureAddress>",
    "<highTenureAddress>",
    "<fragmentParent>",
@@ -2781,7 +2780,7 @@ TR_Debug::printCommonDataMiningAnnotations(TR::FILE *pOutFile, TR::Instruction *
   }
 
 
-#if !defined(TR_TARGET_POWER) && !defined(TR_TARGET_ARM)
+#if !defined(TR_TARGET_POWER) && !defined(TR_TARGET_ARM) && !defined(TR_TARGET_ARM64)
 void
 TR_Debug::print(TR::FILE *pOutFile, TR::Instruction * inst)
    {
@@ -2813,6 +2812,14 @@ TR_Debug::print(TR::FILE *pOutFile, TR::Instruction * inst, const char *title)
 
 #if defined(TR_TARGET_ARM)
    if (TR::Compiler->target.cpu.isARM())
+      {
+      print(pOutFile, inst);
+      return;
+      }
+#endif
+
+#if defined(TR_TARGET_ARM64)
+   if (TR::Compiler->target.cpu.isARM64())
       {
       print(pOutFile, inst);
       return;
@@ -2867,6 +2874,14 @@ TR_Debug::print(TR::FILE *pOutFile, TR::GCRegisterMap * map)
       }
 #endif
 
+#if defined(TR_TARGET_ARM64)
+   if (TR::Compiler->target.cpu.isARM64())
+      {
+      printARM64GCRegisterMap(pOutFile, map);
+      return;
+      }
+#endif
+
    }
 
 void
@@ -2874,9 +2889,6 @@ TR_Debug::print(TR::FILE *pOutFile, TR::list<TR::Snippet*> & snippetList, bool i
    {
    if (pOutFile == NULL)
       return;
-
-   if (_comp->cg()->hasTargetAddressSnippets())
-      _comp->cg()->dumpTargetAddressSnippets(pOutFile);
 
    for (auto snippets = snippetList.begin(); snippets != snippetList.end(); ++snippets)
       {
@@ -2893,9 +2905,6 @@ TR_Debug::print(TR::FILE *pOutFile, List<TR::Snippet> & snippetList, bool isWarm
    {
    if (pOutFile == NULL)
       return;
-
-   if (_comp->cg()->hasTargetAddressSnippets())
-      _comp->cg()->dumpTargetAddressSnippets(pOutFile);
 
    ListIterator<TR::Snippet> snippets(&snippetList);
    for (TR::Snippet * snippet = snippets.getFirst(); snippet; snippet = snippets.getNext())
@@ -3002,6 +3011,10 @@ TR_Debug::getName(TR::Register *reg, TR_RegisterSizes size)
       if (TR::Compiler->target.cpu.isZ())
          return getName(toRealRegister(reg), size);
 #endif
+#if defined(TR_TARGET_ARM64)
+      if (TR::Compiler->target.cpu.isARM64())
+         return getName((TR::RealRegister *)reg, size);
+#endif
       TR_ASSERT(0, "TR_Debug::getName() ==> unknown target platform for given real register\n");
       }
 
@@ -3098,7 +3111,6 @@ TR_Debug::getRegisterKindName(TR_RegisterKinds rk)
       case TR_VRF:   return "VRF";
       case TR_VSX_SCALAR:   return "VSX_SCALAR";
       case TR_VSX_VECTOR:   return "VSX_VECTOR";
-      case TR_GPR64: return "GPR64";
       case TR_SSR:   return "SSR";
       default:       return "??R";
       }
@@ -3174,6 +3186,13 @@ TR_Debug::print(TR::FILE *pOutFile, TR::Register * reg, TR_RegisterSizes size)
       if (TR::Compiler->target.cpu.isZ())
          {
          print(pOutFile, toRealRegister(reg), size);
+         return;
+         }
+#endif
+#if defined(TR_TARGET_ARM64)
+      if (TR::Compiler->target.cpu.isARM64())
+         {
+         print(pOutFile, (TR::RealRegister *)reg, size);
          return;
          }
 #endif
@@ -3732,101 +3751,6 @@ TR_Debug::getRuntimeHelperName(int32_t index)
       }
 #endif
 
-#if defined(OMR_RUBY)
-   if (index < TR_FSRH)
-      {
-      switch (index)
-         {
-         case RubyHelper_rb_funcallv:            return "rb_funcallv";
-         case RubyHelper_vm_send:                return "vm_send";
-         case RubyHelper_vm_send_without_block:  return "vm_send_without_block";
-         case RubyHelper_vm_getspecial:          return "vm_getspecial";
-         case RubyHelper_lep_svar_set:           return "vm_lep_svar_set";
-         case RubyHelper_vm_getivar:             return "vm_getivar";
-         case RubyHelper_vm_setivar:             return "vm_setivar";
-         case RubyHelper_vm_opt_plus:            return "vm_opt_plus";
-         case RubyHelper_vm_opt_minus:           return "vm_opt_minus";
-         case RubyHelper_vm_opt_mult:            return "vm_opt_mult";
-         case RubyHelper_vm_opt_div:             return "vm_opt_div";
-         case RubyHelper_vm_opt_mod:             return "vm_opt_mod";
-         case RubyHelper_vm_opt_eq:              return "vm_opt_eq";
-         case RubyHelper_vm_opt_neq:             return "vm_opt_neq";
-         case RubyHelper_vm_opt_lt:              return "vm_opt_lt";
-         case RubyHelper_vm_opt_le:              return "vm_opt_le";
-         case RubyHelper_vm_opt_gt:              return "vm_opt_gt";
-         case RubyHelper_vm_opt_ge:              return "vm_opt_ge";
-         case RubyHelper_vm_opt_ltlt:            return "vm_opt_ltlt";
-         case RubyHelper_vm_opt_not:             return "vm_opt_not";
-         case RubyHelper_vm_opt_aref:            return "vm_opt_aref";
-         case RubyHelper_vm_opt_aset:            return "vm_opt_aset";
-         case RubyHelper_vm_opt_length:          return "vm_opt_length";
-         case RubyHelper_vm_opt_size:            return "vm_opt_size";
-         case RubyHelper_vm_opt_empty_p:         return "vm_opt_empty_p";
-         case RubyHelper_vm_opt_succ:            return "vm_opt_succ";
-         case RubyHelper_rb_ary_new_capa:        return "rb_ary_new_capa";
-         case RubyHelper_rb_ary_new_from_values: return "rb_ary_new_from_values";
-         case RubyHelper_vm_expandarray:         return "vm_expandarray";
-         case RubyHelper_rb_ary_resurrect:       return "rb_ary_resurrect";
-         case RubyHelper_vm_concatarray:         return "vm_concatarray";
-         case RubyHelper_vm_splatarray:          return "vm_splatarray";
-         case RubyHelper_rb_range_new:           return "rb_range_new";
-         case RubyHelper_rb_hash_new:            return "rb_hash_new";
-         case RubyHelper_rb_hash_aset:           return "rb_hash_aset";
-         case RubyHelper_vm_trace:               return "vm_trace";
-         case RubyHelper_rb_str_new:             return "rb_str_new";
-         case RubyHelper_rb_str_new_cstr:        return "rb_str_new_cstr";
-         case RubyHelper_rb_str_resurrect:       return "rb_str_resurrect";
-
-         case RubyHelper_vm_get_ev_const:        return "vm_get_ev_const";
-         case RubyHelper_vm_check_if_namespace:  return "vm_check_if_namespace";
-         case RubyHelper_rb_const_set:           return "rb_const_set";
-         case RubyHelper_rb_gvar_get:            return "rb_gvar_get";
-         case RubyHelper_rb_gvar_set:            return "rb_gvar_set";
-         case RubyHelper_rb_iseq_add_mark_object:return "rb_iseq_add_mark_object";
-         case RubyHelper_vm_setinlinecache:      return "vm_setinlinecache";
-         case RubyHelper_vm_throw:               return "vm_throw";
-         case RubyHelper_rb_threadptr_execute_interrupts:
-                                                 return "rb_threadptr_execute_interrupts";
-         case RubyHelper_rb_vm_ep_local_ep:      return "rb_vm_ep_local_ep";
-         case RubyHelper_vm_get_cbase:           return "vm_get_cbase";
-         case RubyHelper_vm_get_const_base:      return "vm_get_const_base";
-         case RubyHelper_rb_vm_get_cref:         return "rb_vm_get_cref";
-         case RubyHelper_vm_get_cvar_base:       return "vm_get_cvar_base";
-         case RubyHelper_rb_cvar_get:            return "rb_cvar_get";
-         case RubyHelper_rb_cvar_set:            return "rb_cvar_set";
-         case RubyHelper_vm_checkmatch:          return "vm_checkmatch";
-         case RubyHelper_rb_obj_as_string:       return "rb_obj_as_string";
-         case RubyHelper_rb_str_append:          return "rb_str_append";
-         case RubyHelper_rb_ary_tmp_new:         return "rb_ary_tmp_new";
-         case RubyHelper_rb_ary_store:           return "rb_ary_store";
-         case RubyHelper_rb_reg_new_ary:         return "rb_reg_new_ary";
-         case RubyHelper_vm_opt_regexpmatch1:    return "vm_opt_regexpmatch1";
-         case RubyHelper_vm_opt_regexpmatch2:    return "vm_opt_regexpmatch2";
-         case RubyHelper_vm_defined:             return "vm_defined";
-         case RubyHelper_vm_invokesuper:         return "vm_invokesuper";
-         case RubyHelper_vm_invokeblock:         return "vm_invokeblock";
-         case RubyHelper_vm_get_block_ptr:       return "vm_get_block_ptr";
-         case RubyHelper_rb_bug:                 return "rb_bug";
-         case RubyHelper_vm_exec_core:           return "vm_exec_core";
-         case RubyHelper_rb_class_of:            return "rb_class_of";
-         case RubyHelper_vm_send_woblock_inlineable_guard:  return "vm_send_woblock_inlineable_guard";
-         case RubyHelper_vm_send_woblock_jit_inline_frame:  return "vm_send_woblock_jit_inline_frame";
-         case RubyHelper_ruby_omr_is_valid_object:  return "ruby_omr_is_valid_object";
-         case RubyHelper_rb_class2name:          return "rb_class2name";
-         case RubyHelper_vm_opt_aref_with:       return "vm_opt_aref_with";
-         case RubyHelper_vm_opt_aset_with:       return "vm_opt_aset_with";
-         case RubyHelper_vm_setconstant:         return "vm_setconstant";
-         case RubyHelper_rb_vm_env_write:        return "rb_vm_env_write";
-         case RubyHelper_vm_jit_stack_check:     return "vm_jit_stack_check";
-         case RubyHelper_rb_str_freeze:          return "rb_str_freeze";
-         case RubyHelper_rb_ivar_set:            return "rb_ivar_set";
-         case RubyHelper_vm_compute_case_dest:   return "vm_compute_case_dest";
-         case RubyHelper_vm_getinstancevariable: return "vm_getinstancevariable";
-         case RubyHelper_vm_setinstancevariable: return "vm_setinstancevariable";
-         }
-      }
-#endif
-
 #ifdef J9_PROJECT_SPECIFIC
    if (index < TR_FSRH)
       {
@@ -3837,6 +3761,7 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_instanceOf:                return "jitInstanceOf";
          case TR_checkAssignable:           return "jitCheckAssignable";
          case TR_induceOSRAtCurrentPC:      return "jitInduceOSRAtCurrentPC";
+         case TR_induceOSRAtCurrentPCAndRecompile:    return "jitInduceOSRAtCurrentPCAndRecompile";
          case TR_monitorEntry:              return "jitMonitorEntry";
          case TR_methodMonitorEntry:        return "jitMethodMonitorEntry";
          case TR_monitorExit:               return "jitMonitorExit";
@@ -3858,18 +3783,6 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_flushGPU:                  return "flushGPU";
          case TR_callGPU:                   return "callGPU";
 
-         case TR_MTUnresolvedInt32Load:     return "MTUnresolvedInt32Load";
-         case TR_MTUnresolvedInt64Load:     return "MTUnresolvedInt64Load";
-         case TR_MTUnresolvedFloatLoad:     return "MTUnresolvedFloatLoad";
-         case TR_MTUnresolvedDoubleLoad:    return "MTUnresolvedDoubleLoad";
-         case TR_MTUnresolvedAddressLoad:   return "MTUnresolvedAddressLoad";
-
-         case TR_MTUnresolvedInt32Store:    return "MTUnresolvedInt32Store";
-         case TR_MTUnresolvedInt64Store:    return "MTUnresolvedInt64Store";
-         case TR_MTUnresolvedFloatStore:    return "MTUnresolvedFloatStore";
-         case TR_MTUnresolvedDoubleStore:   return "MTUnresolvedDoubleStore";
-         case TR_MTUnresolvedAddressStore:  return "MTUnresolvedAddressStore";
-
          case TR_newObject:                 return "jitNewObject";
          case TR_newObjectNoZeroInit:       return "jitNewObjectNoZeroInit";
          case TR_newArray:                  return "jitNewArray";
@@ -3886,6 +3799,7 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_divCheck:                  return "jitThrowArithmeticException";
          case TR_arrayStoreException:       return "jitThrowArrayStoreException";
          case TR_typeCheckArrayStore:       return "jitTypeCheckArrayStore";
+         case TR_readBarrier:               return "jitReadBarrier";
          case TR_writeBarrierStore:         return "jitWriteBarrierStore";
          case TR_writeBarrierStoreGenerational: return "jitWriteBarrierStoreGenerational";
          case TR_writeBarrierStoreGenerationalAndConcurrentMark: return "jitWriteBarrierStoreGenerationalAndConcurrentMark";
@@ -3895,7 +3809,16 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_stackOverflow:             return "jitStackOverflow";
          case TR_reportMethodEnter:         return "jitReportMethodEnter";
          case TR_reportStaticMethodEnter:   return "jitReportStaticMethodEnter";
+         case TR_jitReportInstanceFieldRead: return "jitReportInstanceFieldRead";
+         case TR_jitReportStaticFieldRead:  return "jitReportStaticFieldRead";
+         case TR_jitReportInstanceFieldWrite:  return "jitReportInstanceFieldWrite";
+         case TR_jitReportStaticFieldWrite:  return "jitReportStaticFieldWrite";
+         case TR_jitResolveFieldDirect:      return "jitResolveFieldDirect";
+         case TR_jitResolveFieldSetterDirect: return "jitResolveFieldSetterDirect";
+         case TR_jitResolveStaticFieldDirect: return "jitResolveStaticFieldDirect";
+         case TR_jitResolveStaticFieldSetterDirect:  return "jitResolveStaticFieldSetterDirect";
          case TR_reportMethodExit:          return "jitReportMethodExit";
+         case TR_reportFinalFieldModified:  return "jitReportFinalFieldModified";
          case TR_acquireVMAccess:           return "jitAcquireVMAccess";
          case TR_jitCheckIfFinalizeObject:  return "jitCheckIfFinalizeObject";
          case TR_releaseVMAccess:           return "jitReleaseVMAccess";
@@ -3903,8 +3826,6 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_throwClassCastException:   return "jitThrowClassCastException";
 
          case TR_IncompatibleClassChangeError:return "jitThrowIncompatibleClassChangeError";
-         case TR_AbstractMethodError:       return "jitThrowAbstractMethodError";
-         case TR_IllegalAccessError:        return "jitThrowIllegalAccessError";
          case TR_newInstanceImplAccessCheck:return "jitNewInstanceImplAccessCheck";
 
          case TR_icallVMprJavaSendStatic0:                        return "icallVMprJavaSendStatic0";
@@ -3947,8 +3868,7 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_volatileWriteLong:         return "jitVolatileWriteLong";
          case TR_volatileReadDouble:        return "jitVolatileReadDouble";
          case TR_volatileWriteDouble:       return "jitVolatileWriteDouble";
-
-         case TR_referenceArrayCopy:        return "referenceArrayCopy";
+         case TR_referenceArrayCopy:        return "jitReferenceArrayCopy";
          }
       }
 #ifdef TR_TARGET_X86
@@ -3975,6 +3895,7 @@ TR_Debug::getRuntimeHelperName(int32_t index)
             case TR_X86interpreterUnresolvedClassFromStaticFieldGlue: return "interpreterUnresolvedClassFromStaticFieldGlue";
             case TR_X86interpreterUnresolvedStringGlue:               return "interpreterUnresolvedStringGlue";
             case TR_X86interpreterUnresolvedStaticFieldGlue:          return "interpreterUnresolvedStaticFieldGlue";
+            case TR_X86interpreterUnresolvedConstantDynamicGlue:      return "interpreterUnresolvedConstantDynamicGlue";
             case TR_X86interpreterUnresolvedStaticFieldSetterGlue:    return "interpreterUnresolvedStaticFieldSetterGlue";
             case TR_X86interpreterUnresolvedFieldGlue:                return "interpreterUnresolvedFieldGlue";
             case TR_X86interpreterUnresolvedFieldSetterGlue:          return "interpreterUnresolvedFieldSetterGlue";
@@ -4081,6 +4002,7 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_PPCinterpreterUnresolvedClassGlue:                return "_interpreterUnresolvedClassGlue";
          case TR_PPCinterpreterUnresolvedClassGlue2:               return "_interpreterUnresolvedClassGlue2";
          case TR_PPCinterpreterUnresolvedStringGlue:               return "_interpreterUnresolvedStringGlue";
+         case TR_PPCinterpreterUnresolvedConstantDynamicGlue:      return "_interpreterUnresolvedConstantDynamicGlue";
          case TR_PPCinterpreterUnresolvedStaticDataGlue:           return "_interpreterUnresolvedStaticDataGlue";
          case TR_PPCinterpreterUnresolvedStaticDataStoreGlue:      return "_interpreterUnresolvedStaticDataStoreGlue";
          case TR_PPCinterpreterUnresolvedInstanceDataGlue:         return "_interpreterUnresolvedInstanceDataGlue";
@@ -4226,6 +4148,7 @@ TR_Debug::getRuntimeHelperName(int32_t index)
          case TR_S390jitMethodIsSync:                              return "__jitMethodIsSync";
          case TR_S390jitResolveClass:                              return "__jitResolveClass";
          case TR_S390jitResolveField:                              return "__jitResolveField";
+         case TR_S390jitResolveConstantDynamicGlue:                return "_jitResolveConstantDynamic";
          case TR_S390jitResolveFieldSetter:                        return "__jitResolveFieldSetter";
          case TR_S390jitResolveInterfaceMethod:                    return "__jitResolveInterfaceMethod";
          case TR_S390jitResolveStaticField:                        return "__jitResolveStaticField";
@@ -4492,8 +4415,6 @@ TR_Debug::getVirtualGuardTestTypeName(TR_VirtualGuardTestType testType)
          return "MethodTest";
       case TR_NonoverriddenTest:
          return "NonoverriddenTest";
-      case TR_RubyInlineTest:
-         return "RubyInlineTest";
       case TR_FSDTest:
          return "FSDTest";
       }
@@ -4950,18 +4871,6 @@ TR_Debug::traceRegisterAssignment(TR::Instruction *instr, bool insertedByRA, boo
                   }
                trfprintf(_file, "</fprs>\n");
                }
-#if defined(TR_TARGET_X86)
-            if (_registerKindsToAssign & TR_X87_Mask)
-               {
-               trfprintf(_file, "<x87>\n");
-               TR::RegisterIterator *iter = _comp->cg()->getX87RegisterIterator();
-               for (TR::Register *reg = iter->getFirst(); reg; reg = iter->getNext())
-                  {
-                  printFullRegInfo(_file, reg);
-                  }
-               trfprintf(_file, "</x87>\n");
-               }
-#endif
             trfprintf(_file, "</regstates>\n");
             }
          if (_comp->getOptions()->getRegisterAssignmentTraceOption(TR_TraceRAPreAssignmentInstruction))

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -24,8 +24,8 @@
 
 #include "x/codegen/DataSnippet.hpp"
 
-#include <stdint.h>                   // for uint8_t
-#include "codegen/Snippet.hpp"        // for TR::X86Snippet::Kind, etc
+#include <stdint.h>
+#include "codegen/Snippet.hpp"
 
 namespace TR { class CodeGenerator; }
 namespace TR { class Node; }
@@ -36,7 +36,7 @@ class X86ConstantDataSnippet : public TR::X86DataSnippet
    {
    public:
 
-   inline X86ConstantDataSnippet(TR::CodeGenerator *cg, TR::Node *n, void *c, uint8_t size) : TR::X86DataSnippet(cg, n, c, size) { }
+   inline X86ConstantDataSnippet(TR::CodeGenerator *cg, TR::Node *n, void *c, size_t size) : TR::X86DataSnippet(cg, n, c, size) { }
    virtual Kind getKind() { return IsConstantData; }
    };
 
