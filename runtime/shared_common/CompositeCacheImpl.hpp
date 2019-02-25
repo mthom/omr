@@ -88,15 +88,15 @@ public:
 
 	IDATA startupNested(OMR_VMThread* currentThread);
 
-	static SH_CompositeCacheImpl* newInstanceChained(OMR_VM* vm, SH_CompositeCacheImpl* memForConstructor, OMRSharedClassConfig* sharedClassConfig, I_32 cacheTypeRequired);
+	static SH_CompositeCacheImpl* newInstanceChained(OMR_VM* vm, SH_CompositeCacheImpl* memForConstructor, OMRSharedCacheConfig* sharedClassConfig, I_32 cacheTypeRequired);
 
 	IDATA startupChained(OMR_VMThread* currentThread, SH_CompositeCacheImpl* ccHead,
-			J9SharedClassPreinitConfig* piconfig, U_32* actualSize, UDATA* localCrashCntr);
+			OMRSharedCachePreinitConfig* piconfig, U_32* actualSize, UDATA* localCrashCntr);
 #endif /* J9SHR_CACHELET_SUPPORT */
 	
-	static SH_CompositeCacheImpl* newInstance(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, SH_CompositeCacheImpl* memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd, bool startupForStats);
+	static SH_CompositeCacheImpl* newInstance(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, SH_CompositeCacheImpl* memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd, bool startupForStats);
 	
-	IDATA startup(OMR_VMThread* currentThread, J9SharedClassPreinitConfig* piconfig, BlockPtr cacheMemoryUT, U_64* runtimeFlags, UDATA verboseFlags,
+	IDATA startup(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* piconfig, BlockPtr cacheMemoryUT, U_64* runtimeFlags, UDATA verboseFlags,
 			const char* rootName, const char* ctrlDirName, UDATA cacheDirPerm, U_32* actualSize, UDATA* localCrashCntr, bool isFirstStart, bool* cacheHasIntegrity);
 
 	void cleanup(OMR_VMThread* currentThread);
@@ -165,7 +165,7 @@ public:
 	
 	void* getBaseAddress(void);
 
-	J9SharedCacheHeader* getCacheHeaderAddress(void);
+	OMRSharedCacheHeader* getCacheHeaderAddress(void);
 	
 	void* getStringTableBase(void);
 	
@@ -412,12 +412,12 @@ public:
 	void increaseUnstoredBytes(U_32 blockBytes, U_32 aotBytes, U_32 jitBytes);
 
 private:
-  	OMRSharedClassConfig* _sharedClassConfig;
+  	OMRSharedCacheConfig* _sharedClassConfig;
 	SH_OSCache* _oscache;
 	omrthread_monitor_t _utMutex, _headerProtectMutex, _runtimeFlagsProtectMutex;
 	OMRPortLibrary* _portlib;
 
-	J9SharedCacheHeader* _theca;
+	OMRSharedCacheHeader* _theca;
 	bool _started;
 	const char* _cacheName;
 	
@@ -542,8 +542,8 @@ private:
 	void incReaderCount(OMR_VMThread* currentThread);
 	void decReaderCount(OMR_VMThread* currentThread);
 
-	void initialize(OMR_VM* vm, BlockPtr memForConstructor, OMRSharedClassConfig* sharedClassConfig, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats);
-	void initializeWithCommonInfo(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd, bool startupForStats);
+	void initialize(OMR_VM* vm, BlockPtr memForConstructor, OMRSharedCacheConfig* sharedClassConfig, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats);
+	void initializeWithCommonInfo(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd, bool startupForStats);
 	void initCommonCCInfoHelper();
 
 #if defined(J9SHR_CACHELET_SUPPORT)
@@ -560,7 +560,7 @@ private:
 #if defined(J9SHR_CACHELETS_SAVE_READWRITE_AREA)
 	BlockPtr allocateReadWrite(U_32 separateBufferSize);
 #endif
-	void setCacheAreaBoundaries(OMR_VMThread* currentThread, J9SharedClassPreinitConfig* piConfig);
+	void setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* piConfig);
 
 	void notifyPagesRead(BlockPtr start, BlockPtr end, UDATA expectedDirection, bool protect);
 	void notifyPagesCommitted(BlockPtr start, BlockPtr end, UDATA expectedDirection);

@@ -117,7 +117,7 @@ class SH_AttachedDataResourceDescriptor : public SH_ResourceDescriptor
 			memcpy(ADWDATA(adwInCache), (void *)_dataStart, _dataSize);
 		}
 
-		virtual void updateDataInCache(const ShcItem *cacheItem, I_32 updateAtOffset, const J9SharedDataDescriptor* data)
+		virtual void updateDataInCache(const ShcItem *cacheItem, I_32 updateAtOffset, const OMRSharedDataDescriptor* data)
 		{
 			AttachedDataWrapper* adwInCache = (AttachedDataWrapper*)ITEMDATA(cacheItem);
 			U_8 *dest;

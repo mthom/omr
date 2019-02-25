@@ -82,7 +82,7 @@
  * @param [in]  i Pointer to an initializer to be used to initialize the data
  * 				area of a new cache
  */
-SH_OSCachesysv::SH_OSCachesysv(OMRPortLibrary* portLibrary, OMR_VM* vm, const char* cachedirname, const char* cacheName, J9SharedClassPreinitConfig* piconfig, IDATA numLocks,
+SH_OSCachesysv::SH_OSCachesysv(OMRPortLibrary* portLibrary, OMR_VM* vm, const char* cachedirname, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, IDATA numLocks,
 		UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCache::SH_OSCacheInitializer* i)
 {
 	Trc_SHR_OSC_Constructor_Entry(cacheName, piconfig->sharedClassCacheSize, createFlag);
@@ -144,7 +144,7 @@ SH_OSCachesysv::initialize(OMRPortLibrary* portLib, char* memForConstructor, UDA
  * @return true on success, false on failure
  */
 bool
-SH_OSCachesysv::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, J9SharedClassPreinitConfig* piconfig, IDATA numLocks, UDATA create,
+SH_OSCachesysv::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, IDATA numLocks, UDATA create,
 		UDATA verboseFlags_, U_64 runtimeFlags_, I_32 openMode, UDATA storageKeyTesting, J9PortShcVersion* versionData, SH_OSCache::SH_OSCacheInitializer* i, UDATA reason)
 {
 	IDATA retryCount;
@@ -1788,7 +1788,7 @@ SH_OSCachesysv::getCacheStats(OMR_VM* vm, const char* ctrlDirName, UDATA groupPe
 		SH_OSCachesysv cacheStruct;
 		SH_OSCachesysv * cache = NULL;
 		J9PortShcVersion versionData;
-		J9SharedClassPreinitConfig piconfig;
+		OMRSharedCachePreinitConfig piconfig;
 		bool attachedMem = false;
 
 		getValuesFromShcFilePrefix(OMRPORTLIB, cacheNameWithVGen, &versionData);
@@ -2747,7 +2747,7 @@ SH_OSCachesysv::restoreFromSnapshot(OMR_VM* vm, const char* cacheName, UDATA num
 			OSC_ERR_TRACE1(J9NLS_SHRC_ERROR_SNAPSHOT_FILE_LOCK, pathFileName);
 			rc = -1;
 		} else {
-			J9SharedClassPreinitConfig* piconfig = vm->sharedClassPreinitConfig;
+			OMRSharedCachePreinitConfig* piconfig = vm->sharedCachePreinitConfig;
 			OMR_VMThread* currentThread = omr_vmthread_getCurrent(vm); //vm->internalVMFunctions->currentVMThread(vm);
 			bool rcStartup = false;
 
@@ -2793,7 +2793,7 @@ SH_OSCachesysv::restoreFromSnapshot(OMR_VM* vm, const char* cacheName, UDATA num
 				I_32 semid = 0;
 				U_16 theVMCntr = 0;
 				OSCachesysv_header_version_current*  osCacheSysvHeader = NULL;
-				J9SharedCacheHeader* theca = (J9SharedCacheHeader *)attach(currentThread, &versionData);
+				OMRSharedCacheHeader* theca = (OMRSharedCacheHeader *)attach(currentThread, &versionData);
 				IDATA nbytes = (IDATA)fileSize;
 				IDATA fileRc = 0;
 

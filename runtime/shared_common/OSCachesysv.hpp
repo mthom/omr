@@ -104,10 +104,10 @@ typedef enum SH_SysvShmAccess {
 class SH_OSCachesysv : public SH_OSCache
 {
 public:
-	SH_OSCachesysv(OMRPortLibrary* portlib, OMR_VM* vm, const char* cachedirname, const char* cacheName, J9SharedClassPreinitConfig* piconfig_, IDATA numLocks, UDATA createFlag,
+	SH_OSCachesysv(OMRPortLibrary* portlib, OMR_VM* vm, const char* cachedirname, const char* cacheName, OMRSharedCachePreinitConfig* piconfig_, IDATA numLocks, UDATA createFlag,
 			UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCache::SH_OSCacheInitializer* initializer);
 
-	virtual bool startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, J9SharedClassPreinitConfig* piconfig_, IDATA numLocks, UDATA createFlag,
+	virtual bool startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, OMRSharedCachePreinitConfig* piconfig_, IDATA numLocks, UDATA createFlag,
 			UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, UDATA storageKeyTesting, J9PortShcVersion* versionData, SH_OSCache::SH_OSCacheInitializer* i, UDATA reason);
 
 	/**
@@ -195,7 +195,7 @@ private:
 	
 	UDATA _storageKeyTesting;
 
-	const J9SharedClassPreinitConfig* config;
+	const OMRSharedCachePreinitConfig* config;
 
 	SH_OSCache::SH_OSCacheInitializer* _initializer;
 	UDATA _groupPerm;

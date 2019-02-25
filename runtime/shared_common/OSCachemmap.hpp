@@ -41,7 +41,7 @@ class SH_OSCachemmap : public SH_OSCacheFile
 public:
 	static IDATA getCacheStats(OMR_VM* vm, const char* cacheDirName, const char* filePath, SH_OSCache_Info* returnVal, UDATA reason);
 	  
-	SH_OSCachemmap(OMRPortLibrary* portlib, OMR_VM* vm, const char* cacheDirName, const char* cacheName, J9SharedClassPreinitConfig* piconfig, IDATA numLocks,
+	SH_OSCachemmap(OMRPortLibrary* portlib, OMR_VM* vm, const char* cacheDirName, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, IDATA numLocks,
 			UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer);
 	/*This constructor should only be used by this class or its parent*/
 	SH_OSCachemmap() {};
@@ -55,7 +55,7 @@ public:
 	 */
 	void *operator new(size_t sizeArg, void *memoryPtrArg) { return memoryPtrArg; };
 
-	virtual bool startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, J9SharedClassPreinitConfig* piconfig, IDATA numLocks,
+	virtual bool startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, IDATA numLocks,
 			UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, UDATA storageKeyTesting, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer, UDATA reason);
 
 	virtual IDATA destroy(bool suppressVerbose, bool isReset = false);

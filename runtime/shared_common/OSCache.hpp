@@ -205,7 +205,7 @@ public:
 
 	bool isRunningReadOnly();
 
-	virtual bool startup(OMR_VM* vm, const char* cacheDirName, UDATA cacheDirPerm, const char* cacheName, J9SharedClassPreinitConfig* piconfig_, IDATA numLocks,
+	virtual bool startup(OMR_VM* vm, const char* cacheDirName, UDATA cacheDirPerm, const char* cacheName, OMRSharedCachePreinitConfig* piconfig_, IDATA numLocks,
 			UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, UDATA storageKeyTesting, J9PortShcVersion* versionData, SH_OSCacheInitializer* i, UDATA reason) = 0;
 
 	virtual IDATA destroy(bool suppressVerbose, bool isReset = false) = 0;
@@ -261,7 +261,7 @@ protected:
 
 	static IDATA removeCacheVersionAndGen(char* buffer, UDATA bufferSize, UDATA versionLen, const char* cacheNameWithVGen);
 	
-	IDATA commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, J9SharedClassPreinitConfig* piconfig_, UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData);
+	IDATA commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, OMRSharedCachePreinitConfig* piconfig_, UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData);
 	
 	void commonInit(OMRPortLibrary* portLibrary, UDATA generation);
 
@@ -297,7 +297,7 @@ protected:
 	UDATA _createFlags;
 	UDATA _verboseFlags;
 	IDATA _errorCode;
-	const J9SharedClassPreinitConfig* _config;	
+	const OMRSharedCachePreinitConfig* _config;	
 	I_32 _openMode;
 	bool _runningReadOnly;
 	OMRPortLibrary* _portLibrary;

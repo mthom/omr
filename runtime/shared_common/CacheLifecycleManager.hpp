@@ -47,7 +47,7 @@
 extern "C" {
 #endif
 	
-IDATA omrshr_iterateSharedCaches(OMR_VM *vm, const char *ctrlDirName, UDATA groupPerm, BOOLEAN useCommandLineValue, IDATA (*callback)(OMR_VM *vm, J9SharedCacheInfo *event_data, void *user_data), void *user_data);
+IDATA omrshr_iterateSharedCaches(OMR_VM *vm, const char *ctrlDirName, UDATA groupPerm, BOOLEAN useCommandLineValue, IDATA (*callback)(OMR_VM *vm, OMRSharedCacheInfo *event_data, void *user_data), void *user_data);
 IDATA omrshr_destroySharedCache(OMR_VM *vm, const char *ctrlDirName, const char *name, U_32 cacheType, BOOLEAN useCommandLineValue);
 
 IDATA omrshr_destroy_cache(struct OMR_VM* vm, const char* ctrlDirName, UDATA verboseFlags, const char* cacheName, UDATA generationStart, UDATA generationEnd, J9PortShcVersion* versionData, BOOLEAN isReset);

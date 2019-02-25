@@ -62,13 +62,13 @@ protected:
 public:
 	typedef char* BlockPtr;
 
-	static SH_CacheMap* newInstance(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, SH_CacheMap* memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd);
+	static SH_CacheMap* newInstance(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, SH_CacheMap* memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd);
 
 	static SH_CacheMapStats* newInstanceForStats(OMR_VM* vm, SH_CacheMap* memForConstructor, const char* cacheName);
 
 	static UDATA getRequiredConstrBytes(bool startupForStats);
 
-	IDATA startup(OMR_VMThread* currentThread, J9SharedClassPreinitConfig* piconfig, const char* rootName, const char* cacheDirName, UDATA cacheDirPerm, BlockPtr cacheMemoryUT, bool* cacheHasIntegrity);
+	IDATA startup(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* piconfig, const char* rootName, const char* cacheDirName, UDATA cacheDirPerm, BlockPtr cacheMemoryUT, bool* cacheHasIntegrity);
 
 #if defined(J9SHR_CACHELET_SUPPORT)
 	/* @see SharedCache.hpp */
@@ -94,28 +94,28 @@ public:
 	virtual const U_8* findCompiledMethod(OMR_VMThread* currentThread, const MethodNameAndSignature* nameAndSignature, UDATA* flags);
 
 	/* @see SharedCache.hpp */
-	virtual IDATA findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool);
+	virtual IDATA findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, OMRSharedDataDescriptor* firstItem, const J9Pool* descriptorPool);
 
 	/* @see SharedCache.hpp */
-	virtual const U_8* storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const J9SharedDataDescriptor* data);
+	virtual const U_8* storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const OMRSharedDataDescriptor* data);
 
 	/* @see SharedCache.hpp */
-		virtual const U_8* findAttachedDataAPI(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset) ;
+		virtual const U_8* findAttachedDataAPI(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset) ;
 
  	/* @see SharedCache.hpp */
-	virtual UDATA storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const J9SharedDataDescriptor* data, UDATA forceReplace) ;
+	virtual UDATA storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const OMRSharedDataDescriptor* data, UDATA forceReplace) ;
 
 	/* @see SharedCache.hpp */
-	virtual UDATA updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const J9SharedDataDescriptor* data) ;
+	virtual UDATA updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const OMRSharedDataDescriptor* data) ;
 
 	/* @see SharedCache.hpp */
 	virtual UDATA updateAttachedUDATA(OMR_VMThread* currentThread, const void* addressInCache, UDATA type, I_32 updateAtOffset, UDATA value) ;
 
 	/* @see SharedCache.hpp */
-	virtual UDATA acquirePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data);
+	virtual UDATA acquirePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data);
 
 	/* @see SharedCache.hpp */
-	virtual UDATA releasePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data);
+	virtual UDATA releasePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data);
 
 	void dontNeedMetadata(OMR_VMThread* currentThread);
 
@@ -146,7 +146,7 @@ public:
 	};
 
 	/* @see SharedCache.hpp */
-  //	virtual UDATA getJavacoreData(OMR_VM *vm, J9SharedClassJavacoreDataDescriptor* descriptor);
+  //	virtual UDATA getJavacoreData(OMR_VM *vm, OMRSharedCacheJavacoreDataDescriptor* descriptor);
 
 	/* @see SharedCache.hpp */
   //	virtual IDATA markStale(OMR_VMThread* currentThread, ClasspathEntryItem* cpei, bool hasWriteMutex);
@@ -184,7 +184,7 @@ public:
 	/* @see SharedCache.hpp */
   //	virtual void notifyClasspathEntryStateChange(OMR_VMThread* currentThread, const char* path, UDATA newState);
 
-  //	static IDATA createPathString(OMR_VMThread* currentThread, OMRSharedClassConfig* config, char** pathBuf, UDATA pathBufSize, ClasspathEntryItem* cpei, const char* className, UDATA classNameLen, bool* doFreeBuffer);
+  //	static IDATA createPathString(OMR_VMThread* currentThread, OMRSharedCacheConfig* config, char** pathBuf, UDATA pathBufSize, ClasspathEntryItem* cpei, const char* className, UDATA classNameLen, bool* doFreeBuffer);
 
 #if defined(J9SHR_CACHELET_SUPPORT)
 	/* @see SharedCache.hpp */
@@ -257,7 +257,7 @@ public:
 
 	void updateRuntimeFullFlags(OMR_VMThread* currentThread);
 
-  //    void increaseTransactionUnstoredBytes(U_32 segmentAndDebugBytes, J9SharedClassTransaction* obj);
+  //    void increaseTransactionUnstoredBytes(U_32 segmentAndDebugBytes, OMRSharedCacheTransaction* obj);
 
 	void increaseUnstoredBytes(U_32 blockBytes, U_32 aotBytes = 0, U_32 jitBytes = 0);
 
@@ -270,7 +270,7 @@ private:
 	 * extensions can more easily mirror the shape.
 	 */
 	U_64 _writeHashStartTime;
-	OMRSharedClassConfig* _sharedClassConfig;
+	OMRSharedCacheConfig* _sharedClassConfig;
 
 	SH_CompositeCacheImpl* _ccHead;				/* head of supercache list */
 	SH_CompositeCacheImpl* _cacheletHead;		/* head of all known cachelets */
@@ -334,7 +334,7 @@ private:
 
 	SH_Managers * _managers;
 
-	void initialize(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd, bool startupForStats);
+	void initialize(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 newPersistentCacheReqd, bool startupForStats);
 
 	IDATA readCacheUpdates(OMR_VMThread* currentThread);
 
@@ -348,7 +348,7 @@ private:
 
   	const void* addROMClassResourceToCache(OMR_VMThread* currentThread, const void* romAddress, SH_ROMClassResourceManager* localRRM, SH_ROMClassResourceManager::SH_ResourceDescriptor* resourceDescriptor, const char** p_subcstr);
 
-  //	BlockPtr addByteDataToCache(OMR_VMThread* currentThread, SH_Manager* localBDM, const OMRUTF8* tokenKeyInCache, const J9SharedDataDescriptor* data, SH_CompositeCacheImpl* forceCache, bool writeWithoutMetadata);
+  //	BlockPtr addByteDataToCache(OMR_VMThread* currentThread, SH_Manager* localBDM, const OMRUTF8* tokenKeyInCache, const OMRSharedDataDescriptor* data, SH_CompositeCacheImpl* forceCache, bool writeWithoutMetadata);
 
   //	J9MemorySegment* addNewROMImageSegment(OMR_VMThread* currentThread, U_8* segmentBase, U_8* segmentEnd);
 
@@ -358,9 +358,9 @@ private:
 
   	const void* findROMClassResource(OMR_VMThread* currentThread, const void* romAddress, SH_ROMClassResourceManager* localRRM, SH_ROMClassResourceManager::SH_ResourceDescriptor* resourceDescriptor, bool useReadMutex, const char** p_subcstr, UDATA* flags);
 
-  	UDATA updateROMClassResource(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, SH_ROMClassResourceManager* localRRM, SH_ROMClassResourceManager::SH_ResourceDescriptor* resourceDescriptor, const J9SharedDataDescriptor* data, bool isUDATA, const char** p_subcstr);
+  	UDATA updateROMClassResource(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, SH_ROMClassResourceManager* localRRM, SH_ROMClassResourceManager::SH_ResourceDescriptor* resourceDescriptor, const OMRSharedDataDescriptor* data, bool isUDATA, const char** p_subcstr);
 
-  	const U_8* findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset, const char** p_subcstr) ;
+  	const U_8* findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset, const char** p_subcstr) ;
 
 //  	void updateROMSegmentList(OMR_VMThread* currentThread, bool hasClassSegmentMutex);
 
@@ -415,9 +415,9 @@ private:
 
   //	void getBoundsForCache(SH_CompositeCacheImpl* cache, BlockPtr* cacheStart, BlockPtr* romClassEnd, BlockPtr* metaStart, BlockPtr* cacheEnd);
 
-	J9SharedClassCacheDescriptor* appendCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedClassConfig* sharedClassConfig);
+	OMRSharedCacheDescriptor* appendCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedCacheConfig* sharedClassConfig);
 #endif
-	void resetCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedClassConfig* sharedClassConfig);
+	void resetCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedCacheConfig* sharedClassConfig);
 
 #if defined(J9SHR_CACHELET_SUPPORT)
 	SH_CompositeCacheImpl* initCachelet(OMR_VMThread* currentThread, BlockPtr cacheletMemory, bool creatingCachelet);
@@ -461,7 +461,7 @@ private:
 
   //	void tokenStoreStaleCheckAndMark(OMR_VMThread* currentThread, U_16 classnameLength, const char* classnameData, ClasspathWrapper* cpw, const OMRUTF8* partitionInCache, const OMRUTF8* modContextInCache, UDATA callerHelperID);
 
-	OMRSharedClassConfig* getSharedClassConfig();
+	OMRSharedCacheConfig* getSharedClassConfig();
 
 	void updateLineNumberContentInfo(OMR_VMThread* currentThread);
 

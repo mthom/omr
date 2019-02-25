@@ -281,7 +281,7 @@ SH_ByteDataManagerImpl::markAllStaleForKey(OMR_VMThread* currentThread, const ch
 }
 
 void
-SH_ByteDataManagerImpl::setDescriptorFields(const ByteDataWrapper* wrapper, J9SharedDataDescriptor* descriptor)
+SH_ByteDataManagerImpl::setDescriptorFields(const ByteDataWrapper* wrapper, OMRSharedDataDescriptor* descriptor)
 {
 	Trc_SHR_BDMI_setDescriptorFields_Event(wrapper, descriptor);
 
@@ -299,7 +299,7 @@ SH_ByteDataManagerImpl::setDescriptorFields(const ByteDataWrapper* wrapper, J9Sh
 
 /**
  * Retrieves data in the cache which has been stored against "key" which is a UTF8 string.
- * Populates descriptorPool with J9SharedDataDescriptors describing data elements. Returns the number of elements found.
+ * Populates descriptorPool with OMRSharedDataDescriptors describing data elements. Returns the number of elements found.
  * The data returned can include private data of other JVMs or data of different types stored under the same key.
  * 
  * @param[in] currentThread  The current thread
@@ -315,7 +315,7 @@ SH_ByteDataManagerImpl::setDescriptorFields(const ByteDataWrapper* wrapper, J9Sh
  * THREADING: Must be called with cache read mutex held
  */
 IDATA
-SH_ByteDataManagerImpl::find(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool)
+SH_ByteDataManagerImpl::find(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, OMRSharedDataDescriptor* firstItem, const J9Pool* descriptorPool)
 {
 	BdLinkedListImpl *found, *walk;
 	IDATA resultCntr = 0;
@@ -332,12 +332,12 @@ SH_ByteDataManagerImpl::find(OMR_VMThread* currentThread, const char* key, UDATA
 		do {
 			const ShcItem* item = walk->_item;
 			ByteDataWrapper* wrapper = (ByteDataWrapper*)ITEMDATA(item);
-			J9SharedDataDescriptor* newPoolEntry; 
+			OMRSharedDataDescriptor* newPoolEntry; 
 
 			if (!_cache->isStale(item) &&
 				(!limitDataType || (limitDataType == (UDATA)wrapper->dataType)) &&
 				(includePrivateData || (!includePrivateData && (wrapper->privateOwnerID == 0)))) {
-				if (descriptorPool && (newPoolEntry = (J9SharedDataDescriptor*)pool_newElement((J9Pool*)descriptorPool))) {
+				if (descriptorPool && (newPoolEntry = (OMRSharedDataDescriptor*)pool_newElement((J9Pool*)descriptorPool))) {
 					setDescriptorFields(wrapper, newPoolEntry);
 				}
 				if (!setOptItem && firstItem) {
@@ -370,7 +370,7 @@ SH_ByteDataManagerImpl::find(OMR_VMThread* currentThread, const char* key, UDATA
  * THREADING: No need to get the cache write mutex as we only modify data private to this JVM 
  */
 UDATA
-SH_ByteDataManagerImpl::releasePrivateEntry(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data)
+SH_ByteDataManagerImpl::releasePrivateEntry(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data)
 {
 	ByteDataWrapper* wrapper;
 
@@ -425,7 +425,7 @@ SH_ByteDataManagerImpl::htReleasePrivateEntry(void *entry, void *opaque)
  * THREADING: Must be called with cache write mutex held
  */
 UDATA
-SH_ByteDataManagerImpl::acquirePrivateEntry(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data)
+SH_ByteDataManagerImpl::acquirePrivateEntry(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data)
 {
 	ByteDataWrapper* wrapper;
 

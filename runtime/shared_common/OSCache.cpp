@@ -305,7 +305,7 @@ SH_OSCache::getGenerationFromName(const char* cacheNameWithVGen)
 
 /* Common startup function used by all OSCache subclasses - sets up the common class variables */
 IDATA
-SH_OSCache::commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, J9SharedClassPreinitConfig* piconfig, UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData)
+SH_OSCache::commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData)
 {
 	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 

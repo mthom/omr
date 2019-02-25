@@ -50,15 +50,15 @@ public:
 	virtual void markAllStaleForKey(OMR_VMThread* currentThread, const char* key, UDATA keylen) = 0;
 
 	/* Fill descriptorPool with entries found and return number of entries or -1 */	
-	virtual IDATA find(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool) = 0;
+	virtual IDATA find(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, OMRSharedDataDescriptor* firstItem, const J9Pool* descriptorPool) = 0;
 
 	/* Attempt to make the entry represented by "data" private to this JVM. 1 if success, 0 for failure.
 	 * Input to this function should be a descriptor obtained from calling find */
-	virtual UDATA acquirePrivateEntry(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data) = 0;
+	virtual UDATA acquirePrivateEntry(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data) = 0;
 
 	/* Attempt to "release" a piece of private data so that it can be used by other JVMs.
 	 * Input to this function should be a descriptor obtained from calling find */
-	virtual UDATA releasePrivateEntry(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data) = 0;
+	virtual UDATA releasePrivateEntry(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data) = 0;
 
 	virtual UDATA getNumOfType(UDATA type) = 0;
 

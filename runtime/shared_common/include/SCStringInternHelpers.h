@@ -39,7 +39,7 @@ typedef struct J9SharedInternHashTableQuery {
  * This helper is provided for external modules (outside of j9dyn) that need to perform
  * operations on J9InternAVLLRU structs.
  *
- * @param[in] table  The J9SharedInvariantInternTable in use. Must be a J9SharedInvariantInternTable.
+ * @param[in] table  The OMRSharedInvariantInternTable in use. Must be a OMRSharedInvariantInternTable.
  * @param[in] node  A node
  * @param[in] action  The action to perform
  * @param[in] userData  optional user data
@@ -47,7 +47,7 @@ typedef struct J9SharedInternHashTableQuery {
  * @return value expected by the given action
  */
 static UDATA
-sharedInternTable_performNodeAction(J9SharedInvariantInternTable *table, J9SharedInternSRPHashTableEntry *entry, UDATA action, void *userData)
+sharedInternTable_performNodeAction(OMRSharedInvariantInternTable *table, OMRSharedInternSRPHashTableEntry *entry, UDATA action, void *userData)
 {
 	switch (action) {
 	case STRINGINTERNTABLES_ACTION_VERIFY_BOTH_TABLES :
@@ -86,7 +86,7 @@ sharedInternHashEqualFn(void *existingEntry, void *key, void *userData)
 	keyUtf8Length = query->length;
 	keyUtf8Data = query->data;
 
-	OMRUTF8 *existing_utf8 = SRP_GET(((J9SharedInternSRPHashTableEntry *)existingEntry)->utf8SRP, OMRUTF8 *);
+	OMRUTF8 *existing_utf8 = SRP_GET(((OMRSharedInternSRPHashTableEntry *)existingEntry)->utf8SRP, OMRUTF8 *);
 	if (NULL != existing_utf8) {
 		existingUtf8Length = OMRUTF8_LENGTH(existing_utf8);
 		existingUtf8Data = OMRUTF8_DATA(existing_utf8);

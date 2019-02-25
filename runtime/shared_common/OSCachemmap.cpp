@@ -70,7 +70,7 @@
  * @param [in]  initializer Pointer to an initializer to be used to initialize the data
  * 				area of a new cache
  */ 
-SH_OSCachemmap::SH_OSCachemmap(OMRPortLibrary* portLibrary, OMR_VM* vm, const char* cacheDirName, const char* cacheName, J9SharedClassPreinitConfig* piconfig,
+SH_OSCachemmap::SH_OSCachemmap(OMRPortLibrary* portLibrary, OMR_VM* vm, const char* cacheDirName, const char* cacheName, OMRSharedCachePreinitConfig* piconfig,
 		IDATA numLocks, UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer)
 {
 	Trc_SHR_OSC_Mmap_Constructor_Entry(cacheName, piconfig->sharedClassCacheSize, numLocks, createFlag, verboseFlags);
@@ -154,7 +154,7 @@ SH_OSCachemmap::finalise()
  * @return true on success, false on failure
  */
 bool
-SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, J9SharedClassPreinitConfig* piconfig, IDATA numLocks,
+SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, IDATA numLocks,
 		UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, UDATA storageKeyTesting, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer, UDATA reason)
 {
 	I_32 mmapCapabilities;
@@ -1408,7 +1408,7 @@ SH_OSCachemmap::getCacheStats(OMR_VM* vm, const char* cacheDirName, const char *
 	I_64 *timeValue;
 	I_32 inUse;
 	IDATA lockRc;
-	J9SharedClassPreinitConfig piconfig;
+	OMRSharedCachePreinitConfig piconfig;
 	J9PortShcVersion versionData;
 	UDATA reasonForStartup = SHR_STARTUP_REASON_NORMAL;
 	

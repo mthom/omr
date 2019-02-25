@@ -6,7 +6,7 @@
 #define UTE_OMRSHR_MODULE_HEADER
 #include "ute_module.h"
 #if !defined(UT_DIRECT_TRACE_REGISTRATION)
-#include "jni.h"
+//#include "jni.h"
 #endif /* !defined(UT_DIRECT_TRACE_REGISTRATION) */
 #ifndef UT_TRACE_OVERHEAD
 #define UT_TRACE_OVERHEAD 1
@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#include "omr.h"
+  
 #if (defined (__clang__) && !defined(_MSC_VER))
 #include <unistd.h>
 #define Trace_Unreachable() _exit(-1)
@@ -36,12 +38,12 @@ int32_t deregisteromrshrWithTrace(UtInterface * utIntf);
 #define UT_OMRSHR_MODULE_LOADED(utIntf) registeromrshrWithTrace((utIntf), NULL);
 #define UT_OMRSHR_MODULE_UNLOADED(utIntf) deregisteromrshrWithTrace((utIntf));
 #else /* defined(UT_DIRECT_TRACE_REGISTRATION) */
-int32_t registeromrshrWithTrace(JavaVM * vm, UtModuleInfo* containerName);
-int32_t deregisteromrshrWithTrace(JavaVM * vm);
-#define UT_MODULE_LOADED(vm) registeromrshrWithTrace((JavaVM *)(vm), NULL);
-#define UT_MODULE_UNLOADED(vm) deregisteromrshrWithTrace((JavaVM *)(vm));
-#define UT_OMRSHR_MODULE_LOADED(vm) registeromrshrWithTrace((JavaVM *)(vm), NULL);
-#define UT_OMRSHR_MODULE_UNLOADED(vm) deregisteromrshrWithTrace((JavaVM *)(vm));
+int32_t registeromrshrWithTrace(OMR_VM * vm, UtModuleInfo* containerName);
+int32_t deregisteromrshrWithTrace(OMR_VM * vm);
+#define UT_MODULE_LOADED(vm) registeromrshrWithTrace((OMR_VM *)(vm), NULL);
+#define UT_MODULE_UNLOADED(vm) deregisteromrshrWithTrace((OMR_VM *)(vm));
+#define UT_OMRSHR_MODULE_LOADED(vm) registeromrshrWithTrace((OMR_VM *)(vm), NULL);
+#define UT_OMRSHR_MODULE_UNLOADED(vm) deregisteromrshrWithTrace((OMR_VM *)(vm));
 #endif /* defined(UT_DIRECT_TRACE_REGISTRATION) */
 
 #if UT_TRACE_OVERHEAD >= 1

@@ -56,21 +56,21 @@ public:
 
 	virtual const U_8* findCompiledMethod(OMR_VMThread* currentThread, const MethodNameAndSignature* methodNameAndSignature, UDATA* flags) = 0;
 
-	virtual IDATA findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool) = 0;
+	virtual IDATA findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, OMRSharedDataDescriptor* firstItem, const J9Pool* descriptorPool) = 0;
 
-	virtual const U_8* storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const J9SharedDataDescriptor* data) = 0;
+	virtual const U_8* storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const OMRSharedDataDescriptor* data) = 0;
 
-	virtual const U_8* findAttachedDataAPI(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset) = 0;
+	virtual const U_8* findAttachedDataAPI(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset) = 0;
 
-	virtual UDATA storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const J9SharedDataDescriptor* data, UDATA forceReplace) = 0;
+	virtual UDATA storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const OMRSharedDataDescriptor* data, UDATA forceReplace) = 0;
 
-	virtual UDATA updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const J9SharedDataDescriptor* data) = 0;
+	virtual UDATA updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const OMRSharedDataDescriptor* data) = 0;
 
 	virtual UDATA updateAttachedUDATA(OMR_VMThread* currentThread, const void* addressInCache, UDATA type, I_32 updateAtOffset, UDATA value) = 0;
 	
-	virtual UDATA acquirePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data) = 0;
+	virtual UDATA acquirePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data) = 0;
 
-	virtual UDATA releasePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data) = 0;
+	virtual UDATA releasePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data) = 0;
 
   //virtual IDATA markStale(OMR_VMThread* currentThread, ClasspathEntryItem* cpei, bool hasWriteMutex) = 0;
 
@@ -114,7 +114,7 @@ public:
 
 	virtual SH_Managers * managers() = 0;
 
-	virtual OMRSharedClassConfig* getSharedClassConfig() = 0;
+	virtual OMRSharedCacheConfig* getSharedClassConfig() = 0;
 
 	virtual IDATA aotMethodOperation(OMR_VMThread* currentThread, char* methodSpecs, UDATA reason) = 0;
 

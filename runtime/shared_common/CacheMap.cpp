@@ -198,7 +198,7 @@ SH_CacheMap::exitRefreshMutex(OMR_VMThread* currentThread, const char* caller)
  * @return A pointer to the new CacheMap 
  */
 SH_CacheMap*
-SH_CacheMap::newInstance(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, SH_CacheMap* memForConstructor, const char* cacheName, I_32 cacheTypeRequired)
+SH_CacheMap::newInstance(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, SH_CacheMap* memForConstructor, const char* cacheName, I_32 cacheTypeRequired)
 {
 	SH_CacheMap* newCacheMap = memForConstructor;
 
@@ -255,7 +255,7 @@ SH_CacheMap::newInstanceForStats(OMR_VM* vm, SH_CacheMap* memForConstructor, con
 
 /* THREADING: Only ever single threaded */
 void
-SH_CacheMap::initialize(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
+SH_CacheMap::initialize(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
 {
 	BlockPtr allocPtr = memForConstructor;
 
@@ -416,7 +416,7 @@ SH_CacheMap::cleanup(OMR_VMThread* currentThread)
  * @return 0 on success or -1 for failure
  */
 IDATA 
-SH_CacheMap::startup(OMR_VMThread* currentThread, J9SharedClassPreinitConfig* piconfig, const char* rootName, const char* cacheDirName, UDATA cacheDirPerm, BlockPtr cacheMemoryUT, bool* cacheHasIntegrity)
+SH_CacheMap::startup(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* piconfig, const char* rootName, const char* cacheDirName, UDATA cacheDirPerm, BlockPtr cacheMemoryUT, bool* cacheHasIntegrity)
 {
 	IDATA itemsRead = 0;
 	IDATA rc = 0;
@@ -834,7 +834,7 @@ SH_CacheMap::startup(OMR_VMThread* currentThread, J9SharedClassPreinitConfig* pi
 //{
 //	OMR_VM* vm = currentThread->javaVM;
 //	UDATA result = 1;
-//	OMRSharedClassConfig* config;
+//	OMRSharedCacheConfig* config;
 //	U_8 *cacheBase, *cacheDebugAreaStart;
 //	BlockPtr firstROMClassAddress;
 //	omrthread_monitor_t classSegmentMutex = vm->classMemorySegments->segmentMutex;
@@ -2804,7 +2804,7 @@ SH_CacheMap::storeROMClassResource(OMR_VMThread* currentThread, const void* romA
 
 /* THREADING: This function can be called multi-threaded */
 UDATA
-SH_CacheMap::updateROMClassResource(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, SH_ROMClassResourceManager* localRRM, SH_ROMClassResourceManager::SH_ResourceDescriptor* resourceDescriptor, const J9SharedDataDescriptor* data, bool isUDATA , const char** p_subcstr)
+SH_CacheMap::updateROMClassResource(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, SH_ROMClassResourceManager* localRRM, SH_ROMClassResourceManager::SH_ResourceDescriptor* resourceDescriptor, const OMRSharedDataDescriptor* data, bool isUDATA , const char** p_subcstr)
 {
 	const char* fnName = "updateROMClassResource";
 	IDATA result = 0;
@@ -3128,12 +3128,12 @@ SH_CacheMap::updateAccessedShrCacheMetadataBounds(OMR_VMThread* currentThread, u
 * @return OMRSHR_RESOURCE_STORE_FULL if the cache is full
 **/
 UDATA
-SH_CacheMap::storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const J9SharedDataDescriptor *data, UDATA forceReplace)
+SH_CacheMap::storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const OMRSharedDataDescriptor *data, UDATA forceReplace)
 {
 	UDATA result = 0;
 	SH_AttachedDataManager::SH_AttachedDataResourceDescriptor descriptor(data->address, (U_32)data->length, (U_16)data->type);
 	SH_AttachedDataManager* localADM;
-	OMRSharedClassConfig * scconfig = currentThread->_vm->sharedClassConfig;
+	OMRSharedCacheConfig * scconfig = currentThread->_vm->sharedClassConfig;
 	UDATA localVerboseFlags = scconfig->verboseFlags;
 	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 
@@ -3208,12 +3208,12 @@ SH_CacheMap::storeAttachedData(OMR_VMThread* currentThread, const void* addressI
 * @return OMRSHR_RESOURCE_STORE_ERROR if an error occurred storing the attached data
 */
 UDATA
-SH_CacheMap::updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const J9SharedDataDescriptor* data)
+SH_CacheMap::updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const OMRSharedDataDescriptor* data)
 {
 	UDATA result;
 	SH_AttachedDataManager::SH_AttachedDataResourceDescriptor descriptor(data->address, (U_32)data->length, (U_16)data->type);
 	SH_AttachedDataManager* localADM;
-	OMRSharedClassConfig * scconfig = currentThread->_vm->sharedClassConfig;
+	OMRSharedCacheConfig * scconfig = currentThread->_vm->sharedClassConfig;
 	UDATA localVerboseFlags = scconfig->verboseFlags;
 	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 
@@ -3285,8 +3285,8 @@ SH_CacheMap::updateAttachedUDATA(OMR_VMThread* currentThread, const void* addres
 	UDATA result = 0;
 	SH_AttachedDataManager::SH_AttachedDataResourceDescriptor descriptor((U_8 *)&value, (U_32)sizeof(UDATA), (U_16) type);
 	SH_AttachedDataManager* localADM;
-	J9SharedDataDescriptor data;
-	OMRSharedClassConfig * scconfig = currentThread->_vm->sharedClassConfig;
+	OMRSharedDataDescriptor data;
+	OMRSharedCacheConfig * scconfig = currentThread->_vm->sharedClassConfig;
 	UDATA localVerboseFlags = scconfig->verboseFlags;
 	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 
@@ -3356,10 +3356,10 @@ SH_CacheMap::updateAttachedUDATA(OMR_VMThread* currentThread, const void* addres
 *
 */
 const U_8*
-SH_CacheMap::findAttachedDataAPI(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset)
+SH_CacheMap::findAttachedDataAPI(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset)
 {
 	const U_8* result = NULL;
-	OMRSharedClassConfig * scconfig = currentThread->_vm->sharedClassConfig;
+	OMRSharedCacheConfig * scconfig = currentThread->_vm->sharedClassConfig;
 	UDATA localVerboseFlags = scconfig->verboseFlags;
 	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 
@@ -3408,7 +3408,7 @@ SH_CacheMap::findAttachedDataAPI(OMR_VMThread* currentThread, const void* addres
 
 
 const U_8*
-SH_CacheMap::findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset, const char** p_subcstr)
+SH_CacheMap::findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset, const char** p_subcstr)
 {
 	const U_8* result;
 	const char* fnName = "findAttachedData";
@@ -3564,7 +3564,7 @@ _exit:
  */
 //SH_CacheMap::BlockPtr
 //SH_CacheMap::addByteDataToCache(OMR_VMThread* currentThread, SH_Manager* localBDM, const J9UTF8* tokenKeyInCache, 
-//		const J9SharedDataDescriptor* data, SH_CompositeCacheImpl* forceCache, bool writeWithoutMetadata)
+//		const OMRSharedDataDescriptor* data, SH_CompositeCacheImpl* forceCache, bool writeWithoutMetadata)
 //{
 //	U_32 wrapperLength;
 //	ByteDataWrapper* bdwInCache = NULL;
@@ -3743,7 +3743,7 @@ _exit:
  * THREADING: This function can be called multi-threaded
  */
 const U_8* 
-SH_CacheMap::storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const J9SharedDataDescriptor* data)
+SH_CacheMap::storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const OMRSharedDataDescriptor* data)
 {
 	const U_8* result = NULL;
 	const char* fnName = "storeSharedData";
@@ -3876,7 +3876,7 @@ _done:
 
 /**
  * Retrieves data in the cache which has been stored against "key" which is a UTF8 string.
- * Populates descriptorPool with J9SharedDataDescriptors describing data elements. Returns the number of elements found.
+ * Populates descriptorPool with OMRSharedDataDescriptors describing data elements. Returns the number of elements found.
  * The data returned can include private data of other JVMs or data of different types stored under the same key.
  * 
  * @param[in] vmThread  The current thread
@@ -3892,7 +3892,7 @@ _done:
  * THREADING: This function can be called multi-threaded
  */
 IDATA
-SH_CacheMap::findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool)
+SH_CacheMap::findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, OMRSharedDataDescriptor* firstItem, const J9Pool* descriptorPool)
 {
 	IDATA result;
 	const char* fnName = "findSharedData";
@@ -3927,12 +3927,12 @@ SH_CacheMap::findSharedData(OMR_VMThread* currentThread, const char* key, UDATA 
 	if (result > 0) {
 		if (descriptorPool != NULL) {
 			pool_state state;
-			J9SharedDataDescriptor* anElement;
+			OMRSharedDataDescriptor* anElement;
 
-			anElement = (J9SharedDataDescriptor*)pool_startDo((J9Pool*)descriptorPool, &state);
+			anElement = (OMRSharedDataDescriptor*)pool_startDo((J9Pool*)descriptorPool, &state);
 			while (anElement) {
 				updateBytesRead(anElement->length);
-				anElement = (J9SharedDataDescriptor*)pool_nextDo(&state);
+				anElement = (OMRSharedDataDescriptor*)pool_nextDo(&state);
 			}
 		} else if (firstItem != NULL) {
 			updateBytesRead(firstItem->length);
@@ -3954,7 +3954,7 @@ SH_CacheMap::findSharedData(OMR_VMThread* currentThread, const char* key, UDATA 
  * @return  1 if successful or 0 if unsuccessful
  */
 UDATA 
-SH_CacheMap::acquirePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data)
+SH_CacheMap::acquirePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data)
 {
 	UDATA result = 0;
 	const char* fnName = "acquirePrivateSharedData";
@@ -3985,7 +3985,7 @@ SH_CacheMap::acquirePrivateSharedData(OMR_VMThread* currentThread, const J9Share
  * @return 1 if the data was successfully released or 0 otherwise
  */
 UDATA 
-SH_CacheMap::releasePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data)
+SH_CacheMap::releasePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data)
 {
 	SH_ByteDataManager* localBDM;
 
@@ -5038,7 +5038,7 @@ SH_CacheMap::runExitCode(OMR_VMThread* currentThread)
 /* Note: className can be NULL and if not, is not necessarily null-terminated */
 /* THREADING: Can be called multi-threaded */
 //IDATA /*static */
-//SH_CacheMap::createPathString(OMR_VMThread* currentThread, OMRSharedClassConfig* config, char** pathBuf, UDATA pathBufSize, ClasspathEntryItem* cpei, const char* className, UDATA classNameLen, bool* doFreeBuffer)
+//SH_CacheMap::createPathString(OMR_VMThread* currentThread, OMRSharedCacheConfig* config, char** pathBuf, UDATA pathBufSize, ClasspathEntryItem* cpei, const char* className, UDATA classNameLen, bool* doFreeBuffer)
 //{
 //	char* fullPath = *pathBuf;
 //	U_16 cpeiPathLen = 0;
@@ -5168,7 +5168,7 @@ SH_CacheMap::enterStringTableMutex(OMR_VMThread* currentThread, BOOLEAN readOnly
 {
 	IDATA result = -1;
 
-	J9SharedInvariantInternTable* table = currentThread->_vm->sharedInvariantInternTable;
+	OMRSharedInvariantInternTable* table = currentThread->_vm->sharedInvariantInternTable;
 
 	Trc_SHR_Assert_True(_sharedClassConfig != NULL);
 	Trc_SHR_CM_enterStringTableMutex_entry(currentThread);
@@ -5180,13 +5180,13 @@ SH_CacheMap::enterStringTableMutex(OMR_VMThread* currentThread, BOOLEAN readOnly
 			if (table->sharedHeadNodePtr == NULL) {
 				table->headNode = NULL;
 			} else {
-				table->headNode = SRP_PTR_GET(table->sharedHeadNodePtr, J9SharedInternSRPHashTableEntry *);
+				table->headNode = SRP_PTR_GET(table->sharedHeadNodePtr, OMRSharedInternSRPHashTableEntry *);
 			}
 
 			if (table->sharedTailNodePtr == NULL) {
 				table->tailNode = NULL;
 			} else {
-				table->tailNode = SRP_PTR_GET(table->sharedTailNodePtr, J9SharedInternSRPHashTableEntry *);
+				table->tailNode = SRP_PTR_GET(table->sharedTailNodePtr, OMRSharedInternSRPHashTableEntry *);
 			}
 
 			if (OMR_ARE_ANY_BITS_SET(_sharedClassConfig->runtimeFlags, OMRSHR_RUNTIMEFLAG_BLOCK_SPACE_FULL | OMRSHR_RUNTIMEFLAG_AVAILABLE_SPACE_FULL)) {
@@ -5204,7 +5204,7 @@ IDATA
 SH_CacheMap::exitStringTableMutex(OMR_VMThread* currentThread, UDATA resetReason)
 {
 	IDATA result;
-	J9SharedInvariantInternTable* table = currentThread->_vm->sharedInvariantInternTable;
+	OMRSharedInvariantInternTable* table = currentThread->_vm->sharedInvariantInternTable;
 	
 	Trc_SHR_CM_exitStringTableMutex_entry(currentThread);
 	
@@ -5469,7 +5469,7 @@ SH_CacheMap::initCachelet(OMR_VMThread* currentThread, BlockPtr existingCachelet
 //SH_CompositeCacheImpl*
 //SH_CacheMap::createNewCachelet(OMR_VMThread* currentThread) 
 //{
-//	J9SharedDataDescriptor descriptor;
+//	OMRSharedDataDescriptor descriptor;
 //	SH_Manager* localBDM;
 //	BlockPtr cacheletMemory;
 //	SH_CompositeCacheImpl* returnVal = NULL;
@@ -5495,7 +5495,7 @@ SH_CacheMap::initCachelet(OMR_VMThread* currentThread, BlockPtr existingCachelet
 //			if (returnVal) {
 //				if (startupCachelet(currentThread, returnVal) == CC_STARTUP_OK) {
 //					if (createdNewChainedCache) {
-//						J9SharedInvariantInternTable *stringTable = vm->sharedInvariantInternTable;
+//						OMRSharedInvariantInternTable *stringTable = vm->sharedInvariantInternTable;
 //						_ccCacheletHead = returnVal;
 //						if (!initializeROMSegmentList(currentThread)) {
 //							/* TODO: handle this correctly */
@@ -5550,7 +5550,7 @@ SH_CacheMap::createNewChainedCache(OMR_VMThread* currentThread, UDATA requiredSi
 {
 	void* ccMem;
 	SH_CompositeCacheImpl* newCache;
-	J9SharedClassCacheDescriptor *cacheDesc;
+	OMRSharedCacheDescriptor *cacheDesc;
 	OMRPORT_ACCESS_FROM_VMC(currentThread->_vm);
 
 	Trc_SHR_CM_createNewChainedCache_Entry(currentThread, requiredSize, requiredSize);
@@ -5576,9 +5576,9 @@ SH_CacheMap::createNewChainedCache(OMR_VMThread* currentThread, UDATA requiredSi
 		OMR_VM* vm = currentThread->_vm;
 		U_32 ignored;
 		IDATA rc;
-		J9SharedClassPreinitConfig tempConfig;
+		OMRSharedCachePreinitConfig tempConfig;
 		
-		memcpy(&tempConfig, vm->sharedClassPreinitConfig, sizeof(J9SharedClassPreinitConfig));
+		memcpy(&tempConfig, vm->sharedClassPreinitConfig, sizeof(OMRSharedCachePreinitConfig));
 		if (requiredSize > 0) {
 			tempConfig.sharedClassCacheSize = requiredSize;
 			tempConfig.sharedClassReadWriteBytes = 0;
@@ -5638,7 +5638,7 @@ SH_CacheMap::buildCacheletMetadata(OMR_VMThread* currentThread, SH_Manager::Cach
 	SH_Manager* walkManager;
 	SH_Managers::ManagerWalkState state;
 	CacheletHints* firstHint;
-	UDATA totalSizeNeeded = sizeof(J9SharedCacheHeader);
+	UDATA totalSizeNeeded = sizeof(OMRSharedCacheHeader);
 	
 	OMRPORT_ACCESS_FROM_VMC(currentThread->_vm);
 	
@@ -6021,9 +6021,9 @@ SH_CacheMap::serializeOfflineCache(OMR_VMThread* currentThread)
 	SH_CompositeCacheImpl* serializedCache = NULL;
 	SH_CompositeCacheImpl* supercache;
 	SH_CompositeCacheImpl* cachelet;
-	OMRSharedClassConfig config;
-	J9SharedClassPreinitConfig piconfig;
-	J9SharedClassCacheDescriptor newCacheDesc;
+	OMRSharedCacheConfig config;
+	OMRSharedCachePreinitConfig piconfig;
+	OMRSharedCacheDescriptor newCacheDesc;
 	U_32 actualSize;
 	UDATA localCrashCntr;
 	bool cacheHasIntegrity;
@@ -6048,8 +6048,8 @@ SH_CacheMap::serializeOfflineCache(OMR_VMThread* currentThread)
 		return false;
 	}
 
-	memcpy(&config, _sharedClassConfig, sizeof(OMRSharedClassConfig));
-	memcpy(&piconfig, vm->sharedClassPreinitConfig, sizeof(J9SharedClassPreinitConfig));
+	memcpy(&config, _sharedClassConfig, sizeof(OMRSharedCacheConfig));
+	memcpy(&piconfig, vm->sharedClassPreinitConfig, sizeof(OMRSharedCachePreinitConfig));
 
 	/* the config for the serialized cache needs its own cacheDescriptorList */
 	config.cacheDescriptorList = &newCacheDesc;
@@ -6171,7 +6171,7 @@ serializeOfflineCache_done:
 void
 SH_CacheMap::setDeployedROMClassStarts(OMR_VMThread* currentThread, void* serializedROMClassStartAddress)
 {
-	J9SharedClassCacheDescriptor *cacheDesc;
+	OMRSharedCacheDescriptor *cacheDesc;
 	SH_CompositeCacheImpl* walk;
 	BlockPtr destSegmentStart;
 
@@ -6196,7 +6196,7 @@ SH_CacheMap::setDeployedROMClassStarts(OMR_VMThread* currentThread, void* serial
 		srcSegmentEnd = (BlockPtr)walk->getSegmentAllocPtr();
 		srcSegmentLen = srcSegmentEnd - srcSegmentStart;
 		destSegmentStart += srcSegmentLen;
-		/* srcSegmentLen includes the sizeof(J9SharedCacheHeader) offset for the next supercache */
+		/* srcSegmentLen includes the sizeof(OMRSharedCacheHeader) offset for the next supercache */
 
 		walk = next;
 	}
@@ -6323,18 +6323,18 @@ SH_CacheMap::fixCacheletReadWriteOffsets(OMR_VMThread* currentThread)
  * Allocate and append a cache descriptor.
  * The new cacheDesc becomes the "current" one.
  */
-J9SharedClassCacheDescriptor*
-SH_CacheMap::appendCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedClassConfig* sharedClassConfig)
+OMRSharedCacheDescriptor*
+SH_CacheMap::appendCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedCacheConfig* sharedClassConfig)
 {
 	OMRPORT_ACCESS_FROM_VMC(currentThread->_vm);
-	J9SharedClassCacheDescriptor *cacheDesc;
+	OMRSharedCacheDescriptor *cacheDesc;
 	
-	cacheDesc = (J9SharedClassCacheDescriptor *)omrmem_allocate_memory(sizeof(J9SharedClassCacheDescriptor), OMRMEM_CATEGORY_CLASSES);
+	cacheDesc = (OMRSharedCacheDescriptor *)omrmem_allocate_memory(sizeof(OMRSharedCacheDescriptor), OMRMEM_CATEGORY_CLASSES);
 	if (!cacheDesc) {
 		/* TODO: trace and error code */
 		return NULL;
 	}
-	memset(cacheDesc, 0, sizeof(J9SharedClassCacheDescriptor));
+	memset(cacheDesc, 0, sizeof(OMRSharedCacheDescriptor));
 
 	if (sharedClassConfig->configMonitor) {
 		enterLocalMutex(currentThread, sharedClassConfig->configMonitor, "config monitor", "initializeROMSegmentList");
@@ -6363,10 +6363,10 @@ SH_CacheMap::appendCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedCla
  * Frees an existing list and reinitializes it.
  */
 void
-SH_CacheMap::resetCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedClassConfig* sharedClassConfig)
+SH_CacheMap::resetCacheDescriptorList(OMR_VMThread* currentThread, OMRSharedCacheConfig* sharedClassConfig)
 {
 	OMRPORT_ACCESS_FROM_VMC(currentThread->_vm);
-	J9SharedClassCacheDescriptor *cacheDesc, *nextCacheDesc;
+	OMRSharedCacheDescriptor *cacheDesc, *nextCacheDesc;
 
 	if (sharedClassConfig->configMonitor) {
 		enterLocalMutex(currentThread, sharedClassConfig->configMonitor, "config monitor", "initializeROMSegmentList");
@@ -6659,7 +6659,7 @@ SH_CacheMap::startupCacheletForStats(OMR_VMThread* currentThread, SH_CompositeCa
 #endif /*OMRSHR_CACHELET_SUPPORT*/
 
 
-OMRSharedClassConfig*
+OMRSharedCacheConfig*
 SH_CacheMap::getSharedClassConfig()
 {
 	return _sharedClassConfig;

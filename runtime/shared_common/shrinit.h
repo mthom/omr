@@ -29,11 +29,11 @@
 #include "include/SCAbstractAPI.h"
 #include "omrutil.h" // for PRIMENUMBER_HELPER_OUTOFRANGE
 
-UDATA omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const J9SharedDataDescriptor* data, UDATA forceReplace);
-const U_8* omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset);
-UDATA omrshr_updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const J9SharedDataDescriptor* data);
+UDATA omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const OMRSharedDataDescriptor* data, UDATA forceReplace);
+const U_8* omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset);
+UDATA omrshr_updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const OMRSharedDataDescriptor* data);
 UDATA omrshr_updateAttachedUDATA(OMR_VMThread* currentThread, const void* addressInCache, UDATA type, I_32 updateAtOffset, UDATA value);
-void omrshr_freeAttachedDataDescriptor(OMR_VMThread* currentThread, J9SharedDataDescriptor* data);
+void omrshr_freeAttachedDataDescriptor(OMR_VMThread* currentThread, OMRSharedDataDescriptor* data);
 const U_8* omrshr_storeCompiledMethod(OMR_VMThread* currentThread, const MethodNameAndSignature* methodNameAndSignature, const U_8* dataStart, UDATA dataSize, const U_8* codeStart, UDATA codeSize, UDATA forceReplace);
 // UDATA omrshr_getJavacoreData(OMR_VM *vm, J9SharedClassJavacoreDataDescriptor* descriptor);
 IDATA omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal);
@@ -56,10 +56,10 @@ UDATA omrshr_getFreeAvailableSpaceBytes(OMR_VM *vm);
 void omrshr_resetSharedStringTable(OMR_VM* vm);
 BOOLEAN omrshr_isCacheFull(OMR_VM *vm);
 BOOLEAN omrshr_isAddressInCache(OMR_VM *vm, void *address, UDATA length);
-void omrshr_populatePreinitConfigDefaults(OMR_VM *vm, J9SharedClassPreinitConfig *updatedWithDefaults);
+void omrshr_populatePreinitConfigDefaults(OMR_VM *vm, OMRSharedCachePreinitConfig *updatedWithDefaults);
 BOOLEAN omrshr_isPlatformDefaultPersistent(struct OMR_VM* vm);
 UDATA omrshr_isBCIEnabled(OMR_VM *vm);
-UDATA ensureCorrectCacheSizes(OMR_VM *vm, OMRPortLibrary* portlib, U_64 runtimeFlags, UDATA verboseFlags, J9SharedClassPreinitConfig* piconfig);
+UDATA ensureCorrectCacheSizes(OMR_VM *vm, OMRPortLibrary* portlib, U_64 runtimeFlags, UDATA verboseFlags, OMRSharedCachePreinitConfig* piconfig);
 //UDATA parseArgs(OMR_VM* vm, char* options, U_64* runtimeFlags, UDATA* verboseFlags, char** cacheName, char** modContext, char** expireTime, char** ctrlDirName, char** cacheDirPerm, char** methodSpecs, UDATA* printStatsOptions, UDATA* storageKeyTesting);
 UDATA convertPermToDecimal(OMR_VM *vm, const char *permStr);
 SCAbstractAPI * initializeSharedAPI(OMR_VM *vm);

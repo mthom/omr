@@ -51,7 +51,7 @@
  *
  * *-----------------------------*---------*-------*-------*-------------------*-------*-------*-------------------*
  * |                             |         |       |       |                   |       |       |   Class Debug     |
- * | J9SharedCacheHeader         |readWrite|segment|segment|    free space     |cache  |cache  |   Attribute       |
+ * | OMRSharedCacheHeader         |readWrite|segment|segment|    free space     |cache  |cache  |   Attribute       |
  * |  {totalBytes, updateSRP,    |area     |entry1 |entry2 |                   |entry2 |entry1 |   Data            |
  * |   updateCount, segmentSRP}  |         |       |       |                   |       |       |                   |
  * |                             |         |       |       |                   |       |       |                   |
@@ -73,8 +73,8 @@
 #define RWUPDATEPTR(ca) (((BlockPtr)(ca)) + (ca)->readWriteSRP)
 #define SEGUPDATEPTR(ca) (((BlockPtr)(ca)) + (ca)->segmentSRP)
 
-#define READWRITEAREASIZE(ca) ((ca)->readWriteBytes - sizeof(J9SharedCacheHeader))
-#define READWRITEAREASTART(ca) (((BlockPtr)(ca)) + sizeof(J9SharedCacheHeader))
+#define READWRITEAREASIZE(ca) ((ca)->readWriteBytes - sizeof(OMRSharedCacheHeader))
+#define READWRITEAREASTART(ca) (((BlockPtr)(ca)) + sizeof(OMRSharedCacheHeader))
 
 #define FREEBYTES(ca) ((ca)->updateSRP - (ca)->segmentSRP)
 #define FREEREADWRITEBYTES(ca) ((ca)->readWriteBytes - (U_32)(ca)->readWriteSRP)
@@ -131,14 +131,14 @@ SH_CompositeCacheImpl::SH_SharedCacheHeaderInit::newInstance(SH_SharedCacheHeade
 void 
 SH_CompositeCacheImpl::SH_SharedCacheHeaderInit::init(BlockPtr data, U_32 len, I_32 minAOT, I_32 maxAOT, I_32 minJIT, I_32 maxJIT, U_32 readWriteLen, U_32 softMaxBytes)
 {
-	J9SharedCacheHeader* ca = (J9SharedCacheHeader*)data;
+	OMRSharedCacheHeader* ca = (OMRSharedCacheHeader*)data;
 
-	memset(ca, 0, sizeof(J9SharedCacheHeader));
+	memset(ca, 0, sizeof(OMRSharedCacheHeader));
 
 	ca->totalBytes = len;
-	ca->readWriteBytes = readWriteLen + sizeof(J9SharedCacheHeader);
+	ca->readWriteBytes = readWriteLen + sizeof(OMRSharedCacheHeader);
 	ca->updateSRP = (UDATA)len;
-	ca->readWriteSRP = sizeof(J9SharedCacheHeader);
+	ca->readWriteSRP = sizeof(OMRSharedCacheHeader);
 	ca->segmentSRP = (UDATA)ca->readWriteBytes;
 	ca->minAOT = minAOT;
 	ca->maxAOT = maxAOT;
@@ -179,7 +179,7 @@ SH_CompositeCacheImpl::SH_SharedCacheHeaderInit::init(BlockPtr data, U_32 len, I
  * @return A pointer to the new instance
  */
 SH_CompositeCacheImpl*
-SH_CompositeCacheImpl::newInstance(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, SH_CompositeCacheImpl* memForConstructor, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
+SH_CompositeCacheImpl::newInstance(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, SH_CompositeCacheImpl* memForConstructor, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
 {
 	SH_CompositeCacheImpl* newCC = (SH_CompositeCacheImpl*)memForConstructor;
 
@@ -217,7 +217,7 @@ SH_CompositeCacheImpl::newInstanceNested(OMR_VM* vm, SH_CompositeCacheImpl* pare
 }
 
 SH_CompositeCacheImpl*
-SH_CompositeCacheImpl::newInstanceChained(OMR_VM* vm, SH_CompositeCacheImpl* memForConstructor, OMRSharedClassConfig* sharedClassConfig, I_32 cacheTypeRequired)
+SH_CompositeCacheImpl::newInstanceChained(OMR_VM* vm, SH_CompositeCacheImpl* memForConstructor, OMRSharedCacheConfig* sharedClassConfig, I_32 cacheTypeRequired)
 {
 	SH_CompositeCacheImpl* newCC = (SH_CompositeCacheImpl*)memForConstructor;
 
@@ -348,7 +348,7 @@ SH_CompositeCacheImpl::getFreeBlockBytes(void)
 }
 
 void
-SH_CompositeCacheImpl::initializeWithCommonInfo(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
+SH_CompositeCacheImpl::initializeWithCommonInfo(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, BlockPtr memForConstructor, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
 {
 	const char * ctrlDirName = NULL;
 	BlockPtr memToUse = (BlockPtr)memForConstructor;
@@ -370,7 +370,7 @@ SH_CompositeCacheImpl::initializeWithCommonInfo(OMR_VM* vm, OMRSharedClassConfig
 }
 
 void
-SH_CompositeCacheImpl::initialize(OMR_VM* vm, BlockPtr memForConstructor, OMRSharedClassConfig* sharedClassConfig, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
+SH_CompositeCacheImpl::initialize(OMR_VM* vm, BlockPtr memForConstructor, OMRSharedCacheConfig* sharedClassConfig, const char* cacheName, I_32 cacheTypeRequired, bool startupForStats)
 {
 	J9PortShcVersion versionData;
 
@@ -657,7 +657,7 @@ SH_CompositeCacheImpl::setCorruptCache(OMR_VMThread *currentThread, IDATA corrup
  * Prereq: Cache header should be unprotected - this is only done during initialization 
  * Don't derive the piConfig from currentThread as we need to be able to pass it through in the unit tests */
 void
-SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9SharedClassPreinitConfig* piConfig)
+SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* piConfig)
 {
 	OMR_VM* vm = currentThread->_vm;
 	U_32 finalReadWriteSize = 0;
@@ -673,7 +673,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9Sha
 	}
 	Trc_SHR_CC_setCacheAreaBoundaries_Entry(currentThread);
 
-	finalReadWriteSize = READWRITEAREASIZE(_theca);		/* Note that this does not include the size of the J9SharedCacheHeader */
+	finalReadWriteSize = READWRITEAREASIZE(_theca);		/* Note that this does not include the size of the OMRSharedCacheHeader */
 	/**
 	 * finalReadWriteSize can be 0 in two cases
 	 * 1. If user do not pass an argument to define the size of shared string intern table. (i.e -Xitsn option)
@@ -684,7 +684,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9Sha
 	if ((finalReadWriteSize == 0) && (piConfig->sharedClassReadWriteBytes == -1)) {
 		/* If no explicit value for sharedClassReadWriteBytes was set, set it to a proportion of the cache size */
 		finalReadWriteSize = SHC_PAD((_theca->totalBytes / DEFAULT_READWRITE_BYTES_DIVISOR), SHC_WORDALIGN);
-		maxSharedStringTableSize = srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(J9SharedInternSRPHashTableEntry), TRUE);
+		maxSharedStringTableSize = srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
 		if (maxSharedStringTableSize == PRIMENUMBERHELPER_OUTOFRANGE) {
 			/*
 			 * We should never be here.
@@ -702,7 +702,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9Sha
 		 * This will prevent wasting any extra memory that is wasted by SRP hashtable.
 		 */
 		if (!(*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE)) {
-			numOfSharedNodes = srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
+			numOfSharedNodes = srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
 			if (numOfSharedNodes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				/**
 				 * This should never happen since finalReadWriteSize is limited up to maxSharedStringTableSize above.
@@ -712,12 +712,12 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9Sha
 				 */
 				Trc_SHR_Assert_ShouldNeverHappen();
 			}
-			finalReadWriteSize = srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
+			finalReadWriteSize = srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
 		}
 	}
 
 	/* Work out where the segment area will now start from */
-	finalSegmentStart = (BlockPtr)SHC_PAD(((UDATA)((BlockPtr)_theca) + finalReadWriteSize + sizeof(J9SharedCacheHeader)), SHC_WORDALIGN);
+	finalSegmentStart = (BlockPtr)SHC_PAD(((UDATA)((BlockPtr)_theca) + finalReadWriteSize + sizeof(OMRSharedCacheHeader)), SHC_WORDALIGN);
 	
 	/* If we're rounding to page sizes, the segment area and cache end will need to be reset onto page boundaries */
 	if (*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE) {
@@ -960,13 +960,13 @@ SH_CompositeCacheImpl::notifyPagesCommitted(BlockPtr start, BlockPtr end, UDATA 
 IDATA 
 SH_CompositeCacheImpl::startupNested(OMR_VMThread* currentThread)
 {
-	J9SharedClassPreinitConfig tempConfig;
+	OMRSharedCachePreinitConfig tempConfig;
 	OMR_VM* vm = currentThread->_vm;
 	U_32 actualSize;
 	UDATA ignore;
 	bool ignore2;
 
-	memcpy(&tempConfig, vm->sharedClassPreinitConfig, sizeof(J9SharedClassPreinitConfig));
+	memcpy(&tempConfig, vm->sharedClassPreinitConfig, sizeof(OMRSharedCachePreinitConfig));
 	tempConfig.sharedClassCacheSize = _nestedSize;
 	tempConfig.sharedClassReadWriteBytes = 0;
 	
@@ -977,7 +977,7 @@ SH_CompositeCacheImpl::startupNested(OMR_VMThread* currentThread)
 
 IDATA 
 SH_CompositeCacheImpl::startupChained(OMR_VMThread* currentThread, SH_CompositeCacheImpl* ccHead,
-		J9SharedClassPreinitConfig* piconfig, U_32* actualSize, UDATA* localCrashCntr)
+		OMRSharedCachePreinitConfig* piconfig, U_32* actualSize, UDATA* localCrashCntr)
 {
 	bool ignore;
 	OMR_VM* vm = currentThread->_vm;
@@ -1019,7 +1019,7 @@ SH_CompositeCacheImpl::startupChained(OMR_VMThread* currentThread, SH_CompositeC
  * @retval CC_STARTUP_NO_CACHELETS (-5)
  */
 IDATA 
-SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinitConfig* piconfig, BlockPtr cacheMemory,
+SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* piconfig, BlockPtr cacheMemory,
 		U_64* runtimeFlags, UDATA verboseFlags, const char* rootName, const char* ctrlDirName, UDATA cacheDirPerm, U_32* actualSize,
 		UDATA* localCrashCntr, bool isFirstStart, bool *cacheHasIntegrity)
 {
@@ -1110,7 +1110,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 	*actualSize = 0;
 
 	if (cacheMemory != NULL) {
-		if (!(((J9SharedCacheHeader*)cacheMemory)->ccInitComplete & CC_STARTUP_COMPLETE)) {
+		if (!(((OMRSharedCacheHeader*)cacheMemory)->ccInitComplete & CC_STARTUP_COMPLETE)) {
 			U_32 readWriteBytes = (U_32)((piconfig->sharedClassReadWriteBytes > 0) ? piconfig->sharedClassReadWriteBytes : 0);
 			headerInit->init(cacheMemory, (U_32)piconfig->sharedClassCacheSize, (I_32)piconfig->sharedClassMinAOTSize, (I_32)piconfig->sharedClassMaxAOTSize,
 					(I_32)piconfig->sharedClassMinJITSize, (I_32)piconfig->sharedClassMaxJITSize, readWriteBytes, (U_32)piconfig->sharedClassSoftMaxBytes);
@@ -1228,9 +1228,9 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 	if (hasWriteMutex) {
 		_oldUpdateCount = 0;
 		if (cacheMemory != NULL) {
-			_theca = (J9SharedCacheHeader*)cacheMemory;
+			_theca = (OMRSharedCacheHeader*)cacheMemory;
 		} else {
-	    	_theca = (J9SharedCacheHeader*)_oscache->attach(currentThread, &versionData);
+	    	_theca = (OMRSharedCacheHeader*)_oscache->attach(currentThread, &versionData);
 #ifndef OMRSHR_CACHELET_SUPPORT
 			/* Verify that a non-realtime VM is not attaching to a Realtime cache when printing stats */
 			if ((_theca != 0) && getContainsCachelets() &&
@@ -1564,7 +1564,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 					U_32 roundedHeaderAndRWSize = (U_32)ROUND_UP_TO(_osPageSize, ((UDATA)CASTART(_theca) - (UDATA)_theca));
 					
 					_cacheHeaderPageStart = (BlockPtr)ROUND_DOWN_TO(_osPageSize, (UDATA)_theca);
-					_cacheHeaderPageBytes = (U_32)ROUND_UP_TO(_osPageSize, (UDATA)sizeof(J9SharedCacheHeader));
+					_cacheHeaderPageBytes = (U_32)ROUND_UP_TO(_osPageSize, (UDATA)sizeof(OMRSharedCacheHeader));
 					if (_readWriteAreaStart != NULL) {
 						_readWriteAreaPageStart = (BlockPtr)ROUND_DOWN_TO(_osPageSize, (UDATA)_readWriteAreaStart);
 						_readWriteAreaPageBytes = (U_32)ROUND_UP_TO(_osPageSize, (UDATA)_readWriteAreaBytes);
@@ -3355,7 +3355,7 @@ SH_CompositeCacheImpl::getBaseAddress(void)
  *
  * @return Address of start of shared classes cache header
  */
-J9SharedCacheHeader *
+OMRSharedCacheHeader *
 SH_CompositeCacheImpl::getCacheHeaderAddress(void)
 {
 	if (!_started) {
@@ -4709,7 +4709,7 @@ SH_CompositeCacheImpl::getFirstROMClassAddress(bool isNested)
 	BlockPtr returnVal = (BlockPtr)getBaseAddress();
 
 	if (isNested || getContainsCachelets()) {
-		return returnVal + sizeof(J9SharedCacheHeader);
+		return returnVal + sizeof(OMRSharedCacheHeader);
 	} else {
 		return returnVal;
 	}
@@ -5472,7 +5472,7 @@ SH_CompositeCacheImpl::startupForStats(OMR_VMThread* currentThread, SH_OSCache *
 		goto done;
 	}
 
-	_theca = (J9SharedCacheHeader*)attachedMemory;
+	_theca = (OMRSharedCacheHeader*)attachedMemory;
 
 	if (isCacheInitComplete() == false) {
 		retval = CC_STARTUP_CORRUPT;
@@ -5623,7 +5623,7 @@ SH_CompositeCacheImpl::startupNestedForStats(OMR_VMThread* currentThread)
 	_oscache = _parent->_oscache;
 	_osPageSize = _oscache->getPermissionsRegionGranularity(_portlib);
 
-	_theca = (J9SharedCacheHeader*)_nestedMemory;
+	_theca = (OMRSharedCacheHeader*)_nestedMemory;
 	if (this->isCacheInitComplete() == false) {
 		retval = CC_STARTUP_CORRUPT;
 		goto done;

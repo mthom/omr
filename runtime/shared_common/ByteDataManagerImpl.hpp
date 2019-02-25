@@ -60,11 +60,11 @@ public:
 
 	virtual void markAllStaleForKey(OMR_VMThread* currentThread, const char* key, UDATA keylen);
 
-	virtual IDATA find(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool);
+	virtual IDATA find(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, OMRSharedDataDescriptor* firstItem, const J9Pool* descriptorPool);
 	
-	virtual UDATA acquirePrivateEntry(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data);
+	virtual UDATA acquirePrivateEntry(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data);
 
-	virtual UDATA releasePrivateEntry(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data);
+	virtual UDATA releasePrivateEntry(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data);
 	
 	virtual void runExitCode(void);
 
@@ -109,7 +109,7 @@ private:
 
 	void initialize(OMR_VM* vm, SH_SharedCache* cache, BlockPtr memForConstructor);
 	
-	void setDescriptorFields(const ByteDataWrapper* wrapper, J9SharedDataDescriptor* descriptor);
+	void setDescriptorFields(const ByteDataWrapper* wrapper, OMRSharedDataDescriptor* descriptor);
 
 	static UDATA htReleasePrivateEntry(void *entry, void *opaque);
 	

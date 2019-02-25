@@ -71,7 +71,7 @@ typedef struct SCAbstractAPI
 
 	/* Get shared classes defaults for -verbose:sizes
 	 */
-	void (*populatePreinitConfigDefaults)(OMR_VM *vm, J9SharedClassPreinitConfig *updatedWithDefaults);
+	void (*populatePreinitConfigDefaults)(OMR_VM *vm, OMRSharedCachePreinitConfig *updatedWithDefaults);
 
 } SCAbstractAPI;
 

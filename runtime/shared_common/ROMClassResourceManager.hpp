@@ -118,7 +118,7 @@ class SH_ResourceDescriptor
 		virtual void writeDataToCache(const ShcItem* newCacheItem, const void* resourceAddress) = 0;
 
 		/* Update the given cache item at the specified offset with the value in data */
-		virtual void updateDataInCache(const ShcItem *cacheItem, I_32 updateAtOffset, const J9SharedDataDescriptor* data) {};
+		virtual void updateDataInCache(const ShcItem *cacheItem, I_32 updateAtOffset, const OMRSharedDataDescriptor* data) {};
 
 		/* Update the given cache item at the specified offset with the UDATA value */
 		virtual void updateUDATAInCache(const ShcItem *cacheItem, I_32 updateAtOffset, UDATA value) {};

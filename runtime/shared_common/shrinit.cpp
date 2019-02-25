@@ -385,7 +385,7 @@ static IDATA omrshr_restoreFromSnapshot(OMR_VM* vm, const char* ctrlDirName, con
 static void omrshr_print_snapshot_filename(OMR_VM* vm, const char* cacheDirName, const char* snapshotName);
 static IDATA omrshr_aotMethodOperation(OMR_VM* vm, char* methodSpecs, UDATA action);
 static bool recoverMethodSpecSeparator(char* string, char* end);
-static void adjustCacheSizes(OMRPortLibrary* portlib, UDATA verboseFlags, J9SharedClassPreinitConfig* piconfig, U_64 newSize);
+static void adjustCacheSizes(OMRPortLibrary* portlib, UDATA verboseFlags, OMRSharedCachePreinitConfig* piconfig, U_64 newSize);
 static IDATA checkIfCacheExists(OMR_VM* vm, const char* ctrlDirName, char* cacheDirName, const char* cacheName, J9PortShcVersion* versionData, U_32 cacheType);
   //static bool isClassFromPatchedModule(OMR_VMThread* vmThread, J9Module *j9module, U_8* className, UDATA classNameLength, J9ClassLoader* classLoader);
   //static J9Module* getModule(OMR_VMThread* vmThread, U_8* className, UDATA classNameLength, J9ClassLoader* classLoader);
@@ -1590,7 +1590,7 @@ const U_8*
 omrshr_storeCompiledMethod(OMR_VMThread* currentThread, const MethodNameAndSignature* methodNameAndSignature, const U_8* dataStart, UDATA dataSize, const U_8* codeStart, UDATA codeSize, UDATA forceReplace)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	const U_8* returnVal = 0;
@@ -1674,10 +1674,10 @@ omrshr_existsCachedCodeForROMMethod(OMR_VMThread* currentThread, const MethodNam
 
 /**
  * Searches for data in the cache which has been stored against "key" which is a UTF8 string.
- * Populates descriptorPool with the J9SharedDataDescriptors found. Returns the number of elements found.
+ * Populates descriptorPool with the OMRSharedDataDescriptors found. Returns the number of elements found.
  * The data returned can optionally include private data of other JVMs or data of different types stored under the same key.
  *
- * Each J9SharedDataDescriptor returned will have the following data in each field:
+ * Each OMRSharedDataDescriptor returned will have the following data in each field:
  *   address  The address of the cached data record
  *   length  The length of the cached data record
  *   type  The type of the cached data record, which will be one of the OMRSHR_DATA_TYPE_X constants defined in j9.h
@@ -1693,16 +1693,16 @@ omrshr_existsCachedCodeForROMMethod(OMR_VMThread* currentThread, const MethodNam
  *								If 0, all data stored under that key is returned
  * @param[in] includePrivate  If non-zero, will also add private data of other JVMs stored under that key into the pool
  * @param[out] firstItem If non-NULL, is filled in with the first data item found
- * @param[out] descriptorPool  Must be a J9Pool of size J9SharedDataDescriptor which will be populated with the results. 
+ * @param[out] descriptorPool  Must be a J9Pool of size OMRSharedDataDescriptor which will be populated with the results. 
  * 								The pool can be NULL if only the existence of data needs to be determined
  * 
  * @return  The number of data elements found or -1 in the case of error
  */
 IDATA 
-omrshr_findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool)
+omrshr_findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, OMRSharedDataDescriptor* firstItem, const J9Pool* descriptorPool)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	IDATA returnVal = -1;
@@ -1760,7 +1760,7 @@ omrshr_findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen
  * Note that each JVM can create a unique private data record in the cache using the same key
  * The function returns null if the cache is full, otherwise it returns a pointer to the shared location of the data.
  *
- * J9SharedDataDescriptor describing the data should have the following fields completed:
+ * OMRSharedDataDescriptor describing the data should have the following fields completed:
  *   address  The address of the local data to copy. This is ignored if OMRSHRDATA_ALLOCATE_ZEROD_MEMORY flag is used.
  *   length  The length in bytes of the data to copy (or allocate in the case of OMRSHRDATA_ALLOCATE_ZEROD_MEMORY)
  *   type  The data type. This should be one of the OMRSHR_DATA_TYPE_X constants defined in j9.h
@@ -1777,10 +1777,10 @@ omrshr_findSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen
  * @return  The new location of the cached data or null
  */
 const U_8* 
-omrshr_storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const J9SharedDataDescriptor* data)
+omrshr_storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keylen, const OMRSharedDataDescriptor* data)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	const U_8* returnVal = NULL;
@@ -1858,7 +1858,7 @@ omrshr_storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keyle
 * stored, regardless of whether it already exists or not. If it does exist,
 * the existing cached data is marked stale.
 *
-* The J9SharedDataDescriptor->flags currently has no defined values and must
+* The OMRSharedDataDescriptor->flags currently has no defined values and must
 * be set to OMRSHR_ATTACHED_DATA_NO_FLAGS.
 *
 * @return 0 if shared data was successfully stored
@@ -1872,13 +1872,13 @@ omrshr_storeSharedData(OMR_VMThread* currentThread, const char* key, UDATA keyle
 *         This will occur if the cache is read-only
 * @return OMRSHR_RESOURCE_STORE_FULL if the cache is full
 * @return OMRSHR_RESOURCE_PARAMETER_ERROR if shared class configuration is missing or
-* 		  if parameter error such as invalid J9SharedDataDescriptor->type or J9SharedDataDescriptor->flags
+* 		  if parameter error such as invalid OMRSharedDataDescriptor->type or OMRSharedDataDescriptor->flags
 */
 UDATA
-omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const J9SharedDataDescriptor* data, UDATA forceReplace)
+omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const OMRSharedDataDescriptor* data, UDATA forceReplace)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	UDATA returnVal = 0;
@@ -1950,12 +1950,12 @@ omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache
 * 				if data->address is non NULL then data->length is equal to size of the buffer pointed by data->address. On successful return, the buffer is filled with the data.
 * @param[out] corruptOffset If non -1, the updateAtOffset supplied to omrshr_updateAttachedData() when the incomplete write occurred.
 *
-* The J9SharedDataDescriptor->flags currently has no defined values and must
+* The OMRSharedDataDescriptor->flags currently has no defined values and must
 * be set to OMRSHR_ATTACHED_DATA_NO_FLAGS.
 *
 * @return A pointer to the start of the data
 * @return OMRSHR_RESOURCE_PARAMETER_ERROR if shared class configuration is missing or
-* 		  if parameter error such as invalid J9SharedDataDescriptor->flags
+* 		  if parameter error such as invalid OMRSharedDataDescriptor->flags
 * @return OMRSHR_RESOURCE_STORE_ERROR if an error occurred storing the data, or
 *     	  This will occur if OMRSHR_CACHELET_SUPPORT is defined
 *		  This will occur if data->address is non NULL and data->length, indicating the size of buffer pointed
@@ -1966,10 +1966,10 @@ omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache
 * 		  In case data is corrupt, data->address should be freed by the caller if it was passed as NULL.
 */
 const U_8*
-omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset)
+omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	const U_8* returnVal = 0;
@@ -2025,7 +2025,7 @@ omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache,
 * @param[in] updateAtOffset The offset into the data to make the update
 * @param[in] updateData The type of data to update must be specified, as well as the update data and length.
 *
-* The J9SharedDataDescriptor->flags currently has no defined values and must
+* The OMRSharedDataDescriptor->flags currently has no defined values and must
 * be set to OMRSHR_ATTACHED_DATA_NO_FLAGS.
 *
 * @return 0 on success
@@ -2040,10 +2040,10 @@ omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache,
 * @return OMRSHR_RESOURCE_PARAMETER_ERROR if problem with parameters or shared class configuration is missing.
 */
 UDATA
-omrshr_updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const J9SharedDataDescriptor* data)
+omrshr_updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const OMRSharedDataDescriptor* data)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	UDATA returnVal = 0;
@@ -2114,7 +2114,7 @@ UDATA
 omrshr_updateAttachedUDATA(OMR_VMThread* currentThread, const void* addressInCache, UDATA type, I_32 updateAtOffset, UDATA value)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	UDATA returnVal = 0;
@@ -2159,14 +2159,14 @@ omrshr_updateAttachedUDATA(OMR_VMThread* currentThread, const void* addressInCac
 }
 
 /**
- * Free the memory in the J9SharedDataDescriptor->address field, and
+ * Free the memory in the OMRSharedDataDescriptor->address field, and
  * set it to NULL.
  *
  * @param[in] currentThread  The current VM thread
- * @param[in] data The J9SharedDataDescriptor to free.
+ * @param[in] data The OMRSharedDataDescriptor to free.
  */
 void
-omrshr_freeAttachedDataDescriptor(OMR_VMThread* currentThread, J9SharedDataDescriptor* data)
+omrshr_freeAttachedDataDescriptor(OMR_VMThread* currentThread, OMRSharedDataDescriptor* data)
 {
 	OMR_VM* vm = currentThread->_vm;
 	OMRPORT_ACCESS_FROM_VMC(vm);
@@ -2194,7 +2194,7 @@ omrshr_freeAttachedDataDescriptor(OMR_VMThread* currentThread, J9SharedDataDescr
  * @return 1 if the data was successfully acquired or 0 otherwise
  */
 static UDATA
-omrshr_acquirePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data)
+omrshr_acquirePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data)
 {
 	if (currentThread->_vm->sharedClassConfig->runtimeFlags & OMRSHR_RUNTIMEFLAG_DENY_CACHE_UPDATES) {
 		return 0;
@@ -2216,7 +2216,7 @@ omrshr_acquirePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataD
  * @return 1 if the data was successfully released or 0 otherwise
  */
 static UDATA
-omrshr_releasePrivateSharedData(OMR_VMThread* currentThread, const J9SharedDataDescriptor* data)
+omrshr_releasePrivateSharedData(OMR_VMThread* currentThread, const OMRSharedDataDescriptor* data)
 {
 	if (currentThread->_vm->sharedClassConfig->runtimeFlags & OMRSHR_RUNTIMEFLAG_DENY_CACHE_UPDATES) {
 		return 0;
@@ -2259,7 +2259,7 @@ resetSharedTable(J9SharedInvariantInternTable* sharedTable)
 //    						table->sharedInvariantSRPHashtable,
 //    						cacheMap->getStringTableBase(),
 //    						(U_32) cacheMap->getStringTableBytes(),
-//    						(U_32) sizeof(J9SharedInternSRPHashTableEntry),
+//    						(U_32) sizeof(OMRSharedInternSRPHashTableEntry),
 //    						0,
 //    						sharedInternHashFn,
 //    						sharedInternHashEqualFn,
@@ -2357,7 +2357,7 @@ getCacheTypeFromRuntimeFlags(U_64 runtimeFlags)
 }
 
 //static IDATA
-//performSharedClassesCommandLineAction(OMR_VM* vm, OMRSharedClassConfig* sharedClassConfig, const char* cacheName, UDATA verboseFlags, U_64 runtimeFlags, char* expireTimeStr, UDATA command, UDATA printStatsOptions) {
+//performSharedClassesCommandLineAction(OMR_VM* vm, OMRSharedCacheConfig* sharedClassConfig, const char* cacheName, UDATA verboseFlags, U_64 runtimeFlags, char* expireTimeStr, UDATA command, UDATA printStatsOptions) {
 //	OMRPORT_ACCESS_FROM_VMC(vm);
 //	J9PortShcVersion versionData;
 //	U_32 cacheType = getCacheTypeFromRuntimeFlags(runtimeFlags);
@@ -2716,7 +2716,7 @@ _error:
 
 /* Returns 0 for ok and 1 for error */
 UDATA
-ensureCorrectCacheSizes(OMR_VM *vm, OMRPortLibrary* portlib, U_64 runtimeFlags, UDATA verboseFlags, J9SharedClassPreinitConfig* piconfig)
+ensureCorrectCacheSizes(OMR_VM *vm, OMRPortLibrary* portlib, U_64 runtimeFlags, UDATA verboseFlags, OMRSharedCachePreinitConfig* piconfig)
 {
 	UDATA* cacheSize = &piconfig->sharedClassCacheSize;
 	OMRPORT_ACCESS_FROM_OMRPORT(portlib);
@@ -2844,7 +2844,7 @@ ensureCorrectCacheSizes(OMR_VM *vm, OMRPortLibrary* portlib, U_64 runtimeFlags, 
 		if (piconfig->sharedClassInternTableNodeCount == 0) {
 			piconfig->sharedClassReadWriteBytes = 0;
 		} else {
-			piconfig->sharedClassReadWriteBytes = (UDATA)srpHashTable_requiredMemorySize((U_32)piconfig->sharedClassInternTableNodeCount, sizeof(J9SharedInternSRPHashTableEntry), TRUE);
+			piconfig->sharedClassReadWriteBytes = (UDATA)srpHashTable_requiredMemorySize((U_32)piconfig->sharedClassInternTableNodeCount, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
 			if (piconfig->sharedClassReadWriteBytes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				SHRINIT_ERR_TRACE2(verboseFlags, J9NLS_SHRC_SHRINIT_VALUE_IS_NOT_SUPPORTED_BY_PRIMENUMBERHELPER, piconfig->sharedClassInternTableNodeCount, getSupportedBiggestNumberByPrimeNumberHelper());
 				return 1;
@@ -2911,7 +2911,7 @@ initializeSharedAPI(OMR_VM *vm)
 //initializeSharedStringTable(OMR_VM* vm)
 //{
 //	J9SharedInvariantInternTable* table = vm->sharedInvariantInternTable;
-//	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+//	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 //	UDATA verboseIntern = (sharedClassConfig->verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE_INTERN);
 //	SH_CacheMap* cacheMap = (SH_CacheMap*)(vm->sharedClassConfig->sharedClassCache);
 //
@@ -2959,7 +2959,7 @@ initializeSharedAPI(OMR_VM *vm)
 //								       OMR_GET_CALLSITE(),
 //								       cacheMap->getStringTableBase(),
 //								       (U_32) cacheMap->getStringTableBytes(),
-//								       (U_32) sizeof(J9SharedInternSRPHashTableEntry),
+//								       (U_32) sizeof(OMRSharedInternSRPHashTableEntry),
 //								       0,
 //								       sharedInternHashFn,
 //								       sharedInternHashEqualFn,
@@ -2982,8 +2982,8 @@ initializeSharedAPI(OMR_VM *vm)
 //		omrtty_printf("   Succeeded in getting a srphashtable. ");
 //	}
 //	if (*(table->sharedHeadNodePtr)) {
-//		table->headNode = NNSRP_PTR_GET(table->sharedHeadNodePtr, J9SharedInternSRPHashTableEntry*);
-//		table->tailNode = NNSRP_PTR_GET(table->sharedTailNodePtr, J9SharedInternSRPHashTableEntry*);
+//		table->headNode = NNSRP_PTR_GET(table->sharedHeadNodePtr, OMRSharedInternSRPHashTableEntry*);
+//		table->tailNode = NNSRP_PTR_GET(table->sharedTailNodePtr, OMRSharedInternSRPHashTableEntry*);
 //		if (verboseIntern) {
 //			omrtty_printf("Set up the table with the following values:\n");
 //			omrtty_printf("      sharedTable->headNode = %p\n", table->headNode);
@@ -3009,7 +3009,7 @@ initializeSharedAPI(OMR_VM *vm)
 //static BOOLEAN
 //verifyStringTableElement(void *address, void *userData)
 //{
-//	J9SharedInternSRPHashTableEntry *node = (J9SharedInternSRPHashTableEntry *)address;
+//	OMRSharedInternSRPHashTableEntry *node = (OMRSharedInternSRPHashTableEntry *)address;
 //	J9SharedVerifyStringTable *verifyData = (J9SharedVerifyStringTable *)userData;
 //	void *utf8 = J9SHAREDINTERNSRPHASHTABLEENTRY_UTF8SRP(node);
 //	void *prevNode = J9SHAREDINTERNSRPHASHTABLEENTRY_PREVNODE(node);
@@ -3075,8 +3075,8 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	char* ctrlDirName = vm->sharedCacheAPI->ctrlDirName;
 //	IDATA returnVal = OMR_SHARED_CACHE_INIT_FAILED; //J9VMDLLMAIN_FAILED;
 	UDATA cmBytes, nameBytes, modContextBytes;
-	OMRSharedClassConfig* tempConfig;
-	J9SharedClassPreinitConfig* piconfig = vm->sharedClassPreinitConfig;
+	OMRSharedCacheConfig* tempConfig;
+	OMRSharedCachePreinitConfig* piconfig = vm->sharedCachePreinitConfig;
 	J9UTF8* mcPtr;
 	bool doPrintStats = false;
 	bool exitAfterBuildingTempConfig = false;
@@ -3212,8 +3212,8 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //	modContextBytes = modContext ? ((strlen(modContext) * sizeof(char)) + sizeof(J9UTF8)) : 0;
 	
 	//TODO: maybe include bytes for the cache name in this.. once that's up and running.
-	memBytesNeeded = sizeof(OMRSharedClassConfig) + sizeof(J9SharedClassCacheDescriptor); // + cmBytes + nameBytes + modContextBytes;
-	tempConfig = (OMRSharedClassConfig*)omrmem_allocate_memory(memBytesNeeded, OMRMEM_CATEGORY_CLASSES);
+	memBytesNeeded = sizeof(OMRSharedCacheConfig) + sizeof(OMRSharedCacheDescriptor); // + cmBytes + nameBytes + modContextBytes;
+	tempConfig = (OMRSharedCacheConfig*)omrmem_allocate_memory(memBytesNeeded, OMRMEM_CATEGORY_CLASSES);
 	
 	if (!tempConfig) {
 		SHRINIT_ERR_TRACE(verboseFlags, J9NLS_SHRC_SHRINIT_FAILURE_ALLOCATING_CONFIG);
@@ -3240,8 +3240,8 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //
 	/* Initialize the cache */
 
-	tempConfig->cacheDescriptorList = (J9SharedClassCacheDescriptor*)((UDATA)tempConfig + sizeof(OMRSharedClassConfig));
-	cmPtr = (SH_CacheMap*)((UDATA)tempConfig->cacheDescriptorList + sizeof(J9SharedClassCacheDescriptor));
+	tempConfig->cacheDescriptorList = (OMRSharedCacheDescriptor*)((UDATA)tempConfig + sizeof(OMRSharedCacheConfig));
+	cmPtr = (SH_CacheMap*)((UDATA)tempConfig->cacheDescriptorList + sizeof(OMRSharedCacheDescriptor));
 	mcPtr = (J9UTF8*)((UDATA)cmPtr + cmBytes);
 	copiedCacheName = (char*)((UDATA)mcPtr + modContextBytes);
 
@@ -3316,12 +3316,12 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	//	}
 
 	if (rcStartup != 0) {
-		OMRSharedClassConfig* config = vm->sharedClassConfig;
+		OMRSharedCacheConfig* config = vm->sharedClassConfig;
 		config->sharedClassCache = NULL;
 		goto _error;
 	} else {
 //		J9TranslationBufferSet* translationBuffers = vm->dynamicLoadBuffers;
-	  OMRSharedClassConfig* config = vm->sharedClassConfig;
+	  OMRSharedCacheConfig* config = vm->sharedClassConfig;
 	  J9HookInterface **shcHooks;
 
 	  /* Create the pools */
@@ -3412,7 +3412,7 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //	        		UDATA headerAddress = (UDATA)cc->getCacheHeaderAddress();
 //	        		UDATA totalSize = 0;
 //	        		/* below calculation is same as done in srpHashTableReset() to get string table size */
-//	        		UDATA tableSize = srpHashTable_calculateTableSize((U_32) cm->getStringTableBytes(), (U_32) sizeof(J9SharedInternSRPHashTableEntry), FALSE);
+//	        		UDATA tableSize = srpHashTable_calculateTableSize((U_32) cm->getStringTableBytes(), (U_32) sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
 //	        		
 //	        		if ((0 == tableSize) || (PRIMENUMBERHELPER_OUTOFRANGE == tableSize)) {
 //	        			SHRINIT_ERR_TRACE2(vm->sharedClassConfig->verboseFlags, J9NLS_SHRC_SHRINIT_CHECK_STRING_TABLE_RESET_MAY_FAIL, totalSize, osPageSize);
@@ -3450,7 +3450,7 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //						}
 //
 //						memset(vm->sharedInvariantInternTable, 0, sizeof(J9SharedInvariantInternTable));
-//						vm->sharedInvariantInternTable->performNodeAction = (UDATA (*)(J9SharedInvariantInternTable*, J9SharedInternSRPHashTableEntry*, UDATA, void*))sharedInternTable_performNodeAction;
+//						vm->sharedInvariantInternTable->performNodeAction = (UDATA (*)(J9SharedInvariantInternTable*, OMRSharedInternSRPHashTableEntry*, UDATA, void*))sharedInternTable_performNodeAction;
 //						vm->sharedInvariantInternTable->tableInternFxMutex = tableInternFxMutex;
 //						if (initializeSharedStringTable(vm)) {
 //							if (!doRebuildCacheData &&(!cacheHasIntegrity || ((runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_STRING_TABLE_CHECK) != 0))) {
@@ -3468,7 +3468,7 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //									}
 //
 //									/* Do an integrity check of the SRPHashTable. */
-//									if (srpHashTableVerify(table->sharedInvariantSRPHashtable, (U_32) cm->getStringTableBytes(), (U_32) sizeof(J9SharedInternSRPHashTableEntry))) {
+//									if (srpHashTableVerify(table->sharedInvariantSRPHashtable, (U_32) cm->getStringTableBytes(), (U_32) sizeof(OMRSharedInternSRPHashTableEntry))) {
 //										J9SharedVerifyStringTable verifyStringTable;
 //										UDATA numElements = srpHashTableGetCount(table->sharedInvariantSRPHashtable);
 //										if (numElements != *(table->totalSharedNodesPtr)) {
@@ -3482,7 +3482,7 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //													OMRPORTLIB,
 //													&verifyStringTableElement,
 //													(void *)&verifyStringTable,
-//													4096 / sizeof(J9SharedInternSRPHashTableEntry) / 2)
+//													4096 / sizeof(OMRSharedInternSRPHashTableEntry) / 2)
 //											) {
 //												Trc_SHR_INIT_failedSimplePoolConsistency();
 //												verifyError = 1;
@@ -3993,7 +3993,7 @@ omrshr_shutdown(OMR_VM *vm)
 //		vm->sharedInvariantInternTable = NULL;
 //	}
 	if (vm->sharedClassConfig) {
-		OMRSharedClassConfig* config = vm->sharedClassConfig;
+		OMRSharedCacheConfig* config = vm->sharedClassConfig;
 //		struct J9Pool* cpCachePool = config->jclClasspathCache;
 //		struct J9Pool* tokenCachePool = config->jclTokenCache;
 //		struct J9Pool* urlCachePool = config->jclURLCache;
@@ -4112,7 +4112,7 @@ omrshr_isAddressInCache(OMR_VM *vm, void *address, UDATA length)
 	BOOLEAN retval = FALSE;
 
 	if (NULL != vm->sharedClassConfig) {
-		J9SharedClassCacheDescriptor *cache = vm->sharedClassConfig->cacheDescriptorList;
+		OMRSharedCacheDescriptor *cache = vm->sharedClassConfig->cacheDescriptorList;
 		U_8 *ptr = (U_8*)address;
 
 		while (NULL != cache) {
@@ -4185,13 +4185,13 @@ getDefaultRuntimeFlags(void)
 }
 
 //void
-//omrshr_populatePreinitConfigDefaults(OMR_VM *vm, J9SharedClassPreinitConfig *updatedWithDefaults)
+//omrshr_populatePreinitConfigDefaults(OMR_VM *vm, OMRSharedCachePreinitConfig *updatedWithDefaults)
 //{
 //	J9SharedInvariantInternTable* table = vm->sharedInvariantInternTable;
 //	J9SharedClassJavacoreDataDescriptor descriptor;
 //	if (0 == ((SH_CacheMap*)(vm->sharedClassConfig->sharedClassCache))->getJavacoreData(vm, &descriptor)) {
 //		/*This should never happen. But if it does zero all the sizes in the structure.*/
-//		memset(updatedWithDefaults,0,sizeof(J9SharedClassPreinitConfig));
+//		memset(updatedWithDefaults,0,sizeof(OMRSharedCachePreinitConfig));
 //		return;
 //	}
 //
@@ -4324,7 +4324,7 @@ omrshr_parseMemSize(char * str, UDATA & value) {
 //
 //		omrfile_printf(OMRPORT_TTY_OUT, "addTestJitHint adding hint to %.*s.%.*s\n",
 //				J9UTF8_LENGTH(romclassName), J9UTF8_DATA(romclassName), J9UTF8_LENGTH(methodName), J9UTF8_DATA(methodName));
-//		J9SharedDataDescriptor newHint;
+//		OMRSharedCacheDescriptor newHint;
 //		U_8 hintData[] = {0xDE, 0xAD, 0xBE, 0xEF};
 //
 //		newHint.address = hintData;
@@ -4332,7 +4332,7 @@ omrshr_parseMemSize(char * str, UDATA & value) {
 //		newHint.type = OMRSHR_ATTACHED_DATA_TYPE_JITHINT;
 //		newHint.flags = OMRSHR_ATTACHED_DATA_NO_FLAGS;
 //
-//		OMRSharedClassConfig* config = vm->sharedClassConfig;
+//		OMRSharedCacheConfig* config = vm->sharedClassConfig;
 //		config->storeAttachedData(eventData->currentThread, romMethod, &newHint, false);
 //	}
 //
@@ -4390,7 +4390,7 @@ omrshr_createCacheSnapshot(OMR_VM* vm, const char* cacheName)
 			OMR_VMThread* currentThread = omr_vmthread_getCurrent(vm); //vm->internalVMFunctions->currentVMThread(vm);
 			SH_CacheMap* cm = (SH_CacheMap *)vm->sharedClassConfig->sharedClassCache;
 			SH_CompositeCacheImpl *cc = (SH_CompositeCacheImpl *)cm->getCompositeCacheAPI();
-			J9SharedCacheHeader* theca = cc->getCacheHeaderAddress();
+			OMRSharedCacheHeader* theca = cc->getCacheHeaderAddress();
 			UDATA cacheSize = cc->getCacheMemorySize();
 			UDATA headerSize = SH_OSCachesysv::getHeaderSize();
 			OSCachesysv_header_version_current* headerStart = (OSCachesysv_header_version_current*)((UDATA)theca - headerSize);
@@ -4667,7 +4667,7 @@ const U_8*
 omrshr_findCompiledMethodEx1(OMR_VMThread* currentThread, const MethodNameAndSignature* methodNameAndSignature, UDATA* flags)
 {
 	OMR_VM* vm = currentThread->_vm;
-	OMRSharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	OMRSharedCacheConfig* sharedClassConfig = vm->sharedClassConfig;
 	UDATA oldState = (UDATA)-1;
 	UDATA* currentState = &(currentThread->vmState);
 	const U_8* returnVal = 0;
@@ -4751,7 +4751,7 @@ omrshr_aotMethodOperation(OMR_VM* vm, char* methodSpecs, UDATA action)
  * @param[in] usingDefaultSize Whether the default cache size is being used.
  */
 static void
-adjustCacheSizes(OMRPortLibrary* portlib, UDATA verboseFlags, J9SharedClassPreinitConfig* piconfig, U_64 newSize)
+adjustCacheSizes(OMRPortLibrary* portlib, UDATA verboseFlags, OMRSharedCachePreinitConfig* piconfig, U_64 newSize)
 {
 	UDATA cacheSize = piconfig->sharedClassCacheSize;
 	double ratio = (double)newSize/cacheSize;
