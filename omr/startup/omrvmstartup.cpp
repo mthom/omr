@@ -33,8 +33,9 @@
 #include "omrvm.h"
 #include "thread_api.h"
 #include "omrutil.h"
+extern "C"{
 #include "shrinit.h"
-
+}
 #if defined(OMR_GC)
 #include "GCExtensionsBase.hpp"
 #include "Heap.hpp"

@@ -29,6 +29,7 @@ macro(create_jitbuilder_test target)
 	add_executable(${target} ${ARGN})
 	target_link_libraries(${target}
 		jitbuilder
+		shared_cache
 		${CMAKE_DL_LIBS})
 	add_test(NAME ${target}_example_as_test COMMAND ${target})
 endmacro(create_jitbuilder_test)

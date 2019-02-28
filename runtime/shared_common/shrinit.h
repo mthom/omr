@@ -22,12 +22,13 @@
 
 #if !defined(SHRINIT_H_INCLUDED)
 #define SHRINIT_H_INCLUDED
-
+//extern "C"{
 /* @ddr_namespace: default */
 #include "sharedconsts.h"
 #include "omrhookable.h"
 #include "include/SCAbstractAPI.h"
 #include "omrutil.h" // for PRIMENUMBER_HELPER_OUTOFRANGE
+
 
 UDATA omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const J9SharedDataDescriptor* data, UDATA forceReplace);
 const U_8* omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset);
@@ -83,7 +84,7 @@ typedef struct J9SharedClassesOptions {
 	U_8 action;
 	U_64 flag;
 } J9SharedClassesOptions;
-
+//}
 #define OPTION_NO_TIMESTAMP_CHECKS "noTimestampChecks"
 #define OPTION_NO_CLASSPATH_CACHEING "noClasspathCacheing"
 #define OPTION_NO_REDUCE_STORE_CONTENTION "noReduceStoreContention"

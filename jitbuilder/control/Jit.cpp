@@ -21,6 +21,10 @@
  *******************************************************************************/
 
 #include <stdio.h>
+#include "omrvm.h"
+extern "C"{
+  #include "shrinit.h"
+}
 #include "codegen/CodeGenerator.hpp"
 #include "compile/CompilationTypes.hpp"
 #include "compile/Method.hpp"
@@ -132,7 +136,9 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
       {
       return false;
       }
-
+   OMR_VM *omrvm;
+   OMR_Initialize(NULL,&omrvm);
+   omrshr_init(omrvm,0,nullptr);
    TR::Compiler->initialize();
 
    // --------------------------------------------------------------------------
@@ -194,7 +200,6 @@ compileMethodBuilder(TR::MethodBuilder *m, uint8_t **entry)
    {
    TR::ResolvedMethod resolvedMethod(m);
    TR::IlGeneratorMethodDetails details(&resolvedMethod);
-
    int32_t rc=0;
    *entry = compileMethodFromDetails(NULL, details, warm, rc);
    m->typeDictionary()->NotifyCompilationDone();

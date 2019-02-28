@@ -74,7 +74,8 @@ target_include_directories(jitbuilder
 )
 
 target_link_libraries(jitbuilder
-        shared_cache
+	omrvmstartup
+	shared_cache
 	${OMR_PORT_LIB}
 )
 

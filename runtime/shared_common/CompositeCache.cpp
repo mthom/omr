@@ -684,7 +684,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9Sha
 	if ((finalReadWriteSize == 0) && (piConfig->sharedClassReadWriteBytes == -1)) {
 		/* If no explicit value for sharedClassReadWriteBytes was set, set it to a proportion of the cache size */
 		finalReadWriteSize = SHC_PAD((_theca->totalBytes / DEFAULT_READWRITE_BYTES_DIVISOR), SHC_WORDALIGN);
-		maxSharedStringTableSize = srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(J9SharedInternSRPHashTableEntry), TRUE);
+		maxSharedStringTableSize = 0;//srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(J9SharedInternSRPHashTableEntry), TRUE);
 		if (maxSharedStringTableSize == PRIMENUMBERHELPER_OUTOFRANGE) {
 			/*
 			 * We should never be here.
@@ -702,7 +702,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9Sha
 		 * This will prevent wasting any extra memory that is wasted by SRP hashtable.
 		 */
 		if (!(*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE)) {
-			numOfSharedNodes = srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
+			numOfSharedNodes = 0;//srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
 			if (numOfSharedNodes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				/**
 				 * This should never happen since finalReadWriteSize is limited up to maxSharedStringTableSize above.
@@ -712,7 +712,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, J9Sha
 				 */
 				Trc_SHR_Assert_ShouldNeverHappen();
 			}
-			finalReadWriteSize = srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
+			finalReadWriteSize = 0;//srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
 		}
 	}
 
@@ -1037,7 +1037,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 	bool hasReadWriteMutex = SH_CompositeCacheImpl::hasReadWriteMutex(currentThread);
 	bool doReleaseWriteMutex = false;
 	bool doReleaseReadWriteMutex = false;
-	OMR_VM* vm = currentThread->_vm;
+	OMR_VM* vm = (OMR_VM*)currentThread;//currentThread->_vm;
 	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 
 	/* This function/method may be called indirectly from j9shr_init, return CC_STARTUP_OK if it is already started. */
@@ -1076,15 +1076,15 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 		}
 	}
 		
-	if (0 != omrthread_monitor_init(&_headerProtectMutex, 0)) {
-		Trc_SHR_CC_startup_Exit10(currentThread);
-		return CC_STARTUP_FAILED;
-	}
+//	if (0 != omrthread_monitor_init(&_headerProtectMutex, 0)) {
+//		Trc_SHR_CC_startup_Exit10(currentThread);
+//		return CC_STARTUP_FAILED;
+//	}
 	
-	if (0 != omrthread_monitor_init(&_runtimeFlagsProtectMutex, 0)) {
-		Trc_SHR_CC_startup_Exit11(currentThread);
-		return CC_STARTUP_FAILED;
-	}
+//	if (0 != omrthread_monitor_init(&_runtimeFlagsProtectMutex, 0)) {
+//		Trc_SHR_CC_startup_Exit11(currentThread);
+//		return CC_STARTUP_FAILED;
+//	}
 	
 	if (isFirstStart) {
 		_commonCCInfo->cacheIsCorrupt = 0;
@@ -1148,8 +1148,8 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, J9SharedClassPreinit
 		/* Note that OSCache startup does not leave any kind of lock on the cache, so the cache file could in theory
 		 * be recreated by another process whenever we're not holding a lock on it. This can happen until attach() is called */
 
-		OSCStarted = _oscache->startup(vm, ctrlDirName, cacheDirPerm, rootName, piconfig, ((_ccHead == NULL) ? SH_CompositeCacheImpl::getNumRequiredOSLocks() : 0), createFlags, _verboseFlags, *_runtimeFlags, openMode, vm->sharedCacheAPI->storageKeyTesting, &versionData, headerInit, SHR_STARTUP_REASON_NORMAL);
-
+//		OSCStarted = _oscache->startup(vm, ctrlDirName, cacheDirPerm, rootName, piconfig, ((_ccHead == NULL) ? SH_CompositeCacheImpl::getNumRequiredOSLocks() : 0), createFlags, _verboseFlags, *_runtimeFlags, openMode, vm->sharedCacheAPI->storageKeyTesting, &versionData, headerInit, SHR_STARTUP_REASON_NORMAL);
+		OSCStarted = _oscache->startup(vm, ctrlDirName, cacheDirPerm, rootName, piconfig, ((_ccHead == NULL) ? SH_CompositeCacheImpl::getNumRequiredOSLocks() : 0), createFlags, _verboseFlags, *_runtimeFlags, openMode, 0, &versionData, headerInit, SHR_STARTUP_REASON_NORMAL);
 		if ((OMR_ARE_ALL_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_ENABLE_TEST_BAD_BUILDID))
 			&& (OMR_ARE_NO_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_SNAPSHOT))
 		) {
