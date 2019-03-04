@@ -241,6 +241,7 @@ SH_OSCache::createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDAT
 	Trc_SHR_OSC_createCacheDir_Exit();
 	return rc;
 }
+
 /* Returns the full path of a cache based on the current cacheDir value */
 IDATA
 SH_OSCache::getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* buffer, UDATA bufferSize, const char* cacheNameWithVGen)

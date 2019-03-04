@@ -26,9 +26,12 @@
 
 #include "OSCache.hpp"
 
+namespace OSMemoryMappedCacheUtils
+{
 static SH_CacheFileAccess checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, I_32 openMode,
 					       LastErrorInfo* lastErrorInfo);
 static I_32 verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle,
 				       LastErrorInfo *lastErrorInfo);
+}
 
 #endif

@@ -41,8 +41,7 @@ class SH_OSCachemmap : public SH_OSCacheFile
 public:
 	static IDATA getCacheStats(OMR_VM* vm, const char* cacheDirName, const char* filePath, SH_OSCache_Info* returnVal, UDATA reason);
 	  
-	SH_OSCachemmap(OMRPortLibrary* portlib, OMR_VM* vm, const char* cacheDirName, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, IDATA numLocks,
-			UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer);
+	SH_OSCachemmap(OMRPortLibrary* portlib, OMR_VM* vm, const char* cacheDirName, const char* cacheName, OMRSharedCachePreinitConfig* piconfig, IDATA numLocks, UDATA createFlag, UDATA verboseFlags, U_64 runtimeFlags, I_32 openMode, J9PortShcVersion* versionData, SH_OSCacheInitializer* initializer);
 	/*This constructor should only be used by this class or its parent*/
 	SH_OSCachemmap() {};
 

@@ -42,7 +42,6 @@ public:
   virtual void detach();
 
   virtual IDATA internalAttach();
-
 protected:
   // this should probably be updated within the MemoryMapped class. It doesn't
   // apply to the shared memory version.

@@ -20,7 +20,6 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-
 #if !defined(OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED
 
@@ -31,11 +30,26 @@
 #include "omr.h"
 #include "omrport.h"
 
-// an implementation of a persistent shared cache that uses omrmmap primitives,
+// an implementation of a persistent shared cache that uses omrmmap primitives
 // and region-based locks on sections of files.
 class OSMemoryMappedCache: public OSPersistentCache {
 public:  
   virtual void getError();
+
+  OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
+					   OMR_VM* vm,
+					   const char* cacheDirName,
+					   const char* cacheName,
+					   IDATA numLocks,
+					   OSMemoryMappedCacheConfigOptions configOptions,
+					   I_32 openMode);
+
+  bool startup(I_32 openMode);
+
+  //TODO: should these functions be virtual?
+  virtual void initialize(OMRPortLibrary* library);
+  virtual void finalise();
+  
 protected:
   IDATA internalAttach();
   void internalDetach();
@@ -45,7 +59,6 @@ protected:
   OSMemoryMappedInitializationContext* _init_context;
   OSMemoryMappedCacheConfig* _config;
 
-  // should this be in the config object? I don't even know
   OMRMmapHandle *_mapFileHandle;
 };
 

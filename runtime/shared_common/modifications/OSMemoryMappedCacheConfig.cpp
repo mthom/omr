@@ -25,6 +25,31 @@
 
 #include "OSMemoryMappedCacheConfig.hpp"
 
+/*
+PreinitConfig is this:
+
+Notice, this is a J9 specific thing. It should be ignored within this
+class, but addressed in J9MemoryMappedCache, obviously.
+
+typedef struct OMRSharedCachePreinitConfig {
+	UDATA sharedClassCacheSize;
+	IDATA sharedClassInternTableNodeCount;
+	IDATA sharedClassMinAOTSize;
+	IDATA sharedClassMaxAOTSize;
+	IDATA sharedClassMinJITSize;
+	IDATA sharedClassMaxJITSize;
+	IDATA sharedClassReadWriteBytes;
+	IDATA sharedClassDebugAreaBytes;
+	IDATA sharedClassSoftMaxBytes;
+} OMRSharedCachePreinitConfig;
+ */
+
+OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(U_32 numLocks)						     
+  : _numLocks(numLocks)
+  , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
+  , _readWriteLockID(OMRSH_OSCACHE_LOCKID_READWRITELOCK)
+{}
+
 OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig()
   : _numLocks(OMRSH_OSCACHE_MMAP_LOCK_COUNT)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)

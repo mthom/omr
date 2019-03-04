@@ -22,6 +22,122 @@
 
 #include "OSMemoryMappedCache.hpp"
 
+OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
+					 OMR_VM* vm,
+					 const char* cacheDirName,
+					 const char* cacheName,
+					 IDATA numLocks,
+					 OSMemoryMappedCacheConfigOptions configOptions,
+					 I_32 openMode)
+  : _config(OSMemoryMappedCacheConfig(numLocks))
+  , _configOptions(configOptions)
+{
+  initialize(library);
+  startup(openMode, ..);
+}
+
+void OSMemoryMappedCache::initialize(OMRPortLibrary* library)
+{
+  /* memForConstructor is used in J9 as a place to allocate the cache in. Now
+  that we're in OMR, I don't what will take its place, if anything.
+  Trc_SHR_OSC_Mmap_initialize_Entry(portLibrary, memForConstructor);
+  */
+
+  //TODO: set _portLibrary in commonInit.
+  commonInit(library); //, generation);
+
+  _config->_fileHandle = -1;
+  _config->_actualFileLength = 0;
+  _config->_finalised = 0;
+
+  _mapFileHandle = NULL;
+
+  for (UDATA i = 0; i < J9SH_OSCACHE_MMAP_LOCK_COUNT; i++) {
+    _config->_lockMutex[i] = NULL;
+  }
+
+  //TODO: shouldn't this be in the OSCache constructor? Seems both universal and benign in
+  //its effects.
+  _corruptionCode = NO_CORRUPTION;
+  _corruptValue = NO_CORRUPTION;
+
+  _config->_cacheFileAccess = J9SH_CACHE_FILE_ACCESS_ALLOWED;
+}
+
+void OSMemoryMappedCache::finalise()
+{
+  //Trc_SHR_OSC_Mmap_finalise_Entry();
+
+  commonCleanup();
+
+  _config->_fileHandle = -1;
+  _config->_actualFileLength = 0;
+  _config->_finalised = 1;
+
+  _mapFileHandle = NULL;
+
+  for (UDATA i = 0; i < _config->_numLocks; i++) { // J9SH_OSCACHE_MMAP_LOCK_COUNT; i++) {
+    if(NULL != _config->_lockMutex[i]) {
+      omrthread_monitor_destroy(_config->_lockMutex[i]);
+    }
+  }
+
+  //Trc_SHR_OSC_Mmap_finalise_Exit();
+}
+
+bool OSMemoryMappedCache::startup(I_32 openMode)
+{
+  I_32 mmapCapabilities = omrmmap_capabilities();
+  LastErrorInfo lastErrorInfo;
+
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  /*
+  Trc_SHR_OSC_Mmap_startup_Entry(cacheName, ctrlDirName,
+				 (piconfig!= NULL)? piconfig->sharedClassCacheSize : defaultCacheSize,
+				 numLocks, createFlag, verboseFlags, openMode);
+  */
+
+  /* no longer need these, obviously:
+
+  versionData->cacheType = OMRPORT_SHR_CACHE_TYPE_PERSISTENT;
+  mmapCapabilities = omrmmap_capabilities();
+  */
+
+  // we need both writing and synchronization capabilities in order to
+  // have a memory-mapped cache.
+  if (!(mmapCapabilities & OMRPORT_MMAP_CAPABILITY_WRITE) || !(mmapCapabilities & OMRPORT_MMAP_CAPABILITY_MSYNC))
+  {
+    Trc_SHR_OSC_Mmap_startup_nommap(mmapCapabilities);
+    errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_MMAPCAP, NULL);
+    goto _errorPreFileOpen;
+  }
+
+  //TODO: add these parameters (ctrlDirName, cacheDirPermissions, openMode) to this function.
+  if(initCacheDirName(ctrlDirName, cacheDirPermissions, openMode) != 0) {
+    //Trc_SHR_OSC_Mmap_startup_commonStartupFailure();
+    goto _errorPreFileOpen;
+  }
+
+  //TODO: overload this function, provide a cacheName parameter to this function.
+  if(initCacheName(cacheName) != 0) {
+    goto _errorPreFileOpen;
+  }
+
+  //Trc_SHR_OSC_Mmap_startup_commonStartupSuccess();
+  /* Detect remote filesystem */
+  if (openMode & J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE) {
+    // _cacheLocation, or _cacheDirName as it was called, is initialized inside commonStartup.
+    if (0 == omrfile_stat(_cacheLocation, 0, &statBuf)) {
+      if (statBuf.isRemote) {
+	//Trc_SHR_OSC_Mmap_startup_detectedNetworkCache();
+	errorHandler(J9NLS_SHRC_OSCACHE_MMAP_NETWORK_CACHE, NULL);
+	goto _errorPreFileOpen;
+      }
+    }
+  }
+}
+
 /*
  * This function performs enough of an attach to start the cache, but nothing more
  * The internalDetach function is the equivalent for detach

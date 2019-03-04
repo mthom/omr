@@ -20,7 +20,6 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-
 #if !defined(OSCACHE_PERSISTENT_HPP_INCLUDED)
 #define OSCACHE_PERSISTENT_HPP_INCLUDED
 
@@ -37,9 +36,14 @@ public:
   virtual void dontNeedMetadata(OMR_VMThread* currentThread, OSCacheRegion* region);
 
 protected:
+  virtual IDATA initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode);
+  virtual IDATA initCacheName(const char* cacheName) = 0;
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
+  virtual IDATA commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName,
+			      OSCacheConfigOptions* configOptions, I_32 openMode);
 
-  // was:  char *_cacheDir; // the path to the directory containing the cache file.
+  I_32 _openMode; 
+  // was:  char *_cacheDir; // the path to the directory containing the cache file.  
   char *_cacheLocation;  // the path, or a URI, or something, to the resource containing the cache.  
   char *_cacheName; // the name of the cache file. Together with _cacheDir, we have the effective field,
                     // _cachePathName.

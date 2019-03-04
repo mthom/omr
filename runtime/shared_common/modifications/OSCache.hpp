@@ -110,7 +110,10 @@ protected:
   IDATA _corruptionCode;
   UDATA _corruptValue;
 
-  OSCacheConfig* _config;
+  //  it's best if caches embed their own configuration objects.
+  //  OSCacheConfig* _config;
+  OMRPortLibrary* _portLibrary;
+  OSCacheConfigOptions _configOptions;
 };
 
 #endif

@@ -31,7 +31,6 @@ public:
   // attach to a freshly created/connected cache. the logic of these varies
   // according to the initialization context.
   virtual IDATA internalAttach(OSMemoryMappedCache* cache) = 0;
-  virtual void internalDetach() = 0;
 };
 
 #endif

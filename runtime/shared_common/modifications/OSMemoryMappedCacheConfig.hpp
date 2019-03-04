@@ -40,10 +40,10 @@ typedef enum SH_CacheFileAccess {
 #define OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK 0
 #define OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK 1
 
-// a config object owns two OSCacheRegion.
 class OSMemoryMappedCacheConfig : public OSCacheConfig<OSMemoryMappedCacheLayout>
 {
 public:
+  OSMemoryMappedCacheConfig(U_32 numLocks);
   OSMemoryMappedCacheConfig();
 
   virtual OSMemoryMappedCacheCreatingContext* constructCreatingContext();
@@ -66,11 +66,12 @@ public:
 
   virtual U_64* getHeaderLocation() = 0;
   virtual U_64* getHeaderSize() = 0;
+  
 protected:
   friend class OSMemoryMappedCacheCreatingContext;
   friend class OSMemoryMappedCacheAttachingContext;
 
-  IDATA acquireHeaderWriteLock(LastErrorInfo* lastError);
+  IDATA acquireHeaderWriteLock(LastErrorInfo* lastErrorInfo);
   
   // the generation is only used for determining the location of
   // the header lock. if we use the _config object to do that instead,
@@ -79,12 +80,12 @@ protected:
   IDATA releaseAttachReadLock();
 
   OSMemoryMappedCacheHeader* _header;
-
+  
   I_64 _actualFileLength;
   UDATA _fileHandle;
 
   UDATA _runningReadOnly;
-  UDATA _finalised; // is the cache finalised, ie. is initialization complete?
+  UDATA _finalised; // is the cache finalised, resources returned before the cache is destroyed
   SH_CacheFileAccess _cacheFileAccess; // the status of the cache file access.
 
   omrthread_monitor_t* _lockMutex; // there should be _numLocks of these.
