@@ -31,14 +31,17 @@ class OSMemoryMappedCacheHeader : public OSCacheRegion
 public:
   virtual U_64 getHeaderLockOffset() = 0;
   virtual U_64 getAttachLockOffset() = 0;
-
+  // was: initOSCacheHeader.
+  virtual void init(OSMemoryMappedCacheLayout* layout) = 0;
+  
   U_64 getAttachLockSize() {
     return sizeof(_attachLock);
   }
-
 protected:
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
 
+  // TODO: add eyecatcher of length J9SH_OSCACHE_MMAP_EYECATCHER.
+  
   // from the OSCache_header* and OSCachemmap_header* structs.
   // U_32 _headerSize;   // from OSCache_header2: dataLength
   // J9SRP _headerStart; // from OSCache_header2: dataStart

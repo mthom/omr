@@ -101,9 +101,7 @@ SH_OSCachemmap::initialize(OMRPortLibrary* portLibrary, char* memForConstructor,
 	for (UDATA i = 0; i < J9SH_OSCACHE_MMAP_LOCK_COUNT; i++) {
 		_lockMutex[i] = NULL;
 	}
-
-	//TODO: shouldn't this be in the OSCache constructor? Seems both universal and benign in
-	//its effects.
+	
 	_corruptionCode = NO_CORRUPTION;
 	_corruptValue = NO_CORRUPTION;	
 	_cacheFileAccess = J9SH_CACHE_FILE_ACCESS_ALLOWED;

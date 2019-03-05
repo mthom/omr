@@ -23,3 +23,4 @@
 #include "omrport.h"
 
 #include "OSMemoryMappedCacheHeader.hpp"
+#include "OSMemoryMappedCacheLayout.hpp"

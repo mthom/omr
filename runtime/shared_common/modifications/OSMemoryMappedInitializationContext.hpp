@@ -33,6 +33,7 @@ public:
   OSMemoryMappedInitializationContext(OSMemoryMappedCache* cache)
     : _cache(cache)
   {}
+  
   // attach to a freshly created/connected cache. the logic of these varies
   // according to the initialization context.
   virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions) = 0;

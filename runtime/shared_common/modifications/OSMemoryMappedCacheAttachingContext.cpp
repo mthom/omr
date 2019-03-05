@@ -27,18 +27,30 @@
 // TODO: move constructAttachingContext and constructCreatingContext to OSMemoryMappedCache.
 // since the Context classes own their own cache ptr.
 
-/* ok, this is very confusing, and I need to think of better
-names. The 'secret' is this: there's an internalAttach in the
-AttachingContext and CreatingContext classes, that supplements
-OSMemoryMappedCache's internalAttach method, since these contexts are
-stateful objects telling the cache whether it is attaching to an
-existing cache or creating a new one.
-*/
-IDATA OSMemoryMappedCacheAttachingContext::internalAttach()
+IDATA OSMemoryMappedCacheAttachingContext::initAttach()
 {
-  //TODO: I remember porting this! But the code has seemingly
-  //vanished. I might have failed to add it to bitbucket. Check
-  //tomorrow (today is 04/03/2019).
+  IDATA rc = OMRSH_OSCACHE_SUCCESS;
+
+  J9SRP* dataStartField;
+  U_32* dataLengthField;
+
+  if ((dataLengthField = _config->getDataLengthFieldLocation())) {
+    _cache->_config->_layout->_dataLength = *dataLengthField;
+  }
+
+  if ((dataStartField = _config->getDataSectionLocation())) {
+    _cache->_config->_layout->_dataStart = *dataStartField; //whaat?: MMAP_DATASTARTFROMHEADER(dataStartField);
+  }
+
+  if (NULL == *dataStartField) {
+    Trc_SHR_OSC_Mmap_internalAttach_corruptcachefile();
+    OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_DATA_START_NULL, *dataStartField);
+
+    _cache->setCorruptionContext(CACHE_DATA_NULL, (UDATA)*dataStartField);
+    rc = OMRSH_OSCACHE_CORRUPT;
+  }
+
+  return rc;
 }
 
 // we probably also need a OSMemoryMappedStartup class, since the method is so huge,

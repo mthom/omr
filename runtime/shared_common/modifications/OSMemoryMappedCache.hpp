@@ -38,17 +38,23 @@ public:
 
   OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
 					   OMR_VM* vm,
+					   const char* cacheName,					   
 					   const char* cacheDirName,
-					   const char* cacheName,
+					   UDATA cacheDirPermissions,
 					   IDATA numLocks,
-					   OSMemoryMappedCacheConfigOptions configOptions,
+					   OSCacheConfigOptions configOptions,
 					   I_32 openMode);
 
-  bool startup(I_32 openMode);
+  bool startup(const char* cacheName, const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode);
+  IDATA destroy(bool suppressVerbose, bool isReset);
 
+  virtual void* attach();
+  virtual void detach();
+  
   //TODO: should these functions be virtual?
   virtual void initialize(OMRPortLibrary* library);
   virtual void finalise();
+  virtual void cleanup();
   
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
@@ -60,11 +66,17 @@ protected:
   IDATA internalAttach();
   void internalDetach();
   
+  virtual void runExitProcedure();  
+  virtual void handleCacheHeaderCorruption(IDATA headerRc);
+#if defined(OMRSH_MSYNC_SUPPORT)
+  virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
+#endif
+  
   OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator();
 
   OSMemoryMappedInitializationContext* _init_context;
   OSMemoryMappedCacheConfig* _config;
-
+  
   OMRMmapHandle *_mapFileHandle;
 };
 

@@ -24,10 +24,14 @@
 
 #include "OSMemoryMappedCacheLayout.hpp"
 
+class OSMemoryMappedCacheHeader;
+
 class OSMemoryMappedCacheLayout : public OSCacheLayout {
 public:
   OSMemoryMappedCacheLayout();
 protected:
+  friend class OSMemoryMappedCacheHeader;
+  
   U_32 _cacheSize;
   void* _headerStart;
   void* _dataStart;

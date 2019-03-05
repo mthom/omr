@@ -34,8 +34,10 @@ public:
   {}
   
   virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
+  virtual IDATA initAttach();
   virtual void setCacheAreaBoundaries();
   virtual bool creatingNewCache();
+  virtual I32 createCacheHeader();
 protected:  
 }
 

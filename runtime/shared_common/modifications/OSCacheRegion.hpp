@@ -30,15 +30,15 @@ class OSCacheLayout;
 
 class OSCacheRegion {
 public:
-  // I think we should have a OSCacheRegionLocks class, which normalizes again, y'know,
-  // the different lock capabilities and their implementations. Also allows us
-  // to mix lock types freely within the same cache, not that we'd want to.
-  // The region can own a vector of such objects. It should probably be of fixed sized.
-  // Although dynamically allocated, so I dunno.. a vector?
-  virtual IDATA getLockCapabilities(void) = 0;  
-  
+  // the start address of the region.
+  virtual UDATA getRegionStartAddress() = 0;
   // calculates the size of the region.
   virtual UDATA getRegionSize() = 0;
+
+  // render the Region's settings as flags that can be used
+  // by the underlying ocmponents of the OMRPortLibrary, as anticipated
+  // by the OSCacheRegion subclass.
+  virtual IDATA renderToFlags() = 0;
 
   // check the cache region for corruption using whatever means are
   // available.  I'm not sure this method should belong to the

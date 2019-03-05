@@ -49,8 +49,8 @@ public:
   virtual IDATA getWriteLockID();
   virtual IDATA getReadWriteLockID();
 
-  virtual IDATA acquireLock(UDATA lockID, LastErrorInfo* lastErrorInfo = NULL);
-  virtual IDATA releaseLock(UDATA lockID);
+  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL);
+  virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
 
   // let these be decided by the classes of the generational header versions. They will
   // know where the locks lie and how large they are.
@@ -68,26 +68,31 @@ public:
 
   virtual bool setCacheLength(LastErrorInfo* lastErrorInfo) = 0;
   virtual bool setCacheInitComplete() = 0; // a header dependent thing. hence it's a pure virtual function.
-  
+
+  // replaces SH_OSCachemmap::isCacheHeaderValid(..).
+  virtual bool isCacheHeaderValid() = 0;
+
+  virtual bool updateLastAttachedTime(OMRPortLibrary* library);
+  virtual bool updateLastDetachedTime(OMRPortLibrary* library);
 protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;
   friend class OSMemoryMappedCacheAttachingContext;
 
-  IDATA acquireHeaderWriteLock(LastErrorInfo* lastErrorInfo);
-  //TODO: implement!
-  IDATA releaseHeaderWriteLock(LastErrorInfo* lastErrorInfo);
-  
+  IDATA acquireHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
+  IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
+
   // the generation is only used for determining the location of
   // the header lock. if we use the _config object to do that instead,
   // we can omit the generation parameter.
-  IDATA acquireAttachReadLock(LastErrorInfo *lastErrorInfo);
-  IDATA releaseAttachReadLock();
+  IDATA acquireAttachReadLock(OMRPortLibrary* library, LastErrorInfo *lastErrorInfo);
+  IDATA releaseAttachReadLock(OMRPortLibrary* library);
 
-  inline bool cacheFileAccessAllowed();
-  
+  inline bool cacheFileAccessAllowed() const;
+  bool isCacheAccessible() const;
+
   OSMemoryMappedCacheHeader* _header;
-  
+
   I_64 _actualFileLength;
   UDATA _fileHandle;
 

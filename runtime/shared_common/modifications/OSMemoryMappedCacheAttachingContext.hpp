@@ -38,18 +38,8 @@ public:
   {}
 
   virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
-  virtual IDATA internalAttach(OSMemoryMappedCache* cache);
-  virtual bool creatingNewCache();
-  
-  // attach originally had this parameter: ..., J9PortShcVersion* expectedVersionData)
-  virtual void *attach(OMR_VMThread* currentThread);
-  virtual void detach();  
-protected:
-  // this should probably be updated within the MemoryMapped class. It doesn't
-  // apply to the shared memory version.
-  #if defined (J9SHR_MSYNC_SUPPORT)
-  virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
-  #endif
+  virtual IDATA initAttach(OSMemoryMappedCache* cache);
+  virtual bool creatingNewCache();  
 };
 
 #endif

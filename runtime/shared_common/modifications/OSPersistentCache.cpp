@@ -36,7 +36,8 @@ IDATA OSPersistentCache::initCacheDirName(const char* ctrlDirName, UDATA cacheDi
   // Trc_SHR_OSC_commonStartup_Entry();
   _openMode = openMode;
 
-  //TODO: do we need this now? Yes? No?
+  //TODO: do we need this now? Yes? No? A: No. It's specified in the ConfigOptions object. Toggling
+  //the flag is no longer the responsibility of this class.
   // _isUserSpecifiedCacheDir = (OMR_ARE_ALL_BITS_SET(_runtimeFlags, OMRSHR_RUNTIMEFLAG_CACHEDIR_PRESENT));
   if (!(_cacheLocation = (char*)omrmem_allocate_memory(OMRSH_MAXPATH, OMRMEM_CATEGORY_CLASSES))) {
     //Trc_SHR_OSC_commonStartup_nomem_cacheDirName();
@@ -65,4 +66,36 @@ IDATA OSPersistentCache::initCacheDirName(const char* ctrlDirName, UDATA cacheDi
      checks to the configuration object. Also, stuff with generation
      and version labels, and buildIDs. How the cachePathName is
      populated using that information. */
+}
+
+/* This is an unhelpful name that describes an obscure feature: the
+   ability to disclaim regions of memory from page
+   protection. Specifically, if an area of memory is no longer needed
+   by a program, the program can use the disclaim64 routine to declare
+   it as such to the AIX OS. Hence the flag. The omrmmap_dont_need
+   routine wraps it inside port/unix/omrmmap.c. If OMR is running on
+   Linux or OS X (which is vastly more likely), the call
+   madvise((void*)roundedStart, roundedLength, MADV_DONTNEED) is used
+   instead (it does the same thing, basically, but because it's an
+   "advisement", it shrinks from making hard guarantees). madvise is
+   documented here:
+
+   http://man7.org/linux/man-pages/man2/madvise.2.html
+*/
+
+//TODO: determine whether this will instead deal with OSCacheRegion's.
+void
+OSPersistentCache::dontNeedMetadata(const void* startAddress, size_t length)
+{
+/* AIX does not allow memory to be disclaimed for memory mapped files */
+#if !defined(AIXPPC)
+  /* why does it need the specific VM?!? It only appears to use it to get at the 
+     portLibrary. But the _portLibrary just points to a table of C functions. I can't
+     imagine how those addresses might be dependent on the thread or VM objects.
+     This seems totally unnecessary to me, since we have _portLibrary at the ready
+     in this class. So, I've removed the VM parameter. */
+  //OMRPORT_ACCESS_FROM_VMC(currentThread->_vm);
+    OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+    omrmmap_dont_need(startAddress, length);
+#endif
 }

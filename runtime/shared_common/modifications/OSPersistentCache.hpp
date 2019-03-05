@@ -33,7 +33,7 @@ public:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache
    */
-  virtual void dontNeedMetadata(OMR_VMThread* currentThread, OSCacheRegion* region);
+  virtual void dontNeedMetadata(const void* startAddress, size_t length);
 
 protected:
   virtual IDATA initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode);
