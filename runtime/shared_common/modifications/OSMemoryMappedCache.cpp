@@ -89,6 +89,8 @@ bool OSMemoryMappedCache::startup(I_32 openMode)
 {
   I_32 mmapCapabilities = omrmmap_capabilities();
   LastErrorInfo lastErrorInfo;
+  IDATA errorCode = OMRSH_OSCACHE_FAILURE;
+  struct J9FileStat statBuf;
 
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
@@ -136,6 +138,199 @@ bool OSMemoryMappedCache::startup(I_32 openMode)
       }
     }
   }
+
+  if (!openCacheFile(configOptions, &lastErrorInfo)) { // _createFlags & OMRSH_OSCACHE_CREATE, &lastErrorInfo)) {
+    // Trc_SHR_OSC_Mmap_startup_badfileopen(_cachePathName);
+    errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_FILEOPEN_ERROR, &lastErrorInfo);  /* TODO: ADD FILE NAME */
+    goto _errorPostFileOpen;
+  }
+  // Trc_SHR_OSC_Mmap_startup_goodfileopen(_cachePathName, _fileHandle);
+
+  if (!configOptions.isUserSpecifiedCacheDir()
+      && !configOptions.openToDestroyExistingCache()
+      && !configOptions.openToDestroyExpiredCache())
+  {
+    _config->_cacheFileAccess = OSMemoryMappedCacheUtils::checkCacheFileAccess(_portLibrary,
+									       _fileHandle,
+									       configOptions->openMode(),
+									       &lastErrorInfo);
+    if (configOptions.openToStatExistingCache() || _config->cacheFileAccessAllowed())
+    {
+      // Trc_SHR_OSC_Mmap_startup_fileaccessallowed(_cachePathName);
+    } else {
+      // handle cache access errors.
+      switch(_config->_cacheFileAccess) {
+      case OMRSH_CACHE_FILE_ACCESS_GROUP_ACCESS_REQUIRED:
+	errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_GROUPACCESS_REQUIRED, NULL);
+	goto _errorPostFileOpen;
+	break;
+      case OMRSH_CACHE_FILE_ACCESS_OTHERS_NOT_ALLOWED:
+	errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_OTHERS_ACCESS_NOT_ALLOWED, NULL);
+	goto _errorPostFileOpen;
+	break;
+      case OMRSH_CACHE_FILE_ACCESS_CANNOT_BE_DETERMINED:
+	errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_INTERNAL_ERROR_CHECKING_CACHEFILE_ACCESS, &lastErrorInfo);
+	goto _errorPostFileOpen;
+	break;
+      default:
+	Trc_SHR_Assert_ShouldNeverHappen();
+      }
+    }
+  }
+
+  if(configOptions.openToDestroyExistingCache()) {
+    Trc_SHR_OSC_Mmap_startup_openCacheForDestroy(_cachePathName);
+    goto _exitForDestroy;
+  }
+
+  for (UDATA i = 0; i < _numLocks; i++) { // J9SH_OSCACHE_MMAP_LOCK_COUNT; i++) {
+    if (omrthread_monitor_init_with_name(&_config->_lockMutex[i], 0, "Persistent shared classes lock mutex")) {
+      // Trc_SHR_OSC_Mmap_startup_failed_mutex_init(i);
+      goto _errorPostFileOpen;
+    }
+  }
+  // Trc_SHR_OSC_Mmap_startup_initialized_mutexes();
+
+  /* Get cache header write lock */
+  if (-1 == _config->acquireHeaderWriteLock(&lastErrorInfo)) {
+    //Trc_SHR_OSC_Mmap_startup_badAcquireHeaderWriteLock();
+    errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_STARTUP_ACQUIREHEADERWRITELOCK_ERROR, &lastErrorInfo);
+    errorCode = OMRSH_OSCACHE_CORRUPT;
+
+    //OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_CORRUPT_ACQUIRE_HEADER_WRITE_LOCK_FAILED, lastErrorInfo.lastErrorCode);
+    setCorruptionContext(ACQUIRE_HEADER_WRITE_LOCK_FAILED, (UDATA)lastErrorInfo.lastErrorCode);
+    goto _errorPostHeaderLock;
+  }
+
+  //Trc_SHR_OSC_Mmap_startup_goodAcquireHeaderWriteLock();
+
+  IDATA errorCode = OMRSH_OSCACHE_FAILURE;
+  
+  /* Check the length of the file */
+#if defined(WIN32) || defined(WIN64)
+  if ((_cacheSize = (U_32)omrfile_blockingasync_flength(_fileHandle)) > 0) {
+#else
+  if ((_cacheSize = (U_32)omrfile_flength(_fileHandle)) > 0) {
+#endif
+    // we are attaching to an existing cache.
+    _init_context = OSMemoryMappedCacheAttachingContext(this);
+    
+    if(!_init_context->startup(errorCode, retryCntr, configOptions)) {
+      goto _errorPostAttach;
+    }
+  } else {
+    _init_context = OSMemoryMappedCacheCreatingContext(this);
+    
+    if(!_init_context->startup(errorCode, retryCntr, configOptions)) {
+      goto _errorPostHeaderLock;
+    } else {
+      _config->setCacheInitComplete();
+	//this code replaces this:
+	/*
+	if (creatingNewCache) {
+	  OSCachemmap_header_version_current *cacheHeader = (OSCachemmap_header_version_current *)_headerStart;
+	
+	  cacheHeader->oscHdr.cacheInitComplete = 1;
+	}
+	*/
+      }
+    }
+  }
+  
+_exitForDestroy:
+  _finalised = 0;
+  // TODO: determine whether _startupCompleted is necessary.
+  _startupCompleted = true;
+  
+  Trc_SHR_OSC_Mmap_startup_Exit();
+  return true;
+_errorPostAttach :
+  internalDetach();//_activeGeneration);
+_errorPostHeaderLock :
+  releaseHeaderWriteLock(NULL);//_activeGeneration, NULL);
+_errorPostFileOpen :
+  closeCacheFile();
+  if (_init_context->creatingNewCache()) { 
+    deleteCacheFile(NULL); //TODO:implement
+  }
+_errorPreFileOpen :
+  setError(errorCode); //TODO: implement
+  return false;
+}
+
+bool
+OSMemoryMappedCache::openCacheFile(OSCacheConfigOptions configOptions, LastErrorInfo* lastErrorInfo)
+{
+  bool result = true;
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  //TODO: _openMode should be fed into the ConfigOptions object, subclassed for MemoryMappedCache's.
+  //(_openMode & J9OSCACHE_OPEN_MODE_DO_READONLY) ? EsOpenRead : (EsOpenRead | EsOpenWrite);
+  I_32 openFlags = configOptions.readOnlyOpenMode() ? EsOpenRead: (EsOpenRead | EsOpenWrite);
+  I_32 fileMode = configOptions.fileMode();
+
+  // Trc_SHR_OSC_Mmap_openCacheFile_entry();
+
+  if(configOptions.createFile() && (openFlags & EsOpenWrite)) {
+    openFlags |= EsOpenCreate;
+  }
+
+  for(IDATA i = 0; i < 2; i++) {
+#if defined(WIN32) || defined(WIN64)
+    _fileHandle = omrfile_blockingasync_open(_cachePathName, openFlags, fileMode);
+#else
+    _fileHandle = omrfile_open(_cachePathName, openFlags, fileMode);
+#endif
+
+    if ((_fileHandle == -1) && (openFlags != EsOpenRead) && configOptions.tryReadOnlyOnOpenFailure()) {
+      openFlags &= ~EsOpenWrite;
+      continue;
+    }
+
+    break;
+  }
+
+  if (-1 == _fileHandle) {
+    if (NULL != lastErrorInfo) {
+      lastErrorInfo->populate();
+    }
+    Trc_SHR_OSC_Mmap_openCacheFile_failed();
+    result = false;
+  } else if ((openFlags & (EsOpenRead | EsOpenWrite)) == EsOpenRead) {
+    Trc_SHR_OSC_Event_OpenReadOnly();
+    _config->_runningReadOnly = true;
+  }
+
+  Trc_SHR_OSC_Mmap_openCacheFile_exit();
+  return result;
+}
+
+bool OSMemoryMappedCache::closeCacheFile()
+{
+  bool result = true;
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  Trc_SHR_Assert_Equals(_config->_layout->_headerStart, NULL);
+  Trc_SHR_Assert_Equals(_config->_layout->_dataStart, NULL);
+
+  if(-1 == _fileHandle) {
+    return true;
+  }
+  Trc_SHR_OSC_Mmap_closeCacheFile_entry();
+#if defined(WIN32) || defined(WIN64)
+  if(-1 == omrfile_blockingasync_close(_fileHandle)) {
+#else
+  if(-1 == omrfile_close(_fileHandle)) {
+#endif
+    Trc_SHR_OSC_Mmap_closeCacheFile_failed();
+    result = false;
+  }
+
+  _config->_fileHandle = -1;
+  // _startupCompleted = false;
+
+  Trc_SHR_OSC_Mmap_closeCacheFile_exit();
+  return result;
 }
 
 /*
@@ -210,13 +405,13 @@ IDATA OSMemoryMappedCache::internalAttach() //bool isNewCache, UDATA generation)
   }
 
   _layout->_headerStart = _mapFileHandle->pointer;
-  Trc_SHR_OSC_Mmap_internalAttach_goodmapfile(_layout->_headerStart);
+  // Trc_SHR_OSC_Mmap_internalAttach_goodmapfile(_layout->_headerStart);
 
   if(_init_context->internalAttach(this) == OMRSH_OSCACHE_CORRUPT) {
     goto error;
   }
 
-  Trc_SHR_OSC_Mmap_internalAttach_Exit(_dataStart, sizeof(OSCachemmap_header_version_current));
+  // Trc_SHR_OSC_Mmap_internalAttach_Exit(_dataStart, sizeof(OSCachemmap_header_version_current));
   return 0;
 
  error:

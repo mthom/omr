@@ -44,7 +44,7 @@ typedef struct OMRSharedCachePreinitConfig {
 } OMRSharedCachePreinitConfig;
  */
 
-OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(U_32 numLocks)						     
+OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(U_32 numLocks)
   : _numLocks(numLocks)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
   , _readWriteLockID(OMRSH_OSCACHE_LOCKID_READWRITELOCK)
@@ -457,4 +457,9 @@ IDATA OSMemoryMappedCacheConfig::releaseAttachReadLock()
 
   Trc_SHR_OSC_Mmap_releaseAttachReadLock_Exit(rc);
   return rc;
+}
+
+bool OSMemoryMappedCacheConfig::cacheFileAccessAllowed()
+{
+  return _cacheFileAccess == OMRSH_CACHE_FILE_ACCESS_ALLOWED;
 }

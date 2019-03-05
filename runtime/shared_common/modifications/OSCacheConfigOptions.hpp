@@ -29,12 +29,35 @@ public:
   };
 
   enum RuntimeOptions {
-    GETCACHEDIR_USE_USERHOME // relates to OMRSHMEM_GETDIR_USE_USERHOME
+    GETCACHEDIR_USE_USERHOME, // relates to OMRSHMEM_GETDIR_USE_USERHOME
+    CACHEDIR_PRESENT // the user specified the cache directory as a runtime flag
   };
 
   enum VerboseOptions {
   };
 
+  enum StartupReason {
+  };
+
+  virtual bool isUserSpecifiedCacheDir();
+  // is the cache being opened in read-only mode?
+  virtual bool readOnlyOpenMode();
+  
+  virtual I_32 fileMode();
+  virtual I_32 openMode();
+  
+  // are we opening the cache in order to destroy?
+  virtual bool openToDestroyExistingCache();
+  virtual bool openToDestroyExpiredCache();
+  virtual bool openToStatExistingCache();
+  
+  // does the cache create a file?
+  virtual bool createFile();
+
+  // do we try to open the cache read-only if we failed to open the cache with write permissions?
+  virtual bool tryReadOnlyOnOpenFailure();
+
+  virtual bool verboseEnabled();
   virtual bool groupAccessEnabled();
   // allocate the cache in the user's home directory.
   virtual void useUserHomeDirectoryForCacheLocation();
@@ -48,9 +71,12 @@ public:
      flags |= OMRSHMEM_GETDIR_USE_USERHOME; <-- covered by useUserHomeDirectoryForCacheLocation().
    */
 protected:
+  // TODO: move _openMode here. in the persistent version.
+  
   CreateOptions _createOptions;
   RuntimeOptions _runtimeOptions;
   VerboseOptions _verboseOptions;
+  StartupReason _startupReason;
 };
 
 #endif

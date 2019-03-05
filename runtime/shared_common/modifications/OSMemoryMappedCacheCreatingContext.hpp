@@ -20,36 +20,23 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED
+#if !defined(OS_MEMORY_MAPPED_CACHE_CREATING_CONTEXT_HPP_INCLUDED)
+#define OS_MEMORY_MAPPED_CACHE_CREATING_CONTEXT_HPP_INCLUDED
 
-#include "omr.h"
-
-#include "OSCacheMemoryMappedInitializationContext.hpp"
+#include "OSMemoryMappedCacheInitializationContext.hpp"
 
 class OSMemoryMappedCache;
-class OSMemoryMappedCacheConfig;
 
-class OSMemoryMappedCacheAttachingContext: public OSMemoryMappedCacheInitializationContext
-{
+class OSMemoryMappedCacheCreatingContext : public OSMemoryMappedCacheInitializationContext {
 public:
-  OSMemoryMappedCacheAttachingContext(OSMemoryMappedCache* cache)
+  OSMemoryMappedCacheCreatingContext(OSMemoryMappedCache* cache)
     : OSMemoryMappedCacheInitializationContext(cache)
   {}
-
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
-  virtual IDATA internalAttach(OSMemoryMappedCache* cache);
-  virtual bool creatingNewCache();
   
-  // attach originally had this parameter: ..., J9PortShcVersion* expectedVersionData)
-  virtual void *attach(OMR_VMThread* currentThread);
-  virtual void detach();  
-protected:
-  // this should probably be updated within the MemoryMapped class. It doesn't
-  // apply to the shared memory version.
-  #if defined (J9SHR_MSYNC_SUPPORT)
-  virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
-  #endif
-};
+  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
+  virtual void setCacheAreaBoundaries();
+  virtual bool creatingNewCache();
+protected:  
+}
 
 #endif

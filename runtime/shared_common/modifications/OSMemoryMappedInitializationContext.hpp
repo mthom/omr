@@ -24,13 +24,23 @@
 
 #include "sharedconsts.hpp"
 
+#include "OSCacheConfigOptions.hpp"
+
 class OSMemoryMappedCache;
 
 class OSMemoryMappedInitializationContext {
 public:
+  OSMemoryMappedInitializationContext(OSMemoryMappedCache* cache)
+    : _cache(cache)
+  {}
   // attach to a freshly created/connected cache. the logic of these varies
   // according to the initialization context.
-  virtual IDATA internalAttach(OSMemoryMappedCache* cache) = 0;
+  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions) = 0;
+  virtual IDATA internalAttach() = 0;
+  virtual bool creatingNewCache() = 0;
+  
+protected:
+  OSMemoryMappedCache* _cache;
 };
 
 #endif

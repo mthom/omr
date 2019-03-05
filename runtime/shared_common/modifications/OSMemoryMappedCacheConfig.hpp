@@ -46,9 +46,6 @@ public:
   OSMemoryMappedCacheConfig(U_32 numLocks);
   OSMemoryMappedCacheConfig();
 
-  virtual OSMemoryMappedCacheCreatingContext* constructCreatingContext();
-  virtual OSMemoryMappedCacheAttachingContext* constructAttachingContext();
-
   virtual IDATA getWriteLockID();
   virtual IDATA getReadWriteLockID();
 
@@ -66,12 +63,20 @@ public:
 
   virtual U_64* getHeaderLocation() = 0;
   virtual U_64* getHeaderSize() = 0;
+
+  virtual U_64* getInitCompleteLocation() = 0;
+
+  virtual bool setCacheLength(LastErrorInfo* lastErrorInfo) = 0;
+  virtual bool setCacheInitComplete() = 0; // a header dependent thing. hence it's a pure virtual function.
   
 protected:
+  friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;
   friend class OSMemoryMappedCacheAttachingContext;
 
   IDATA acquireHeaderWriteLock(LastErrorInfo* lastErrorInfo);
+  //TODO: implement!
+  IDATA releaseHeaderWriteLock(LastErrorInfo* lastErrorInfo);
   
   // the generation is only used for determining the location of
   // the header lock. if we use the _config object to do that instead,
@@ -79,6 +84,8 @@ protected:
   IDATA acquireAttachReadLock(LastErrorInfo *lastErrorInfo);
   IDATA releaseAttachReadLock();
 
+  inline bool cacheFileAccessAllowed();
+  
   OSMemoryMappedCacheHeader* _header;
   
   I_64 _actualFileLength;

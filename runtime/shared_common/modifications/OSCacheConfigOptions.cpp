@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2019 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,36 +20,32 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED
-
 #include "omr.h"
 
-#include "OSCacheMemoryMappedInitializationContext.hpp"
+#include "OSCacheConfigOptions.hpp"
 
-class OSMemoryMappedCache;
-class OSMemoryMappedCacheConfig;
-
-class OSMemoryMappedCacheAttachingContext: public OSMemoryMappedCacheInitializationContext
+I_32
+OSCacheConfigOptions::fileMode()
 {
-public:
-  OSMemoryMappedCacheAttachingContext(OSMemoryMappedCache* cache)
-    : OSMemoryMappedCacheInitializationContext(cache)
-  {}
+  I_32 perm = 0;
+	
+  Trc_SHR_OSC_Mmap_getFileMode_Entry();
+	
+  if (isUserSpecifiedCacheDir()) {
+    if (_openMode & J9OSCACHE_OPEN_MODE_GROUPACCESS) {
+      perm = J9SH_CACHE_FILE_MODE_USERDIR_WITH_GROUPACCESS;
+    } else {
+      perm = J9SH_CACHE_FILE_MODE_USERDIR_WITHOUT_GROUPACCESS;
+    }
+  } else {
+    if (_openMode & J9OSCACHE_OPEN_MODE_GROUPACCESS) {
+      perm = J9SH_CACHE_FILE_MODE_DEFAULTDIR_WITH_GROUPACCESS;
+    } else {
+      perm = J9SH_CACHE_FILE_MODE_DEFAULTDIR_WITHOUT_GROUPACCESS;
+    }
+  }
+	
+  Trc_SHR_OSC_Mmap_getFileMode_Exit(_openMode, perm);
+  return perm;
+}
 
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
-  virtual IDATA internalAttach(OSMemoryMappedCache* cache);
-  virtual bool creatingNewCache();
-  
-  // attach originally had this parameter: ..., J9PortShcVersion* expectedVersionData)
-  virtual void *attach(OMR_VMThread* currentThread);
-  virtual void detach();  
-protected:
-  // this should probably be updated within the MemoryMapped class. It doesn't
-  // apply to the shared memory version.
-  #if defined (J9SHR_MSYNC_SUPPORT)
-  virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
-  #endif
-};
-
-#endif

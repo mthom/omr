@@ -51,6 +51,12 @@ public:
   virtual void finalise();
   
 protected:
+  friend class OSMemoryMappedCacheAttachingContext;
+  friend class OSMemoryMappedCacheCreatingContext;
+  
+  IDATA openCacheFile(LastErrorInfo*);
+  bool closeCacheFile();
+  
   IDATA internalAttach();
   void internalDetach();
   
