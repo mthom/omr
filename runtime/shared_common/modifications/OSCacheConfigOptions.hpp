@@ -37,6 +37,7 @@ public:
   };
 
   enum StartupReason {
+    Stat
   };
 
   virtual bool isUserSpecifiedCacheDir();
@@ -45,18 +46,22 @@ public:
   
   virtual I_32 fileMode();
   virtual I_32 openMode();
+  virtual IDATA cacheDirPermissions();
   
   // are we opening the cache in order to destroy?
   virtual bool openToDestroyExistingCache();
   virtual bool openToDestroyExpiredCache();
   virtual bool openToStatExistingCache();
+
+  virtual void setOpenReason(StartupReason reason);
+  virtual void setReadOnlyOpenMode();
   
   // does the cache create a file?
   virtual bool createFile();
 
   // do we try to open the cache read-only if we failed to open the cache with write permissions?
   virtual bool tryReadOnlyOnOpenFailure();
-
+  
   virtual bool verboseEnabled();
   virtual bool groupAccessEnabled();
   // allocate the cache in the user's home directory.
@@ -64,6 +69,7 @@ public:
   // render the object's options to a bit vector understood by the functions of the OMR port library.
   virtual U_32 renderToFlags();
 
+  virtual void setOpenMode(I_32 openMode);
   // flags obviated so far:
   /* appendBaseDir (a variable inside getCacheDir)
      appendBaseDir = (NULL == ctrlDirName) || (OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT == cacheType) || (OMRPORT_SHR_CACHE_TYPE_SNAPSHOT == cacheType);

@@ -466,7 +466,6 @@ SH_OSCachemmap::dontNeedMetadata(OMR_VMThread* currentThread, const void* startA
 #endif
 }
 
-
 /**
  * Destroy a persistent shared classes cache
  * 

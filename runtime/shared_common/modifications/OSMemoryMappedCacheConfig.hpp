@@ -64,6 +64,10 @@ public:
   virtual U_64* getHeaderLocation() = 0;
   virtual U_64* getHeaderSize() = 0;
 
+  virtual U_64* getLastAttachTimeLocation() = 0;
+  virtual U_64* getLastDetachTimeLocation() = 0;
+  virtual U_64* getLastCreateTimeLocation() = 0;
+  
   virtual U_64* getInitCompleteLocation() = 0;
 
   virtual bool setCacheLength(LastErrorInfo* lastErrorInfo) = 0;
@@ -87,6 +91,9 @@ protected:
   // we can omit the generation parameter.
   IDATA acquireAttachReadLock(OMRPortLibrary* library, LastErrorInfo *lastErrorInfo);
   IDATA releaseAttachReadLock(OMRPortLibrary* library);
+
+  IDATA tryAcquireAttachWriteLock(OMRPortLibrary* library);
+  IDATA releaseAttachWriteLock(OMRPortLibrary* library);
 
   inline bool cacheFileAccessAllowed() const;
   bool isCacheAccessible() const;

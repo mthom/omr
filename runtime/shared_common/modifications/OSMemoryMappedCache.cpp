@@ -23,18 +23,21 @@
 #include "OSMemoryMappedCache.hpp"
 
 OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
-					 OMR_VM* vm,
 					 const char* cacheName,
 					 const char* cacheDirName,
-					 UDATA cacheDirPermissions,
+					 //					 UDATA cacheDirPermissions,
 					 IDATA numLocks,
-					 OSCacheConfigOptions configOptions,
-					 I_32 openMode)
+					 OSCacheConfigOptions& configOptions)
+					 //					 I_32 openMode)
   : _config(OSMemoryMappedCacheConfig(numLocks))
   , _configOptions(configOptions)
 {
   initialize(library);
-  startup(cacheName, ctrlDirName, cacheDirPermissions, openMode);
+  // expect the open mode has been set in the configOptions object already.
+  // configOptions.setOpenMode(openMode);
+
+  // TODO: eliminate cacheName and ctrlDirName as constructor arguments.
+  //  startup(cacheName, ctrlDirName);
 }
 
 void OSMemoryMappedCache::initialize(OMRPortLibrary* library)
@@ -86,8 +89,7 @@ void OSMemoryMappedCache::finalise()
   Trc_SHR_OSC_Mmap_finalise_Exit();
 }
 
-bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName,
-				  UDATA cacheDirPermissions, I_32 openMode)
+bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName)
 {
   I_32 mmapCapabilities = omrmmap_capabilities();
   LastErrorInfo lastErrorInfo;
@@ -117,6 +119,9 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     goto _errorPreFileOpen;
   }
 
+  IDATA openMode = _configOptions.openMode();
+  IDATA cacheDirPermissions = _configOptions.cacheDirPermissions();
+  
   if(initCacheDirName(ctrlDirName, cacheDirPermissions, openMode) != 0) {
     Trc_SHR_OSC_Mmap_startup_commonStartupFailure();
     goto _errorPreFileOpen;
@@ -140,7 +145,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     }
   }
 
-  if (!openCacheFile(configOptions, &lastErrorInfo)) { // _createFlags & OMRSH_OSCACHE_CREATE, &lastErrorInfo)) {
+  if (!openCacheFile(&lastErrorInfo)) { // _createFlags & OMRSH_OSCACHE_CREATE, &lastErrorInfo)) {
     Trc_SHR_OSC_Mmap_startup_badfileopen(_cachePathName);
     errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_FILEOPEN_ERROR, &lastErrorInfo);  /* TODO: ADD FILE NAME */
     goto _errorPostFileOpen;
@@ -148,13 +153,13 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 
   Trc_SHR_OSC_Mmap_startup_goodfileopen(_cachePathName, _fileHandle);
 
-  if (!configOptions.isUserSpecifiedCacheDir()
-      && !configOptions.openToDestroyExistingCache()
-      && !configOptions.openToDestroyExpiredCache())
+  if (!_configOptions.isUserSpecifiedCacheDir()
+      && !_configOptions.openToDestroyExistingCache()
+      && !_configOptions.openToDestroyExpiredCache())
   {
     _config->_cacheFileAccess = OSMemoryMappedCacheUtils::checkCacheFileAccess(_portLibrary,
 									       _fileHandle,
-									       configOptions->openMode(),
+									       _configOptions,
 									       &lastErrorInfo);
     if (configOptions.openToStatExistingCache() || _config->cacheFileAccessAllowed())
     {
@@ -180,7 +185,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     }
   }
 
-  if(configOptions.openToDestroyExistingCache()) {
+  if(_configOptions.openToDestroyExistingCache()) {
     Trc_SHR_OSC_Mmap_startup_openCacheForDestroy(_cachePathName);
     goto _exitForDestroy;
   }
@@ -218,13 +223,13 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     // we are attaching to an existing cache.
     _init_context = OSMemoryMappedCacheAttachingContext(this);
 
-    if(!_init_context->startup(errorCode, retryCntr, configOptions)) {
+    if(!_init_context->startup(errorCode, retryCntr, _configOptions)) {
       goto _errorPostAttach;
     }
   } else {
     _init_context = OSMemoryMappedCacheCreatingContext(this);
 
-    if(!_init_context->startup(errorCode, retryCntr, configOptions)) {
+    if(!_init_context->startup(errorCode, retryCntr, _configOptions)) {
       goto _errorPostHeaderLock;
     } else {
       _config->setCacheInitComplete();

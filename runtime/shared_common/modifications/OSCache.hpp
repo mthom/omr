@@ -116,7 +116,7 @@ protected:
   //  it's best if caches embed their own configuration objects.
   //  OSCacheConfig* _config;
   OMRPortLibrary* _portLibrary;
-  OSCacheConfigOptions _configOptions;
+  OSCacheConfigOptions& _configOptions;
 };
 
 #endif
