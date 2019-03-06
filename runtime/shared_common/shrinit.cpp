@@ -3219,7 +3219,8 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	modContextBytes = modContext ? ((strlen(modContext) * sizeof(char)) + sizeof(OMRUTF8)) : 0;
 	
 	//TODO: maybe include bytes for the cache name in this.. once that's up and running.
-	memBytesNeeded = sizeof(OMRSharedClassConfig) + sizeof(J9SharedClassCacheDescriptor); // + cmBytes + nameBytes + modContextBytes;
+//	memBytesNeeded = sizeof(OMRSharedClassConfig) + sizeof(J9SharedClassCacheDescriptor); // + cmBytes + nameBytes + modContextBytes;
+	memBytesNeeded = sizeof(OMRSharedClassConfig) + sizeof(J9SharedClassCacheDescriptor) + cmBytes;
 	tempConfig = (OMRSharedClassConfig*)omrmem_allocate_memory(memBytesNeeded, OMRMEM_CATEGORY_CLASSES);
 	
 	if (!tempConfig) {

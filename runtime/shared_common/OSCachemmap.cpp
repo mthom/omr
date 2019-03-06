@@ -257,23 +257,23 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 		goto _exitForDestroy;
 	}
 
-	for (UDATA i = 0; i < J9SH_OSCACHE_MMAP_LOCK_COUNT; i++) {
-		if (omrthread_monitor_init_with_name(&_lockMutex[i], 0, "Persistent shared classes lock mutex")) {
-			Trc_SHR_OSC_Mmap_startup_failed_mutex_init(i);
- 			goto _errorPostFileOpen;
-		}
-	}
+//	for (UDATA i = 0; i < J9SH_OSCACHE_MMAP_LOCK_COUNT; i++) {
+//		if (omrthread_monitor_init_with_name(&_lockMutex[i], 0, "Persistent shared classes lock mutex")) {
+//			Trc_SHR_OSC_Mmap_startup_failed_mutex_init(i);
+// 			goto _errorPostFileOpen;
+//		}
+//	}
 	Trc_SHR_OSC_Mmap_startup_initialized_mutexes();
 	
 	/* Get cache header write lock */
-	if (-1 == acquireHeaderWriteLock(_activeGeneration, &lastErrorInfo)) {
-		Trc_SHR_OSC_Mmap_startup_badAcquireHeaderWriteLock();
-		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ACQUIREHEADERWRITELOCK_ERROR, &lastErrorInfo);
-		errorCode = OMRSH_OSCACHE_CORRUPT;
-		OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CORRUPT_ACQUIRE_HEADER_WRITE_LOCK_FAILED, lastErrorInfo.lastErrorCode);
-		setCorruptionContext(ACQUIRE_HEADER_WRITE_LOCK_FAILED, (UDATA)lastErrorInfo.lastErrorCode);
-		goto _errorPostHeaderLock;
-	}
+//	if (-1 == acquireHeaderWriteLock(_activeGeneration, &lastErrorInfo)) {
+//		Trc_SHR_OSC_Mmap_startup_badAcquireHeaderWriteLock();
+//		errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ACQUIREHEADERWRITELOCK_ERROR, &lastErrorInfo);
+//		errorCode = OMRSH_OSCACHE_CORRUPT;
+//		OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CORRUPT_ACQUIRE_HEADER_WRITE_LOCK_FAILED, lastErrorInfo.lastErrorCode);
+//		setCorruptionContext(ACQUIRE_HEADER_WRITE_LOCK_FAILED, (UDATA)lastErrorInfo.lastErrorCode);
+//		goto _errorPostHeaderLock;
+//	}
 	Trc_SHR_OSC_Mmap_startup_goodAcquireHeaderWriteLock();
 	
 	/* Check the length of the file */
@@ -654,10 +654,10 @@ SH_OSCachemmap::acquireWriteLock(UDATA lockID)
 	 * then a file lock for locking between different JVMs
 	 */
 	Trc_SHR_OSC_Mmap_acquireWriteLock_entering_monitor(lockID);
-	if (omrthread_monitor_enter(_lockMutex[lockID]) != 0) {
-		Trc_SHR_OSC_Mmap_acquireWriteLock_failed_monitor_enter(lockID);
-		return -1;
-	}
+//	if (omrthread_monitor_enter(_lockMutex[lockID]) != 0) {
+//		Trc_SHR_OSC_Mmap_acquireWriteLock_failed_monitor_enter(lockID);
+//		return -1;
+//	}
 
 	Trc_SHR_OSC_Mmap_acquireWriteLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -829,10 +829,10 @@ SH_OSCachemmap::releaseWriteLock(UDATA lockID)
 	}
 	
 	Trc_SHR_OSC_Mmap_releaseWriteLock_exiting_monitor(lockID);
-	if (omrthread_monitor_exit(_lockMutex[lockID]) != 0) {
-		Trc_SHR_OSC_Mmap_releaseWriteLock_bad_monitor_exit(lockID);
-		rc = -1;
- 	}
+//	if (omrthread_monitor_exit(_lockMutex[lockID]) != 0) {
+//		Trc_SHR_OSC_Mmap_releaseWriteLock_bad_monitor_exit(lockID);
+//		rc = -1;
+// 	}
 	
 	Trc_SHR_OSC_Mmap_releaseWriteLock_Exit(rc);
 	return rc;
