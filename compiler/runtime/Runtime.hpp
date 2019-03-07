@@ -404,7 +404,97 @@ enum SymbolType
    typeClass,
    typeMethod,
    };
+typedef struct AOTStats
+   {
+   int32_t numCHEntriesAlreadyStoredInLocalList;
+   int32_t numStaticEntriesAlreadyStoredInLocalList;
+   int32_t numNewCHEntriesInLocalList;
+   int32_t numNewStaticEntriesInLocalList;
+   int32_t numNewCHEntriesInSharedClass;
+   int32_t numEntriesFoundInLocalChain;
+   int32_t numEntriesFoundAndValidatedInSharedClass;
+   int32_t numClassChainNotInSharedClass;
+   int32_t numCHInSharedCacheButFailValiation;
+   int32_t numInstanceFieldInfoNotUsed;
+   int32_t numStaticFieldInfoNotUsed;
+   int32_t numDefiningClassNotFound;
+   int32_t numInstanceFieldInfoUsed;
+   int32_t numStaticFieldInfoUsed;
+   int32_t numCannotGenerateHashForStore; // Shouldn't happen
+   int32_t numRuntimeChainNotFound;
+   int32_t numRuntimeStaticFieldUnresolvedCP;
+   int32_t numRuntimeInstanceFieldUnresolvedCP;
+   int32_t numRuntimeUnresolvedStaticFieldFromCP;
+   int32_t numRuntimeUnresolvedInstanceFieldFromCP;
+   int32_t numRuntimeResolvedStaticFieldButFailValidation;
+   int32_t numRuntimeResolvedInstanceFieldButFailValidation;
+   int32_t numRuntimeStaticFieldReloOK;
+   int32_t numRuntimeInstanceFieldReloOK;
 
+   int32_t numInlinedMethodOverridden;
+   int32_t numInlinedMethodNotResolved;
+   int32_t numInlinedMethodClassNotMatch;
+   int32_t numInlinedMethodCPNotResolved;
+   int32_t numInlinedMethodRelocated;
+   int32_t numInlinedMethodValidationFailed;
+
+   TR_AOTInliningStats staticMethods;
+   TR_AOTInliningStats specialMethods;
+   TR_AOTInliningStats virtualMethods;
+   TR_AOTInliningStats interfaceMethods;
+   TR_AOTInliningStats abstractMethods;
+
+   TR_AOTInliningStats profiledInlinedMethods;
+   TR_AOTInliningStats profiledClassGuards;
+   TR_AOTInliningStats profiledMethodGuards;
+
+   int32_t numDataAddressRelosSucceed;
+   int32_t numDataAddressRelosFailed;
+
+   int32_t numCheckcastNodesIlgenTime;
+   int32_t numInstanceofNodesIlgenTime;
+   int32_t numCheckcastNodesCodegenTime;
+   int32_t numInstanceofNodesCodegenTime;
+
+   int32_t numRuntimeClassAddressUnresolvedCP;
+   int32_t numRuntimeClassAddressFromCP;
+   int32_t numRuntimeClassAddressButFailValidation;
+   int32_t numRuntimeClassAddressReloOK;
+
+   int32_t numRuntimeClassAddressRelocationCount;
+   int32_t numRuntimeClassAddressReloUnresolvedCP;
+   int32_t numRuntimeClassAddressReloUnresolvedClass;
+
+   int32_t numVMCheckCastEvaluator;
+   int32_t numVMInstanceOfEvaluator;
+   int32_t numVMIfInstanceOfEvaluator;
+   int32_t numCheckCastVMHelperInstructions;
+   int32_t numInstanceOfVMHelperInstructions;
+   int32_t numIfInstanceOfVMHelperInstructions;
+
+   int32_t numClassValidations;
+   int32_t numClassValidationsFailed;
+   int32_t numWellKnownClassesValidationsFailed;
+
+   TR_FailedPerfAssumptionCode failedPerfAssumptionCode;
+
+   uint32_t numRelocationsFailedByType[TR_NumExternalRelocationKinds];
+
+   }AOTStats;
+typedef struct AOTMethodHeader 
+   {
+   uint16_t  minorVersion;
+   uint16_t  majorVersion;
+   uint32_t  offsetToRelocationDataItems;
+   uint32_t  offsetToExceptionTable;
+   uint32_t  offsetToPersistentInfo;
+   uintptr_t compileMethodCodeStartPC;
+   uintptr_t compileMethodCodeSize;
+   uintptr_t compileMethodDataStartPC;
+   uintptr_t compileMethodDataSize;
+   uintptr_t compileFirstClassLocation;
+   uint32_t flags;
+   } AOTMethodHeader;
 }
 
 typedef struct TR_RelocationRecordInformation {

@@ -46,6 +46,14 @@ namespace OMR
 
 namespace X86
 {
+   // The following 4 lines of code are required to 
+   // pack relevant information into AOTHeader, which
+   // will be of different size among different architec
+   // tures
+#define PROCESSOR_FEATURES_SIZE 3
+typedef struct ProcessorFeatureFlags {
+  uint32_t featureFlags[PROCESSOR_FEATURES_SIZE];
+} ProcessorFeatureFlags;
 
 class CPU : public OMR::CPU
    {
