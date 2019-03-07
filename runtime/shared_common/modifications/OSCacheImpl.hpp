@@ -27,8 +27,14 @@
 
 #include "omr.h"
 
-class OSPersistentCache: public OSCache {
+/*
+ * This class houses utility functions that depend on the state of
+ * cache internals. Those that don't depend on cache internals are static
+ * functions, and are stored in the OSCache*Utils namespaces.
+ */
+class OSCacheImpl: public OSCache {
 public:
+  OSCacheImpl(OMRPortLibrary* library);
   // old J9 cache comment:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache
@@ -39,12 +45,19 @@ protected:
   virtual IDATA initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode);
   virtual IDATA initCacheName(const char* cacheName) = 0;
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
-  virtual IDATA commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm, const char* cacheName,
-			      OSCacheConfigOptions* configOptions, I_32 openMode);
 
-  I_32 _openMode; 
-  // was:  char *_cacheDir; // the path to the directory containing the cache file.  
-  char *_cacheLocation;  // the path, or a URI, or something, to the resource containing the cache.  
+  virtual void* attach() = 0;
+  virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;
+
+  void commonInit();
+  
+  OMRPortLibrary* _portLibrary;
+  I_32  _openMode;
+  UDATA _runningReadOnly;
+  IDATA _errorCode;
+  
+  // was:  char *_cacheDir; // the path to the directory containing the cache file.
+  char *_cacheLocation;  // the path, or a URI, or something, to the resource containing the cache.
   char *_cacheName; // the name of the cache file. Together with _cacheDir, we have the effective field,
                     // _cachePathName.
   char *_cachePathName; // the _cacheLocation + _cacheName, typically.

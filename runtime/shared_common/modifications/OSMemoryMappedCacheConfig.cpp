@@ -240,7 +240,8 @@ IDATA OSMemoryMappedCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lock
 
 // was: acquireHeaderWriteLock
 // see the comment above acquireWriteLock. It shouldn't depend on a lockID dependent thing.
-IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo)
+IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly,
+							LastErrorInfo* lastErrorInfo)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
 
@@ -256,7 +257,7 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library,
   }
   */
 
-  if (_runningReadOnly) {
+  if (runningReadOnly) {
     Trc_SHR_OSC_Mmap_acquireHeaderWriteLock_ExitReadOnly();
     return 0;
   }
@@ -274,7 +275,7 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library,
 
   if (-1 == rc) {
     if (NULL != lastErrorInfo) {
-      lastErrorInfo->populate();
+      lastErrorInfo->populate(library);
       /*
       lastErrorInfo->lastErrorCode = omrerror_last_error_number();
       lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
@@ -299,7 +300,8 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library,
  * @return 0 on success, -1 on failure
  */
 IDATA
-OSMemoryMappedCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo *lastErrorInfo)
+OSMemoryMappedCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly,
+						  LastErrorInfo *lastErrorInfo)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
 
@@ -312,7 +314,7 @@ OSMemoryMappedCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, LastE
   //  lastErrorInfo->lastErrorCode = 0;
   //}
 
-  if (_runningReadOnly) {
+  if (runningReadOnly) {
     Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_ExitReadOnly();
     return 0;
   }
@@ -330,7 +332,7 @@ OSMemoryMappedCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, LastE
 #endif
   if (-1 == rc) {
     if (NULL != lastErrorInfo) {
-      lastErrorInfo->populate();
+      lastErrorInfo->populate(library);
     //  lastErrorInfo->lastErrorCode = omrerror_last_error_number();
     //  lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
     }
@@ -421,7 +423,7 @@ IDATA OSMemoryMappedCacheConfig::acquireAttachReadLock(OMRPortLibrary* library, 
 
   if (-1 == rc) {
     if (NULL != lastErrorInfo) {
-      lastErrorInfo->populate();
+      lastErrorInfo->populate(library);
     }
     Trc_SHR_OSC_Mmap_acquireAttachReadLock_badLock();
   } else {
@@ -578,12 +580,12 @@ bool OSMemoryMappedCacheConfig::isCacheAccessible()
  * THREADING: Pre-req caller holds the cache header write lock
  */
 bool
-SH_OSMemoryMappedCacheConfig::updateLastAttachedTime(OMRPortLibrary* library)
+SH_OSMemoryMappedCacheConfig::updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
   Trc_SHR_OSC_Mmap_updateLastAttachedTime_Entry();
 
-  if (_runningReadOnly) {
+  if (runningReadOnly) {
     Trc_SHR_OSC_Mmap_updateLastAttachedTime_ReadOnly();
     return true;
   }
@@ -603,7 +605,7 @@ SH_OSMemoryMappedCacheConfig::updateLastAttachedTime(OMRPortLibrary* library)
  * THREADING: Pre-req caller holds the cache header write lock
  */
 bool
-SH_OSCachemmap::updateLastDetachedTime(OMRPortLibrary* library)
+SH_OSCachemmap::updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
 
@@ -611,7 +613,7 @@ SH_OSCachemmap::updateLastDetachedTime(OMRPortLibrary* library)
 
   Trc_SHR_OSC_Mmap_updateLastDetachedTime_Entry();
 
-  if (_runningReadOnly) {
+  if (runningReadOnly) {
     Trc_SHR_OSC_Mmap_updateLastDetachedTime_ReadOnly();
     return true;
   }

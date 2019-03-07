@@ -23,60 +23,53 @@
 #if !defined(OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED
 
-#include "OSPersistentCache.hpp"
+#include "OSCacheImpl.hpp"
 #include "OSMemoryMappedCacheConfig.hpp"
-#include "OSMemoryMappedInitializationContext.hpp"
+#include "OSMemoryMappedCacheInitializationContext.hpp"
 
 #include "omr.h"
 #include "omrport.h"
 
 // an implementation of a persistent shared cache that uses omrmmap primitives
 // and region-based locks on sections of files.
-class OSMemoryMappedCache: public OSPersistentCache {
-public:  
+class OSMemoryMappedCache: public OSCacheImpl {
+public:
   virtual void getError();
 
-  OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
-					   OMR_VM* vm,
-					   const char* cacheName,					   
-					   const char* cacheDirName,
-					   UDATA cacheDirPermissions,
-					   IDATA numLocks,
-					   OSCacheConfigOptions configOptions,
-					   I_32 openMode);
-
-  bool startup(const char* cacheName, const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode);
+  OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName, IDATA numLocks, OSCacheConfigOptions configOptions);
+  
+  bool startup(const char* cacheName, const char* ctrlDirName);  
   IDATA destroy(bool suppressVerbose, bool isReset);
 
   virtual void* attach();
   virtual void detach();
-  
+
   //TODO: should these functions be virtual?
-  virtual void initialize(OMRPortLibrary* library);
+  virtual void initialize();
   virtual void finalise();
   virtual void cleanup();
-  
+
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;
-  
+
   IDATA openCacheFile(LastErrorInfo*);
   bool closeCacheFile();
-  
+
   IDATA internalAttach();
   void internalDetach();
-  
-  virtual void runExitProcedure();  
+
+  virtual void runExitProcedure();
   virtual void handleCacheHeaderCorruption(IDATA headerRc);
 #if defined(OMRSH_MSYNC_SUPPORT)
   virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
 #endif
-  
+
   OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator();
 
   OSMemoryMappedInitializationContext* _init_context;
   OSMemoryMappedCacheConfig* _config;
-  
+
   OMRMmapHandle *_mapFileHandle;
 };
 

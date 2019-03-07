@@ -25,22 +25,20 @@
 OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* cacheDirName,
-					 //					 UDATA cacheDirPermissions,
 					 IDATA numLocks,
 					 OSCacheConfigOptions& configOptions)
-					 //					 I_32 openMode)
-  : _config(OSMemoryMappedCacheConfig(numLocks))
+  : OSCacheImpl(library),
+  , _config(OSMemoryMappedCacheConfig(numLocks))
   , _configOptions(configOptions)
 {
-  initialize(library);
+  initialize();
   // expect the open mode has been set in the configOptions object already.
   // configOptions.setOpenMode(openMode);
 
-  // TODO: eliminate cacheName and ctrlDirName as constructor arguments.
-  //  startup(cacheName, ctrlDirName);
+  startup(cacheName, ctrlDirName);
 }
 
-void OSMemoryMappedCache::initialize(OMRPortLibrary* library)
+void OSMemoryMappedCache::initialize()
 {
   /* memForConstructor is used in J9 as a place to allocate the cache in. Now
   that we're in OMR, I don't what will take its place, if anything.
@@ -48,7 +46,7 @@ void OSMemoryMappedCache::initialize(OMRPortLibrary* library)
   */
 
   //TODO: set _portLibrary in commonInit.
-  commonInit(library); //, generation);
+  commonInit(); //, generation);
 
   _config->_fileHandle = -1;
   _config->_actualFileLength = 0;
@@ -121,13 +119,13 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 
   IDATA openMode = _configOptions.openMode();
   IDATA cacheDirPermissions = _configOptions.cacheDirPermissions();
-  
+
+  // this is how commonStartup was broken up, into these next two blocks.
   if(initCacheDirName(ctrlDirName, cacheDirPermissions, openMode) != 0) {
     Trc_SHR_OSC_Mmap_startup_commonStartupFailure();
     goto _errorPreFileOpen;
   }
 
-  //TODO: overload this function, provide a cacheName parameter to this function.
   if(initCacheName(cacheName) != 0) {
     goto _errorPreFileOpen;
   }
@@ -300,7 +298,7 @@ OSMemoryMappedCache::openCacheFile(OSCacheConfigOptions configOptions, LastError
 
   if (-1 == _fileHandle) {
     if (NULL != lastErrorInfo) {
-      lastErrorInfo->populate();
+      lastErrorInfo->populate(_portLibrary);
     }
     Trc_SHR_OSC_Mmap_openCacheFile_failed();
     result = false;
@@ -401,7 +399,7 @@ IDATA OSMemoryMappedCache::internalAttach() //bool isNewCache, UDATA generation)
   /* Map the file */
   _mapFileHandle = omrmmap_map_file(_config->_fileHandle, 0, (UDATA)_actualFileLength, _cachePathName, accessFlags, OMRMEM_CATEGORY_CLASSES_SHC_CACHE);
   if ((NULL == _mapFileHandle) || (NULL == _mapFileHandle->pointer)) {
-    lastErrorInfo.populate();
+    lastErrorInfo.populate(_portLibrary);
     /*
       lastErrorInfo.lastErrorCode = omrerror_last_error_number();
       lastErrorInfo.lastErrorMsg = omrerror_last_error_message();
@@ -435,26 +433,26 @@ SH_OSCachemmap::detach()
 {
   if (_config->acquireHeaderWriteLock(NULL) != -1) {
     _config->updateLastDetachedTime();
-    
+
     if (_config->releaseHeaderWriteLock(NULL) == -1) {
       OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
       I_32 myerror = omrerror_last_error_number();
-      
+
       Trc_SHR_OSC_Mmap_detach_releaseHeaderWriteLock_Failed(myerror);
       Trc_SHR_Assert_ShouldNeverHappen();
     }
   } else {
     OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
     I_32 myerror = omrerror_last_error_number();
-    
+
     Trc_SHR_OSC_Mmap_detach_acquireHeaderWriteLock_Failed(myerror);
     Trc_SHR_Assert_ShouldNeverHappen();
   }
-  
+
   internalDetach();
 }
 
- 
+
 /* Perform enough work to detach from the cache after having called internalAttach */
 void OSMemoryMappedCache::internalDetach()
 {
@@ -627,9 +625,9 @@ OSMemoryMappedCache::cleanup()
 /**
  * Function to attach a persistent shared classes cache to the process
  * Function performs version checking on the cache if the version data is provided
- * 
+ *
  * @param [in] expectedVersionData  If not NULL, function checks the version data of the cache against the values in this struct
- * 
+ *
  * @return Pointer to the start of the cache data area on success, NULL on failure
  */
 /* Again, the currentThread in this function == vestigial by all appearances. */
@@ -639,7 +637,7 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
   // Again, a J9 specific thing.
   // OSCachemmap_header_version_current *cacheHeader;
-  
+
   IDATA headerRc;
   LastErrorInfo lastErrorInfo;
   // OMR_VM *vm = currentThread->_vm;
@@ -648,7 +646,7 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
 
   // Another J9 specific thing.
   // Trc_SHR_OSC_Mmap_attach_Entry1(UnitTest::unitTest);
-	
+
   /* If we are already attached, just return */
   if (_config->_layout->_dataStart) {
     Trc_SHR_OSC_Mmap_attach_alreadyattached(_config->_layout->_headerStart,
@@ -656,15 +654,15 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
 					    _config->_layout->_dataLength);
     return _config->_layout->_dataStart;
   }
-	
+
   if (_config->acquireHeaderWriteLock(&lastErrorInfo) == -1) { //_activeGeneration, &lastErrorInfo) == -1) {
     Trc_SHR_OSC_Mmap_attach_acquireHeaderLockFailed();
     errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_ATTACH_ACQUIREHEADERWRITELOCK_ERROR, &lastErrorInfo);
     return NULL;
   }
-	
+
   doRelease = true;
-  
+
   rc = internalAttach(); //false, _activeGeneration);
   if (0 != rc) {
     setError(rc);
@@ -680,17 +678,17 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
     _config->handleCacheHeaderCorruption(headerRc);
     goto detach;
   }
-  
+
   Trc_SHR_OSC_Mmap_attach_validCacheHeader();
 
   if (!_config->updateLastAttachedTime(_portLibrary)) {
     Trc_SHR_OSC_Mmap_attach_badupdatelastattachedtime2();
     errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_UPDATING_LAST_ATTACHED_TIME, NULL);
     setError(OMRSH_OSCACHE_FAILURE);
-    
+
     goto detach;
   }
-  
+
   Trc_SHR_OSC_Mmap_attach_goodupdatelastattachedtime();
 
   if (_config->releaseHeaderWriteLock(_activeGeneration, &lastErrorInfo) == -1) {
@@ -704,10 +702,10 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
   if (configOptions.verboseEnabled() && _startupCompleted) {
     OSC_TRACE1(OMRNLS_SHRC_OSCACHE_MMAP_ATTACH_ATTACHED, _cacheName);
   }
-	
+
   Trc_SHR_OSC_Mmap_attach_Exit(_config->_layout->_dataStart);
   return _config->_layout->_dataStart;
-	
+
 detach:
   internalDetach()//_activeGeneration);
 release:
@@ -715,7 +713,7 @@ release:
     Trc_SHR_OSC_Mmap_attach_releaseHeaderLockFailed2();
     errorHandler(J9NLS_SHRC_OSCACHE_MMAP_ATTACH_ERROR_RELEASING_HEADER_WRITE_LOCK, &lastErrorInfo);
   }
-  
+
   Trc_SHR_OSC_Mmap_attach_ExitWithError();
   return NULL;
 }
@@ -738,9 +736,9 @@ void OSMemoryMappedCacheConfig::handleCacheHeaderCorruption(IDATA headerRc)
       */
       setError(OMRSH_OSCACHE_CORRUPT);
  // } else if (headerRc == OMRSH_OSCACHE_HEADER_DIFF_BUILDID) {
-      
+
       //a J9 specific thing:
-      
+
       //Trc_SHR_OSC_Mmap_attach_differentBuildID();
       //setError(OMRSH_OSCACHE_DIFF_BUILDID);
   } else {
@@ -752,7 +750,7 @@ void OSMemoryMappedCacheConfig::handleCacheHeaderCorruption(IDATA headerRc)
 
 /**
  * Method to perform processing required when the JVM is exiting
- * 
+ *
  * Note:  The VM requires that memory should not be freed during
  * 			exit processing
  */
@@ -760,7 +758,7 @@ void
 OSMemoryMappedCache::runExitProcedure()
 {
   Trc_SHR_OSC_Mmap_runExitCode_Entry();
-	
+
   if (_config->acquireHeaderWriteLock(NULL) != -1) {
     if (_config->updateLastDetachedTime()) {
       Trc_SHR_OSC_Mmap_runExitCode_goodUpdateLastDetachedTime();
@@ -772,7 +770,7 @@ OSMemoryMappedCache::runExitProcedure()
   } else {
     OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
     I_32 myerror = omrerror_last_error_number();
-    
+
     Trc_SHR_OSC_Mmap_runExitCode_acquireHeaderWriteLock_Failed(myerror);
     Trc_SHR_Assert_ShouldNeverHappen();
   }
@@ -785,30 +783,30 @@ OSMemoryMappedCache::runExitProcedure()
 IDATA syncUpdates(void* start, UDATA length, U_32 flags)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-	
+
   IDATA rc;
-	
+
   Trc_SHR_OSC_Mmap_syncUpdates_Entry(start, length, flags);
-	
+
   rc = omrmmap_msync(start, length, flags);
   if (-1 == rc) {
     Trc_SHR_OSC_Mmap_syncUpdates_badmsync();
     return -1;
   }
-  
+
   Trc_SHR_OSC_Mmap_syncUpdates_goodmsync();
-	
+
   Trc_SHR_OSC_Mmap_syncUpdates_Exit();
-  return 0;  
+  return 0;
 }
 #endif
 
 /**
  * Return the locking capabilities of this shared classes cache implementation
- * 
+ *
  * Read and write locks are supported for this implementation
- * 
- * @return OMROSCACHE_DATA_WRITE_LOCK | OMROSCACHE_DATA_READ_LOCK 
+ *
+ * @return OMROSCACHE_DATA_WRITE_LOCK | OMROSCACHE_DATA_READ_LOCK
  */
 IDATA
 OSMemoryMappedCache::getLockCapabilities()
@@ -824,14 +822,14 @@ OSMemoryMappedCache::getLockCapabilities()
  * @param[in] address 	Pointer to the shared memory region.
  * @param[in] length	The size of memory in bytes spanning the region in which we want to set protection
  * @param[in] flags 	The specified protection to apply to the pages in the specified interval
- * 
+ *
  * @return 0 if the operations has been successful, -1 if an error has occured
  */
 IDATA
 OSMemoryMappedCache::setRegionPermissions(OSCacheRegion* region)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-		
+
   return omrmmap_protect(region->getRegionStartAddress(), region->getRegionSize(), region->renderToFlags());
 }
 
@@ -839,7 +837,7 @@ OSMemoryMappedCache::setRegionPermissions(OSCacheRegion* region)
  * Returns the minimum sized region of a shared classes cache on which the process can set permissions, in the number of bytes.
  *
  * @param[in] portLibrary An instance of portLibrary
- * 
+ *
  * @return the minimum size of region on which we can control permissions size or 0 if this is unsupported
  */
 UDATA
@@ -855,6 +853,6 @@ SH_OSCachemmap::getPermissionsRegionGranularity(OSCacheRegion*)
   if (omrmmap_capabilities() & OMRPORT_MMAP_CAPABILITY_PROTECT) {
     return omrmmap_get_region_granularity((void*)_config->_layout->_headerStart);
   }
-  
+
   return 0;
 }

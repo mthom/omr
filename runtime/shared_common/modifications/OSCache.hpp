@@ -44,7 +44,9 @@ struct LastErrorInfo
     , _lastErrorMsg(NULL)
   {}
 
-  void populate() {
+  void populate(OMRPortLibrary* library) {
+    OMRPORT_ACCESS_FROM_OMRPORT(library);
+    
     lastErrorCode = omrerror_last_error_number();
     lastErrorMsg = omrerror_last_error_message();
   }
@@ -115,7 +117,6 @@ protected:
 
   //  it's best if caches embed their own configuration objects.
   //  OSCacheConfig* _config;
-  OMRPortLibrary* _portLibrary;
   OSCacheConfigOptions& _configOptions;
 };
 

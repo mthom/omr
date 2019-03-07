@@ -21,12 +21,17 @@
  *******************************************************************************/
 
 #include "OSCacheUtils.hpp"
-#include "OSPersistentCache.hpp"
+#include "OSCacheImpl.hpp"
+
+OSCacheImpl::OSCacheImpl(OMRPortLibrary* library)
+  : _portLibrary(library)
+{}
 
 // formerly OSCache::commonStartup. We only kept the directory init
 // part, not the cache name initialization logic. We leave
 // initCacheName as a pure virtual function.
-IDATA OSPersistentCache::initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode)
+IDATA
+OSCacheImpl::initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
@@ -85,11 +90,11 @@ IDATA OSPersistentCache::initCacheDirName(const char* ctrlDirName, UDATA cacheDi
 
 //TODO: determine whether this will instead deal with OSCacheRegion's.
 void
-OSPersistentCache::dontNeedMetadata(const void* startAddress, size_t length)
+OSCacheImpl::dontNeedMetadata(const void* startAddress, size_t length)
 {
 /* AIX does not allow memory to be disclaimed for memory mapped files */
 #if !defined(AIXPPC)
-  /* why does it need the specific VM?!? It only appears to use it to get at the 
+  /* why does it need the specific VM?!? It only appears to use it to get at the
      portLibrary. But the _portLibrary just points to a table of C functions. I can't
      imagine how those addresses might be dependent on the thread or VM objects.
      This seems totally unnecessary to me, since we have _portLibrary at the ready
@@ -98,4 +103,28 @@ OSPersistentCache::dontNeedMetadata(const void* startAddress, size_t length)
     OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
     omrmmap_dont_need(startAddress, length);
 #endif
+}
+
+void
+OSCacheImpl::commonInit()
+{
+  //  _startupCompleted = false;
+  //  _portLibrary = portLibrary; // now handled in the constructor.
+  //  _activeGeneration = generation;
+  //  _cacheNameWithVGen = NULL;
+  _cacheName = NULL;
+  _cacheLocation = NULL; //_cachePathName = NULL;
+  _cacheDirName = NULL;
+//  _verboseFlags = 0;
+//  _createFlags = 0;
+  //  _config = NULL; // the OMRCacheConfigOptions object initialization takes care of this.
+  _openMode = 0;
+//  _dataStart = NULL; // these are now all contained in the layout process.
+//  _dataLength = 0;
+//  _headerStart = NULL;
+//  _cacheSize = 0;
+  _errorCode = 0;
+  _runningReadOnly = false;
+//  _doCheckBuildID = false;
+//  _isUserSpecifiedCacheDir = false;
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -26,8 +26,8 @@
 
 #include "OSCacheConfig.hpp"
 #include "OSMemoryMappedCacheLayout.hpp"
-#include "OSMemoryMappedAttachingContext.hpp"
-#include "OSMemoryMappedCreatingContext.hpp"
+#include "OSMemoryMappedCacheAttachingContext.hpp"
+#include "OSMemoryMappedCacheCreatingContext.hpp"
 
 typedef enum SH_CacheFileAccess {
 	OMRSH_CACHE_FILE_ACCESS_ALLOWED 				= 0,
@@ -76,15 +76,15 @@ public:
   // replaces SH_OSCachemmap::isCacheHeaderValid(..).
   virtual bool isCacheHeaderValid() = 0;
 
-  virtual bool updateLastAttachedTime(OMRPortLibrary* library);
-  virtual bool updateLastDetachedTime(OMRPortLibrary* library);
+  virtual bool updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
+  virtual bool updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
 protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;
   friend class OSMemoryMappedCacheAttachingContext;
 
-  IDATA acquireHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
-  IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
+  IDATA acquireHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly, LastErrorInfo* lastErrorInfo);
+  IDATA releaseHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly, LastErrorInfo* lastErrorInfo);
 
   // the generation is only used for determining the location of
   // the header lock. if we use the _config object to do that instead,
@@ -103,7 +103,6 @@ protected:
   I_64 _actualFileLength;
   UDATA _fileHandle;
 
-  UDATA _runningReadOnly;
   UDATA _finalised; // is the cache finalised, resources returned before the cache is destroyed
   SH_CacheFileAccess _cacheFileAccess; // the status of the cache file access.
 

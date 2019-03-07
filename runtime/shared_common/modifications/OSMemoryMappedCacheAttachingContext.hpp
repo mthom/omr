@@ -25,7 +25,7 @@
 
 #include "omr.h"
 
-#include "OSCacheMemoryMappedInitializationContext.hpp"
+#include "OSCacheMemoryMappedCacheInitializationContext.hpp"
 
 class OSMemoryMappedCache;
 class OSMemoryMappedCacheConfig;

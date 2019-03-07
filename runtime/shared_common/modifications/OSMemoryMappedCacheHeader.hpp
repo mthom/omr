@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -26,7 +26,7 @@
 
 #include "OSCacheRegion.hpp"
 
-class OSMemoryMappedCacheHeader : public OSCacheRegion
+class OSMemoryMappedCacheHeader: public OSCacheRegion
 {
 public:
   virtual U_64 getHeaderLockOffset() = 0;
@@ -43,6 +43,7 @@ protected:
   // TODO: add eyecatcher of length J9SH_OSCACHE_MMAP_EYECATCHER.
   
   // from the OSCache_header* and OSCachemmap_header* structs.
+  // these have been moved to the OSMemoryMappedCacheLayout class.
   // U_32 _headerSize;   // from OSCache_header2: dataLength
   // J9SRP _headerStart; // from OSCache_header2: dataStart
 

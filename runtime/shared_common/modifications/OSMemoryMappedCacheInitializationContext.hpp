@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2019 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,34 +19,29 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED)
+#define OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED
 
-#if !defined(OSCACHE_CONFIG_HPP_INCLUDED)
-#define OSCACHE_CONFIG_HPP_INCLUDED
+#include "sharedconsts.hpp"
 
-#include "omr.h"
-#include "sharedconsts.h"
+#include "OSCacheConfigOptions.hpp"
 
-#include "OSCacheAttachingContext.hpp"
-#include "OSCacheCreatingContext.hpp"
+class OSMemoryMappedCache;
 
-// why is OSCacheLayout a template parameter?? Because Layout classes
-// are typically "bottom level", meaning that they contain information
-// regarding the architecture of the class that's accessed
-// frequently. This is vastly preferable to peppering the cache code
-// with dynamic_cast's wherever it needs to know about the layout
-// IMHO.
-template <class OSCacheLayout>
-class OSCacheConfig
-{
+class OSMemoryMappedCacheInitializationContext {
 public:
-  virtual IDATA getWriteLockID() = 0;
-  virtual IDATA getReadWriteLockID() = 0;
-
-  // sometimes the lock IDs are keyed against regions, sometimes not.
-  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL) = 0;
-  virtual IDATA releaseLock(UDATA lockID) = 0;  
+  OSMemoryMappedCacheInitializationContext(OSMemoryMappedCache* cache)
+    : _cache(cache)
+  {}
+  
+  // attach to a freshly created/connected cache. the logic of these varies
+  // according to the initialization context.
+  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions) = 0;
+  virtual IDATA internalAttach() = 0;
+  virtual bool creatingNewCache() = 0;
+  
 protected:
-  OSCacheLayout* _layout;
+  OSMemoryMappedCache* _cache;
 };
 
 #endif
