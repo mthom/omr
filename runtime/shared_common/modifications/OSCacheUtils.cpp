@@ -19,12 +19,17 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-
+#include "omrcfg.h"
+#include "omrargscan.h"
+#include "omrport.h"
+#include "pool_api.h"
+#include "shrnls.h"
 #include "omrsharedhelper.h" // see omrsharedhelper.c for
                              // cleanSharedMemorySegments, which is
                              // called from omrshmem_createDir to
                              // "clean the memory segments." More
                              // comments in the source.
+#include "ut_omrshr.h"
 
 #include "OSCacheConfigOptions.hpp"
 #include "OSCacheUtils.hpp"
@@ -111,7 +116,29 @@ getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* bu
   omrstr_printf(buffer, bufferSize, "%s", cacheDirName);//, cacheNameWithVGen);
 
   //Trc_SHR_OSC_getCachePathName_Exit();
-  
+
+  return 0;
+}
+
+UDATA
+statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cacheName, bool displayNotFoundMsg)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
+  char fullPath[OMRSH_MAXPATH];
+
+  Trc_SHR_OSC_statCache_Entry(cacheName); // cacheNameWithVGen);
+
+  omrstr_printf(fullPath, OMRSH_MAXPATH, "%s%s", cacheDirName, cacheName); // cacheNameWithVGen);
+  if (omrfile_attr(fullPath) == EsIsFile) {
+    Trc_SHR_OSC_statCache_cacheFound();
+    return 1;
+  }
+
+  if (displayNotFoundMsg) {
+    omrnls_printf(OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_NOT_EXIST);
+  }
+
+  Trc_SHR_OSC_statCache_cacheNotFound();
   return 0;
 }
 

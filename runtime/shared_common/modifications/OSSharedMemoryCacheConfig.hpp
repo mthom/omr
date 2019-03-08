@@ -75,6 +75,11 @@ public:
   virtual U_64 getLockSize(UDATA lockID) = 0;
   
 protected:
+  IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
+  IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
+  
+  virtual IDATA initializeHeader(const char* cacheDirName, LastErrorInfo* lastErrorInfo) = 0;
+  
   IDATA _numLocks;
   OSSharedMemoryCacheHeader* _header;
 

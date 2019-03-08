@@ -67,7 +67,7 @@ public:
   virtual U_64* getLastAttachTimeLocation() = 0;
   virtual U_64* getLastDetachTimeLocation() = 0;
   virtual U_64* getLastCreateTimeLocation() = 0;
-  
+
   virtual U_64* getInitCompleteLocation() = 0;
 
   virtual bool setCacheLength(LastErrorInfo* lastErrorInfo) = 0;

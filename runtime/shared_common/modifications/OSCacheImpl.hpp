@@ -52,10 +52,11 @@ protected:
   void commonInit();
   
   OMRPortLibrary* _portLibrary;
-  I_32  _openMode;
+  //  I_32  _openMode; // now addressed by the OSCacheConfigOptions class.
   UDATA _runningReadOnly;
   IDATA _errorCode;
-  
+
+  UDATA _cacheSize;
   // was:  char *_cacheDir; // the path to the directory containing the cache file.
   char *_cacheLocation;  // the path, or a URI, or something, to the resource containing the cache.
   char *_cacheName; // the name of the cache file. Together with _cacheDir, we have the effective field,

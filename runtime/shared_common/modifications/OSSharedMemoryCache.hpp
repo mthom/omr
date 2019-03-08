@@ -57,16 +57,25 @@ public:
 
   virtual void initialize();
   virtual void cleanup(void);
+
 protected:
   OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator();
 
+  IDATA openCache(const char* cacheName, bool semCreated);
+  IDATA OpenSysVMemoryHelper(const char* cacheName, U_32 perm, LastErrorInfo *lastErrorInfo);
+  
+  I_32 verifySemaphoreGroupAccess(LastErrorInfo* lastErrorInfo);
+  I_32 verifySharedMemoryGroupAccess(LastErrorInfo* lastErrorInfo);
+
+  void cleanupSysvResources();
+  
   OSSharedMemoryCacheConfig* _config;
   OMRControlFileStatus _controlFileStatus;
 
   IDATA _attachCount; // was _attach_count, but then why were we mixing case styles?
   UDATA _totalNumSems;
   UDATA _userSemCntr;
-  
+
   char* _shmFileName;
   char* _semFileName;
   bool _openSharedMemory;

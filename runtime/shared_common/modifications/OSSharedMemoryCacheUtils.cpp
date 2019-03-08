@@ -19,16 +19,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#if !defined(OS_CACHE_UTILS_HPP_INCLUDED)
-#define OS_CACHE_UTILS_HPP_INCLUDED
 
-namespace OSCacheUtils
+#include "OSSharedCacheCacheUtils.hpp"
+#include "OSSharedCacheCacheConfig.hpp"
+#include "OSCacheConfigOptions.hpp"
+
+namespace OSSharedCacheCacheUtils
 {
-static IDATA getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize);//, U_32 cacheType);
-static IDATA createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDATA cacheDirPermissions,
-			    bool cleanMemorySegments);
-static IDATA getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* buffer, UDATA bufferSize);//, const char* cacheNameWithVGen)
-static UDATA statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cacheName, bool displayNotFoundMsg);
 }
-
-#endif

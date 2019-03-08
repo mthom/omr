@@ -25,7 +25,11 @@
 class OSCacheConfigOptions
 {
 public:
+  // cache creation/opening options. used mostly in startup routines.
   enum CreateOptions {
+    OpenForStats,
+    OpenToDestroy,
+    OpenDoNotCreate
   };
 
   enum RuntimeOptions {
@@ -47,7 +51,17 @@ public:
   virtual I_32 fileMode();
   virtual I_32 openMode();
   virtual IDATA cacheDirPermissions();
-  
+
+  // TODO: the restore check only applies to the shared memory cache,
+  // so we should probably create an OSSharedMemoryCacheConfigOptions
+  // subclass, and put it there.. then OSSharedMemoryCache will own a
+  // reference to an OSSharedMemoryCacheConfigOptions object.
+  virtual bool restoreCheckEnabled();
+
+  // TODO: same as restoreCheckEnabled.
+  virtual bool restoreEnabled();
+
+  virtual bool openButDoNotCreate();
   // are we opening the cache in order to destroy?
   virtual bool openToDestroyExistingCache();
   virtual bool openToDestroyExpiredCache();
@@ -66,8 +80,10 @@ public:
   virtual bool groupAccessEnabled();
   // allocate the cache in the user's home directory.
   virtual void useUserHomeDirectoryForCacheLocation();
-  // render the object's options to a bit vector understood by the functions of the OMR port library.
+  // render the options to a bit vector understood by the functions of the OMR port library.
   virtual U_32 renderToFlags();
+
+  virtual UDATA renderCreateOptionsToFlags();
 
   virtual void setOpenMode(I_32 openMode);
   // flags obviated so far:
