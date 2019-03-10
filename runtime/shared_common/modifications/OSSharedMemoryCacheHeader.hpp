@@ -47,7 +47,7 @@ protected:
   // U_32 _headerSize;   // from OSCache_header2: dataLength
   // J9SRP _headerStart; // from OSCache_header2: dataStart
 
-  I_64 _createTime; // from OSCache_mmap_header1 & 2: createTime
+  I_64 _createTime; // from OSCache_sysv_header1 & 2: createTime
   UDATA _inDefaultControlDir; // from OSCache_sysv_header1 & 2: inDefaultControlDir  
 };
 

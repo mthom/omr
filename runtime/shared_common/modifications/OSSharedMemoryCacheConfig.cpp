@@ -28,11 +28,11 @@ OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const
   PORT_ACCESS_FROM_PORT(_portLibrary);
   IDATA rc = 0;
   Trc_SHR_OSC_GlobalLock_getMutex(cacheName);
-  
+
   if (NULL != lastErrorInfo) {
     lastErrorInfo->lastErrorCode = 0;
   }
-  
+
   if (_semhandle != NULL) {
     rc = j9shsem_deprecated_wait(_semhandle, SEM_HEADERLOCK, J9PORT_SHSEM_MODE_UNDO);
     if (-1 == rc) {
@@ -48,7 +48,7 @@ OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const
 }
 
 IDATA OSSharedMemoryCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
-{	
+{
   OMRPORT_ACCESS_FROM_OMRPORT(library);
   IDATA rc = 0;
   if (NULL != lastErrorInfo) {
@@ -65,7 +65,95 @@ IDATA OSSharedMemoryCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library,
       }
     }
   }
-  
+
   Trc_SHR_OSC_GlobalLock_released();
+  return rc;
+}
+
+/**
+ * Obtain the exclusive access right for the shared cache
+ *
+ * If this method succeeds, the caller will own the exclusive access right to the lock specified
+ * and any other thread that attempts to call this method will be suspended.
+ * If the process which owns the exclusive access right has crashed without relinquishing the access right,
+ * it will automatically resume one of the waiting threads which will then own the access right.
+ *
+ * @param[in] lockID  The ID of the lock to acquire
+ *
+ * @return 0 if the operation has been successful, -1 if an error has occured
+ */
+IDATA
+OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
+  IDATA rc;
+
+  // we don't have the _cacheName field in this scope.
+  //Trc_SHR_OSC_enterMutex_Entry(_cacheName);
+  if(_semhandle == NULL) {
+    Trc_SHR_OSC_enterMutex_Exit1();
+    Trc_SHR_Assert_ShouldNeverHappen();
+    return -1;
+  }
+
+  if (lockID > (_totalNumSems-1)) {
+    // we don't know the total number of semaphores.
+    Trc_SHR_OSC_enterMutex_Exit2_V2(lockID, _totalNumSems-1);
+    Trc_SHR_Assert_ShouldNeverHappen();
+    return -1;
+  }
+
+  rc = omrshsem_deprecated_wait(_semhandle, lockID, OMRPORT_SHSEM_MODE_UNDO);
+  if (rc == -1) {
+    /* CMVC 97181 : Don't print error message because if JVM terminates with ^C signal, this function will return -1 and this is not an error*/
+    I_32 myerror = omrerror_last_error_number();
+    if ( ((I_32)(myerror | 0xFFFF0000)) != OMRPORT_ERROR_SYSV_IPC_ERRNO_EINTR) {
+#if !defined(WIN32)
+      OSC_ERR_TRACE2(OMRNLS_SHRC_CC_SYSV_AQUIRE_LOCK_FAILED_ENTER_MUTEX, omrshsem_deprecated_getid(_semhandle), myerror);
+#else
+      OSC_ERR_TRACE1(OMRNLS_SHRC_CC_AQUIRE_LOCK_FAILED_ENTER_MUTEX, myerror);
+#endif
+      Trc_SHR_OSC_enterMutex_Exit3(myerror);
+      Trc_SHR_Assert_ShouldNeverHappen();
+      return -1;
+    }
+  }
+  // again, don't have access to this attribute.
+  //Trc_SHR_OSC_enterMutex_Exit(_cacheName);
+  return rc;
+}
+
+/**
+ * Relinquish the exclusive access right
+ *
+ * If this method succeeds, the caller will return the exclusive access right to the lock specified.
+ * If there is one or more thread(s) suspended on the Mutex by calling @ref SH_OSCache::acquireWriteLock,
+ * then one of the threads will be resumed and become the new owner of the exclusive access rights for the lock
+ *
+ * @param[in] lockID  The ID of the lock to release
+ *
+ * @return 0 if the operations has been successful, -1 if an error has occured
+ */
+IDATA
+OSSharedMemoryCacheConfig::releaseLock(OMRPortLibrary* library, UDATA lockID)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
+  IDATA rc;
+  // again, don't have it.
+  //  Trc_SHR_OSC_exitMutex_Entry(_cacheName);
+  if(_semhandle == NULL) {
+    Trc_SHR_OSC_exitMutex_Exit1();
+    Trc_SHR_Assert_ShouldNeverHappen();
+    return -1;
+  }
+
+  if (lockID > (_totalNumSems-1)) {
+    Trc_SHR_OSC_exitMutex_Exit2_V2(lockID, _totalNumSems);
+    Trc_SHR_Assert_ShouldNeverHappen();
+    return -1;
+  }
+
+  rc = omrshsem_deprecated_post(_semhandle, lockID, OMRPORT_SHSEM_MODE_UNDO);
+  Trc_SHR_OSC_exitMutex_Exit(_cacheName);
   return rc;
 }

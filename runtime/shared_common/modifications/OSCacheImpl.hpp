@@ -34,7 +34,7 @@
  */
 class OSCacheImpl: public OSCache {
 public:
-  OSCacheImpl(OMRPortLibrary* library);
+  OSCacheImpl(OMRPortLibrary* library, IDATA numLocks);
   // old J9 cache comment:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache
@@ -55,7 +55,8 @@ protected:
   //  I_32  _openMode; // now addressed by the OSCacheConfigOptions class.
   UDATA _runningReadOnly;
   IDATA _errorCode;
-
+  
+  
   UDATA _cacheSize;
   // was:  char *_cacheDir; // the path to the directory containing the cache file.
   char *_cacheLocation;  // the path, or a URI, or something, to the resource containing the cache.

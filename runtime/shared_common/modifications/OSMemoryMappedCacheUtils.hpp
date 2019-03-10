@@ -28,7 +28,6 @@
 
 namespace OSMemoryMappedCacheUtils
 {  
-static SH_CacheFileAccess checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions options, LastErrorInfo* lastErrorInfo);
 static I_32 verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle, LastErrorInfo *lastErrorInfo);
 static IDATA getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
 }

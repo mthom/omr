@@ -56,24 +56,41 @@ public:
   IDATA destroy(bool suppressVerbose, bool isReset = false);
 
   virtual void initialize();
-  virtual void cleanup(void);
+  virtual void cleanup();
+
+  SH_CacheAccess isCacheAccessible() const;
+  //  IDATA restoreFromSnapshot(const char* cacheName, UDATA numLocks, bool& cacheExists);
 
 protected:
   OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator();
 
   IDATA openCache(const char* cacheName, bool semCreated);
-  IDATA OpenSysVMemoryHelper(const char* cacheName, U_32 perm, LastErrorInfo *lastErrorInfo);
   
+#if !defined(WIN32)
+  IDATA OpenSysVMemoryHelper(const char* cacheName, U_32 perm, LastErrorInfo *lastErrorInfo);
+  IDATA OpenSysVSemaphoreHelper(LastErrorInfo* lastErrorInfo);
+  IDATA DestroySysVSemHelper();
+
+  I_32 getControlFilePermissions(char *cacheDirName, char *filename,
+				 bool& isNotReadable, bool& isReadOnly)
   I_32 verifySemaphoreGroupAccess(LastErrorInfo* lastErrorInfo);
   I_32 verifySharedMemoryGroupAccess(LastErrorInfo* lastErrorInfo);
+#endif
 
-  void cleanupSysvResources();
+  SH_SysvSemAccess checkSemaphoreAccess(LastErrorInfo* lastErrorInfo);
   
+  // this is largely J9 specific. let it be overloaded.
+  virtual IDATA verifyCacheHeader() = 0;
+  void cleanupSysvResources();
+  IDATA detachRegion();
+
+  void* attach();
+  IDATA detach();
+
   OSSharedMemoryCacheConfig* _config;
   OMRControlFileStatus _controlFileStatus;
 
   IDATA _attachCount; // was _attach_count, but then why were we mixing case styles?
-  UDATA _totalNumSems;
   UDATA _userSemCntr;
 
   char* _shmFileName;

@@ -67,13 +67,24 @@ public:
   virtual IDATA getReadWriteLockID(void);
   
   virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL);
-  virtual IDATA releaseLock(UDATA lockID);
+  virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
 
-  // let these be decided by the classes of the generational header versions. They will
-  // know where the locks lie and how large they are.
+  // let these be decided by the classes of the generational header
+  // versions. They will know where the locks lie and how large they
+  // are.
   virtual U_64 getLockOffset(UDATA lockID) = 0;
   virtual U_64 getLockSize(UDATA lockID) = 0;
+
+  virtual U_64* getHeaderLocation() = 0;
+  virtual U_64* getHeaderSize() = 0;
   
+  // this is _dataStart, wherever that ultimately ends up.
+  virtual U_64* getDataSectionLocation() = 0;
+  virtual U_32 getDataSectionLength() = 0;
+
+  virtual void setHeaderLocation(void* location) = 0;
+  virtual void setDataSectionLocation(void* location) = 0;
+
 protected:
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
@@ -89,6 +100,7 @@ protected:
   omrshmem_handle* _shmhandle;
   omrshsem_handle* _semhandle;
 
+  UDATA _totalNumSems;  
   UDATA _groupPerm;
   I_32 _semid;
 };

@@ -57,7 +57,7 @@ public:
   virtual U_64 getLockOffset(UDATA lockID) = 0;
   virtual U_64 getLockSize(UDATA lockID) = 0;
 
-  // this is _headerStart + _dataStart, wherever that ultimately ends up.
+  // these are _headerStart + _dataStart, wherever that ultimately ends up.
   virtual U_64* getDataSectionLocation() = 0;
   virtual J9SRP* getDataLengthFieldLocation() = 0;
 

@@ -851,7 +851,7 @@ SH_OSCachemmap::getPermissionsRegionGranularity(OSCacheRegion*)
 
   /* This call to capabilities is arguably unnecessary, but it is a good check to do */
   if (omrmmap_capabilities() & OMRPORT_MMAP_CAPABILITY_PROTECT) {
-    return omrmmap_get_region_granularity((void*)_config->_layout->_headerStart);
+    return omrmmap_get_region_granularity(_config->getDataSectionLocation());
   }
 
   return 0;

@@ -67,6 +67,12 @@ public:
   virtual bool openToDestroyExpiredCache();
   virtual bool openToStatExistingCache();
 
+  // reasons for stats. Should have a StatReason enum.
+  virtual bool statToDestroy(); // like SHR_STATS_REASON_DESTROY
+  virtual bool statExpired(); // like SHR_STATS_REASON_EXPIRE
+  virtual bool statIterate(); // like SHR_STATS_REASON_ITERATE
+  virtual bool statList(); // like SHR_STATS_REASON_LIST
+
   virtual void setOpenReason(StartupReason reason);
   virtual void setReadOnlyOpenMode();
   
@@ -75,6 +81,9 @@ public:
 
   // do we try to open the cache read-only if we failed to open the cache with write permissions?
   virtual bool tryReadOnlyOnOpenFailure();
+
+  // when the cache is corrupt, do we dump its contents?
+  virtual bool disableCorruptCacheDumps();
   
   virtual bool verboseEnabled();
   virtual bool groupAccessEnabled();

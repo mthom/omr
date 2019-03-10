@@ -28,10 +28,20 @@
 
 namespace OSSharedMemoryCacheUtils
 {  
-//static SH_CacheFileAccess checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions options, LastErrorInfo* lastErrorInfo);
-//static I_32 verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle, LastErrorInfo *lastErrorInfo);
-//static IDATA getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
-static I_32 verifySemaphoreGroupAccess(LastErrorInfo* lastErrorInfo);  
+static IDATA
+getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
+static SH_CacheFileAccess
+checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions options, LastErrorInfo* lastErrorInfo);  
+#if !defined(WIN32)
+static IDATA
+StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cacheDirName, UDATA groupPerm,
+		     const char* cacheName, OMRPortShmemStatistic* statBuf);
+#endif  
+static IDATA
+getCacheStatsHelper(OMRPortLibrary* library, const char* cacheDirName, UDATA groupPerm, const char* cacheName, SH_OSCache_Info* cacheInfo, OSCacheConfigOptions configOptions);
+
+IDATA
+getCacheStats(OMRPortLibrary* library, const char* ctrlDirName, UDATA groupPerm, const char* cacheName, SH_OSCache_Info* cacheInfo, OSCacheConfigOptions configOptions);
 }
 
 #endif
