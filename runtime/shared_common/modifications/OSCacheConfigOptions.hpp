@@ -22,11 +22,13 @@
 #if !defined(OS_CACHE_CONFIG_OPTIONS_HPP_INCLUDED)
 #define OS_CACHE_CONFIG_OPTIONS_HPP_INCLUDED
 
+#include "omr.h"
+
 class OSCacheConfigOptions
 {
 public:
-  OSCacheConfigOptions(I_32 _openMode) :
-    _openMode(_openMode)
+  OSCacheConfigOptions(I_32 _openMode)
+    : _openMode(_openMode)
   {}
   
   // cache creation/opening options. used mostly in startup routines.

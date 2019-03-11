@@ -25,11 +25,13 @@
 #include "omrport.h"
 
 #include "OSCache.hpp"
+#include "OSCacheImpl.hpp"
+#include "OSCacheConfigOptions.hpp"
 
 namespace OSMemoryMappedCacheUtils
 {  
 static I_32 verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle, LastErrorInfo *lastErrorInfo);
-static IDATA getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
+// static IDATA getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
 }
 
 #endif

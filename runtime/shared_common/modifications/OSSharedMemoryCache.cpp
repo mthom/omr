@@ -20,6 +20,12 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "sharedconsts.h"
+#include "shrnls.h"
+#include "ut_omrshr.h"
+
+#include "OSCacheConfigOptions.hpp"
+#include "OSCacheUtils.hpp"
 #include "OSSharedMemoryCache.hpp"
 
 OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
@@ -27,16 +33,14 @@ OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
 					 const char* cacheDirName,
 					 IDATA numLocks,
 					 OSCacheConfigOptions& configOptions)
-  : OSCacheImpl(library, numLocks)
-  , _config(OSSharedMemoryCacheConfig(numLocks))
-  , _configOptions(configOptions)
+  : OSCacheImpl(library, configOptions, numLocks)  
 {
   // I need to revise the arguments to this trace message.
   // Trc_SHR_OSC_Constructor_Entry(cacheName, piconfig->sharedClassCacheSize, createFlag);
   initialize();
   // expect the open mode has been set in the configOptions object already.
   // configOptions.setOpenMode(openMode);
-  startup(cacheName, ctrlDirName);
+  startup(cacheName, cacheDirName);
   Trc_SHR_OSC_Constructor_Exit(cacheName);
 }
 
@@ -45,7 +49,7 @@ OSSharedMemoryCache::initialize()
 {
   commonInit();
 
-  _attach_count = 0;
+  _attachCount = 0;
   _config->_shmhandle = NULL;
   _config->_semhandle = NULL;
   // _actualCacheSize = 0;
@@ -88,12 +92,12 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
   // Trc_SHR_OSC_startup_Entry(cacheName, (piconfig!= NULL)? piconfig->sharedClassCacheSize : defaultCacheSize, create);
 
   if (_configOptions.groupAccessEnabled()) {
-    _groupPerm = 1;
+    _config->_groupPerm = 1;
   }
 
   // J9 specific.
   // versionData->cacheType = OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT;
-  _cacheSize = (piconfig!= NULL) ? (U_32)piconfig->sharedClassCacheSize : (U_32)defaultCacheSize;
+  //  _cacheSize = (piconfig!= NULL) ? (U_32)piconfig->sharedClassCacheSize : (U_32)defaultCacheSize;
   //  _initializer = i;
     
   _config->_totalNumSems = _numLocks + 1;		/* +1 because of header mutex */
@@ -132,7 +136,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 //  }
   if (!(_semFileName = (char*)omrmem_allocate_memory(semLength, OMRMEM_CATEGORY_CLASSES))) {
     Trc_SHR_OSC_startup_nameAllocateFailure();
-    OSC_ERR_TRACE(J9NLS_SHRC_OSCACHE_ALLOC_FAILED);
+    OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_ALLOC_FAILED);
     return false;
   }
 
@@ -145,8 +149,8 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
     IDATA rc;
 
     if(_configOptions.readOnlyOpenMode()) {
-      if (!statCache(_portLibrary, _cacheDirName, _shmFileName, false)) {
-	OSC_ERR_TRACE(J9NLS_SHRC_OSCACHE_STARTUP_CACHE_CREATION_NOT_ALLOWED_READONLY_MODE);
+      if (!OSCacheUtils::statCache(_portLibrary, _cacheLocation, _shmFileName, false)) {
+	OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_STARTUP_CACHE_CREATION_NOT_ALLOWED_READONLY_MODE);
 	Trc_SHR_OSC_startup_cacheCreationNotAllowed_readOnlyMode();
 	rc = OS_SHARED_MEMORY_CACHE_FAILURE;
 	break;
@@ -154,10 +158,10 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 
       /* Don't get the semaphore set when running read-only, but pretend that we did */
       shsemrc = OMRPORT_INFO_SHSEM_OPENED;
-      _semhandle = NULL;
+      _config->_semhandle = NULL;
     } else {
       #if !defined(WIN32)
-      shsemrc = OpenSysVSemaphoreHelper(versionData, &lastErrorInfo);
+      shsemrc = OpenSysVSemaphoreHelper(&lastErrorInfo);
 #else
       /* Currently on windows, "flags" passed to omrshsem_deprecated_open() are not used, but its better to pass correct flags */
       /*
@@ -173,7 +177,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 
       UDATA flags = _configOptions.renderCreateOptionsToFlags();
 
-      shsemrc = omrshsem_deprecated_open(_cacheDirName, _config->_groupPerm,
+      shsemrc = omrshsem_deprecated_open(_cacheLocation, _config->_groupPerm,
 					 &_config->_semhandle, _semFileName,
 					 (int)_config->_totalNumSems, 0, flags, NULL);
       lastErrorInfo->populate(_portLibrary);
@@ -204,40 +208,41 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 
     switch(shsemrc) {
     case OMRPORT_INFO_SHSEM_CREATED:
+#if !defined(WIN32)      
       if (_configOptions.groupAccessEnabled()) {
 	/* Verify if the group access has been set */
 	struct J9FileStat statBuf;
 	char pathFileName[OMRSH_MAXPATH];
 
-	I_32 semid = omrshsem_deprecated_getid(_semhandle);
+	I_32 semid = omrshsem_deprecated_getid(_config->_semhandle);
 	I_32 groupAccessRc = verifySemaphoreGroupAccess(&lastErrorInfo);
 
 	if (0 == groupAccessRc) {
 	  Trc_SHR_OSC_startup_setSemaphoreGroupAccessFailed(semid);
-	  OSC_WARNING_TRACE1(OMRNLS_SHRC_OSCACHE_SEMAPHORE_SET_GROUPACCESS_FAILED, semid);
+	  OSC_WARNING_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SEMAPHORE_SET_GROUPACCESS_FAILED, semid);
 	} else if (-1 == groupAccessRc) {
 	  /* Fail to get stats of the semaphore */
 	  Trc_SHR_OSC_startup_badSemaphoreStat(semid);
-	  errorHandler(OMRNLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SEMAPHORE_ACCESS, &lastErrorInfo);
-	  rc = OS_SHARED_CACHE_FAILURE;
+	  errorHandler(J9NLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SEMAPHORE_ACCESS, &lastErrorInfo);
+	  rc = OMRSH_OSCACHE_FAILURE;
 	  break;
 	}
 
-	getCachePathName(OMRPORTLIB, _cacheDirName, pathFileName, OMRSH_MAXPATH, _semFileName);
+	OSCacheUtils::getCachePathName(OMRPORTLIB, _cacheLocation, pathFileName, OMRSH_MAXPATH);//, _semFileName);
 	/* No check for return value of getCachePathName() as it always return 0 */
 	memset(&statBuf, 0, sizeof(statBuf));
 	if (0 == omrfile_stat(pathFileName, 0, &statBuf)) {
 	  if (1 != statBuf.perm.isGroupReadable) {
 	    /* Control file needs to be group readable */
 	    Trc_SHR_OSC_startup_setGroupAccessFailed(pathFileName);
-	    OSC_WARNING_TRACE1(J9NLS_SHRC_OSCACHE_SEM_CONTROL_FILE_SET_GROUPACCESS_FAILED, pathFileName);
+	    OSC_WARNING_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SEM_CONTROL_FILE_SET_GROUPACCESS_FAILED, pathFileName);
 	  }
 	} else {
 	  Trc_SHR_OSC_startup_badFileStat(pathFileName);
 	  lastErrorInfo.populate(_portLibrary);
-	  errorHandler(OMRNLS_SHRC_OSCACHE_ERROR_FILE_STAT, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_ERROR_FILE_STAT, &lastErrorInfo);
 
-	  rc = OS_SHARED_CACHE_FAILURE;
+	  rc = OMRSH_OSCACHE_FAILURE;
 	  break;
 	}
       }
@@ -248,7 +253,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
        * - user has specified a cache directory, or
        * - destroying an existing cache
        */
-      if (!_configOptions.readOnlyOpenMode()  //OMR_ARE_NO_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_DO_READONLY)
+      if (!_configOptions.readOnlyOpenMode()  //OMR_ARE_NO_BITS_SET(_configOptions._openMode, J9OSCACHE_OPEN_MODE_DO_READONLY)
 	  && (OMRPORT_INFO_SHSEM_OPENED == shsemrc)
 	  && (!_configOptions.isUserSpecifiedCacheDir())
 	  && (!_configOptions.openToDestroyExistingCache())//OMR_ARE_NO_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_DESTROY))
@@ -268,32 +273,32 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 	}
 
 	if (0 == headerMutexRc) {
-	  rc = openCache(_cacheDirName, (shsemrc == OMRPORT_INFO_SHSEM_CREATED));
+	  rc = openCache(_cacheLocation, (shsemrc == OMRPORT_INFO_SHSEM_CREATED));
 	  if (!_configOptions.restoreCheckEnabled() || !_configOptions.restoreEnabled()) {
 	      // OMR_ARE_NO_BITS_SET(_runtimeFlags, OMRSHR_RUNTIMEFLAG_RESTORE | OMRSHR_RUNTIMEFLAG_RESTORE_CHECK)) {
 	    /* When running "restoreFromSnapshot" utility, do not release headerMutex here */
 	    if (0 != _config->releaseHeaderWriteLock(_portLibrary, &lastErrorInfo)) {
-	      errorHandler(OMRNLS_SHRC_OSCACHE_ERROR_EXIT_HDR_MUTEX, &lastErrorInfo);
+	      errorHandler(J9NLS_SHRC_OSCACHE_ERROR_EXIT_HDR_MUTEX, &lastErrorInfo);
 	      rc = OS_SHARED_MEMORY_CACHE_FAILURE;
 	    }
 	  }
 	} else {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_ERROR_ENTER_HDR_MUTEX, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_ERROR_ENTER_HDR_MUTEX, &lastErrorInfo);
 	  rc = OS_SHARED_MEMORY_CACHE_FAILURE;
 	}
       } else {
-	switch (_semAccess) {
+	switch (_config->_semAccess) {
 	case OMRSH_SEM_ACCESS_CANNOT_BE_DETERMINED:
-	  errorHandler(OMRNLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SEMAPHORE_ACCESS, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SEMAPHORE_ACCESS, &lastErrorInfo);
 	  break;
 	case OMRSH_SEM_ACCESS_OWNER_NOT_CREATOR:
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OWNER_NOT_CREATOR, NULL);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OWNER_NOT_CREATOR, NULL);
 	  break;
 	case OMRSH_SEM_ACCESS_GROUP_ACCESS_REQUIRED:
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_GROUPACCESS_REQUIRED, NULL);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_GROUPACCESS_REQUIRED, NULL);
 	  break;
 	case OMRSH_SEM_ACCESS_OTHERS_NOT_ALLOWED:
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OTHERS_ACCESS_NOT_ALLOWED, NULL);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OTHERS_ACCESS_NOT_ALLOWED, NULL);
 	  break;
 	default:
 	  Trc_SHR_Assert_ShouldNeverHappen();
@@ -315,7 +320,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
       ) {
 	/* No semaphore set was found when opening for
 	   "destroy". Avoid printing any error message. */
-	rc = OSCACHESYSV_SUCCESS;
+	rc = OS_SHARED_MEMORY_CACHE_SUCCESS;
       } else {
 	I_32 semid = 0;
 
@@ -329,32 +334,32 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 	}
 
 	if ((OMRPORT_ERROR_SHSEM_OPFAILED == shsemrc) || (OMRPORT_ERROR_SHSEM_OPFAILED_SEMAPHORE_NOT_FOUND == shsemrc)) {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED, &lastErrorInfo);
 	  if ((OMRPORT_ERROR_SHSEM_OPFAILED == shsemrc) && (0 != semid)) {
-	    omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
+	    omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
 	  }
 	} else if (OMRPORT_ERROR_SHSEM_OPFAILED_CONTROL_FILE_LOCK_FAILED == shsemrc) {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_CONTROL_FILE_LOCK_FAILED, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_CONTROL_FILE_LOCK_FAILED, &lastErrorInfo);
 	} else if (OMRPORT_ERROR_SHSEM_OPFAILED_CONTROL_FILE_CORRUPT == shsemrc) {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_CONTROL_FILE_CORRUPT, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_CONTROL_FILE_CORRUPT, &lastErrorInfo);
 	} else if (OMRPORT_ERROR_SHSEM_OPFAILED_SEMID_MISMATCH == shsemrc) {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEMID_MISMATCH, &lastErrorInfo);
-	  omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEMID_MISMATCH, &lastErrorInfo);
+	  omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
 	} else if (OMRPORT_ERROR_SHSEM_OPFAILED_SEM_KEY_MISMATCH == shsemrc) {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEM_KEY_MISMATCH, &lastErrorInfo);
-	  omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEM_KEY_MISMATCH, &lastErrorInfo);
+	  omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
 	} else if (OMRPORT_ERROR_SHSEM_OPFAILED_SEM_SIZE_CHECK_FAILED == shsemrc) {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEM_SIZE_CHECK_FAILED, &lastErrorInfo);
-	  omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEM_SIZE_CHECK_FAILED, &lastErrorInfo);
+	  omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
 	} else if (OMRPORT_ERROR_SHSEM_OPFAILED_SEM_MARKER_CHECK_FAILED == shsemrc) {
-	  errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEM_MARKER_CHECK_FAILED, &lastErrorInfo);
-	  omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
+	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_SEM_MARKER_CHECK_FAILED, &lastErrorInfo);
+	  omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED_DISPLAY_SEMID, semid);
 	}
 	/* Report any error that occurred during unlinking of control file */
 	if (OMRPORT_INFO_CONTROL_FILE_UNLINK_FAILED == _controlFileStatus.status) {
-	  omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SEMAPHORE_CONTROL_FILE_UNLINK_FAILED, _semFileName);
-	  OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, _controlFileStatus.errorCode);
-	  OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE, _controlFileStatus.errorMsg);
+	  omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SEMAPHORE_CONTROL_FILE_UNLINK_FAILED, _semFileName);
+	  OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, _controlFileStatus.errorCode);
+	  OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE, _controlFileStatus.errorMsg);
 	}
       }
       
@@ -366,15 +371,15 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 	_config->_semhandle = NULL;
 	/* Skip acquiring header mutex as the semaphore handle is NULL */
 	// versionData is J9 specific.
-	rc = openCache(_cacheDirName, false); //, versionData, false);
+	rc = openCache(_cacheLocation, false); //, versionData, false);
       } else if (_configOptions.tryReadOnlyOnOpenFailure()) {
 	/* Try read-only mode for 'nonfatal' option only if shared memory control file exists
 	 * because we can't create a new control file when running in read-only mode.
 	 */
-	if (statCache(_portLibrary, _cacheDirName, _shmFileName, false)) {
-	  OSC_TRACE(OMRNLS_SHRC_OSCACHE_STARTUP_NONFATAL_TRY_READONLY);
+	if (OSCacheUtils::statCache(_portLibrary, _cacheLocation, _shmFileName, false)) {
+	  OSC_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_STARTUP_NONFATAL_TRY_READONLY);
 	  Trc_SHR_OSC_startup_attemptNonfatalReadOnly();
-	  _openMode |= OMROSCACHE_OPEN_MODE_DO_READONLY;
+	  _configOptions.setOpenMode(_configOptions.openMode() | J9OSCACHE_OPEN_MODE_DO_READONLY);
 	  rc = OS_SHARED_MEMORY_CACHE_RESTART;
 	} else {
 	  rc = OS_SHARED_MEMORY_CACHE_FAILURE;
@@ -385,12 +390,12 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
       break;
 
     case OMRPORT_ERROR_SHSEM_WAIT_FOR_CREATION_MUTEX_TIMEDOUT:
-      errorHandler(OMRNLS_SHRC_OSCACHE_SEMAPHORE_WAIT_FOR_CREATION_MUTEX_TIMEDOUT, &lastErrorInfo);
+      errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_WAIT_FOR_CREATION_MUTEX_TIMEDOUT, &lastErrorInfo);
       rc = OS_SHARED_MEMORY_CACHE_FAILURE;
       break;
 
     default:
-      errorHandler(OMRNLS_SHRC_OSCACHE_UNKNOWN_ERROR, &lastErrorInfo);
+      errorHandler(J9NLS_SHRC_OSCACHE_UNKNOWN_ERROR, &lastErrorInfo);
       rc = OS_SHARED_MEMORY_CACHE_FAILURE;
       break;
     }
@@ -398,7 +403,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
     switch (rc) {
     case OS_SHARED_MEMORY_CACHE_CREATED:
       if (_configOptions.verboseEnabled()) {
-	OSC_TRACE1(OMRNLS_SHRC_OSCACHE_SHARED_CACHE_CREATEDA, _cacheName);
+	OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SHARED_CACHE_CREATEDA, _cacheName);
       }
 #if !defined(WIN32)
       if (_configOptions.groupAccessEnabled()) {//OMR_ARE_ALL_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_GROUPACCESS)) {
@@ -409,10 +414,10 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 
 	if (0 == groupAccessRc) {
 	  Trc_SHR_OSC_startup_setSharedMemoryGroupAccessFailed(shmid);
-	  OSC_WARNING_TRACE1(OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_SET_GROUPACCESS_FAILED, shmid);
+	  OSC_WARNING_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_SET_GROUPACCESS_FAILED, shmid);
 	} else if (-1 == groupAccessRc) {
 	  Trc_SHR_OSC_startup_badSharedMemoryStat(shmid);
-	  errorHandler(OMRNLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SHARED_MEMORY_ACCESS, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SHARED_MEMORY_ACCESS, &lastErrorInfo);
 	  retryCount = 0;
 	  continue;
 	}
@@ -422,14 +427,14 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 	  if (1 != statBuf.perm.isGroupReadable) {
 	    /* Control file needs to be group readable */
 	    Trc_SHR_OSC_startup_setGroupAccessFailed(_cachePathName);
-	    OSC_WARNING_TRACE1(OMRNLS_SHRC_OSCACHE_SHM_CONTROL_FILE_SET_GROUPACCESS_FAILED, _cachePathName);
+	    OSC_WARNING_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SHM_CONTROL_FILE_SET_GROUPACCESS_FAILED, _cachePathName);
 	  }
 	} else {
 	  Trc_SHR_OSC_startup_badFileStat(_cachePathName);
 	  lastErrorInfo.populate(_portLibrary);
 //	  lastErrorInfo.lastErrorCode = omrerror_last_error_number();
 //	  lastErrorInfo.lastErrorMsg = omrerror_last_error_message();
-	  errorHandler(OMRNLS_SHRC_OSCACHE_ERROR_FILE_STAT, &lastErrorInfo);
+	  errorHandler(J9NLS_SHRC_OSCACHE_ERROR_FILE_STAT, &lastErrorInfo);
 	  retryCount = 0;
 	  continue;
 	}
@@ -444,9 +449,9 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
     case OS_SHARED_MEMORY_CACHE_OPENED:
       if (_configOptions.verboseEnabled()) {
 	if (_runningReadOnly) {
-	  OSC_TRACE1(OMRNLS_SHRC_OSCACHE_SYSV_STARTUP_OPENED_READONLY, _cacheName);
+	  OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SYSV_STARTUP_OPENED_READONLY, _cacheName);
 	} else {
-	  OSC_TRACE1(OMRNLS_SHRC_OSCACHE_SHARED_CACHE_OPENEDA, _cacheName);
+	  OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SHARED_CACHE_OPENEDA, _cacheName);
 	}
       }
       setError(OMRSH_OSCACHE_OPENED);
@@ -495,7 +500,7 @@ OSSharedMemoryCache::checkSemaphoreAccess(LastErrorInfo *lastErrorInfo)
   SH_SysvSemAccess semAccess = OMRSH_SEM_ACCESS_ALLOWED;
 
   if (NULL != lastErrorInfo) {
-    lastErrorInfo->lastErrorCode = 0;
+    lastErrorInfo->_lastErrorCode = 0;
   }
 
 #if !defined(WIN32)
@@ -547,7 +552,7 @@ OSSharedMemoryCache::checkSemaphoreAccess(LastErrorInfo *lastErrorInfo)
 	      semAccess = OMRSH_SEM_ACCESS_CANNOT_BE_DETERMINED;
 	      if (NULL != lastErrorInfo) {
 		lastErrorInfo->populate(_portLibrary);
-		//lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+		//lastErrorInfo->_lastErrorCode = omrerror_last_error_number();
 		//lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
 	      }
 	      Trc_SHR_OSC_Sysv_checkSemaphoreAccess_GetGroupsFailed();
@@ -559,7 +564,7 @@ OSSharedMemoryCache::checkSemaphoreAccess(LastErrorInfo *lastErrorInfo)
 	  }
 	  if (sameGroup) {
 	    /* This process belongs to same group as owner or creator of the semaphore set. */
-	    if (0 == _groupPerm) {
+	    if (0 == _config->_groupPerm) {
 	      /* If 'groupAccess' option is not set, it implies this process wants to attach to a shared cache that it owns or created.
 	       * But this process is neither creator nor owner of the semaphore set.
 	       * This implies we should not allow this process to use the cache.
@@ -580,7 +585,7 @@ OSSharedMemoryCache::checkSemaphoreAccess(LastErrorInfo *lastErrorInfo)
       semAccess = OMRSH_SEM_ACCESS_CANNOT_BE_DETERMINED;
       if (NULL != lastErrorInfo) {
 	lastErrorInfo->populate(_portLibrary);
-//	lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+//	lastErrorInfo->_lastErrorCode = omrerror_last_error_number();
 //	lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
       }
       Trc_SHR_OSC_Sysv_checkSemaphoreAccess_ShsemStatFailed(semid);
@@ -601,14 +606,14 @@ _end:
 SH_CacheAccess
 OSSharedMemoryCache::isCacheAccessible() const
 {
-  if (OMRSH_SHM_ACCESS_ALLOWED == _shmAccess) {
-    return OMRSH_CACHE_ACCESS_ALLOWED;
-  } else if (OMRSH_SHM_ACCESS_GROUP_ACCESS_REQUIRED == _shmAccess) {
-    return OMRSH_CACHE_ACCESS_ALLOWED_WITH_GROUPACCESS;
-  } else if (OMRSH_SHM_ACCESS_GROUP_ACCESS_READONLY_REQUIRED == _shmAccess) {
-    return OMRSH_CACHE_ACCESS_ALLOWED_WITH_GROUPACCESS_READONLY;
+  if (OMRSH_SHM_ACCESS_ALLOWED == _config->_shmAccess) {
+    return J9SH_CACHE_ACCESS_ALLOWED;
+  } else if (OMRSH_SHM_ACCESS_GROUP_ACCESS_REQUIRED == _config->_shmAccess) {
+    return J9SH_CACHE_ACCESS_ALLOWED_WITH_GROUPACCESS;
+  } else if (OMRSH_SHM_ACCESS_GROUP_ACCESS_READONLY_REQUIRED == _config->_shmAccess) {
+    return J9SH_CACHE_ACCESS_ALLOWED_WITH_GROUPACCESS_READONLY;
   } else {
-    return OMRSH_CACHE_ACCESS_NOT_ALLOWED;
+    return J9SH_CACHE_ACCESS_NOT_ALLOWED;
   }
 }
 
@@ -646,7 +651,7 @@ OSSharedMemoryCache::isCacheAccessible() const
 //   if (-1 == OSCacheUtils::getCacheDirName(OMRPORTLIB, ctrlDirName, cacheDirName, OMRSH_MAXPATH))//, OMRPORT_SHR_CACHE_TYPE_SNAPSHOT))
 //   {
 //     Trc_SHR_OSC_Sysv_restoreFromSnapshot_getCacheDirFailed();
-//     OSC_ERR_TRACE(OMRNLS_SHRC_GETSNAPSHOTDIR_FAILED);
+//     OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_GETSNAPSHOTDIR_FAILED);
 //     rc = -1;
 //     goto done;
 //   }
@@ -661,15 +666,15 @@ OSSharedMemoryCache::isCacheAccessible() const
 // 
 //     if (OMRPORT_ERROR_FILE_NOENT == errorno) {
 //       Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileNotFound(pathFileName);
-//       OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_NOT_FOUND, pathFileName);
+//       OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_NOT_FOUND, pathFileName);
 //     } else {
 //       const char * errormsg = omrerror_last_error_message();
 // 
 //       Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileOpenFailed(pathFileName);
-//       OSC_ERR_TRACE1(OMRNLS_SHRC_PORT_ERROR_NUMBER, errorno);
+//       OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_PORT_ERROR_NUMBER, errorno);
 //       Trc_SHR_Assert_True(errormsg != NULL);
-//       OSC_ERR_TRACE1(OMRNLS_SHRC_PORT_ERROR_MESSAGE, errormsg);
-//       OSC_ERR_TRACE1(OMRNLS_SHRC_ERROR_SNAPSHOT_FILE_OPEN, pathFileName);
+//       OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_PORT_ERROR_MESSAGE, errormsg);
+//       OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_ERROR_SNAPSHOT_FILE_OPEN, pathFileName);
 //     }
 //     rc = -1;
 //   } else {
@@ -683,10 +688,10 @@ OSSharedMemoryCache::isCacheAccessible() const
 //     // this function configures the restored cache as it goes about
 //     // restoring it.
 //     if (_configOptions.groupAccessEnabled()) { //OMR_ARE_ALL_BITS_SET(vm->sharedClassConfig->runtimeFlags, OMRSHR_RUNTIMEFLAG_ENABLE_GROUP_ACCESS)) {
-//       openMode |= OMROSCACHE_OPEN_MODE_GROUPACCESS;
-//       _groupPerm = 1;
+//       openMode |= J9OSCACHE_OPEN_MODE_GROUPACCESS;
+//       _config->_groupPerm = 1;
 //     } else {
-//       _groupPerm = 0;
+//       _config->_groupPerm = 0;
 //     }
 // 
 //     cacheFileAccess = OSMemoryMappedCacheUtils::checkCacheFileAccess(OMRPORTLIB, fd, openMode, &lastErrorInfo);
@@ -694,14 +699,14 @@ OSSharedMemoryCache::isCacheAccessible() const
 //     if (OMRSH_CACHE_FILE_ACCESS_ALLOWED != cacheFileAccess) {
 //       switch (cacheFileAccess) {
 //       case OMRSH_CACHE_FILE_ACCESS_GROUP_ACCESS_REQUIRED:
-// 	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_SNAPSHOT_GROUPACCESS_REQUIRED, pathFileName);
+// 	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SNAPSHOT_GROUPACCESS_REQUIRED, pathFileName);
 // 	break;
 //       case OMRSH_CACHE_FILE_ACCESS_OTHERS_NOT_ALLOWED:
-// 	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_SNAPSHOT_OTHERS_ACCESS_NOT_ALLOWED, pathFileName);
+// 	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SNAPSHOT_OTHERS_ACCESS_NOT_ALLOWED, pathFileName);
 // 	break;
 //       case OMRSH_CACHE_FILE_ACCESS_CANNOT_BE_DETERMINED:
 // 	printErrorMessage(&lastErrorInfo);
-// 	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_SNAPSHOT_INTERNAL_ERROR_CHECKING_CACHEFILE_ACCESS, pathFileName);
+// 	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SNAPSHOT_INTERNAL_ERROR_CHECKING_CACHEFILE_ACCESS, pathFileName);
 // 	break;
 //       default:
 // 	Trc_SHR_Assert_ShouldNeverHappen();
@@ -714,7 +719,7 @@ OSSharedMemoryCache::isCacheAccessible() const
 // 
 //     if ((fileSize < MIN_CC_SIZE) || (fileSize > MAX_CC_SIZE)) {
 //       Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileSizeInvalid(pathFileName, fileSize);
-//       OSC_ERR_TRACE4(OMRNLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_LENGTH, pathFileName, fileSize,
+//       OSC_ERR_TRACE4(J9NLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_LENGTH, pathFileName, fileSize,
 // 		     MIN_CC_SIZE, MAX_CC_SIZE);
 //       rc = -1;
 //       /* lock the file to prevent reading and writing */
@@ -723,10 +728,10 @@ OSSharedMemoryCache::isCacheAccessible() const
 //       const char * errormsg = omrerror_last_error_message();
 //       
 //       Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileLockFailed(pathFileName);
-//       OSC_ERR_TRACE1(OMRNLS_SHRC_PORT_ERROR_NUMBER, errorno);
+//       OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_PORT_ERROR_NUMBER, errorno);
 //       Trc_SHR_Assert_True(errormsg != NULL);
-//       OSC_ERR_TRACE1(OMRNLS_SHRC_PORT_ERROR_MESSAGE, errormsg);
-//       OSC_ERR_TRACE1(OMRNLS_SHRC_ERROR_SNAPSHOT_FILE_LOCK, pathFileName);
+//       OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_PORT_ERROR_MESSAGE, errormsg);
+//       OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_ERROR_SNAPSHOT_FILE_LOCK, pathFileName);
 //       rc = -1;
 //     } else {
 //       // the commented lines in this section are all J9 specific.
@@ -742,12 +747,12 @@ OSSharedMemoryCache::isCacheAccessible() const
 // #if !defined(WIN32)
 // 	OMRPortShmemStatistic statbuf;
 // 	/* The shared memory may be removed without deleting the control files. So check the existence of the shared memory */
-// 	IDATA ret = OSSharedCacheUtils::StatSysVMemoryHelper(OMRPORTLIB, cacheDirName, _groupPerm, nameWithVGen, &statbuf);
+// 	IDATA ret = OSSharedCacheUtils::StatSysVMemoryHelper(OMRPORTLIB, cacheDirName, _config->_groupPerm, nameWithVGen, &statbuf);
 // 
 // 	if (0 == ret) {
 // #endif /* !defined(WIN32) */
 // 	  // Trc_SHR_OSC_Sysv_restoreFromSnapshot_cacheExist1(currentThread);
-// 	  OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_ERROR_RESTORE_EXISTING_CACHE, cacheName);
+// 	  OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_ERROR_RESTORE_EXISTING_CACHE, cacheName);
 // 	  cacheExist = true;
 // 	  omrfile_close(fd);
 // 	  rc = -1;
@@ -757,19 +762,19 @@ OSSharedMemoryCache::isCacheAccessible() const
 // #endif /* !defined(WIN32) */
 //       }
 // 
-//       _openMode = openMode;
+//       _configOptions._openMode = openMode;
 //       _numLocks = numLocks;
 //       
 //       rcStartup = startup(cacheName, ctrlDirName);
 //       
 //       if (false == rcStartup) {
 // 	// Trc_SHR_OSC_Sysv_restoreFromSnapshot_cacheStartupFailed1(currentThread);
-// 	OSC_ERR_TRACE(OMRNLS_SHRC_OSCACHE_ERROR_STARTUP_CACHE);
+// 	OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_ERROR_STARTUP_CACHE);
 // 	destroy(false);
 // 	rc = -1;
 //       } else if (OMRSH_OSCACHE_CREATED != getError()) {
 // 	/* Another VM has created the cache */
-// 	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_ERROR_RESTORE_EXISTING_CACHE, cacheName);
+// 	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_ERROR_RESTORE_EXISTING_CACHE, cacheName);
 // 	Trc_SHR_OSC_Sysv_restoreFromSnapshot_cacheExist2(currentThread);
 // 	cacheExist = true;
 // 	rc = -1;
@@ -787,7 +792,7 @@ OSSharedMemoryCache::isCacheAccessible() const
 // 
 // 	if (NULL == theca) {
 // 	  Trc_SHR_OSC_Sysv_restoreFromSnapshot_cacheAttachFailed(currentThread);
-// 	  OSC_ERR_TRACE(J9NLS_SHRC_OSCACHE_SHMEM_ATTACH);
+// 	  OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_SHMEM_ATTACH);
 // 	  destroy(false);
 // 	  omrfile_close(fd);
 // 	  rc = -1;
@@ -806,17 +811,17 @@ OSSharedMemoryCache::isCacheAccessible() const
 // 					const char * errormsg = omrerror_last_error_message();
 // 
 // 					Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileReadFailed1(currentThread, pathFileName);
-// 					OSC_ERR_TRACE1(J9NLS_SHRC_PORT_ERROR_NUMBER, errorno);
+// 					OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_PORT_ERROR_NUMBER, errorno);
 // 					Trc_SHR_Assert_True(errormsg != NULL);
-// 					OSC_ERR_TRACE1(J9NLS_SHRC_PORT_ERROR_MESSAGE, errormsg);
-// 					OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_READ, pathFileName);
+// 					OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_PORT_ERROR_MESSAGE, errormsg);
+// 					OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_READ, pathFileName);
 // 					destroy(false);
 // 					omrfile_close(fd);
 // 					rc = -1;
 // 					goto done;
 // 				} else if (nbytes != fileRc) {
 // 					Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileReadFailed2(currentThread, pathFileName, nbytes, fileRc);
-// 					OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_READ, pathFileName);
+// 					OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_READ, pathFileName);
 // 					destroy(false);
 // 					omrfile_close(fd);
 // 					rc = -1;
@@ -882,7 +887,7 @@ OSSharedMemoryCache::detachRegion()
       lastErrorInfo.populate(_portLibrary);
 //      lastErrorInfo.lastErrorCode = omrerror_last_error_number();
 //      lastErrorInfo.lastErrorMsg = omrerror_last_error_message();
-      errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_DETACH, &lastErrorInfo);
+      errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_DETACH, &lastErrorInfo);
     } else {
       rc = OS_SHARED_MEMORY_CACHE_SUCCESS;
     }
@@ -896,7 +901,7 @@ OSSharedMemoryCache::detachRegion()
 }
 
 IDATA
-SH_OSCachesysv::detach()
+OSSharedMemoryCache::detach()
 {
   IDATA rc=OS_SHARED_MEMORY_CACHE_FAILURE;
   Trc_SHR_OSC_detach_Entry();
@@ -970,7 +975,7 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
     lastErrorInfo.populate(_portLibrary);    
 //    lastErrorInfo.lastErrorCode = omrerror_last_error_number();
 //    lastErrorInfo.lastErrorMsg = omrerror_last_error_message();
-    errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_ATTACH, &lastErrorInfo);
+    errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_ATTACH, &lastErrorInfo);
     _config->setDataSectionLocation(NULL);
     _attachCount = 0;
     
@@ -1008,7 +1013,7 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
   /*_dataStart is set here, and possibly initializeHeader if its a new cache */
 
   // this has to be overloaded by the header class.
-  _config->_header->init(_config->_layout);
+  _config->_header->init(); //_config->_layout);
 //  _dataStart = SHM_DATASTARTFROMHEADER(((OSCachesysv_header_version_current*)_headerStart));
 //
 //  _dataLength = SHM_CACHEDATASIZE(((OSCachesysv_header_version_current*)_headerStart)->oscHdr.size);
@@ -1016,10 +1021,10 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
   
   if (_configOptions.verboseEnabled()) { //_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
     U_32 dataLength = _config->getDataSectionLength();
-    OSC_TRACE2(OMRNLS_SHRC_OSCACHE_ATTACH_SUCCESS, _cacheName, dataLength);
+    OSC_TRACE2(_configOptions, J9NLS_SHRC_OSCACHE_ATTACH_SUCCESS, _cacheName, dataLength);
   }
 
-  U_32 dataStart = _config->getDataSectionLocation();
+  U_64* dataStart = _config->getDataSectionLocation();
   
   Trc_SHR_OSC_attach_Exit(dataStart);
   return dataStart;
@@ -1034,8 +1039,8 @@ OSSharedMemoryCache::openCache(const char* cacheDirName, bool semCreated) //, J9
   /* we are attaching to existing cache! */
   Trc_SHR_OSC_openCache_Entry(_cacheName);
   IDATA rc;
-  IDATA result = OS_SHARED_MEMORY_CACHE_FAILURE; //OSCACHESYSV_FAILURE;
-  LastErrorInfo lastErrorInfo; // *ahem* WHY??
+  IDATA result = OS_SHARED_MEMORY_CACHE_FAILURE; //OS_SHARED_MEMORY_CACHE_FAILURE;
+  LastErrorInfo lastErrorInfo;
 
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
@@ -1048,7 +1053,7 @@ OSSharedMemoryCache::openCache(const char* cacheDirName, bool semCreated) //, J9
     /* FALLTHROUGH */
   case OMRPORT_ERROR_SHMEM_CREATE_ATTACHED_FAILED:
     /*We failed to attach to the memory.*/
-    errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPEN_ATTACHED_FAILED, &lastErrorInfo);
+    errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPEN_ATTACHED_FAILED, &lastErrorInfo);
     Trc_SHR_OSC_openCache_ExitAttachFailed();
     result = OS_SHARED_MEMORY_CACHE_FAILURE;
     break;
@@ -1067,29 +1072,29 @@ OSSharedMemoryCache::openCache(const char* cacheDirName, bool semCreated) //, J9
 	) {
       /* ALL SET */
       Trc_SHR_OSC_openCache_Exit_Opened(_cacheName);
-      result = OS_SHARED_CACHE_OPENED;
+      result = OS_SHARED_MEMORY_CACHE_OPENED;
     } else {
       switch (_config->_shmAccess) {
       case OMRSH_SHM_ACCESS_CANNOT_BE_DETERMINED:
-	errorHandler(OMRNLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SHARED_MEMORY_ACCESS, &lastErrorInfo);
+	errorHandler(J9NLS_SHRC_OSCACHE_INTERNAL_ERROR_CHECKING_SHARED_MEMORY_ACCESS, &lastErrorInfo);
 	break;
       case OMRSH_SHM_ACCESS_OWNER_NOT_CREATOR:
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OWNER_NOT_CREATOR, NULL);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OWNER_NOT_CREATOR, NULL);
 	break;
       case OMRSH_SHM_ACCESS_GROUP_ACCESS_REQUIRED:
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_GROUPACCESS_REQUIRED, NULL);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHARED_MEMORY_GROUPACCESS_REQUIRED, NULL);
 	break;
       case OMRSH_SHM_ACCESS_GROUP_ACCESS_READONLY_REQUIRED:
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_GROUPACCESS_READONLY_REQUIRED, NULL);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHARED_MEMORY_GROUPACCESS_READONLY_REQUIRED, NULL);
 	break;
       case OMRSH_SHM_ACCESS_OTHERS_NOT_ALLOWED:
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OTHERS_ACCESS_NOT_ALLOWED, NULL);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OTHERS_ACCESS_NOT_ALLOWED, NULL);
 	break;
       default:
 	Trc_SHR_Assert_ShouldNeverHappen();
       }
       Trc_SHR_OSC_openCache_ExitAccessNotAllowed(_config->_shmAccess);
-      result = OS_SHARED_CACHE_FAILURE;
+      result = OMRSH_OSCACHE_FAILURE;
     }
 
     break;
@@ -1098,7 +1103,7 @@ OSSharedMemoryCache::openCache(const char* cacheDirName, bool semCreated) //, J9
      * we should set it up, but don't need to init semaphore
      */
     // TODO: this is now a pure virtual function in the Config class.
-    rc = _config->initializeHeader(cacheDirName, lastErrorInfo); //versionData, lastErrorInfo);
+    rc = _config->initializeHeader(cacheDirName, &lastErrorInfo); //versionData, lastErrorInfo);
     if(rc == OS_SHARED_MEMORY_CACHE_FAILURE) {
       Trc_SHR_OSC_openCache_Exit_CreatedHeaderInitFailed(_cacheName);
       result = OS_SHARED_MEMORY_CACHE_FAILURE;
@@ -1109,14 +1114,14 @@ OSSharedMemoryCache::openCache(const char* cacheDirName, bool semCreated) //, J9
     break;
 
   case OMRPORT_ERROR_SHMEM_WAIT_FOR_CREATION_MUTEX_TIMEDOUT:
-    errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPEN_WAIT_FOR_CREATION_MUTEX_TIMEDOUT, &lastErrorInfo);
+    errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPEN_WAIT_FOR_CREATION_MUTEX_TIMEDOUT, &lastErrorInfo);
     Trc_SHR_OSC_openCache_Exit4();
     result = OS_SHARED_MEMORY_CACHE_FAILURE;
     break;
 
   case OMRPORT_INFO_SHMEM_PARTIAL:
     /* If OMRPORT_INFO_SHMEM_PARTIAL then ::startup() was called by j9shr_destroy_cache().
-     * Returning OSCACHESYSV_OPENED will cause j9shr_destroy_cache() to call ::destroy(),
+     * Returning OS_SHARED_MEMORY_CACHE_OPENED will cause j9shr_destroy_cache() to call ::destroy(),
      * which will cleanup any control files that have there SysV IPC objects del
      */
     result = OS_SHARED_MEMORY_CACHE_OPENED;
@@ -1132,18 +1137,18 @@ OSSharedMemoryCache::openCache(const char* cacheDirName, bool semCreated) //, J9
   case OMRPORT_ERROR_SHMEM_OPFAILED_SHM_SIZE_CHECK_FAILED:
   case OMRPORT_ERROR_SHMEM_OPFAILED_SHARED_MEMORY_NOT_FOUND:
   default:
-    if ((_configOptions.openToStatExistingCache() || _configOptions.OpenToDestroyExistingCache()
+    if ((_configOptions.openToStatExistingCache() || _configOptions.openToDestroyExistingCache()
 	 || _configOptions.openButDoNotCreate())
 	//OMR_ARE_ANY_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_STATS | OMRSH_OSCACHE_OPEXIST_DESTROY | OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE)
 	&& (OMRPORT_ERROR_SHMEM_OPFAILED_SHARED_MEMORY_NOT_FOUND == rc)
 	) {
-      if (_configOptions.OpenToDestroyExistingCache()) { //OMR_ARE_ALL_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_DESTROY)) {
+      if (_configOptions.openToDestroyExistingCache()) { //OMR_ARE_ALL_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_DESTROY)) {
 	/* Absence of shared memory is equivalent to non-existing cache. Do not display any error message,
 	 * but do call cleanupSysVResources() to remove any semaphore set in case we opened it successfully.
 	 */
 	cleanupSysvResources();
       } else if (_configOptions.openToStatExistingCache() || _configOptions.openButDoNotCreate()) {//OMR_ARE_ANY_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_STATS | OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE)) {
-	omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_NOT_EXIST);
+	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_NOT_EXIST);
       }
       Trc_SHR_OSC_openCache_Exit3();
       result = OS_SHARED_MEMORY_CACHE_NOT_EXIST;
@@ -1159,52 +1164,58 @@ OSSharedMemoryCache::openCache(const char* cacheDirName, bool semCreated) //, J9
       }
 
       if ((OMRPORT_ERROR_SHMEM_OPFAILED == rc) || (OMRPORT_ERROR_SHMEM_OPFAILED_SHARED_MEMORY_NOT_FOUND == rc)) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_V1, &lastErrorInfo);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_V1, &lastErrorInfo);
 	if ((OMRPORT_ERROR_SHMEM_OPFAILED == rc) && (0 != shmid)) {
-	  omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
+	  omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
 	}
       } else if (OMRPORT_ERROR_SHMEM_OPFAILED_CONTROL_FILE_LOCK_FAILED == rc) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_CONTROL_FILE_LOCK_FAILED, &lastErrorInfo);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_CONTROL_FILE_LOCK_FAILED, &lastErrorInfo);
       } else if (OMRPORT_ERROR_SHMEM_OPFAILED_CONTROL_FILE_CORRUPT == rc) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_CONTROL_FILE_CORRUPT, &lastErrorInfo);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_CONTROL_FILE_CORRUPT, &lastErrorInfo);
       } else if (OMRPORT_ERROR_SHMEM_OPFAILED_SHMID_MISMATCH == rc) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHMID_MISMATCH, &lastErrorInfo);
-	omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHMID_MISMATCH, &lastErrorInfo);
+	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
       } else if (OMRPORT_ERROR_SHMEM_OPFAILED_SHM_KEY_MISMATCH == rc) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_KEY_MISMATCH, &lastErrorInfo);
-	omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_KEY_MISMATCH, &lastErrorInfo);
+	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
       } else if (OMRPORT_ERROR_SHMEM_OPFAILED_SHM_GROUPID_CHECK_FAILED == rc) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_GROUPID_CHECK_FAILED, &lastErrorInfo);
-	omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_GROUPID_CHECK_FAILED, &lastErrorInfo);
+	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
       } else if (OMRPORT_ERROR_SHMEM_OPFAILED_SHM_USERID_CHECK_FAILED == rc) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_USERID_CHECK_FAILED, &lastErrorInfo);
-	omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_USERID_CHECK_FAILED, &lastErrorInfo);
+	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
       } else if (OMRPORT_ERROR_SHMEM_OPFAILED_SHM_SIZE_CHECK_FAILED == rc) {
-	errorHandler(OMRNLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_SIZE_CHECK_FAILED, &lastErrorInfo);
-	omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
+	errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_OPFAILED_SHM_SIZE_CHECK_FAILED, &lastErrorInfo);
+	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_OPFAILED_DISPLAY_SHMID, shmid);
       }
       /* Report any error that occurred during unlinking of control file */
       if (OMRPORT_INFO_CONTROL_FILE_UNLINK_FAILED == _controlFileStatus.status) {
-	omrnls_printf( OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_SHARED_MEMORY_CONTROL_FILE_UNLINK_FAILED, _shmFileName);
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, _controlFileStatus.errorCode);
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE, _controlFileStatus.errorMsg);
+	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_SHARED_MEMORY_CONTROL_FILE_UNLINK_FAILED, _shmFileName);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, _controlFileStatus.errorCode);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE, _controlFileStatus.errorMsg);
       }
 #if !defined(WIN32)
       if (_configOptions.openToStatExistingCache()) { //(_createFlags & OMRSH_OSCACHE_OPEXIST_STATS)) {
-	OSC_TRACE(OMRNLS_SHRC_OSCACHE_CONTROL_FILE_RECREATE_PROHIBITED_FETCHING_CACHE_STATS);
+	OSC_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_CONTROL_FILE_RECREATE_PROHIBITED_FETCHING_CACHE_STATS);
       } else if (_configOptions.openToDestroyExistingCache()) { //OMR_ARE_ANY_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE)) {
-	OSC_TRACE(OMRNLS_SHRC_OSCACHE_CONTROL_FILE_RECREATE_PROHIBITED);
-      } else if (_configOptions.readOnlyOpenMode()) { // 0 != (_openMode & OMROSCACHE_OPEN_MODE_DO_READONLY)) {
-	OSC_TRACE(OMRNLS_SHRC_OSCACHE_CONTROL_FILE_RECREATE_PROHIBITED_RUNNING_READ_ONLY);
+	OSC_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_CONTROL_FILE_RECREATE_PROHIBITED);
+      } else if (_configOptions.readOnlyOpenMode()) { // 0 != (_openMode & J9OSCACHE_OPEN_MODE_DO_READONLY)) {
+	OSC_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_CONTROL_FILE_RECREATE_PROHIBITED_RUNNING_READ_ONLY);
       }
 #endif
       Trc_SHR_OSC_openCache_Exit3();
-      result = OS_SHARED_MEMORY_CACHE_FAILURE; // OSCACHESYSV_FAILURE;
+      result = OS_SHARED_MEMORY_CACHE_FAILURE; // OS_SHARED_MEMORY_CACHE_FAILURE;
     }
     break;
   }
 
   return result;
+}
+
+void
+OSSharedMemoryCache::setError(IDATA ec)
+{
+  _errorCode = ec;
 }
 
 IDATA
@@ -1232,7 +1243,7 @@ OSSharedMemoryCache::shmemOpenWrapper(const char *cacheName, LastErrorInfo *last
 #if !defined(WIN32)
   rc = OpenSysVMemoryHelper(cacheName, perm, &localLastErrorInfo);
 #else
-  rc = omrshmem_open(_cacheDirName, _config->_groupPerm, &_config->_shmhandle, cacheName, _cacheSize, perm, OMRMEM_CATEGORY_CLASSES_SHC_CACHE, flags, NULL);
+  rc = omrshmem_open(_cacheLocation, _config->_groupPerm, &_config->_shmhandle, cacheName, _cacheSize, perm, OMRMEM_CATEGORY_CLASSES_SHC_CACHE, flags, NULL);
   localLastErrorInfo.populate(OMRPORTLIB);
 //	localLastErrorInfo.lastErrorCode = omrerror_last_error_number();
 //	localLastErrorInfo.lastErrorMsg = omrerror_last_error_message();
@@ -1258,7 +1269,7 @@ OSSharedMemoryCache::shmemOpenWrapper(const char *cacheName, LastErrorInfo *last
       _configOptions.setReadOnlyOpenMode();
       //_openMode |= J9OSCACHE_OPEN_MODE_DO_READONLY;
       perm = OMRSH_SHMEM_PERM_READ;
-      rc = omrshmem_open(_cacheDirName, _config->_groupPerm, &_config->_shmhandle,
+      rc = omrshmem_open(_cacheLocation, _config->_groupPerm, &_config->_shmhandle,
 			 cacheName, _cacheSize, perm, OMRMEM_CATEGORY_CLASSES_SHC_CACHE,
 			 OMRSHMEM_NO_FLAGS, &_controlFileStatus);
 	/* if omrshmem_open is successful, portable error number is set to 0 */
@@ -1299,7 +1310,7 @@ OSSharedMemoryCache::setRegionPermissions(OSCacheRegion* region)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
-  return omrshmem_protect(_cacheDirName, _groupPerm, region->getRegionStartAddress(),
+  return omrshmem_protect(_cacheLocation, _config->_groupPerm, region->getRegionStartAddress(), region->getRegionSize(),
 			  region->renderToFlags());
 }
 
@@ -1315,7 +1326,7 @@ UDATA
 OSSharedMemoryCache::getPermissionsRegionGranularity()
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-  return omrshmem_get_region_granularity(_cacheDirName, _groupPerm, _config->getDataSectionLocation());
+  return omrshmem_get_region_granularity(_cacheLocation, _config->_groupPerm, _config->getDataSectionLocation());
 }
 
 /**
@@ -1332,7 +1343,7 @@ OSSharedMemoryCache::checkSharedMemoryAccess(LastErrorInfo *lastErrorInfo)
   SH_SysvShmAccess shmAccess = OMRSH_SHM_ACCESS_ALLOWED;
 
   if (NULL != lastErrorInfo) {
-    lastErrorInfo->lastErrorCode = 0;
+    lastErrorInfo->_lastErrorCode = 0;
   }
 
 #if !defined(WIN32)
@@ -1379,7 +1390,7 @@ OSSharedMemoryCache::checkSharedMemoryAccess(LastErrorInfo *lastErrorInfo)
 	    shmAccess = OMRSH_SHM_ACCESS_CANNOT_BE_DETERMINED;
 	    if (NULL != lastErrorInfo) {
 	      lastErrorInfo->populate(OMRPORTLIB);
-//	      lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+//	      lastErrorInfo->_lastErrorCode = omrerror_last_error_number();
 //	      lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
 	    }
 	    Trc_SHR_OSC_Sysv_checkSharedMemoryAccess_GetGroupsFailed();
@@ -1391,7 +1402,7 @@ OSSharedMemoryCache::checkSharedMemoryAccess(LastErrorInfo *lastErrorInfo)
 	}
 	if (sameGroup) {
 	  /* This process belongs to same group as owner or creator of the shared memory. */
-	  if (0 == _groupPerm) {
+	  if (0 == _config->_groupPerm) {
 	    /* If 'groupAccess' option is not set, it implies this process wants to attach to a shared cache that it owns or created.
 	     * But this process is neither creator nor owner of the semaphore set.
 	     * This implies we should not allow this process to use the cache.
@@ -1419,7 +1430,7 @@ OSSharedMemoryCache::checkSharedMemoryAccess(LastErrorInfo *lastErrorInfo)
     shmAccess = OMRSH_SHM_ACCESS_CANNOT_BE_DETERMINED;
     if (NULL != lastErrorInfo) {
       lastErrorInfo->populate(OMRPORTLIB);
-//      lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+//      lastErrorInfo->_lastErrorCode = omrerror_last_error_number();
 //      lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
     }
     Trc_SHR_OSC_Sysv_checkSharedMemoryAccess_ShmemStatFailed(shmid);
@@ -1446,7 +1457,7 @@ OSSharedMemoryCache::OpenSysVMemoryHelper(const char* cacheName, U_32 perm, Last
   UDATA flags = OMRSHMEM_NO_FLAGS;
 
   if (NULL != lastErrorInfo) {
-    lastErrorInfo->lastErrorCode = 0;
+    lastErrorInfo->_lastErrorCode = 0;
   }
 
   // all of this -- J9 specific!
@@ -1485,13 +1496,13 @@ OSSharedMemoryCache::OpenSysVMemoryHelper(const char* cacheName, U_32 perm, Last
 //     }
 //     flags |= OMRSHMEM_PRINT_STORAGE_KEY_WARNING;
 // #endif
-      rc = omrshmem_open(_cacheDirName, _config->_groupPerm, &_config->_shmhandle, cacheName, _cacheSize, perm, OMRMEM_CATEGORY_CLASSES, flags, &_controlFileStatus);
+      rc = omrshmem_open(_cacheLocation, _config->_groupPerm, &_config->_shmhandle, cacheName, _cacheSize, perm, OMRMEM_CATEGORY_CLASSES, flags, &_controlFileStatus);
       break;
   case OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE:
-    rc = omrshmem_openDeprecated(_cacheDirName, _config->_groupPerm, &_config->_shmhandle, cacheName, perm, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
+    rc = omrshmem_openDeprecated(_cacheLocation, _config->_groupPerm, &_config->_shmhandle, cacheName, perm, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
     break;
   case OMRSH_SYSV_OLDER_CONTROL_FILE:
-    rc = omrshmem_openDeprecated(_cacheDirName, _config->_groupPerm, &_config->_shmhandle, cacheName, perm, OMRSH_SYSV_OLDER_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
+    rc = omrshmem_openDeprecated(_cacheLocation, _config->_groupPerm, &_config->_shmhandle, cacheName, perm, OMRSH_SYSV_OLDER_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
     break;
   default:
     Trc_SHR_Assert_ShouldNeverHappen();
@@ -1501,7 +1512,7 @@ OSSharedMemoryCache::OpenSysVMemoryHelper(const char* cacheName, U_32 perm, Last
   /* if above portLibrary call is successful, portable error number is set to 0 */
   if (NULL != lastErrorInfo) {
     lastErrorInfo->populate(OMRPORTLIB);
-//    lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+//    lastErrorInfo->_lastErrorCode = omrerror_last_error_number();
 //    lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
   }
   Trc_SHR_OSC_Sysv_OpenSysVMemoryHelper_Exit(rc);
@@ -1530,11 +1541,11 @@ OSSharedMemoryCache::cleanupSysvResources(void)
   if(isCacheActive()) {
     if (NULL != _config->_semhandle) {
       omrshsem_deprecated_close(&_config->_semhandle);
-      OSC_ERR_TRACE(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_CLOSESEM);
+      OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_CLOSESEM);
     }
     if (NULL != _config->_shmhandle) {
       omrshmem_close(&_config->_shmhandle);
-      OSC_ERR_TRACE(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_CLOSESM);
+      OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_CLOSESM);
     }
     return;
   }
@@ -1543,20 +1554,20 @@ OSSharedMemoryCache::cleanupSysvResources(void)
   if ((NULL != _config->_semhandle) && (OMRSH_SEM_ACCESS_ALLOWED == _config->_semAccess)) {
 #if defined(WIN32)
     if (omrshsem_deprecated_destroy(&_config->_semhandle) == 0) {
-      OSC_TRACE(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SEM);
+      OSC_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SEM);
     } else {
       I_32 errorno = omrerror_last_error_number();
       const char * errormsg = omrerror_last_error_message();
-      OSC_ERR_TRACE(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSEM_ERROR);
-      OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
+      OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSEM_ERROR);
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
       Trc_SHR_Assert_True(errormsg != NULL);
-      OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
     }
 #else
     I_32 semid = omrshsem_deprecated_getid(_config->_semhandle);
 
-    if (omrshsem_deprecated_destroy(&_semhandle) == 0) {
-      OSC_TRACE1(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SEM_WITH_SEMID, semid);
+    if (omrshsem_deprecated_destroy(&_config->_semhandle) == 0) {
+      OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SEM_WITH_SEMID, semid);
     } else {
       I_32 errorno = omrerror_last_error_number();
       const char * errormsg = omrerror_last_error_message();
@@ -1564,12 +1575,12 @@ OSSharedMemoryCache::cleanupSysvResources(void)
       I_32 lastSysCall = errorno - lastError;
 
       if ((OMRPORT_ERROR_SYSV_IPC_SEMCTL_ERROR == lastSysCall) && (OMRPORT_ERROR_SYSV_IPC_ERRNO_EPERM == lastError)) {
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSEM_NOT_PERMITTED, semid);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSEM_NOT_PERMITTED, semid);
       } else {
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSEM_ERROR_V1, semid);
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSEM_ERROR_V1, semid);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
 	Trc_SHR_Assert_True(errormsg != NULL);
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
       }
     }
 #endif
@@ -1577,23 +1588,23 @@ OSSharedMemoryCache::cleanupSysvResources(void)
 
   if ((NULL != _config->_shmhandle) && (OMRSH_SHM_ACCESS_ALLOWED == _config->_shmAccess)) {
 #if defined(WIN32)
-    if (omrshmem_destroy(_cacheDirName, _config->_groupPerm, &_config->_shmhandle) == 0) {
-      OSC_TRACE(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SHM);
+    if (omrshmem_destroy(_cacheLocation, _config->_groupPerm, &_config->_shmhandle) == 0) {
+      OSC_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SHM);
     } else {
       // TODO: isn't this the same lastErrorInfo->populate()?? Why don't we use it?
       I_32 errorno = omrerror_last_error_number();
       const char * errormsg = omrerror_last_error_message();
 
-      OSC_ERR_TRACE(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSM_ERROR);
-      OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
+      OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSM_ERROR);
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
       Trc_SHR_Assert_True(errormsg != NULL);
-      OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
     }
 #else
     I_32 shmid = omrshmem_getid(_config->_shmhandle);
 
-    if (omrshmem_destroy(_cacheDirName, _config->_groupPerm, &_config->_shmhandle) == 0) {
-      OSC_TRACE1(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SHM_WITH_SHMID, shmid);
+    if (omrshmem_destroy(_cacheLocation, _config->_groupPerm, &_config->_shmhandle) == 0) {
+      OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SHM_WITH_SHMID, shmid);
     } else {
       I_32 errorno = omrerror_last_error_number();
       const char * errormsg = omrerror_last_error_message();
@@ -1603,12 +1614,12 @@ OSSharedMemoryCache::cleanupSysvResources(void)
 
       if ((OMRPORT_ERROR_SYSV_IPC_SHMCTL_ERROR == lastSysCall) && (OMRPORT_ERROR_SYSV_IPC_ERRNO_EPERM == lastError))
 	{
-	  OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSHM_NOT_PERMITTED, shmid);
+	  OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSHM_NOT_PERMITTED, shmid);
 	} else {
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSM_ERROR_V1, shmid);
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYSM_ERROR_V1, shmid);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR_RECOVER, errorno);
 	Trc_SHR_Assert_True(errormsg != NULL);
-	OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
+	OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR_RECOVER, errormsg);
       }
     }
 #endif
@@ -1631,14 +1642,14 @@ OSSharedMemoryCache::OpenSysVSemaphoreHelper(LastErrorInfo *lastErrorInfo) //J9P
   UDATA action;
 
   if (NULL != lastErrorInfo) {
-    lastErrorInfo->lastErrorCode = 0;
+    lastErrorInfo->_lastErrorCode = 0;
   }
 
   // J9 specific. take the default course of action.
   // SH_OSCachesysv::SysVCacheFileTypeHelper(cacheVMVersion, _activeGeneration);
   action = OMRSH_SYSV_REGULAR_CONTROL_FILE; 
-  rc = omrshsem_deprecated_open(_cacheDirName, _cache->_groupPerm, &_config->_semhandle,
-				_config->_semFileName, (int)_config->_totalNumSems, 0, flags,
+  rc = omrshsem_deprecated_open(_cacheLocation, _config->_groupPerm, &_config->_semhandle,
+				_semFileName, (int)_config->_totalNumSems, 0, flags,
 				&_controlFileStatus); 
 
   /*
@@ -1652,13 +1663,13 @@ OSSharedMemoryCache::OpenSysVSemaphoreHelper(LastErrorInfo *lastErrorInfo) //J9P
     /*
 	switch(action){
 		case OMRSH_SYSV_REGULAR_CONTROL_FILE:
-			rc = omrshsem_deprecated_open(_cacheDirName, _groupPerm, &_semhandle, _semFileName, (int)_totalNumSems, 0, flags, &_controlFileStatus);
+			rc = omrshsem_deprecated_open(_cacheLocation, _config->_groupPerm, &_semhandle, _semFileName, (int)_totalNumSems, 0, flags, &_controlFileStatus);
 			break;
 		case OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE:
-			rc = omrshsem_deprecated_openDeprecated(_cacheDirName, _groupPerm, &_semhandle, _semFileName, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
+			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _config->_groupPerm, &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
 			break;
 		case OMRSH_SYSV_OLDER_CONTROL_FILE:
-			rc = omrshsem_deprecated_openDeprecated(_cacheDirName, _groupPerm, &_semhandle, _semFileName, OMRSH_SYSV_OLDER_CONTROL_FILE);
+			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _config->_groupPerm, &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_CONTROL_FILE);
 			break;
 		default:
 			Trc_SHR_Assert_ShouldNeverHappen();
@@ -1668,7 +1679,7 @@ OSSharedMemoryCache::OpenSysVSemaphoreHelper(LastErrorInfo *lastErrorInfo) //J9P
 	/* if above portLibrary call is successful, portable error number is set to 0 */
   if (NULL != lastErrorInfo) {
     lastErrorInfo->populate(_portLibrary);
-//    lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+//    lastErrorInfo->_lastErrorCode = omrerror_last_error_number();
 //    lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
   }
   Trc_SHR_OSC_Sysv_OpenSysVSemaphoreHelper_Exit(rc);
@@ -1710,13 +1721,13 @@ OSSharedMemoryCache::DestroySysVSemHelper()
   /*
 	switch(action){
 		case OMRSH_SYSV_REGULAR_CONTROL_FILE:
-			rc = omrshsem_deprecated_destroy(&_semhandle);
+			rc = omrshsem_deprecated_destroy(&_config->_semhandle);
 			break;
 		case OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE:
-			rc = omrshsem_deprecated_destroyDeprecated(&_semhandle, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
+			rc = omrshsem_deprecated_destroyDeprecated(&_config->_semhandle, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
 			break;
 		case OMRSH_SYSV_OLDER_CONTROL_FILE:
-			rc = omrshsem_deprecated_destroyDeprecated(&_semhandle, OMRSH_SYSV_OLDER_CONTROL_FILE);
+			rc = omrshsem_deprecated_destroyDeprecated(&_config->_semhandle, OMRSH_SYSV_OLDER_CONTROL_FILE);
 			break;
 		default:
 			Trc_SHR_Assert_ShouldNeverHappen();
@@ -1731,25 +1742,25 @@ OSSharedMemoryCache::DestroySysVSemHelper()
     I_32 lastSysCall = errorno - lastError;
 
     if ((OMRPORT_ERROR_SYSV_IPC_SEMCTL_ERROR == lastSysCall) && (OMRPORT_ERROR_SYSV_IPC_ERRNO_EPERM == lastError)) {
-      OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_SEMAPHORE_DESTROY_NOT_PERMITTED,
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_SEMAPHORE_DESTROY_NOT_PERMITTED,
 		     omrshsem_deprecated_getid(_config->_semhandle));
     } else {
       const char* errormsg = omrerror_last_error_message();
 
-      OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_DESTROYSEM_ERROR_WITH_SEMID,
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_DESTROYSEM_ERROR_WITH_SEMID,
 		     omrshsem_deprecated_getid(_config->_semhandle));
-      OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR, errorno);
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR, errorno);
       Trc_SHR_Assert_True(errormsg != NULL);
-      OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR, errormsg);
+      OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR, errormsg);
     }
 #else /* !defined(WIN32) */
     I_32 errorno = omrerror_last_error_number();
     const char * errormsg = omrerror_last_error_message();
 
-    OSC_ERR_TRACE(OMRNLS_SHRC_OSCACHE_DESTROYSEM_ERROR);
-    OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR, errorno);
+    OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_DESTROYSEM_ERROR);
+    OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR, errorno);
     Trc_SHR_Assert_True(errormsg != NULL);
-    OSC_ERR_TRACE1(OMRNLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR, errormsg);
+    OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR, errormsg);
 #endif /* !defined(WIN32) */
   }
 done:
@@ -1875,3 +1886,25 @@ OSSharedMemoryCache::verifySharedMemoryGroupAccess(LastErrorInfo *lastErrorInfo)
 }
 #endif /* !defined(WIN32) */
 
+UDATA
+OSSharedMemoryCache::isCacheActive() const
+{
+  IDATA rc;
+  OMRPortShmemStatistic statbuf;
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  rc = omrshmem_stat(_cacheLocation, _config->_groupPerm, _shmFileName, &statbuf);
+  if (-1 == rc) {
+    /* CMVC 143141: If shared memory can not be stat'd then it
+     * doesn't exist.  In this case we return 0 because a cache
+     * that does not exist on the system then it should not be active.
+     */
+    return 0;
+  }
+
+  if(statbuf.nattach > 0) {
+    return 1;
+  }
+  
+  return 0;
+}

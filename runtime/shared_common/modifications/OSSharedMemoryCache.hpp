@@ -24,8 +24,9 @@
 #define OS_SHARED_MEMORY_CACHE_HPP_INCLUDED
 
 #include "OSCacheImpl.hpp"
+#include "OSSharedMemoryCacheIterator.hpp"
 #include "OSSharedMemoryCacheConfig.hpp"
-#include "OSSharedMemoryCacheInitializationContext.hpp"
+//#include "OSSharedMemoryCacheInitializationContext.hpp"
 
 #include "omr.h"
 #include "omrport.h"
@@ -50,7 +51,7 @@
 class OSSharedMemoryCache: public OSCacheImpl
 {
 public:
-  OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName, IDATA numLocks, OSCacheConfigOptions configOptions);
+  OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName, IDATA numLocks, OSCacheConfigOptions& configOptions);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset = false);
@@ -59,11 +60,13 @@ public:
   virtual void cleanup();
 
   SH_CacheAccess isCacheAccessible() const;
+  UDATA isCacheActive() const;
   //  IDATA restoreFromSnapshot(const char* cacheName, UDATA numLocks, bool& cacheExists);
 
-protected:
-  OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator();
+protected:  
+  virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 
+  void setError(IDATA ec);
   IDATA openCache(const char* cacheName, bool semCreated);
   
 #if !defined(WIN32)
@@ -72,12 +75,18 @@ protected:
   IDATA DestroySysVSemHelper();
 
   I_32 getControlFilePermissions(char *cacheDirName, char *filename,
-				 bool& isNotReadable, bool& isReadOnly)
+				 bool& isNotReadable, bool& isReadOnly);
   I_32 verifySemaphoreGroupAccess(LastErrorInfo* lastErrorInfo);
   I_32 verifySharedMemoryGroupAccess(LastErrorInfo* lastErrorInfo);
 #endif
 
   SH_SysvSemAccess checkSemaphoreAccess(LastErrorInfo* lastErrorInfo);
+  IDATA shmemOpenWrapper(const char *cacheName, LastErrorInfo *lastErrorInfo);
+
+  SH_SysvShmAccess checkSharedMemoryAccess(LastErrorInfo* lastErrorInfo);
+  
+  IDATA setRegionPermissions(OSCacheRegion* region);
+  UDATA getPermissionsRegionGranularity();
   
   // this is largely J9 specific. let it be overloaded.
   virtual IDATA verifyCacheHeader() = 0;
@@ -97,5 +106,4 @@ protected:
   char* _semFileName;
   bool _openSharedMemory;
 };
-
 #endif

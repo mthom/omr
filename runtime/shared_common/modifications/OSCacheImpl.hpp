@@ -65,6 +65,37 @@ typedef enum SH_CacheFileAccess {
 #define OMRSH_OSCACHE_READONLY_RETRY_COUNT 10
 #define OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS 10
 
+#define OSC_TRACE(configOptions, var) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_INFO, var)
+#define OSC_TRACE1(configOptions, var, p1) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_INFO, var, p1)
+#define OSC_TRACE2(configOptions, var, p1, p2) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_INFO, var, p1, p2)
+#define OSC_ERR_TRACE(configOptions, var) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var)
+#define OSC_ERR_TRACE1(configOptions, var, p1) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1)
+#define OSC_ERR_TRACE2(configOptions, var, p1, p2) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1, p2)
+#define OSC_ERR_TRACE4(configOptions, var, p1, p2, p3, p4) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1, p2, p3, p4)
+#define OSC_WARNING_TRACE(configOptions, var) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_WARNING, var)
+#define OSC_WARNING_TRACE1(configOptions, var, p1) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_WARNING, var, p1)
+
+/**
+ * @struct SH_OSCache_Info
+ * Information about a OSCache
+ * If the information is not available, the value will be equals to @arg J9SH_OSCACHE_UNKNOWN
+ */
+typedef struct SH_OSCache_Info {
+        char name[CACHE_ROOT_MAXLEN]; /** The name of the cache */
+        UDATA os_shmid; /** Operating System specific shared memory id */
+        UDATA os_semid; /** Operating System specific semaphore id */
+        I_64 lastattach; /** time from which last attach has happened */
+        I_64 lastdetach; /** time from which last detach has happened */
+        I_64 createtime; /** time from which cache has been created */
+        IDATA nattach; /** number of process attached to this region */
+  //        J9PortShcVersion versionData; /** Cache version data */
+  //        UDATA generation; /** cache generation number */
+  //        UDATA isCompatible; /** Is the cache compatible with this VM */
+        UDATA isCorrupt; /** Is set when the cache is found to be corrupt */
+  //        UDATA isJavaCorePopulated; /** Is set when the javacoreData contains valid data */
+  //        J9SharedClassJavacoreDataDescriptor javacoreData; /** If isCompatible is true, then extra information about the cache is availaible in here*/
+} SH_OSCache_Info;
+
 /*
  * This class houses utility functions that depend on the state of
  * cache internals. Those that don't depend on cache internals are static

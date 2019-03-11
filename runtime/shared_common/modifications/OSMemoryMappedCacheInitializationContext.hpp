@@ -32,16 +32,22 @@ class OSMemoryMappedCacheInitializationContext {
 public:
   OSMemoryMappedCacheInitializationContext(OSMemoryMappedCache* cache)
     : _cache(cache)
+    , _startupCompleted(false)
   {}
   
   // attach to a freshly created/connected cache. the logic of these varies
   // according to the initialization context.
-  virtual bool startup(IDATA& errorCode, OSCacheConfigOptions& configOptions) = 0;
+  virtual bool startup(IDATA& errorCode) = 0;
   virtual bool creatingNewCache() = 0;
-  virtual IDATA initAttach() = 0;
+  virtual bool initAttach(IDATA& rc) = 0;
+
+  bool startupCompleted() const {
+    return _startupCompleted;
+  }
   
 protected:
   OSMemoryMappedCache* _cache;
+  bool _startupCompleted;
 };
 
 #endif

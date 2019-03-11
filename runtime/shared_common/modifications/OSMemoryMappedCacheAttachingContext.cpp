@@ -20,37 +20,40 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "OSMemoryMappedCacheConfigOptions.hpp"
+#include "sharedconsts.h"
+#include "shrnls.h"
+
+#include "OSCacheImpl.hpp"
 #include "OSMemoryMappedCacheAttachingContext.hpp"
 #include "OSMemoryMappedCache.hpp"
 
-// TODO: move constructAttachingContext and constructCreatingContext to OSMemoryMappedCache.
-// since the Context classes own their own cache ptr.
-
-IDATA OSMemoryMappedCacheAttachingContext::initAttach()
+// the internalAttach logic applied if attaching to an existing cache at startup.
+bool OSMemoryMappedCacheAttachingContext::initAttach(IDATA& rc)
 {
-  IDATA rc = OMRSH_OSCACHE_SUCCESS;
+  OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
+  rc = OMRSH_OSCACHE_FAILURE;
 
   J9SRP* dataStartField;
   U_32* dataLengthField;
 
-  if ((dataLengthField = _config->getDataLengthFieldLocation())) {
-    _cache->_config->_layout->_dataLength = *dataLengthField;
+  if ((dataLengthField = _cache->_config->getDataLengthFieldLocation())) {
+    *_cache->_config->getDataLengthFieldLocation() = *dataLengthField;
   }
 
-  if ((dataStartField = _config->getDataSectionLocation())) {
-    _cache->_config->_layout->_dataStart = *dataStartField; //whaat?: MMAP_DATASTARTFROMHEADER(dataStartField);
+  if ((dataStartField = _cache->_config->getDataSectionLocation())) {
+    *_cache->_config->getDataSectionLocation() = *dataStartField;
   }
 
-  if (NULL == *dataStartField) {
+  if (0 == *dataStartField) {
     Trc_SHR_OSC_Mmap_internalAttach_corruptcachefile();
-    OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_DATA_START_NULL, *dataStartField);
+    OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_DATA_START_NULL, *dataStartField);
 
     _cache->setCorruptionContext(CACHE_DATA_NULL, (UDATA)*dataStartField);
     rc = OMRSH_OSCACHE_CORRUPT;
+    return false;
   }
 
-  return rc;
+  return true;
 }
 
 // we probably also need a OSMemoryMappedStartup class, since the method is so huge,
@@ -69,8 +72,10 @@ IDATA OSMemoryMappedCacheAttachingContext::initAttach()
  * Return a boolean: false if _errorPostAttach is reached, true otherwise.
  */
 bool
-OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode, OSCacheConfigOptions& configOptions)
+OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode)
 {
+  OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
+  
   IDATA retryCntr = 0;
   IDATA rc;
   /* We are opening an existing cache */
@@ -97,11 +102,11 @@ OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode, OSCacheConfigOpti
     //goto _errorPostAttach;
     return false;
   }
-
-  if (cache->_config->_runningReadOnly)
+  
+  if (_cache->_runningReadOnly)
   {
     retryCntr = 0;
-    U_32* initCompleteAddr = (U_32*)cache->_config->getInitCompleteLocation();
+    U_32* initCompleteAddr = (U_32*)_cache->_config->getInitCompleteLocation();
 
     /* In readonly, we can't get a header lock, so if the cache is
        mid-init, give it a chance to complete initialization */    
@@ -111,21 +116,22 @@ OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode, OSCacheConfigOpti
     }
 
     if (!*initCompleteAddr) {
-      cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_READONLY_CACHE_NOTINITIALIZED, NULL);
+      _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_READONLY_CACHE_NOTINITIALIZED, NULL);
       Trc_SHR_OSC_Mmap_startup_cacheNotInitialized();
       //goto _errorPostAttach;
       return false;
     }
   }
 
-  if (configOptions.verboseEnabled()) { // _verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
-    if (_config->_runningReadOnly) {
-      OSC_TRACE1(OMRNLS_SHRC_OSCACHE_MMAP_STARTUP_OPENED_READONLY, cache->_cacheName);
+  if (_cache->_configOptions.verboseEnabled()) { // _verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
+    if (_cache->_runningReadOnly) {
+      OSC_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_MMAP_STARTUP_OPENED_READONLY, _cache->_cacheName);
     } else {
-      OSC_TRACE1(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_OPENED, _cacheName);
+      OSC_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_MMAP_STARTUP_OPENED, _cache->_cacheName);
     }
   }
 
+  _startupCompleted = true;
   return true;
 }
 

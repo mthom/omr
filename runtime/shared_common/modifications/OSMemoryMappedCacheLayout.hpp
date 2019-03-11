@@ -31,6 +31,7 @@ public:
   OSMemoryMappedCacheLayout();
   
 protected:
+  friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheHeader;
   
   U_32 _cacheSize;

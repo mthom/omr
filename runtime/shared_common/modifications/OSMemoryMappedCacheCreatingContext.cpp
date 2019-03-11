@@ -20,19 +20,27 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "sharedconsts.h"
+#include "shrnls.h"
+
+#include "OSMemoryMappedCache.hpp"
 #include "OSMemoryMappedCacheCreatingContext.hpp"
+#include "OSMemoryMappedCacheHeader.hpp"
+#include "OSMemoryMappedCacheUtils.hpp"
 
-IDATA OSMemoryMappedCacheCreatingContext::initAttach()
+bool OSMemoryMappedCacheCreatingContext::initAttach(IDATA&)
 {
-  _cache->_config->_layout->_dataLength = _cache->_config->getDataLength();
-  _cache->_config->_layout->_dataStart  = _cache->_config->getHeaderLocation()
-    + _cache->_config->getHeaderSize();
+  *_cache->_config->getDataLengthFieldLocation() = _cache->_config->getDataLength();
+  *_cache->_config->getDataSectionLocation() = (U_32) (*_cache->_config->getHeaderLocation() + _cache->_config->getHeaderSize());
 
-  return OMRSH_OSCACHE_SUCCESS;
+  return true;
 }
 
-bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, OSCacheConfigOptions configOptions)
+bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
 {
+  OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
+  LastErrorInfo lastErrorInfo;
+  
   // this is accessible through the Config object.
   //OSCachemmap_header_version_current *cacheHeader;
   IDATA rc;
@@ -43,9 +51,9 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, OSCacheConfig
   Trc_SHR_OSC_Mmap_startup_fileCreated();
 
   /* We can't create the cache when we're running read-only */
-  if (_cache->_config->_runningReadOnly) {
+  if (_cache->_runningReadOnly) {
     Trc_SHR_OSC_Mmap_startup_runningReadOnlyAndWrongLength();
-    errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_OPENING_CACHE_READONLY, NULL);
+    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_OPENING_CACHE_READONLY, NULL);
     //goto _errorPostHeaderLock;
     return false;
   }
@@ -54,7 +62,7 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, OSCacheConfig
   // if (!setCacheLength((U_32)piconfig->sharedClassCacheSize, &lastErrorInfo)) {
   if(_cache->_config->setCacheLength(&lastErrorInfo)) {
     // Trc_SHR_OSC_Mmap_startup_badSetCacheLength(piconfig->sharedClassCacheSize);
-    errorHandler(OMRNLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_SETTING_CACHE_LENGTH, &lastErrorInfo);
+    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_SETTING_CACHE_LENGTH, &lastErrorInfo);
     //goto _errorPostHeaderLock;
     return false;
   }
@@ -62,18 +70,18 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, OSCacheConfig
   // Trc_SHR_OSC_Mmap_startup_goodSetCacheLength(piconfig->sharedClassCacheSize);
 
   /* Verify if the group access has been set */
-  if (configOptions.groupAccessEnabled()) { //OMR_ARE_ALL_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_GROUPACCESS)) {
+  if (_cache->_configOptions.groupAccessEnabled()) { //OMR_ARE_ALL_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_GROUPACCESS)) {
     I_32 groupAccessRc = OSMemoryMappedCacheUtils::verifyCacheFileGroupAccess(_cache->_portLibrary,
 									      _cache->_config->_fileHandle,
 									      &lastErrorInfo);
 
     if (0 == groupAccessRc) {
       Trc_SHR_OSC_Mmap_startup_setGroupAccessFailed(_cache->_cachePathName);
-      OSC_WARNING_TRACE(OMRNLS_SHRC_OSCACHE_MMAP_SET_GROUPACCESS_FAILED);
+      OSC_WARNING_TRACE(_cache->_configOptions, J9NLS_SHRC_OSCACHE_MMAP_SET_GROUPACCESS_FAILED);
     } else if (-1 == groupAccessRc) {
       /* Failed to get stats of the cache file */
-      Trc_SHR_OSC_Mmap_startup_badFileStat(_cachePathName);
-      _cache->errorHandler(OMRNLS_SHRC_OSCACHE_ERROR_FILE_STAT, &lastErrorInfo);
+      Trc_SHR_OSC_Mmap_startup_badFileStat(_cache->_cachePathName);
+      _cache->errorHandler(J9NLS_SHRC_OSCACHE_ERROR_FILE_STAT, &lastErrorInfo);
       // goto _errorPostHeaderLock;
       return false;
     }
@@ -88,7 +96,7 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, OSCacheConfig
   }
 
   //(OSCachemmap_header_version_current *)_headerStart;
-  cacheHeader = _config->_layout->_headerStart;
+  void* cacheHeader = _cache->_config->getHeaderLocation();
 
   /* Create the cache header */
   if (!createCacheHeader(cacheHeader)) { //, versionData)) {
@@ -104,16 +112,19 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, OSCacheConfig
   if (initializer) {
     if (!initializeDataHeader(initializer)) {
       Trc_SHR_OSC_Mmap_startup_badInitializeDataHeader();
-      errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_INITIALISING_DATA_HEADER, NULL);
+      _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_INITIALISING_DATA_HEADER, NULL);
       goto _errorPostAttach;
     }
     Trc_SHR_OSC_Mmap_startup_goodInitializeDataHeader();
   }
   */
 
-  if (configOptions.verboseEnabled()) { //_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
-    OSC_TRACE1(OMRNLS_SHRC_OSCACHE_MMAP_STARTUP_CREATED, _cacheName);
+  if (_cache->_configOptions.verboseEnabled()) { //_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
+    OSC_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_MMAP_STARTUP_CREATED, _cache->_cacheName);
   }
+
+  _startupCompleted = true;
+  return true;
 }
 
 bool OSMemoryMappedCacheCreatingContext::creatingNewCache() {
@@ -130,13 +141,13 @@ bool OSMemoryMappedCacheCreatingContext::creatingNewCache() {
  * THREADING: Pre-req caller holds the cache header write lock
  */
 I_32
-OSMemoryMappedCacheCreatingContext::createCacheHeader()
+OSMemoryMappedCacheCreatingContext::createCacheHeader(void* header)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
   U_32 headerLen = _cache->_config->getHeaderSize();  // MMAP_CACHEHEADERSIZE;
-  OSMemoryMappedCacheHeader* cacheHeader = _cache->_config->_header;
-
-  if(NULL = cacheHeader) {
+  OSMemoryMappedCacheHeader* cacheHeader = (OSMemoryMappedCacheHeader*) header;
+  
+  if(NULL == cacheHeader) {
     return false;
   }
 
@@ -144,11 +155,11 @@ OSMemoryMappedCacheCreatingContext::createCacheHeader()
   // Trc_SHR_OSC_Mmap_createCacheHeader_Entry(cacheHeader, headerLen, versionData);
 
   memset(cacheHeader, 0, headerLen);
-  strncpy(cacheHeader->eyecatcher, J9SH_OSCACHE_MMAP_EYECATCHER, J9SH_OSCACHE_MMAP_EYECATCHER_LENGTH);
+  strncpy(cacheHeader->_eyecatcher, OMRSH_OSCACHE_MMAP_EYECATCHER, OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH);
 
-  cacheHeader->createTime = omrtime_current_time_millis();
-  cacheHeader->lastAttachedTime = omrtime_current_time_millis();
-  cacheHeader->lastDetachedTime = omrtime_current_time_millis();
+  cacheHeader->_createTime = omrtime_current_time_millis();
+  cacheHeader->_lastAttachedTime = omrtime_current_time_millis();
+  cacheHeader->_lastDetachedTime = omrtime_current_time_millis();
 
   cacheHeader->init(); //initOSCacheHeader(&(cacheHeader->oscHdr), versionData, headerLen);
 

@@ -24,14 +24,20 @@
 
 #include "sharedconsts.h"
 
+#include "OSCacheImpl.hpp"
 #include "OSCacheConfig.hpp"
 #include "OSMemoryMappedCacheLayout.hpp"
 #include "OSMemoryMappedCacheAttachingContext.hpp"
 #include "OSMemoryMappedCacheCreatingContext.hpp"
+#include "OSMemoryMappedCacheHeader.hpp"
 
 #define OMRSH_OSCACHE_MMAP_LOCK_COUNT 5
 #define OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK 0
 #define OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK 1
+
+#define RETRY_OBTAIN_WRITE_LOCK_SLEEP_NS 100000
+#define RETRY_OBTAIN_WRITE_LOCK_MAX_MS 160
+#define NANOSECS_PER_MILLISEC (I_64)1000000
 
 class OSMemoryMappedCacheConfig : public OSCacheConfig<OSMemoryMappedCacheLayout>
 {
@@ -44,18 +50,23 @@ public:
 
   virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL);
   virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
-
+  
   // let these be decided by the classes of the generational header versions. They will
   // know where the locks lie and how large they are.
   virtual U_64 getLockOffset(UDATA lockID) = 0;
   virtual U_64 getLockSize(UDATA lockID) = 0;
+  virtual U_64 getHeaderLockOffset() = 0;
 
-  // these are _headerStart + _dataStart, wherever that ultimately ends up.
-  virtual U_64* getDataSectionLocation() = 0;
-  virtual J9SRP* getDataLengthFieldLocation() = 0;
+  // these are _headerStart + _dataStart, wherever that ultimately ends up (in the header is the only
+  // part of the answer we assume).
+  virtual J9SRP* getDataSectionLocation() = 0;
+  virtual U_32* getDataLengthFieldLocation() = 0;
+
+  // what is the length of the data section in the header?
+  virtual U_32 getDataLength(); 
 
   virtual U_64* getHeaderLocation() = 0;
-  virtual U_64* getHeaderSize() = 0;
+  virtual U_64 getHeaderSize() = 0;
 
   virtual U_64* getLastAttachTimeLocation() = 0;
   virtual U_64* getLastDetachTimeLocation() = 0;
@@ -71,6 +82,7 @@ public:
 
   virtual bool updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
   virtual bool updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
+  
 protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;

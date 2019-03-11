@@ -22,9 +22,14 @@
 #if !defined(OS_MEMORY_MAPPED_CACHE_HEADER_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_HEADER_HPP_INCLUDED
 
-#include "sharedconsts.hpp"
+#include "sharedconsts.h"
 
 #include "OSCacheRegion.hpp"
+#include "OSMemoryMappedCacheLayout.hpp"
+#include "OSCacheRegionSerializer.hpp"
+
+#define OMRSH_OSCACHE_MMAP_EYECATCHER "J9SCMAP"
+#define OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH 7
 
 class OSMemoryMappedCacheHeader: public OSCacheRegion
 {
@@ -32,15 +37,18 @@ public:
   virtual U_64 getHeaderLockOffset() = 0;
   virtual U_64 getAttachLockOffset() = 0;
   // was: initOSCacheHeader.
-  virtual void init(OSMemoryMappedCacheLayout* layout) = 0;
+  virtual void init() = 0;
   
   U_64 getAttachLockSize() {
     return sizeof(_attachLock);
   }
 protected:
+  friend class OSMemoryMappedCacheConfig;
+  friend class OSMemoryMappedCacheCreatingContext;
+  
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
 
-  // TODO: add eyecatcher of length J9SH_OSCACHE_MMAP_EYECATCHER.
+  char _eyecatcher[OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH+1];
   
   // from the OSCache_header* and OSCachemmap_header* structs.
   // these have been moved to the OSMemoryMappedCacheLayout class.

@@ -22,7 +22,7 @@
 #if !defined(OS_SHARED_MEMORY_CACHE_HEADER_HPP_INCLUDED)
 #define OS_SHARED_MEMORY_CACHE_HEADER_HPP_INCLUDED
 
-#include "sharedconsts.hpp"
+#include "sharedconsts.h"
 
 #include "OSCacheRegion.hpp"
 
@@ -32,7 +32,7 @@ public:
 //  virtual U_64 getHeaderLockOffset() = 0;
 //  virtual U_64 getAttachLockOffset() = 0;
   // was: initOSCacheHeader.
-  virtual void init(OSMemoryMappedCacheLayout* layout) = 0;
+  virtual void init() = 0; //OSMemoryMappedCacheLayout* layout) = 0;
   
 //  U_64 getAttachLockSize() {
 //    return sizeof(_attachLock);

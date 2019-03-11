@@ -25,6 +25,8 @@
 #define OSCACHE_ITERATOR_HPP_INCLUDED
 
 #include "omr.h"
+#include "omrport.h"
+#include "ut_omrshr.h"
 
 class OSCacheIterator
 {
@@ -37,8 +39,8 @@ public:
   // this design assumes the missing arguments will be available as fields of the OSCacheIterator subclasses.
   
   virtual UDATA findFirst(OMRPortLibrary *portLibrary) = 0;
-  virtual UDATA findNext(OMRPortLibrary *portLibrary) = 0;
-  virtual void findClose(OMRPortLibrary *portLibrary) = 0;
+  virtual I_32 findNext(OMRPortLibrary *portLibrary, UDATA findHandle) = 0;
+  virtual void findClose(OMRPortLibrary *portLibrary, UDATA findHandle) = 0;
 };
 
 #endif

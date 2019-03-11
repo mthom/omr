@@ -20,25 +20,30 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "OSCacheImpl.hpp"
 #include "OSSharedMemoryCacheConfig.hpp"
+
+#include "omrport.h"
+#include "shrnls.h"
+#include "ut_omrshr.h"
 
 IDATA
 OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo *lastErrorInfo)
 {
-  PORT_ACCESS_FROM_PORT(_portLibrary);
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
   IDATA rc = 0;
   Trc_SHR_OSC_GlobalLock_getMutex(cacheName);
 
   if (NULL != lastErrorInfo) {
-    lastErrorInfo->lastErrorCode = 0;
+    lastErrorInfo->_lastErrorCode = 0;
   }
 
   if (_semhandle != NULL) {
-    rc = j9shsem_deprecated_wait(_semhandle, SEM_HEADERLOCK, J9PORT_SHSEM_MODE_UNDO);
+    rc = omrshsem_deprecated_wait(_semhandle, SEM_HEADERLOCK, OMRPORT_SHSEM_MODE_UNDO);
     if (-1 == rc) {
       if (NULL != lastErrorInfo) {
 	lastErrorInfo->populate(OMRPORTLIB);
-//	lastErrorInfo->lastErrorCode = j9error_last_error_number();
+//	lastErrorInfo->_lastErrorCode = j9error_last_error_number();
 //	lastErrorInfo->lastErrorMsg = j9error_last_error_message();
       }
     }
@@ -47,20 +52,20 @@ OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const
   return rc;
 }
 
-IDATA OSSharedMemoryCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
+IDATA OSSharedMemoryCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
   IDATA rc = 0;
   if (NULL != lastErrorInfo) {
-    lastErrorInfo->lastErrorCode = 0;
+    lastErrorInfo->_lastErrorCode = 0;
   }
 
   if (_semhandle != NULL) {
-    rc = j9shsem_deprecated_post(_semhandle, SEM_HEADERLOCK, J9PORT_SHSEM_MODE_UNDO);
+    rc = omrshsem_deprecated_post(_semhandle, SEM_HEADERLOCK, OMRPORT_SHSEM_MODE_UNDO);
     if (-1 == rc) {
       if (NULL != lastErrorInfo) {
 	lastErrorInfo->populate(OMRPORTLIB);
-//	lastErrorInfo->lastErrorCode = j9error_last_error_number();
+//	lastErrorInfo->_lastErrorCode = j9error_last_error_number();
 //	lastErrorInfo->lastErrorMsg = j9error_last_error_message();
       }
     }
@@ -83,7 +88,7 @@ IDATA OSSharedMemoryCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library,
  * @return 0 if the operation has been successful, -1 if an error has occured
  */
 IDATA
-OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo)
+OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions& configOptions, LastErrorInfo* lastErrorInfo)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
   IDATA rc;
@@ -109,9 +114,9 @@ OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, La
     I_32 myerror = omrerror_last_error_number();
     if ( ((I_32)(myerror | 0xFFFF0000)) != OMRPORT_ERROR_SYSV_IPC_ERRNO_EINTR) {
 #if !defined(WIN32)
-      OSC_ERR_TRACE2(OMRNLS_SHRC_CC_SYSV_AQUIRE_LOCK_FAILED_ENTER_MUTEX, omrshsem_deprecated_getid(_semhandle), myerror);
+      OSC_ERR_TRACE2(configOptions, J9NLS_SHRC_CC_SYSV_AQUIRE_LOCK_FAILED_ENTER_MUTEX, omrshsem_deprecated_getid(_semhandle), myerror);
 #else
-      OSC_ERR_TRACE1(OMRNLS_SHRC_CC_AQUIRE_LOCK_FAILED_ENTER_MUTEX, myerror);
+      OSC_ERR_TRACE1(configOptions, J9NLS_SHRC_CC_AQUIRE_LOCK_FAILED_ENTER_MUTEX, myerror);
 #endif
       Trc_SHR_OSC_enterMutex_Exit3(myerror);
       Trc_SHR_Assert_ShouldNeverHappen();
@@ -154,6 +159,6 @@ OSSharedMemoryCacheConfig::releaseLock(OMRPortLibrary* library, UDATA lockID)
   }
 
   rc = omrshsem_deprecated_post(_semhandle, lockID, OMRPORT_SHSEM_MODE_UNDO);
-  Trc_SHR_OSC_exitMutex_Exit(_cacheName);
+  // Trc_SHR_OSC_exitMutex_Exit(_cacheName);
   return rc;
 }

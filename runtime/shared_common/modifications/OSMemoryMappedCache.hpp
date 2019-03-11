@@ -26,6 +26,7 @@
 #include "OSCacheImpl.hpp"
 #include "OSMemoryMappedCacheConfig.hpp"
 #include "OSMemoryMappedCacheInitializationContext.hpp"
+#include "OSMemoryMappedCacheIterator.hpp"
 
 #include "omr.h"
 #include "omrport.h"
@@ -37,8 +38,8 @@ public:
   virtual IDATA getError();
 
   OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks, OSCacheConfigOptions& configOptions);
-  
-  bool startup(const char* cacheName, const char* ctrlDirName);  
+
+  bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);
 
   virtual void* attach();
@@ -53,11 +54,18 @@ protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;
 
-  IDATA openCacheFile(LastErrorInfo*);
+  bool openCacheFile(LastErrorInfo*);
   bool closeCacheFile();
 
   IDATA internalAttach();
   void internalDetach();
+
+  IDATA getLockCapabilities();
+
+  virtual IDATA setRegionPermissions(OSCacheRegion* region);
+  virtual UDATA getPermissionsRegionGranularity(OSCacheRegion*);
+
+  virtual void setError(IDATA errorCode);
 
   virtual void runExitProcedure();
   virtual void handleCacheHeaderCorruption(IDATA headerRc);
@@ -65,7 +73,8 @@ protected:
   virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
 #endif
 
-  OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator();
+  virtual OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator(char* resultBuf) = 0;
+  virtual bool deleteCacheFile(LastErrorInfo* lastErrorInfo);
 
   OSMemoryMappedCacheInitializationContext* _initContext;
   OSMemoryMappedCacheConfig* _config;

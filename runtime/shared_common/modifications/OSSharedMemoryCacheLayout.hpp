@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2019 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,37 +19,23 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(OS_MEMORY_MAPPED_CACHE_LAYOUT_HPP_INCLUDED)
+#define OS_MEMORY_MAPPED_CACHE_LAYOUT_HPP_INCLUDED
 
+#include "OSCacheLayout.hpp"
 
-#if !defined(OSCACHE_REGION_HPP_INCLUDED)
-#define OSCACHE_REGION_HPP_INCLUDED
-
-#include "omr.h"
-#include "OSCacheRegionSerializer.hpp"
-
-class OSCacheRegion {
+class OSSharedMemoryCacheLayout : public OSCacheLayout {
 public:
-  // the start address of the region.
-  virtual void* getRegionStartAddress() = 0;
-  // calculates the size of the region.
-  virtual UDATA getRegionSize() = 0;
-
-  // render the Region's settings as flags that can be used
-  // by the underlying ocmponents of the OMRPortLibrary, as anticipated
-  // by the OSCacheRegion subclass.
-  virtual UDATA renderToFlags() = 0;
-
-  // check the cache region for corruption using whatever means are
-  // available.  I'm not sure this method should belong to the
-  // OSCacheRegion class.  OSCacheConfig may be a more appropriate choice.
-  virtual IDATA checkValidity() = 0;
-
-  virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
- 
-  // the regionStart is a *relative* value denoting the beginning of
-  // the cache allocation from the start of the cache block in memory,
-  // wherever it winds up. we allow for circumstances where the two
-  // may not coincide.
+  OSSharedMemoryCacheLayout();
+  
+protected:
+  friend class OSSharedMemoryCache;
+  friend class OSSharedMemoryCacheHeader;
+  
+  U_32 _cacheSize;
+  void* _headerStart;
+  void* _dataStart;
+  U_32 _dataLength;
 };
 
 #endif

@@ -25,12 +25,22 @@
 #include "omr.h"
 #include "omrport.h"
 #include "pool_api.h"
+#include "sharedconsts.h"
 
-#include "sharedconsts.hpp"
 #include "OSCacheConfig.hpp"
 #include "OSSharedMemoryCacheLayout.hpp"
-#include "OSSharedMemoryCacheAttachingContext.hpp"
-#include "OSSharedMemoryCacheCreatingContext.hpp"
+#include "OSSharedMemoryCacheHeader.hpp"
+// #include "OSSharedMemoryCacheAttachingContext.hpp"
+// #include "OSSharedMemoryCacheCreatingContext.hpp"
+
+#define OS_SHARED_MEMORY_CACHE_RESTART 4
+#define OS_SHARED_MEMORY_CACHE_OPENED 3
+#define OS_SHARED_MEMORY_CACHE_CREATED 2
+#define OS_SHARED_MEMORY_CACHE_EXIST   1
+#define OS_SHARED_MEMORY_CACHE_NOT_EXIST 0
+#define OS_SHARED_MEMORY_CACHE_FAILURE -1
+
+#define OS_SHARED_MEMORY_CACHE_SUCCESS 0
 
 /**
  * This enum contains constants that are used to indicate the reason for not allowing access to the semaphore set.
@@ -57,6 +67,14 @@ typedef enum SH_SysvShmAccess {
 	OMRSH_SHM_ACCESS_OTHERS_NOT_ALLOWED
 } SH_SysvShmAccess;
 
+#define SEM_HEADERLOCK 0
+
+#define OMRSH_OSCACHE_RETRYMAX 30
+
+// #define SHM_CACHEHEADERSIZE SHC_PAD(sizeof(OSCachesysv_header_version_current), SHC_WORDALIGN)
+// #define SHM_CACHEDATASIZE(size) (size-SHM_CACHEHEADERSIZE)
+// #define SHM_DATASTARTFROMHEADER(header) SRP_GET(header->oscHdr.dataStart, void*);
+
 class OSSharedMemoryCacheConfig : public OSCacheConfig<OSSharedMemoryCacheLayout>
 {
 public:
@@ -65,8 +83,9 @@ public:
 
   virtual IDATA getWriteLockID(void);
   virtual IDATA getReadWriteLockID(void);
-  
-  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL);
+
+  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions& configOptions,
+			    LastErrorInfo* lastErrorInfo = NULL);
   virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
 
   // let these be decided by the classes of the generational header
@@ -77,7 +96,7 @@ public:
 
   virtual U_64* getHeaderLocation() = 0;
   virtual U_64* getHeaderSize() = 0;
-  
+
   // this is _dataStart, wherever that ultimately ends up.
   virtual U_64* getDataSectionLocation() = 0;
   virtual U_32 getDataSectionLength() = 0;
@@ -86,21 +105,23 @@ public:
   virtual void setDataSectionLocation(void* location) = 0;
 
 protected:
+  friend class OSSharedMemoryCache;
+
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
-  
+
   virtual IDATA initializeHeader(const char* cacheDirName, LastErrorInfo* lastErrorInfo) = 0;
-  
+
   IDATA _numLocks;
   OSSharedMemoryCacheHeader* _header;
 
   SH_SysvSemAccess _semAccess;
   SH_SysvShmAccess _shmAccess;
-    
+
   omrshmem_handle* _shmhandle;
   omrshsem_handle* _semhandle;
 
-  UDATA _totalNumSems;  
+  UDATA _totalNumSems;
   UDATA _groupPerm;
   I_32 _semid;
 };

@@ -20,36 +20,30 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#if !defined(OS_MEMORY_MAPPED_CACHE_ITERATOR_HPP_INCLUDED)
+#define OS_MEMORY_MAPPED_CACHE_ITERATOR_HPP_INCLUDED
 
-#if !defined(OSCACHE_REGION_HPP_INCLUDED)
-#define OSCACHE_REGION_HPP_INCLUDED
+#include "OSCacheIterator.hpp"
 
 #include "omr.h"
-#include "OSCacheRegionSerializer.hpp"
 
-class OSCacheRegion {
+class OSMemoryMappedCacheIterator: public OSCacheIterator
+{
 public:
-  // the start address of the region.
-  virtual void* getRegionStartAddress() = 0;
-  // calculates the size of the region.
-  virtual UDATA getRegionSize() = 0;
+  OSMemoryMappedCacheIterator(char* cacheDir, char* resultBuf)
+    : _cacheDir(cacheDir)
+    , _resultBuf(_resultBuf)
+  {}
+  
+  virtual UDATA findFirst(OMRPortLibrary *portLibrary);
+  virtual I_32 findNext(OMRPortLibrary *portLibrary, UDATA findHandle);
+  virtual void findClose(OMRPortLibrary *portLibrary, UDATA findHandle);
 
-  // render the Region's settings as flags that can be used
-  // by the underlying ocmponents of the OMRPortLibrary, as anticipated
-  // by the OSCacheRegion subclass.
-  virtual UDATA renderToFlags() = 0;
-
-  // check the cache region for corruption using whatever means are
-  // available.  I'm not sure this method should belong to the
-  // OSCacheRegion class.  OSCacheConfig may be a more appropriate choice.
-  virtual IDATA checkValidity() = 0;
-
-  virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
- 
-  // the regionStart is a *relative* value denoting the beginning of
-  // the cache allocation from the start of the cache block in memory,
-  // wherever it winds up. we allow for circumstances where the two
-  // may not coincide.
+  virtual bool isCacheFileName(OMRPortLibrary *portLibrary, char *cacheName) = 0;
+  
+protected:
+  const char* _cacheDir;
+  char* _resultBuf;
 };
 
 #endif
