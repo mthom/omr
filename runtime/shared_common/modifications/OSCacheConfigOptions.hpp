@@ -25,6 +25,10 @@
 class OSCacheConfigOptions
 {
 public:
+  OSCacheConfigOptions(I_32 _openMode) :
+    _openMode(_openMode)
+  {}
+  
   // cache creation/opening options. used mostly in startup routines.
   enum CreateOptions {
     OpenForStats,
@@ -44,6 +48,7 @@ public:
     Stat
   };
 
+  virtual bool useUserHomeDirectoryForCacheDir();
   virtual bool isUserSpecifiedCacheDir();
   // is the cache being opened in read-only mode?
   virtual bool readOnlyOpenMode();
@@ -102,7 +107,7 @@ public:
      flags |= OMRSHMEM_GETDIR_USE_USERHOME; <-- covered by useUserHomeDirectoryForCacheLocation().
    */
 protected:
-  // TODO: move _openMode here. in the persistent version.
+  I_32 _openMode;
   
   CreateOptions _createOptions;
   RuntimeOptions _runtimeOptions;

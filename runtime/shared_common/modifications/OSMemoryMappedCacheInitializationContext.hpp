@@ -22,7 +22,7 @@
 #if !defined(OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED
 
-#include "sharedconsts.hpp"
+#include "sharedconsts.h"
 
 #include "OSCacheConfigOptions.hpp"
 
@@ -36,9 +36,9 @@ public:
   
   // attach to a freshly created/connected cache. the logic of these varies
   // according to the initialization context.
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions) = 0;
-  virtual IDATA internalAttach() = 0;
+  virtual bool startup(IDATA& errorCode, OSCacheConfigOptions& configOptions) = 0;
   virtual bool creatingNewCache() = 0;
+  virtual IDATA initAttach() = 0;
   
 protected:
   OSMemoryMappedCache* _cache;

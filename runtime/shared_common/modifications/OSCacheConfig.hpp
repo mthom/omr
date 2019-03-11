@@ -26,6 +26,7 @@
 #include "omr.h"
 #include "sharedconsts.h"
 
+#include "OSCache.hpp"
 #include "OSCacheAttachingContext.hpp"
 #include "OSCacheCreatingContext.hpp"
 

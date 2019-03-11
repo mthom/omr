@@ -20,11 +20,16 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "omrport.h"
+
 #include "OSCacheUtils.hpp"
 #include "OSCacheImpl.hpp"
+#include "ut_omrshr.h"
 
-OSCacheImpl::OSCacheImpl(OMRPortLibrary* library)
-  : _portLibrary(library)
+OSCacheImpl::OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions& configOptions, IDATA numLocks)
+  : OSCache(_configOptions)
+  , _portLibrary(library)
+  , _numLocks(numLocks)
 {}
 
 // formerly OSCache::commonStartup. We only kept the directory init
@@ -39,7 +44,7 @@ OSCacheImpl::initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions
   char fullPathName[OMRSH_MAXPATH];
 
   // Trc_SHR_OSC_commonStartup_Entry();
-  _openMode = openMode;
+  _configOptions.setOpenMode(openMode);
 
   //TODO: do we need this now? Yes? No? A: No. It's specified in the ConfigOptions object. Toggling
   //the flag is no longer the responsibility of this class.
@@ -50,18 +55,18 @@ OSCacheImpl::initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions
     return -1;
   }
 
-  IDATA rc = OSCacheUtils::getCacheDirName(OMRPORTLIB, ctrlDirName, _cacheDirName, OMRSH_MAXPATH);//, versionData->cacheType);
+  IDATA rc = OSCacheUtils::getCacheDirName(OMRPORTLIB, ctrlDirName, _cacheLocation, OMRSH_MAXPATH, _configOptions);//, versionData->cacheType);
   if (rc == -1) {
 //    Trc_SHR_OSC_commonStartup_getCacheDir_fail();
 //    OSC_ERR_TRACE(J9NLS_SHRC_OSCACHE_GETCACHEDIR_FAILED);
     return -1;
   }
 
-  rc = OSCacheUtils::createCacheDir(OMRPORTLIB, _cacheDirName, cacheDirPermissions, ctrlDirName == NULL);
+  rc = OSCacheUtils::createCacheDir(OMRPORTLIB, _cacheLocation, cacheDirPermissions, ctrlDirName == NULL);
   if (rc == -1) {
 //  Trc_SHR_OSC_commonStartup_createCacheDir_fail();
     /* remove trailing '/' */
-    _cacheDirName[strlen(_cacheDirName)-1] = '\0';
+    _cacheLocation[strlen(_cacheLocation)-1] = '\0';
 //  OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CREATECACHEDIR_FAILED_V2, _cacheDirName);
     return -1;
   }
@@ -71,6 +76,7 @@ OSCacheImpl::initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions
      checks to the configuration object. Also, stuff with generation
      and version labels, and buildIDs. How the cachePathName is
      populated using that information. */
+  return 0;
 }
 
 /* This is an unhelpful name that describes an obscure feature: the
@@ -114,11 +120,11 @@ OSCacheImpl::commonInit()
   //  _cacheNameWithVGen = NULL;
   _cacheName = NULL;
   _cacheLocation = NULL; //_cachePathName = NULL;
-  _cacheDirName = NULL;
+  //  _cacheDirName = NULL;
 //  _verboseFlags = 0;
 //  _createFlags = 0;
   //  _config = NULL; // the OMRCacheConfigOptions object initialization takes care of this.
-  _openMode = 0;
+  // _openMode = 0; // handled by OSCacheConfigOptions
 //  _dataStart = NULL; // these are now all contained in the layout process.
 //  _dataLength = 0;
 //  _headerStart = NULL;
@@ -127,4 +133,27 @@ OSCacheImpl::commonInit()
   _runningReadOnly = false;
 //  _doCheckBuildID = false;
 //  _isUserSpecifiedCacheDir = false;
+}
+
+void
+OSCacheImpl::commonCleanup()
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+  
+  Trc_SHR_OSC_commonCleanup_Entry();
+  
+  if (_cacheName) {
+    omrmem_free_memory(_cacheName);
+  }
+  if (_cachePathName) {
+    omrmem_free_memory(_cachePathName);
+  }
+  if (_cacheLocation) {
+    omrmem_free_memory(_cacheLocation);
+  }
+  
+  /* If the cache is destroyed and then restarted, we still need portLibrary, versionData and generation */
+  commonInit(); //_portLibrary, _activeGeneration);
+  
+  Trc_SHR_OSC_commonCleanup_Exit();
 }

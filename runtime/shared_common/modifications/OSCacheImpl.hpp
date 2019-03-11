@@ -24,8 +24,46 @@
 #define OSCACHE_PERSISTENT_HPP_INCLUDED
 
 #include "OSCache.hpp"
+#include "OSCacheConfigOptions.hpp"
 
 #include "omr.h"
+
+typedef enum SH_CacheFileAccess {
+	OMRSH_CACHE_FILE_ACCESS_ALLOWED 				= 0,
+	OMRSH_CACHE_FILE_ACCESS_CANNOT_BE_DETERMINED,
+	OMRSH_CACHE_FILE_ACCESS_GROUP_ACCESS_REQUIRED,
+	OMRSH_CACHE_FILE_ACCESS_OTHERS_NOT_ALLOWED,
+} SH_CacheFileAccess;
+
+
+#define OMRSH_OSCACHE_CREATE 			0x1
+#define OMRSH_OSCACHE_OPEXIST_DESTROY	0x2
+#define OMRSH_OSCACHE_OPEXIST_STATS		0x4
+#define OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE	0x8
+#define OMRSH_OSCACHE_UNKNOWN -1
+
+/* 
+ * The different results from attempting to open/create a cache are
+ * defined below. Failure cases MUST all be less than zero.
+ */
+#define OMRSH_OSCACHE_OPENED 2
+#define OMRSH_OSCACHE_CREATED 1
+#define OMRSH_OSCACHE_FAILURE -1
+#define OMRSH_OSCACHE_CORRUPT -2
+#define OMRSH_OSCACHE_DIFF_BUILDID -3
+#define OMRSH_OSCACHE_OUTOFMEMORY -4
+#define OMRSH_OSCACHE_INUSE -5
+#define OMRSH_OSCACHE_NO_CACHE -6
+
+#define OMRSH_OSCACHE_HEADER_OK 0
+#define OMRSH_OSCACHE_HEADER_WRONG_VERSION -1
+#define OMRSH_OSCACHE_HEADER_CORRUPT -2
+#define OMRSH_OSCACHE_HEADER_MISSING -3
+#define OMRSH_OSCACHE_HEADER_DIFF_BUILDID -4
+#define OMRSH_OSCACHE_SEMAPHORE_MISMATCH -5
+
+#define OMRSH_OSCACHE_READONLY_RETRY_COUNT 10
+#define OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS 10
 
 /*
  * This class houses utility functions that depend on the state of
@@ -34,13 +72,13 @@
  */
 class OSCacheImpl: public OSCache {
 public:
-  OSCacheImpl(OMRPortLibrary* library, IDATA numLocks);
+  OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions& configOptions, IDATA numLocks);
   // old J9 cache comment:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache
    */
-  virtual void dontNeedMetadata(const void* startAddress, size_t length);
-
+  virtual void dontNeedMetadata(const void* startAddress, size_t length);  
+  
 protected:
   virtual IDATA initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode);
   virtual IDATA initCacheName(const char* cacheName) = 0;
@@ -50,15 +88,16 @@ protected:
   virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;
 
   void commonInit();
+  void commonCleanup();
   
   OMRPortLibrary* _portLibrary;
   //  I_32  _openMode; // now addressed by the OSCacheConfigOptions class.
   UDATA _runningReadOnly;
   IDATA _errorCode;
-  
-  
+
+  IDATA _numLocks;
   UDATA _cacheSize;
-  // was:  char *_cacheDir; // the path to the directory containing the cache file.
+  // was:  char *_cacheDirName; // the path to the directory containing the cache file.
   char *_cacheLocation;  // the path, or a URI, or something, to the resource containing the cache.
   char *_cacheName; // the name of the cache file. Together with _cacheDir, we have the effective field,
                     // _cachePathName.

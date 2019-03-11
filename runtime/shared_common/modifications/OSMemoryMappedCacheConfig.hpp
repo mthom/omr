@@ -22,19 +22,12 @@
 #if !defined(OS_MEMORY_MAPPED_CACHE_CONFIG_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_CONFIG_HPP_INCLUDED
 
-#include "sharedconsts.hpp"
+#include "sharedconsts.h"
 
 #include "OSCacheConfig.hpp"
 #include "OSMemoryMappedCacheLayout.hpp"
 #include "OSMemoryMappedCacheAttachingContext.hpp"
 #include "OSMemoryMappedCacheCreatingContext.hpp"
-
-typedef enum SH_CacheFileAccess {
-	OMRSH_CACHE_FILE_ACCESS_ALLOWED 				= 0,
-	OMRSH_CACHE_FILE_ACCESS_CANNOT_BE_DETERMINED,
-	OMRSH_CACHE_FILE_ACCESS_GROUP_ACCESS_REQUIRED,
-	OMRSH_CACHE_FILE_ACCESS_OTHERS_NOT_ALLOWED,
-} SH_CacheFileAccess;
 
 #define OMRSH_OSCACHE_MMAP_LOCK_COUNT 5
 #define OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK 0

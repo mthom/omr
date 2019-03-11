@@ -25,7 +25,7 @@
 
 #include "omr.h"
 
-#include "OSCacheMemoryMappedCacheInitializationContext.hpp"
+#include "OSMemoryMappedCacheInitializationContext.hpp"
 
 class OSMemoryMappedCache;
 class OSMemoryMappedCacheConfig;
@@ -37,9 +37,8 @@ public:
     : OSMemoryMappedCacheInitializationContext(cache)
   {}
 
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
   virtual IDATA initAttach(OSMemoryMappedCache* cache);
-  virtual bool creatingNewCache();  
+  virtual bool creatingNewCache();
 };
 
 #endif

@@ -20,11 +20,11 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-
 #if !defined(OSCACHE_HPP_INCLUDED)
 #define OSCACHE_HPP_INCLUDED
 
 #include "OSCacheRegion.hpp"
+#include "OSCacheConfigOptions.hpp"
 
 #include "omr.h"
 #include "sharedconsts.h"
@@ -47,13 +47,17 @@ struct LastErrorInfo
   void populate(OMRPortLibrary* library) {
     OMRPORT_ACCESS_FROM_OMRPORT(library);
     
-    lastErrorCode = omrerror_last_error_number();
-    lastErrorMsg = omrerror_last_error_message();
+    _lastErrorCode = omrerror_last_error_number();
+    _lastErrorMsg = omrerror_last_error_message();
   }
 };
 
 class OSCache {
 public:
+  OSCache(OSCacheConfigOptions& configOptions)
+    : _configOptions(configOptions)
+  {}
+  
   // get the data and total sizes of the cache.
   virtual U_32 getDataSize() = 0;
   virtual U_32 getTotalSize() = 0;

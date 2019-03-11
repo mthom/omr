@@ -29,8 +29,10 @@
                              // called from omrshmem_createDir to
                              // "clean the memory segments." More
                              // comments in the source.
+#include "sharedconsts.h"
 #include "ut_omrshr.h"
 
+#include "OSCacheImpl.hpp"
 #include "OSCacheConfigOptions.hpp"
 #include "OSCacheUtils.hpp"
 
@@ -44,7 +46,7 @@ namespace OSCacheUtils
 // this was originally called getCacheDir -- I renamed it to do away with
 // the ambiguity of 'getCacheDir', ie. we are 'getting' the directory? what?
 IDATA
-getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions* configOptions)
+getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions& configOptions)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
   IDATA rc;
@@ -58,17 +60,17 @@ getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buff
 //  if (appendBaseDir) {
 //    flags |= OMRSHMEM_GETDIR_APPEND_BASEDIR;
 //  }
-  if ((NULL == ctrlDirName) && !configOptions->groupAccessEnabled())
+  if ((NULL == ctrlDirName) && !configOptions.groupAccessEnabled())
   {
 		/* omrshmem_getDir() always tries the CSIDL_LOCAL_APPDATA directory (C:\Documents and Settings\username\Local Settings\Application Data)
 		 * first on Windows if ctrlDirName is NULL, regardless of whether OMRSHMEM_GETDIR_USE_USERHOME is set or not. So OMRSHMEM_GETDIR_USE_USERHOME is effective on UNIX only.
 		 */
 
-    configOptions->useUserHomeDirectoryForCacheDir();
+    configOptions.useUserHomeDirectoryForCacheDir();
     //flags |= OMRSHMEM_GETDIR_USE_USERHOME;
   }
 
-  rc = omrshmem_getDir(ctrlDirName, configOption->renderToFlags(), buffer, bufferSize);
+  rc = omrshmem_getDir(ctrlDirName, configOptions.renderToFlags(), buffer, bufferSize);
   if (rc == -1) {
     // //  Trc_SHR_OSC_getCacheDir_omrshmem_getDir_failed(ctrlDirName);
     return -1;
@@ -97,11 +99,11 @@ createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDATA cacheDirPe
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
   IDATA rc;
 
-  //Trc_SHR_OSC_createCacheDir_Entry(cacheDirName, cleanMemorySegments);
+  Trc_SHR_OSC_createCacheDir_Entry(cacheDirName, cleanMemorySegments);
 
   rc = omrshmem_createDir(cacheDirName, cacheDirPermissions, cleanMemorySegments);
 
-  //Trc_SHR_OSC_createCacheDir_Exit();
+  Trc_SHR_OSC_createCacheDir_Exit();
   return rc;
 }
 
@@ -135,7 +137,7 @@ statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cac
   }
 
   if (displayNotFoundMsg) {
-    omrnls_printf(OMRNLS_ERROR, OMRNLS_SHRC_OSCACHE_NOT_EXIST);
+    omrnls_printf(J9NLS_ERROR, J9NLS_SHRC_OSCACHE_NOT_EXIST);
   }
 
   Trc_SHR_OSC_statCache_cacheNotFound();
@@ -154,17 +156,17 @@ statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cac
  * @return enum SH_CacheFileAccess indicating if the process can access the shared cache file set or not
  */
 SH_CacheFileAccess
-checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, I_32 openMode, LastErrorInfo *lastErrorInfo)
+checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions configOptions, LastErrorInfo *lastErrorInfo)
 {
   SH_CacheFileAccess cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_ALLOWED;
 
   if (NULL != lastErrorInfo) {
-    lastErrorInfo->lastErrorCode = 0;
+    lastErrorInfo->_lastErrorCode = 0;
   }
 
 #if !defined(WIN32)
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
-  OMRFileStat statBuf;
+  J9FileStat statBuf;
   IDATA rc = omrfile_fstat(fileHandle, &statBuf);
 
   if (-1 != rc) {
@@ -195,7 +197,7 @@ checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, I_32 openMod
 	} else {
 	  cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_CANNOT_BE_DETERMINED;
 	  if (NULL != lastErrorInfo) {
-	    lastErrorInfo->populate();
+	    lastErrorInfo->populate(OMRPORTLIB);
 	    /*
 	    lastErrorInfo->lastErrorCode = omrerror_last_error_number();
 	    lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
@@ -229,7 +231,7 @@ checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, I_32 openMod
   } else {
     cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_CANNOT_BE_DETERMINED;
     if (NULL != lastErrorInfo) {
-      lastErrorInfo->populate(); /*
+      lastErrorInfo->populate(OMRPORTLIB); /*
       lastErrorInfo->lastErrorCode = omrerror_last_error_number();
       lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
 				 */
@@ -244,4 +246,3 @@ checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, I_32 openMod
 }
   
 }
-#endif

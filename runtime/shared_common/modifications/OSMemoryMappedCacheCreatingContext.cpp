@@ -31,7 +31,7 @@ IDATA OSMemoryMappedCacheCreatingContext::initAttach()
   return OMRSH_OSCACHE_SUCCESS;
 }
 
-bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, IDATA&, OSCacheConfigOptions configOptions)
+bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode, OSCacheConfigOptions configOptions)
 {
   // this is accessible through the Config object.
   //OSCachemmap_header_version_current *cacheHeader;

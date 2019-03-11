@@ -1254,11 +1254,11 @@ SH_OSCachesysv::releaseWriteLock(UDATA lockID)
 }
 
 IDATA
-SH_OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo *lastErrorInfo)
+SH_OSCachesysv::enterHeaderMutex(LastErrorInfo *lastErrorInfo)
 {
-  OMRPORT_ACCESS_FROM_OMRPORT(library);
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
   IDATA rc = 0;
-  Trc_SHR_OSC_GlobalLock_getMutex(cacheName);
+  Trc_SHR_OSC_GlobalLock_getMutex(_cacheName);
 
   if (NULL != lastErrorInfo) {
     lastErrorInfo->lastErrorCode = 0;
@@ -1268,12 +1268,13 @@ SH_OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, co
     rc = omrshsem_deprecated_wait(_semhandle, SEM_HEADERLOCK, OMRPORT_SHSEM_MODE_UNDO);
     if (-1 == rc) {
       if (NULL != lastErrorInfo) {
-	lastErrorInfo->populate(OMRPORTLIB);
+	lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+	lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
       }
     }
   }
 
-  Trc_SHR_OSC_GlobalLock_gotMutex(cacheName);
+  Trc_SHR_OSC_GlobalLock_gotMutex(_cacheName);
   return rc;
 }
 

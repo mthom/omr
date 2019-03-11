@@ -22,13 +22,14 @@
 #if !defined(OS_MEMORY_MAPPED_CACHE_LAYOUT_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_LAYOUT_HPP_INCLUDED
 
-#include "OSMemoryMappedCacheLayout.hpp"
+#include "OSCacheLayout.hpp"
 
 class OSMemoryMappedCacheHeader;
 
 class OSMemoryMappedCacheLayout : public OSCacheLayout {
 public:
   OSMemoryMappedCacheLayout();
+  
 protected:
   friend class OSMemoryMappedCacheHeader;
   

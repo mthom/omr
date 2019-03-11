@@ -25,6 +25,7 @@
 #define OSCACHE_REGION_HPP_INCLUDED
 
 #include "omr.h"
+#include "OSCacheRegionSerializer.hpp"
 
 class OSCacheLayout;
 
@@ -48,16 +49,6 @@ public:
 protected:  
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
   
-  // this all hinges on ENABLE_MPROTECT being set. The runtime flags. Of course,
-  // we don't want that flag to be built in. Each region should have the choice of being
-  // protected. Probably, these functions should exist downstream from OSCacheRegion.
-  // We could introduce the class OSCachePageProtectedRegion, perhaps?
-
-  // OK, the notion of page protection really doesn't apply at the OSCache
-  // level. Only later, when you move up to the composite cache layer, where regions
-  // are subdivided into further regions, does it make sense.
-
-  // the commented-out arguments are now internal to region objects.
 private:
   friend class OSClassLayout;
   // the regionStart is a *relative* value denoting the beginning of

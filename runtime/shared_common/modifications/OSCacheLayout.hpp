@@ -28,12 +28,8 @@
 #include "OSCacheRegion.hpp"
 #include "OSCacheRegionSerializer.hpp"
 
-#include "compiler/infra/vector.hpp"
-
-class OSCache {
-public:
-  virtual OSCacheRegionSerializer* constructSerializer() = 0;
-};
+//#include "compiler/infra/vector.hpp"
+#include <vector>
 
 class OSCacheLayout
 {
@@ -56,7 +52,8 @@ public:
   }
 
 protected:
-  TR::vector<OSCacheRegion*> _regions;
+  //TODO: switch to TR::vector eventually.
+  std::vector<OSCacheRegion*> _regions;
 
   UDATA _roundToPageSize;
   UDATA _osPageSize;

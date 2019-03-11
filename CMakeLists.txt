@@ -163,8 +163,13 @@ if(OMR_JITBUILDER)
 endif(OMR_JITBUILDER)
 
 if(OMR_SHARED_CACHE)
-        add_subdirectory(runtime/shared_common)
+  add_subdirectory(runtime/shared_common)  
 endif(OMR_SHARED_CACHE)
+
+if(OMR_SHARED_CACHE_MODS)
+  add_subdirectory(runtime/shared_common/modifications)
+endif(OMR_SHARED_CACHE_MODS)
+
 
 # This should come last to ensure dependencies
 # are defined

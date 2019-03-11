@@ -32,13 +32,9 @@ public:
   OSMemoryMappedCacheCreatingContext(OSMemoryMappedCache* cache)
     : OSMemoryMappedCacheInitializationContext(cache)
   {}
-  
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
-  virtual IDATA initAttach();
+    
   virtual void setCacheAreaBoundaries();
-  virtual bool creatingNewCache();
-  virtual I32 createCacheHeader();
-protected:  
-}
+  virtual I_32 createCacheHeader();
+};
 
 #endif

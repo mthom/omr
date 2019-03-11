@@ -69,8 +69,9 @@ IDATA OSMemoryMappedCacheAttachingContext::initAttach()
  * Return a boolean: false if _errorPostAttach is reached, true otherwise.
  */
 bool
-OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions)
+OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode, OSCacheConfigOptions& configOptions)
 {
+  IDATA retryCntr = 0;
   IDATA rc;
   /* We are opening an existing cache */
   // Trc_SHR_OSC_Mmap_startup_fileOpened();
