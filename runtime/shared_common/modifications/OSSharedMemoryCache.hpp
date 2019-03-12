@@ -51,7 +51,8 @@
 class OSSharedMemoryCache: public OSCacheImpl
 {
 public:
-  OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName, IDATA numLocks, OSCacheConfigOptions& configOptions);
+  OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName,
+		      IDATA numLocks, OSCacheConfigOptions& configOptions);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset = false);
@@ -63,14 +64,17 @@ public:
   UDATA isCacheActive() const;
   //  IDATA restoreFromSnapshot(const char* cacheName, UDATA numLocks, bool& cacheExists);
 
-protected:  
+protected:
   virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 
   void setError(IDATA ec);
-  IDATA openCache(const char* cacheName, bool semCreated);
+  IDATA openCache(const char* cacheName);
+
+  virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
+  virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);
   
 #if !defined(WIN32)
-  IDATA OpenSysVMemoryHelper(const char* cacheName, U_32 perm, LastErrorInfo *lastErrorInfo);
+  IDATA OpenSysVMemoryHelper(const char* fileName, U_32 perm, LastErrorInfo *lastErrorInfo);
   IDATA OpenSysVSemaphoreHelper(LastErrorInfo* lastErrorInfo);
   IDATA DestroySysVSemHelper();
 
@@ -82,12 +86,10 @@ protected:
 
   SH_SysvSemAccess checkSemaphoreAccess(LastErrorInfo* lastErrorInfo);
   IDATA shmemOpenWrapper(const char *cacheName, LastErrorInfo *lastErrorInfo);
-
   SH_SysvShmAccess checkSharedMemoryAccess(LastErrorInfo* lastErrorInfo);
-  
   IDATA setRegionPermissions(OSCacheRegion* region);
   UDATA getPermissionsRegionGranularity();
-  
+
   // this is largely J9 specific. let it be overloaded.
   virtual IDATA verifyCacheHeader() = 0;
   void cleanupSysvResources();
@@ -104,6 +106,8 @@ protected:
 
   char* _shmFileName;
   char* _semFileName;
+
+  bool _startupCompleted;
   bool _openSharedMemory;
 };
 #endif

@@ -61,12 +61,13 @@ protected:
   void internalDetach();
 
   IDATA getLockCapabilities();
-
+ 
   virtual IDATA setRegionPermissions(OSCacheRegion* region);
   virtual UDATA getPermissionsRegionGranularity(OSCacheRegion*);
 
   virtual void setError(IDATA errorCode);
-
+  virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo) = 0;
+  
   virtual void runExitProcedure();
   virtual void handleCacheHeaderCorruption(IDATA headerRc);
 #if defined(OMRSH_MSYNC_SUPPORT)

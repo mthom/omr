@@ -67,7 +67,7 @@ void OSMemoryMappedCache::initialize()
   //its effects.
   _corruptionCode = NO_CORRUPTION;
   _corruptValue = NO_CORRUPTION;
-  
+
   _config->_cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_ALLOWED;
 }
 
@@ -95,7 +95,7 @@ void OSMemoryMappedCache::finalise()
 bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-  
+
   I_32 mmapCapabilities = omrmmap_capabilities();
   LastErrorInfo lastErrorInfo;
   IDATA errorCode = OMRSH_OSCACHE_FAILURE;
@@ -113,9 +113,6 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
   mmapCapabilities = omrmmap_capabilities();
   */
 
-  IDATA openMode = _configOptions.openMode();
-  IDATA cacheDirPermissions = _configOptions.cacheDirPermissions();
-  
   // we need both writing and synchronization capabilities in order to
   // have a memory-mapped cache.
   if (!(mmapCapabilities & OMRPORT_MMAP_CAPABILITY_WRITE) || !(mmapCapabilities & OMRPORT_MMAP_CAPABILITY_MSYNC))
@@ -126,7 +123,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
   }
 
   // this is how commonStartup was broken up, into these next two blocks.
-  if(initCacheDirName(ctrlDirName, cacheDirPermissions, openMode) != 0) {
+  if(initCacheDirName(ctrlDirName) != 0) {
     Trc_SHR_OSC_Mmap_startup_commonStartupFailure();
     goto _errorPreFileOpen;
   }
@@ -137,7 +134,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 
   Trc_SHR_OSC_Mmap_startup_commonStartupSuccess();
   /* Detect remote filesystem */
-  if (openMode & J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE) {
+  if (_configOptions.usingNetworkCache()) { // openMode & J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE) {
     // _cacheLocation, or _cacheDirName as it was called, is initialized inside commonStartup.
     if (0 == omrfile_stat(_cacheLocation, 0, &statBuf)) {
       if (statBuf.isRemote) {
@@ -148,6 +145,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     }
   }
 
+  /* Open the file */
   if (!openCacheFile(&lastErrorInfo)) { // _createFlags & OMRSH_OSCACHE_CREATE, &lastErrorInfo)) {
     Trc_SHR_OSC_Mmap_startup_badfileopen(_cachePathName);
     errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_FILEOPEN_ERROR, &lastErrorInfo);  /* TODO: ADD FILE NAME */
@@ -156,6 +154,10 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 
   Trc_SHR_OSC_Mmap_startup_goodfileopen(_cachePathName, _config->_fileHandle);
 
+  /* Avoid any checks for cache file access if
+   * - user has specified a cache directory, or
+   * - destroying an existing cache (if SHR_STARTUP_REASON_DESTROY or SHR_STARTUP_REASON_EXPIRE or OMRSH_OSCACHE_OPEXIST_DESTROY is set)
+   */
   if (!_configOptions.isUserSpecifiedCacheDir()
       && !_configOptions.openToDestroyExistingCache()
       && !_configOptions.openToDestroyExpiredCache())
@@ -243,7 +245,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 	}
 	*/
     }
-  }  
+  }
 
 _exitForDestroy:
   _config->_finalised = 0;
@@ -256,7 +258,7 @@ _errorPostHeaderLock :
 _errorPostFileOpen :
   closeCacheFile();
   if (_initContext->creatingNewCache()) {
-    deleteCacheFile(NULL); 
+    deleteCacheFile(NULL);
   }
 _errorPreFileOpen :
   setError(errorCode);
@@ -291,10 +293,10 @@ OSMemoryMappedCache::openCacheFile(LastErrorInfo* lastErrorInfo)
       openFlags &= ~EsOpenWrite;
       continue;
     }
-    
+
     break;
   }
-  
+
   if (-1 == _config->_fileHandle) {
     if (NULL != lastErrorInfo) {
       lastErrorInfo->populate(_portLibrary);
@@ -858,7 +860,7 @@ OSMemoryMappedCache::getPermissionsRegionGranularity(OSCacheRegion*)
 
 /**
  * Delete the cache file
- * 
+ *
  * @return true on success, false on failure
  */
 bool
@@ -866,7 +868,7 @@ OSMemoryMappedCache::deleteCacheFile(LastErrorInfo *lastErrorInfo)
 {
   bool result = true;
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-	
+
   Trc_SHR_OSC_Mmap_deleteCacheFile_entry();
 
   if (NULL != lastErrorInfo) {
@@ -893,9 +895,9 @@ OSMemoryMappedCache::deleteCacheFile(LastErrorInfo *lastErrorInfo)
 
 /**
  * Method to set the object's error status code
- * 
+ *
  * @param [in]  errorCode The error code to be set
- * 
+ *
  */
 void
 OSMemoryMappedCache::setError(IDATA errorCode)
@@ -903,4 +905,42 @@ OSMemoryMappedCache::setError(IDATA errorCode)
   Trc_SHR_OSC_Mmap_setError_Entry(errorCode);
   _errorCode = errorCode;
   Trc_SHR_OSC_Mmap_setError_Exit(_errorCode);
+}
+
+/**
+ * Method to issue an NLS error message hen an error situation has occurred.  It
+ * can optional issue messages detailing the last error recorded in the Port Library.
+ *
+ * @param [in]  moduleName The message module name
+ * @param [in]  id The message id
+ * @param [in]  lastErrorInfo Stores portable error number and message
+ */
+void
+OSMemoryMappedCache::errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  if ((NULL != lastErrorInfo) && (0 != lastErrorInfo->_lastErrorCode)) {
+    Trc_SHR_OSC_Mmap_errorHandler_Entry_V2(moduleName, id, lastErrorInfo->_lastErrorCode, lastErrorInfo->_lastErrorMsg);
+  } else {
+    Trc_SHR_OSC_Mmap_errorHandler_Entry_V2(moduleName, id, 0, "");
+  }
+
+  UDATA verboseFlags = _configOptions.renderVerboseOptionsToFlags();
+
+  if(moduleName && id && verboseFlags) {
+    Trc_SHR_OSC_Mmap_errorHandler_printingMessage(verboseFlags);
+    omrnls_printf(J9NLS_ERROR, moduleName, id);
+    if ((NULL != lastErrorInfo) && (0 != lastErrorInfo->_lastErrorCode)) {
+      I_32 errorno = lastErrorInfo->_lastErrorCode;
+      const char* errormsg = lastErrorInfo->_lastErrorMsg;
+      Trc_SHR_OSC_Mmap_errorHandler_printingPortMessages();
+      omrnls_printf(J9NLS_ERROR, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, errorno);
+      Trc_SHR_Assert_True(errormsg != NULL);
+      omrnls_printf(J9NLS_ERROR, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE, errormsg);
+    }
+  } else {
+    Trc_SHR_OSC_Mmap_errorHandler_notPrintingMessage(verboseFlags);
+  }
+  Trc_SHR_OSC_Mmap_errorHandler_Exit();
 }

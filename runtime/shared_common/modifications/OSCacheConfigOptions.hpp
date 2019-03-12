@@ -58,7 +58,8 @@ public:
   virtual I_32 fileMode();
   virtual I_32 openMode();
   virtual IDATA cacheDirPermissions();
-
+  virtual bool usingNetworkCache();
+  
   // TODO: the restore check only applies to the shared memory cache,
   // so we should probably create an OSSharedMemoryCacheConfigOptions
   // subclass, and put it there.. then OSSharedMemoryCache will own a
@@ -100,7 +101,8 @@ public:
   virtual U_32 renderToFlags();
 
   virtual UDATA renderCreateOptionsToFlags();
-
+  virtual UDATA renderVerboseOptionsToFlags();
+  
   virtual void setOpenMode(I_32 openMode);
   // flags obviated so far:
   /* appendBaseDir (a variable inside getCacheDir)

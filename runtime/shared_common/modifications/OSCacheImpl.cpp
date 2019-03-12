@@ -36,15 +36,17 @@ OSCacheImpl::OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions& configOp
 // part, not the cache name initialization logic. We leave
 // initCacheName as a pure virtual function.
 IDATA
-OSCacheImpl::initCacheDirName(const char* ctrlDirName, UDATA cacheDirPermissions, I_32 openMode)
+OSCacheImpl::initCacheDirName(const char* ctrlDirName)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
   // UDATA cacheNameLen=0, cachePathNameLen=0, versionStrLen=0;
   char fullPathName[OMRSH_MAXPATH];
+  
+  IDATA openMode = _configOptions.openMode();
+  IDATA cacheDirPermissions = _configOptions.cacheDirPermissions();
 
   // Trc_SHR_OSC_commonStartup_Entry();
-  _configOptions.setOpenMode(openMode);
 
   //TODO: do we need this now? Yes? No? A: No. It's specified in the ConfigOptions object. Toggling
   //the flag is no longer the responsibility of this class.
