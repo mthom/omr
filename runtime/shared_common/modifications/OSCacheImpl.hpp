@@ -27,6 +27,7 @@
 #include "OSCacheConfigOptions.hpp"
 
 #include "omr.h"
+#include "omrport.h"
 
 typedef enum SH_CacheFileAccess {
 	OMRSH_CACHE_FILE_ACCESS_ALLOWED 				= 0,
@@ -74,6 +75,8 @@ typedef enum SH_CacheFileAccess {
 #define OSC_ERR_TRACE4(configOptions, var, p1, p2, p3, p4) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1, p2, p3, p4)
 #define OSC_WARNING_TRACE(configOptions, var) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_WARNING, var)
 #define OSC_WARNING_TRACE1(configOptions, var, p1) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_WARNING, var, p1)
+
+#define OMRSH_MAXPATH EsMaxPath
 
 /**
  * @struct SH_OSCache_Info

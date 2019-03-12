@@ -20,9 +20,12 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "ut_omrshr.h"
+
 #include "OSSharedMemoryCacheUtils.hpp"
 #include "OSSharedMemoryCacheConfig.hpp"
 #include "OSCacheConfigOptions.hpp"
+#include "OSCacheUtils.hpp"
 
 namespace OSSharedCacheCacheUtils
 {
@@ -165,75 +168,75 @@ getCacheStatsHelper(OMRPortLibrary *library, const char* cacheDirName, UDATA gro
  *
  * @return 0 on success
  */
-IDATA
-getCacheStats(OMRPortLibrary *library, const char* ctrlDirName, UDATA groupPerm, const char* cacheName, SH_OSCache_Info* cacheInfo, OSCacheConfigOptions configOptions)
-{
-  IDATA retval = 0;
-  OMRPORT_ACCESS_FROM_OMRPORT(library);
-  char cacheDirName[OMRSH_MAXPATH];
-
-  OSCacheUtils::getCacheDirName(OMRPORTLIB, ctrlDirName, cacheDirName, OMRSH_MAXPATH);//, OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT);
-  if (OSSharedMemoryCacheUtils::getCacheStatsHelper(OMRPORTLIB, cacheDirName, groupPerm, cacheName, cacheInfo, configOptions) == 0) {
-    /* Using 'SH_OSCachesysv cacheStruct' breaks the pattern of calling getRequiredConstrBytes(), and then allocating memory.
-     * However it is consistent with 'SH_OSCachemmap::getCacheStats'.
-		 */
-    OSSharedMemoryCache cacheStruct;
-    OSSharedMemoryCache* cache = NULL;
-//    J9PortShcVersion versionData;
-//    OMRSharedCachePreinitConfig piconfig;
-    bool attachedMem = false;
-
-//    getValuesFromShcFilePrefix(OMRPORTLIB, cacheNameWithVGen, &versionData);
-//    versionData.cacheType = OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT;
-
-    if (configOptions.statIterate() || configOptions.statList()) { // (SHR_STATS_REASON_ITERATE == reason) || (SHR_STATS_REASON_LIST == reason)) {
-      // create a cache with a single lock.
-      cache = new OSSharedMemoryCache(library, cacheName, cacheDirName, 1, configOptions); //(SH_OSCachesysv *) SH_OSCache::newInstance(OMRPORTLIB, &cacheStruct, cacheInfo->name, cacheInfo->generation, &versionData);
-      
-      if (!cache->startup(cacheName, ctrlDirName)) {
-	goto done;
-      }
-
-      /* Avoid calling attach() for incompatible cache since its anyway going to fail.
-       * But we can still get semid from _semhandle as it got populated during startup itself.
-       */
-      if (0 == cacheInfo->isCompatible) {
-	/* if the cache was opened read-only, there is no _semhandle */
-	if (NULL != cache->_config->_semhandle) {
-	  /* SHR_STATS_REASON_LIST needs to populate the os_semid */
-	  cacheInfo->os_semid = cache->_config->_semid = omrshsem_deprecated_getid(cache->_config->_semhandle);
-	}
-      } else {
-	/* Attach to the cache, so we can read the fields in the header */
-	if (NULL == cache->attach()) {//omr_vmthread_getCurrent(vm), NULL)) {
-	  cache->cleanup();
-	  goto done;
-	}
-	
-	attachedMem = true;
-
-	/* SHR_STATS_REASON_LIST needs to populate the os_semid */
-	if (0 != cache->_config->_semid) {
-	  cacheInfo->os_semid = cache->_config->_semid;
-	}
-	
-	if (configOptions.statIterate()) {//SHR_STATS_REASON_ITERATE == reason) {
-	  //TODO: implement this.
-	  getCacheStatsCommon(vm, cache, cacheInfo);
-	}
-	
-	if (attachedMem == true) {
-	  cache->detach();
-	}
-      }
-      
-      cache->cleanup();
-    }
-  } else {
-    retval = -1;
-  }
- done:
-  return retval;
-}
+// IDATA
+// getCacheStats(OMRPortLibrary *library, const char* ctrlDirName, UDATA groupPerm, const char* cacheName, SH_OSCache_Info* cacheInfo, OSCacheConfigOptions configOptions)
+// {
+//   IDATA retval = 0;
+//   OMRPORT_ACCESS_FROM_OMRPORT(library);
+//   char cacheDirName[OMRSH_MAXPATH];
+// 
+//   OSCacheUtils::getCacheDirName(OMRPORTLIB, ctrlDirName, cacheDirName, OMRSH_MAXPATH, configOptions);//, OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT);
+//   if (OSSharedMemoryCacheUtils::getCacheStatsHelper(OMRPORTLIB, cacheDirName, groupPerm, cacheName, cacheInfo, configOptions) == 0) {
+//     /* Using 'SH_OSCachesysv cacheStruct' breaks the pattern of calling getRequiredConstrBytes(), and then allocating memory.
+//      * However it is consistent with 'SH_OSCachemmap::getCacheStats'.
+// 		 */
+//     OSSharedMemoryCache cacheStruct;
+//     OSSharedMemoryCache* cache = NULL;
+// //    J9PortShcVersion versionData;
+// //    OMRSharedCachePreinitConfig piconfig;
+//     bool attachedMem = false;
+// 
+// //    getValuesFromShcFilePrefix(OMRPORTLIB, cacheNameWithVGen, &versionData);
+// //    versionData.cacheType = OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT;
+// 
+//     if (configOptions.statIterate() || configOptions.statList()) { // (SHR_STATS_REASON_ITERATE == reason) || (SHR_STATS_REASON_LIST == reason)) {
+//       // create a cache with a single lock.
+//       cache = new OSSharedMemoryCache(library, cacheName, cacheDirName, 1, configOptions); //(SH_OSCachesysv *) SH_OSCache::newInstance(OMRPORTLIB, &cacheStruct, cacheInfo->name, cacheInfo->generation, &versionData);
+//       
+//       if (!cache->startup(cacheName, ctrlDirName)) {
+// 	goto done;
+//       }
+// 
+//       /* Avoid calling attach() for incompatible cache since its anyway going to fail.
+//        * But we can still get semid from _semhandle as it got populated during startup itself.
+//        */
+//       if (0 == cacheInfo->isCompatible) {
+// 	/* if the cache was opened read-only, there is no _semhandle */
+// 	if (NULL != cache->_config->_semhandle) {
+// 	  /* SHR_STATS_REASON_LIST needs to populate the os_semid */
+// 	  cacheInfo->os_semid = cache->_config->_semid = omrshsem_deprecated_getid(cache->_config->_semhandle);
+// 	}
+//       } else {
+// 	/* Attach to the cache, so we can read the fields in the header */
+// 	if (NULL == cache->attach()) {//omr_vmthread_getCurrent(vm), NULL)) {
+// 	  cache->cleanup();
+// 	  goto done;
+// 	}
+// 	
+// 	attachedMem = true;
+// 
+// 	/* SHR_STATS_REASON_LIST needs to populate the os_semid */
+// 	if (0 != cache->_config->_semid) {
+// 	  cacheInfo->os_semid = cache->_config->_semid;
+// 	}
+// 	
+// 	if (configOptions.statIterate()) {//SHR_STATS_REASON_ITERATE == reason) {
+// 	  //TODO: implement this.
+// 	  getCacheStatsCommon(vm, cache, cacheInfo);
+// 	}
+// 	
+// 	if (attachedMem == true) {
+// 	  cache->detach();
+// 	}
+//       }
+//       
+//       cache->cleanup();
+//     }
+//   } else {
+//     retval = -1;
+//   }
+//  done:
+//   return retval;
+// }
   
 }

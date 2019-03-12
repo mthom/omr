@@ -25,11 +25,11 @@
 #include "omrport.h"
 
 #include "OSCache.hpp"
+#include "OSCacheImpl.hpp"
 
 namespace OSSharedMemoryCacheUtils
 {  
-static IDATA
-getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
+  // static IDATA getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
 static SH_CacheFileAccess
 checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions options, LastErrorInfo* lastErrorInfo);  
 #if !defined(WIN32)
