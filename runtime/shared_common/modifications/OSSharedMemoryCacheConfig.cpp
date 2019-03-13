@@ -88,7 +88,7 @@ IDATA OSSharedMemoryCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library,
  * @return 0 if the operation has been successful, -1 if an error has occured
  */
 IDATA
-OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions& configOptions, LastErrorInfo* lastErrorInfo)
+OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions* configOptions, LastErrorInfo* lastErrorInfo)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
   IDATA rc;

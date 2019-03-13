@@ -84,7 +84,7 @@ public:
   virtual IDATA getWriteLockID(void);
   virtual IDATA getReadWriteLockID(void);
 
-  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions& configOptions,
+  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions* configOptions,
 			    LastErrorInfo* lastErrorInfo = NULL);
   virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
 
@@ -106,6 +106,7 @@ public:
 
 protected:
   friend class OSSharedMemoryCache;
+  friend class OSSharedMemoryCachePolicies;
 
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);

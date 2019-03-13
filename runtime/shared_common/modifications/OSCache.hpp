@@ -54,7 +54,7 @@ struct LastErrorInfo
 
 class OSCache {
 public:
-  OSCache(OSCacheConfigOptions& configOptions)
+  OSCache(OSCacheConfigOptions* configOptions)
     : _configOptions(configOptions)
   {}
   
@@ -121,7 +121,7 @@ protected:
 
   //  it's best if caches embed their own configuration objects.
   //  OSCacheConfig* _config;
-  OSCacheConfigOptions& _configOptions;
+  OSCacheConfigOptions* _configOptions;
 };
 
 #endif

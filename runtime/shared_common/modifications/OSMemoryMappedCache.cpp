@@ -31,7 +31,7 @@ OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* ctrlDirName,
 					 IDATA numLocks,
-					 OSCacheConfigOptions& configOptions)
+					 OSCacheConfigOptions* configOptions)
   : OSCacheImpl(library, configOptions, numLocks)
     //  , _config(new OSMemoryMappedCacheConfig(numLocks)) // this is
     //  an abstract class, so we don't instantiate _config directly.
@@ -134,7 +134,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 
   Trc_SHR_OSC_Mmap_startup_commonStartupSuccess();
   /* Detect remote filesystem */
-  if (_configOptions.usingNetworkCache()) { // openMode & J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE) {
+  if (_configOptions->usingNetworkCache()) { // openMode & J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE) {
     // _cacheLocation, or _cacheDirName as it was called, is initialized inside commonStartup.
     if (0 == omrfile_stat(_cacheLocation, 0, &statBuf)) {
       if (statBuf.isRemote) {
@@ -158,13 +158,13 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
    * - user has specified a cache directory, or
    * - destroying an existing cache (if SHR_STARTUP_REASON_DESTROY or SHR_STARTUP_REASON_EXPIRE or OMRSH_OSCACHE_OPEXIST_DESTROY is set)
    */
-  if (!_configOptions.isUserSpecifiedCacheDir()
-      && !_configOptions.openToDestroyExistingCache()
-      && !_configOptions.openToDestroyExpiredCache())
+  if (!_configOptions->isUserSpecifiedCacheDir()
+      && !_configOptions->openToDestroyExistingCache()
+      && !_configOptions->openToDestroyExpiredCache())
   {
     _config->_cacheFileAccess = OSCacheUtils::checkCacheFileAccess(_portLibrary, _config->_fileHandle,
 								   _configOptions, &lastErrorInfo);
-    if (_configOptions.openToStatExistingCache() || _config->cacheFileAccessAllowed())
+    if (_configOptions->openToStatExistingCache() || _config->cacheFileAccessAllowed())
     {
       Trc_SHR_OSC_Mmap_startup_fileaccessallowed(_cachePathName);
     } else {
@@ -188,7 +188,7 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     }
   }
 
-  if(_configOptions.openToDestroyExistingCache()) {
+  if(_configOptions->openToDestroyExistingCache()) {
     Trc_SHR_OSC_Mmap_startup_openCacheForDestroy(_cachePathName);
     goto _exitForDestroy;
   }
@@ -273,12 +273,12 @@ OSMemoryMappedCache::openCacheFile(LastErrorInfo* lastErrorInfo)
 
   //TODO: _openMode should be fed into the ConfigOptions object, subclassed for MemoryMappedCache's.
   //(_openMode & J9OSCACHE_OPEN_MODE_DO_READONLY) ? EsOpenRead : (EsOpenRead | EsOpenWrite);
-  I_32 openFlags = _configOptions.readOnlyOpenMode() ? EsOpenRead: (EsOpenRead | EsOpenWrite);
-  I_32 fileMode = _configOptions.fileMode();
+  I_32 openFlags = _configOptions->readOnlyOpenMode() ? EsOpenRead: (EsOpenRead | EsOpenWrite);
+  I_32 fileMode = _configOptions->fileMode();
 
   // Trc_SHR_OSC_Mmap_openCacheFile_entry();
 
-  if(_configOptions.createFile() && (openFlags & EsOpenWrite)) {
+  if(_configOptions->createFile() && (openFlags & EsOpenWrite)) {
     openFlags |= EsOpenCreate;
   }
 
@@ -289,7 +289,7 @@ OSMemoryMappedCache::openCacheFile(LastErrorInfo* lastErrorInfo)
     _config->_fileHandle = omrfile_open(_cachePathName, openFlags, fileMode);
 #endif
 
-    if ((_config->_fileHandle == -1) && (openFlags != EsOpenRead) && _configOptions.tryReadOnlyOnOpenFailure()) {
+    if ((_config->_fileHandle == -1) && (openFlags != EsOpenRead) && _configOptions->tryReadOnlyOnOpenFailure()) {
       openFlags &= ~EsOpenWrite;
       continue;
     }
@@ -534,7 +534,7 @@ OSMemoryMappedCache::destroy(bool suppressVerbose, bool isReset)
 
   Trc_SHR_OSC_Mmap_destroy_goodunlink();
 
-  if (!suppressVerbose && _configOptions.verboseEnabled()) {
+  if (!suppressVerbose && _configOptions->verboseEnabled()) {
     // the isReset flag is only used for toggling trace messages. That's it.
     if (isReset) {
       OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_MMAP_DESTROY_SUCCESS, _cacheName);
@@ -700,7 +700,7 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
     goto detach;
   }
 
-  if (_configOptions.verboseEnabled() && _initContext->startupCompleted()) {
+  if (_configOptions->verboseEnabled() && _initContext->startupCompleted()) {
     OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_MMAP_ATTACH_ATTACHED, _cacheName);
   }
 
@@ -731,7 +731,7 @@ void OSMemoryMappedCache::handleCacheHeaderCorruption(IDATA headerRc)
        * After this point, cache is detached.
        */
       /*
-      if (_configOptions.disableCorruptCacheDumps()) {//0 ==(_runtimeFlags & OMRSHR_RUNTIMEFLAG_DISABLE_CORRUPT_CACHE_DUMPS)) {
+      if (_configOptions->disableCorruptCacheDumps()) {//0 ==(_runtimeFlags & OMRSHR_RUNTIMEFLAG_DISABLE_CORRUPT_CACHE_DUMPS)) {
 	//				TRIGGER_J9HOOK_VM_CORRUPT_CACHE(vm->hookInterface, currentThread);
       }
       */
@@ -926,7 +926,7 @@ OSMemoryMappedCache::errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastE
     Trc_SHR_OSC_Mmap_errorHandler_Entry_V2(moduleName, id, 0, "");
   }
 
-  UDATA verboseFlags = _configOptions.renderVerboseOptionsToFlags();
+  UDATA verboseFlags = _configOptions->renderVerboseOptionsToFlags();
 
   if(moduleName && id && verboseFlags) {
     Trc_SHR_OSC_Mmap_errorHandler_printingMessage(verboseFlags);

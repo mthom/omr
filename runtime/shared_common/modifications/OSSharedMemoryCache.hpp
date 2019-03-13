@@ -27,6 +27,7 @@
 #include "OSSharedMemoryCacheIterator.hpp"
 #include "OSSharedMemoryCacheConfig.hpp"
 //#include "OSSharedMemoryCacheInitializationContext.hpp"
+#include "OSSharedMemoryCachePolicies.hpp"
 
 #include "omr.h"
 #include "omrport.h"
@@ -52,7 +53,7 @@ class OSSharedMemoryCache: public OSCacheImpl
 {
 public:
   OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName,
-		      IDATA numLocks, OSCacheConfigOptions& configOptions);
+		      IDATA numLocks, OSCacheConfigOptions* configOptions);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset = false);
@@ -65,28 +66,20 @@ public:
   //  IDATA restoreFromSnapshot(const char* cacheName, UDATA numLocks, bool& cacheExists);
 
 protected:
+  friend class OSSharedMemoryCachePolicies;
+  
   virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 
   void setError(IDATA ec);
   IDATA openCache(const char* cacheName);
 
+  // factory method to construct a policy object that decides how the
+  // interface to shared memory *and* semaphores is handled.
+  virtual OSSharedMemoryCachePolicies* constructSharedMemoryPolicy();
+  
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
   virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);
-  
-#if !defined(WIN32)
-  IDATA OpenSysVMemoryHelper(const char* fileName, U_32 perm, LastErrorInfo *lastErrorInfo);
-  IDATA OpenSysVSemaphoreHelper(LastErrorInfo* lastErrorInfo);
-  IDATA DestroySysVSemHelper();
-
-  I_32 getControlFilePermissions(char *cacheDirName, char *filename,
-				 bool& isNotReadable, bool& isReadOnly);
-  I_32 verifySemaphoreGroupAccess(LastErrorInfo* lastErrorInfo);
-  I_32 verifySharedMemoryGroupAccess(LastErrorInfo* lastErrorInfo);
-#endif
-
-  SH_SysvSemAccess checkSemaphoreAccess(LastErrorInfo* lastErrorInfo);
-  IDATA shmemOpenWrapper(const char *cacheName, LastErrorInfo *lastErrorInfo);
-  SH_SysvShmAccess checkSharedMemoryAccess(LastErrorInfo* lastErrorInfo);
+    
   IDATA setRegionPermissions(OSCacheRegion* region);
   UDATA getPermissionsRegionGranularity();
 
@@ -109,5 +102,7 @@ protected:
 
   bool _startupCompleted;
   bool _openSharedMemory;
+
+  OSSharedMemoryCachePolicies* _policies;
 };
 #endif

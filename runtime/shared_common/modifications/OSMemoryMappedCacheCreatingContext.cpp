@@ -70,7 +70,7 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
   // Trc_SHR_OSC_Mmap_startup_goodSetCacheLength(piconfig->sharedClassCacheSize);
 
   /* Verify if the group access has been set */
-  if (_cache->_configOptions.groupAccessEnabled()) { //OMR_ARE_ALL_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_GROUPACCESS)) {
+  if (_cache->_configOptions->groupAccessEnabled()) { //OMR_ARE_ALL_BITS_SET(_openMode, J9OSCACHE_OPEN_MODE_GROUPACCESS)) {
     I_32 groupAccessRc = OSMemoryMappedCacheUtils::verifyCacheFileGroupAccess(_cache->_portLibrary,
 									      _cache->_config->_fileHandle,
 									      &lastErrorInfo);
@@ -119,7 +119,7 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
   }
   */
 
-  if (_cache->_configOptions.verboseEnabled()) { //_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
+  if (_cache->_configOptions->verboseEnabled()) { //_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
     OSC_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_MMAP_STARTUP_CREATED, _cache->_cacheName);
   }
 

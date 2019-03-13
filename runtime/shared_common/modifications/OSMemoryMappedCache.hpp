@@ -37,7 +37,7 @@ class OSMemoryMappedCache: public OSCacheImpl {
 public:
   virtual IDATA getError();
 
-  OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks, OSCacheConfigOptions& configOptions);
+  OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks, OSCacheConfigOptions* configOptions);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);
@@ -61,7 +61,7 @@ protected:
   void internalDetach();
 
   IDATA getLockCapabilities();
- 
+  
   virtual IDATA setRegionPermissions(OSCacheRegion* region);
   virtual UDATA getPermissionsRegionGranularity(OSCacheRegion*);
 

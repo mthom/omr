@@ -46,7 +46,7 @@ namespace OSCacheUtils
 // this was originally called getCacheDir -- I renamed it to do away with
 // the ambiguity of 'getCacheDir', ie. we are 'getting' the directory? what?
 IDATA
-getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions& configOptions)
+getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions* configOptions)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
   IDATA rc;
@@ -60,17 +60,17 @@ getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buff
 //  if (appendBaseDir) {
 //    flags |= OMRSHMEM_GETDIR_APPEND_BASEDIR;
 //  }
-  if ((NULL == ctrlDirName) && !configOptions.groupAccessEnabled())
+  if ((NULL == ctrlDirName) && !configOptions->groupAccessEnabled())
   {
 		/* omrshmem_getDir() always tries the CSIDL_LOCAL_APPDATA directory (C:\Documents and Settings\username\Local Settings\Application Data)
 		 * first on Windows if ctrlDirName is NULL, regardless of whether OMRSHMEM_GETDIR_USE_USERHOME is set or not. So OMRSHMEM_GETDIR_USE_USERHOME is effective on UNIX only.
 		 */
 
-    configOptions.useUserHomeDirectoryForCacheDir();
+    configOptions->useUserHomeDirectoryForCacheDir();
     //flags |= OMRSHMEM_GETDIR_USE_USERHOME;
   }
 
-  rc = omrshmem_getDir(ctrlDirName, configOptions.renderToFlags(), buffer, bufferSize);
+  rc = omrshmem_getDir(ctrlDirName, configOptions->renderToFlags(), buffer, bufferSize);
   if (rc == -1) {
     // //  Trc_SHR_OSC_getCacheDir_omrshmem_getDir_failed(ctrlDirName);
     return -1;
@@ -156,7 +156,7 @@ statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cac
  * @return enum SH_CacheFileAccess indicating if the process can access the shared cache file set or not
  */
 SH_CacheFileAccess
-checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions configOptions, LastErrorInfo *lastErrorInfo)
+checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions* configOptions, LastErrorInfo *lastErrorInfo)
 {
   SH_CacheFileAccess cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_ALLOWED;
 
@@ -212,7 +212,7 @@ checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfi
       }
       if (sameGroup) {
 	/* This process belongs to same group as owner of the shared cache file. */
-	if (configOptions.groupAccessEnabled()) { // !OMR_ARE_ANY_BITS_SET(openMode, OMROSCACHE_OPEN_MODE_GROUPACCESS)) {
+	if (configOptions->groupAccessEnabled()) { // !OMR_ARE_ANY_BITS_SET(openMode, OMROSCACHE_OPEN_MODE_GROUPACCESS)) {
 	  /* If 'groupAccess' option is not set, it implies this process wants to access a shared cache file that it created.
 	   * But this process is not the owner of the cache file.
 	   * This implies we should not allow this process to use the cache.

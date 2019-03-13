@@ -123,7 +123,7 @@ OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode)
     }
   }
 
-  if (_cache->_configOptions.verboseEnabled()) { // _verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
+  if (_cache->_configOptions->verboseEnabled()) { // _verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
     if (_cache->_runningReadOnly) {
       OSC_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_MMAP_STARTUP_OPENED_READONLY, _cache->_cacheName);
     } else {

@@ -34,7 +34,8 @@ add_library(shared_cache_modifications STATIC
 # OSMemoryMappedCacheHeader.cpp
   OSMemoryMappedCacheUtils.cpp
   OSSharedMemoryCacheIterator.cpp
-  OSSharedMemoryCache.cpp
+  OSSharedMemoryCachePolicies.cpp
+  OSSharedMemoryCache.cpp  
   OSSharedMemoryCacheConfig.cpp
 # OSSharedMemoryCacheHeader.cpp
   OSSharedMemoryCacheUtils.cpp  

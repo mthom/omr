@@ -66,15 +66,15 @@ typedef enum SH_CacheFileAccess {
 #define OMRSH_OSCACHE_READONLY_RETRY_COUNT 10
 #define OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS 10
 
-#define OSC_TRACE(configOptions, var) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_INFO, var)
-#define OSC_TRACE1(configOptions, var, p1) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_INFO, var, p1)
-#define OSC_TRACE2(configOptions, var, p1, p2) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_INFO, var, p1, p2)
-#define OSC_ERR_TRACE(configOptions, var) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var)
-#define OSC_ERR_TRACE1(configOptions, var, p1) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1)
-#define OSC_ERR_TRACE2(configOptions, var, p1, p2) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1, p2)
-#define OSC_ERR_TRACE4(configOptions, var, p1, p2, p3, p4) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1, p2, p3, p4)
-#define OSC_WARNING_TRACE(configOptions, var) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_WARNING, var)
-#define OSC_WARNING_TRACE1(configOptions, var, p1) if (configOptions.verboseEnabled()) omrnls_printf(J9NLS_WARNING, var, p1)
+#define OSC_TRACE(configOptions, var) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_INFO, var)
+#define OSC_TRACE1(configOptions, var, p1) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_INFO, var, p1)
+#define OSC_TRACE2(configOptions, var, p1, p2) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_INFO, var, p1, p2)
+#define OSC_ERR_TRACE(configOptions, var) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_ERROR, var)
+#define OSC_ERR_TRACE1(configOptions, var, p1) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1)
+#define OSC_ERR_TRACE2(configOptions, var, p1, p2) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1, p2)
+#define OSC_ERR_TRACE4(configOptions, var, p1, p2, p3, p4) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_ERROR, var, p1, p2, p3, p4)
+#define OSC_WARNING_TRACE(configOptions, var) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_WARNING, var)
+#define OSC_WARNING_TRACE1(configOptions, var, p1) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_WARNING, var, p1)
 
 #define OMRSH_MAXPATH EsMaxPath
 
@@ -106,7 +106,7 @@ typedef struct SH_OSCache_Info {
  */
 class OSCacheImpl: public OSCache {
 public:
-  OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions& configOptions, IDATA numLocks);
+  OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks);
   // old J9 cache comment:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache

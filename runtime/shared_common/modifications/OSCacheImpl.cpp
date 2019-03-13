@@ -26,7 +26,7 @@
 #include "OSCacheImpl.hpp"
 #include "ut_omrshr.h"
 
-OSCacheImpl::OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions& configOptions, IDATA numLocks)
+OSCacheImpl::OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks)
   : OSCache(_configOptions)
   , _portLibrary(library)
   , _numLocks(numLocks)
@@ -43,8 +43,8 @@ OSCacheImpl::initCacheDirName(const char* ctrlDirName)
   // UDATA cacheNameLen=0, cachePathNameLen=0, versionStrLen=0;
   char fullPathName[OMRSH_MAXPATH];
   
-  IDATA openMode = _configOptions.openMode();
-  IDATA cacheDirPermissions = _configOptions.cacheDirPermissions();
+  IDATA openMode = _configOptions->openMode();
+  IDATA cacheDirPermissions = _configOptions->cacheDirPermissions();
 
   // Trc_SHR_OSC_commonStartup_Entry();
 
