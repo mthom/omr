@@ -21,7 +21,7 @@
 //******************************************************************************
 
 Executable=omrshr
-Submodules=j9vmutil,j9util,pool,avl,simplepool
+Submodules=omrvm,j9utilcore,pool,avl
 DATFileName=J9TraceFormat.dat
 
 TraceEvent=Trc_SHR_VMInitStages_Event1 Overhead=1 Level=1 Test Template="Trace engine initialized for module omrshr"
@@ -2022,7 +2022,7 @@ TraceException=Trc_SHR_CC_enterReadWriteAreaMutex_EventRebuildCacheData2 Overhea
 TraceException=Trc_SHR_CC_enterReadWriteAreaMutex_EventRebuildLocalData2 Overhead=1 Level=1 Template="CC enterReadWriteAreaMutex: Detected termination - must rebuild local string table (_localReadWriteCrashCntr=%u, _theca->readWriteCrashCntr=%u)"
 
 TraceExit=Trc_SHR_CC_setInternCacheHeaderFields_ExitV2 Noenv Overhead=1 Level=1 Template="CC setInternCacheHeaderFields: Exiting with sharedTail=%p, sharedHead=%p, totalSharedNodes=%d, totalSharedWeight=%d"
-TraceException=Trc_SHR_INIT_failedSimplePoolIntegrity NoEnv Overhead=1 Level=1 Template="INIT j9shr_init failed string simple pool integrity expected %u nodes found %u nodes." 
+//TraceException=Trc_SHR_INIT_failedSimplePoolIntegrity NoEnv Overhead=1 Level=1 Template="INIT j9shr_init failed string simple pool integrity expected %u nodes found %u nodes." 
 
 TraceExit=Trc_SHR_OSC_getCacheStatistics_getValuesFromShcFilePrefix_Failed_Exit NoEnv Overhead=1 Level=1 Template="OSCache::getCacheStatistics: getValuesFromShcFilePrefix() failed - rc=-1"
 TraceExit=Trc_SHR_OSC_getCacheStatistics_badModLevel_Exit NoEnv Overhead=1 Level=1 Template="OSCache::getCacheStatistics: versionData.modlevel=%d is not valid - rc=-1"
@@ -2124,7 +2124,7 @@ TraceEvent=Trc_SHR_ClassDebugData_recommendedDebugAreaSize_Event NoEnv Overhead=
 
 TraceException=Trc_SHR_CC_startup_Exception_DebugAreNotOk Overhead=1 Level=1 Template="CC startup: _debugData->isOk() == false"
 
-TraceException=Trc_SHR_INIT_failedSimplePoolConsistency NoEnv Overhead=1 Level=1 Template="INIT j9shr_init failed string simple pool consistency"
+//TraceException=Trc_SHR_INIT_failedSimplePoolConsistency NoEnv Overhead=1 Level=1 Template="INIT j9shr_init failed string simple pool consistency"
 
 TraceException=Trc_SHR_INIT_verifyStringTableElement_utf8Corrupt NoEnv Overhead=1 Level=1 Template="INIT verifyStringTableElement utf8 corrupt %p in node %p in pool %p"
 TraceException=Trc_SHR_INIT_verifyStringTableElement_childCorrupt NoEnv Overhead=1 Level=1 Template="INIT verifyStringTableElement child corrupt %p in node %p in pool %p"

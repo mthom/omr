@@ -72,8 +72,8 @@ extern "C" {
 #include <string.h>
 // #include "util_api.h"
 #include "omrutil.h"
-}
 
+extern "C++"{
 //#include "hookhelpers.hpp"
 #include "CacheLifecycleManager.hpp"
 #include "CacheMap.hpp"
@@ -81,7 +81,7 @@ extern "C" {
 #include "OSCachesysv.hpp"
 //#include "SCImplementedAPI.hpp"
 #include "UnitTest.hpp"
-
+}
 
 #define SHRINIT_NAMEBUF_SIZE 256
 #define SHRINIT_LOW_FREE_DISK_SIZE ((U_64)6 * 1024 * 1024 * 1024)
@@ -368,12 +368,12 @@ J9SharedClassesOptions J9SHAREDCLASSESOPTIONS[] = {
 	{ OPTION_FIND_AOT_METHODS_EQUALS, PARSE_TYPE_STARTSWITH, RESULT_DO_FIND_AOT_METHODS_EQUALS, OMRSHR_RUNTIMEFLAG_DO_NOT_CREATE_CACHE},
 	{ NULL, 0, 0 }
 };
-
+extern "C++"{
 IDATA UnitTest::unitTest = UnitTest::NO_TEST;
 void * UnitTest::cacheMemory = NULL;
 U_32 UnitTest::cacheSize = 0;
-
-extern "C" {
+}
+//extern "C" {
 
 static UDATA initializeSharedStringTable(OMR_VM* vm);
 static void resetSharedTable(J9SharedInvariantInternTable* sharedTable);
@@ -2298,12 +2298,12 @@ reportUtilityNotApplicable(OMR_VM* vm, const char* ctrlDirName, const char* cach
 		optionName = OPTION_PRINTALLSTATS;
 	}
 
-	IDATA reportedIncompatibleNum = omrshr_report_utility_incompatible(vm, ctrlDirName, groupPerm, verboseFlags, cacheName, optionName);
+	IDATA reportedIncompatibleNum = 0;//omrshr_report_utility_incompatible(vm, ctrlDirName, groupPerm, verboseFlags, cacheName, optionName);
 
 	if (SH_OSCache::getCacheDir(vm, ctrlDirName, cacheDirName, OMRSH_MAXPATH, versionData.cacheType) == -1) {
 		return;
 	}
-	if ((reportedIncompatibleNum == 0) && (omrshr_stat_cache(vm, cacheDirName, 0, cacheName, &versionData, OSCACHE_CURRENT_CACHE_GEN))) {
+	if ((reportedIncompatibleNum == 0) /*&& (omrshr_stat_cache(vm, cacheDirName, 0, cacheName, &versionData, OSCACHE_CURRENT_CACHE_GEN))*/) {
 		if (versionData.cacheType == OMRPORT_SHR_CACHE_TYPE_PERSISTENT) {
 			SHRINIT_ERR_TRACE2(verboseFlags, J9NLS_SHRC_SHRINIT_OTHER_PERS_TYPE_CACHE_EXISTS, optionName, cacheName);
 		} else if (versionData.cacheType == OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT) {
@@ -2844,7 +2844,7 @@ ensureCorrectCacheSizes(OMR_VM *vm, OMRPortLibrary* portlib, U_64 runtimeFlags, 
 		if (piconfig->sharedClassInternTableNodeCount == 0) {
 			piconfig->sharedClassReadWriteBytes = 0;
 		} else {
-			piconfig->sharedClassReadWriteBytes = (UDATA)srpHashTable_requiredMemorySize((U_32)piconfig->sharedClassInternTableNodeCount, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
+			piconfig->sharedClassReadWriteBytes = 0;//(UDATA)srpHashTable_requiredMemorySize((U_32)piconfig->sharedClassInternTableNodeCount, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
 			if (piconfig->sharedClassReadWriteBytes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				SHRINIT_ERR_TRACE2(verboseFlags, J9NLS_SHRC_SHRINIT_VALUE_IS_NOT_SUPPORTED_BY_PRIMENUMBERHELPER, piconfig->sharedClassInternTableNodeCount, getSupportedBiggestNumberByPrimeNumberHelper());
 				return 1;
@@ -2902,7 +2902,7 @@ initializeSharedAPI(OMR_VM *vm)
 	scapi->isCacheFull = omrshr_isCacheFull;
 	scapi->isAddressInCache = omrshr_isAddressInCache;
 	/* Set up fimcyopms to get shared classes defaults for -verbose:sizes */
-	scapi->populatePreinitConfigDefaults = omrshr_populatePreinitConfigDefaults;
+	scapi->populatePreinitConfigDefaults = 0;//omrshr_populatePreinitConfigDefaults;
 
 	return scapi;
 }
@@ -3891,7 +3891,7 @@ freeClasspathItemsForPool(OMR_VM* vm, J9Pool* pool, UDATA alsoFreeCpEntries)
 		anElement = (struct J9GenericByID*)pool_startDo(pool, &aState);
 		while (anElement) {
 			if (anElement->cpData) {
-				omrshr_freeClasspathData(vm, anElement->cpData);
+				//omrshr_freeClasspathData(vm, anElement->cpData);
 			}
 			/* For Tokens and URLs, jclData is allocated from pools, but for Classpaths, it is allocated from portlib */
 			if (alsoFreeCpEntries && anElement->jclData) {
@@ -4812,7 +4812,7 @@ checkIfCacheExists(OMR_VM* vm, const char* ctrlDirName, char* cacheDirName, cons
 	} else {
 //		setCurrentCacheVersion(vm, J2SE_VERSION(vm), versionData);
 		versionData->cacheType = cacheType;
-		ret = omrshr_stat_cache(vm, cacheDirName, vm->sharedCacheAPI->verboseFlags, cacheName, versionData, OSCACHE_CURRENT_CACHE_GEN);
+		ret = 0;//omrshr_stat_cache(vm, cacheDirName, vm->sharedCacheAPI->verboseFlags, cacheName, versionData, OSCACHE_CURRENT_CACHE_GEN);
 	}
 	return ret;
 }

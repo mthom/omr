@@ -30,6 +30,7 @@ namespace OMR { typedef OMR::SharedCache SharedCacheConnector; }
 
 #include <stdint.h>
 #include "sharedconsts.h"
+#include "CacheMap.hpp"
 
 namespace OMR
 {
@@ -248,3 +249,4 @@ class SharedCache
    // OMRSharedCachePreinitConfig* preinitConfig;
    };
 }
+#endif

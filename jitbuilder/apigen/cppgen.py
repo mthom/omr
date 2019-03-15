@@ -424,6 +424,9 @@ class CppGenerator:
 
         writer.write("{cname}::{name}(void * impl){inherit} {{\n".format(cname=full_name, name=name, inherit=inherit))
         writer.write("if (impl != NULL) {\n")
+        if "OperandStack" in self.get_impl_class_name(class_desc):
+            writer.write("auto imple = new {aa}(static_cast<{aa}*>(impl));\n".format(aa=self.get_impl_class_name(class_desc)));
+            writer.write("impl = static_cast<void*>(imple);\n");
         writer.write("{impl_cast}->setClient(this);\n".format(impl_cast=self.to_impl_cast(class_desc,"impl")));
 
         impl = "impl" if not class_desc.has_parent() else self.to_opaque_cast("static_cast<{}>(impl)".format(self.get_impl_type(class_desc.as_type())),class_desc)

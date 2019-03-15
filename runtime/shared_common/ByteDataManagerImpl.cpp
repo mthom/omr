@@ -48,7 +48,7 @@ SH_ByteDataManagerImpl::localHashTableCreate(OMR_VMThread* currentThread, U_32 i
 	J9HashTable* returnVal;
 
 	Trc_SHR_BDMI_localHashTableCreate_Entry(currentThread, initialEntries);
-	returnVal = hashTableNew(_portlib, OMR_GET_CALLSITE(), initialEntries, sizeof(SH_Manager::HashLinkedListImpl), sizeof(char *), 0,  OMRMEM_CATEGORY_CLASSES, SH_Manager::hllHashFn, SH_Manager::hllHashEqualFn, NULL, NULL);// (void*)currentThread->javaVM->internalVMFunctions);
+	returnVal = 0;//hashTableNew(_portlib, OMR_GET_CALLSITE(), initialEntries, sizeof(SH_Manager::HashLinkedListImpl), sizeof(char *), 0,  OMRMEM_CATEGORY_CLASSES, SH_Manager::hllHashFn, SH_Manager::hllHashEqualFn, NULL, NULL);// (void*)currentThread->javaVM->internalVMFunctions);
 	Trc_SHR_BDMI_localHashTableCreate_Exit(currentThread, returnVal);
 	return returnVal;
 }

@@ -438,15 +438,15 @@ typedef struct AOTStats
    int32_t numInlinedMethodRelocated;
    int32_t numInlinedMethodValidationFailed;
 
-   TR_AOTInliningStats staticMethods;
-   TR_AOTInliningStats specialMethods;
-   TR_AOTInliningStats virtualMethods;
-   TR_AOTInliningStats interfaceMethods;
-   TR_AOTInliningStats abstractMethods;
+// TR_AOTInliningStats staticMethods;
+// TR_AOTInliningStats specialMethods;
+// TR_AOTInliningStats virtualMethods;
+// TR_AOTInliningStats interfaceMethods;
+// TR_AOTInliningStats abstractMethods;
 
-   TR_AOTInliningStats profiledInlinedMethods;
-   TR_AOTInliningStats profiledClassGuards;
-   TR_AOTInliningStats profiledMethodGuards;
+// TR_AOTInliningStats profiledInlinedMethods;
+// TR_AOTInliningStats profiledClassGuards;
+// TR_AOTInliningStats profiledMethodGuards;
 
    int32_t numDataAddressRelosSucceed;
    int32_t numDataAddressRelosFailed;
@@ -476,7 +476,7 @@ typedef struct AOTStats
    int32_t numClassValidationsFailed;
    int32_t numWellKnownClassesValidationsFailed;
 
-   TR_FailedPerfAssumptionCode failedPerfAssumptionCode;
+// TR_FailedPerfAssumptionCode failedPerfAssumptionCode;
 
    uint32_t numRelocationsFailedByType[TR_NumExternalRelocationKinds];
 

@@ -684,7 +684,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 	if ((finalReadWriteSize == 0) && (piConfig->sharedClassReadWriteBytes == -1)) {
 		/* If no explicit value for sharedClassReadWriteBytes was set, set it to a proportion of the cache size */
 		finalReadWriteSize = SHC_PAD((_theca->totalBytes / DEFAULT_READWRITE_BYTES_DIVISOR), SHC_WORDALIGN);
-		maxSharedStringTableSize = srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
+		maxSharedStringTableSize = 0;//srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
 		if (maxSharedStringTableSize == PRIMENUMBERHELPER_OUTOFRANGE) {
 			/*
 			 * We should never be here.
@@ -702,7 +702,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 		 * This will prevent wasting any extra memory that is wasted by SRP hashtable.
 		 */
 		if (!(*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE)) {
-			numOfSharedNodes = srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
+			numOfSharedNodes = 0;//srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
 			if (numOfSharedNodes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				/**
 				 * This should never happen since finalReadWriteSize is limited up to maxSharedStringTableSize above.
@@ -712,7 +712,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 				 */
 				Trc_SHR_Assert_ShouldNeverHappen();
 			}
-			finalReadWriteSize = srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
+			finalReadWriteSize = 0;//srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
 		}
 	}
 

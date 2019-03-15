@@ -1021,6 +1021,67 @@ OMR::IlBuilder::Negate(TR::IlValue *v)
    return negatedValue;
    }
 
+TR::IlValue*
+OMR::IlBuilder::issueOp(TR::ILOpCodes op, TR::DataType typeTo, TR::IlValue* v) {
+  TR::Node *result = TR::Node::create(op, 1, loadValue(v));
+  TR::IlValue *new_v = newValue(typeTo, result);
+
+  TraceIL("IlBuilder [ %p ]::%d is issueOp(%s) %d\n",
+	  this, new_v->getID(), typeTo.toString(), v->getID());
+
+  return new_v;
+}
+
+TR::IlValue *
+OMR::IlBuilder::bitcastTo(TR::DataType typeTo, TR::IlValue* v)
+  {
+    TR::DataType typeFrom = v->getDataType();
+    TR::ILOpCodes op;
+
+    if(typeFrom.isInt32() && typeTo.isFloatingPoint()) {
+      op = TR::ibits2f;
+    } else if(typeFrom.isInt64() && typeTo.isDouble()) {
+      op = TR::lbits2d;
+    } else if(typeFrom.isFloatingPoint() && typeTo.isInt32()) {
+      op = TR::fbits2i;
+    } else if(typeFrom.isDouble() && typeTo.isInt64()) {
+      op = TR::dbits2l;
+    } else if(typeFrom.isInt64() && typeTo.isInt32()) {
+      op = TR::l2i; // truncation.
+    } else if(typeFrom.isInt32() && typeTo.isInt64()) {
+      op = TR::i2l; // a signed extension.
+    } else if(typeFrom.isFloatingPoint() && typeTo.isInt64()) {
+      v = issueOp(TR::fbits2i, Int32->getPrimitiveType(), v); // float to double conversion
+      op = TR::i2l;
+    } else if(typeFrom.isInt64() && typeTo.isFloatingPoint()) {
+      v = issueOp(TR::l2i, Int32->getPrimitiveType(), v);
+      op = TR::ibits2f;
+    } else {
+      TR_ASSERT(1, "Builder [ %p ] %s and %s must be either {Int64, Double} and\
+{Int32, Float}", this, v->getID(), typeFrom.toString(), typeTo.toString());
+    }
+
+    return issueOp(op, typeTo, v);
+  }
+
+TR::IlValue *
+OMR::IlBuilder::BitcastTo(TR::IlType *t, TR::IlValue *v)
+  {
+  TR::DataType typeFrom = v->getDataType();
+  TR::DataType typeTo = t->getPrimitiveType();
+
+  if(typeFrom == typeTo)
+    {
+    TraceIL("IlBuilder[ %p ]::%d is BitcastTo (already has type %s) %d\n",
+	    this, v->getID(), t->getName(), v->getID());
+    return v;
+    }
+  TR::IlValue *convertedValue = bitcastTo(typeTo, v);
+  TraceIL("IlBuilder[ %p ]::%d is BitcastTo(%s) %d\n",
+	  this, convertedValue->getID(), t->getName(), v->getID());
+  return convertedValue;
+  }
+
 TR::IlValue *
 OMR::IlBuilder::convertTo(TR::DataType typeTo, TR::IlValue *v, bool needUnsigned)
    {

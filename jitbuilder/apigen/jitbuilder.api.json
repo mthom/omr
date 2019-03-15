@@ -826,6 +826,15 @@
                     {"name":"value","type":"IlValue"}
                     ]
                 },
+		{ "name": "BitcastTo"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "IlValue"
+                , "parms": [
+                    {"name":"type","type":"IlType"},
+                    {"name":"value","type":"IlValue"}
+                    ]
+                },
                 { "name": "AtomicAdd"
                 , "overloadsuffix": ""
                 , "flags": []
