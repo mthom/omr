@@ -109,13 +109,13 @@ createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDATA cacheDirPe
 
 /* Returns the full path of a cache based on the current cacheDir value */
 IDATA
-getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* buffer, UDATA bufferSize)//, const char* cacheNameWithVGen)
+getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* buffer, UDATA bufferSize, const char* cacheName)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
 
   //Trc_SHR_OSC_getCachePathName_Entry(cacheNameWithVGen);
 
-  omrstr_printf(buffer, bufferSize, "%s", cacheDirName);//, cacheNameWithVGen);
+  omrstr_printf(buffer, bufferSize, "%s%s", cacheDirName, cacheName);
 
   //Trc_SHR_OSC_getCachePathName_Exit();
 

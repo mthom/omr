@@ -96,12 +96,16 @@ public:
   // in computing this.
   virtual void * getOSCacheStart();
 
+  // startup routines the Composite Cache expects.
+  virtual void* attach() = 0;
+  virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;
+  
   // cleanup resources used by the cache. I'm half-convinced this should occupy a
-  // Destruction policy object.
+  // Destruction methods.
   virtual void cleanup(void) = 0;
   // deletes the shared class. contains an option to suppress verbose trace messages.
   virtual IDATA destroy(bool suppressVerbose, bool isReset = false) = 0;
-  // reports on the contents of.. error codes and the corruption context.
+  // reports on the contents of error codes and the corruption context.
   virtual IDATA getError() = 0;
   // calls routines to finalize/shutdown the cache when OMR is exiting.
   virtual void runExitCode(void) = 0;

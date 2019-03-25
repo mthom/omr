@@ -118,9 +118,8 @@ protected:
   virtual IDATA initCacheName(const char* cacheName) = 0;
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo) = 0;
 
-  virtual void* attach() = 0;
-  virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;
-
+  void initialize();
+  
   void commonInit();
   void commonCleanup();
   

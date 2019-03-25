@@ -123,7 +123,6 @@ protected:
   omrshsem_handle* _semhandle;
 
   UDATA _totalNumSems;
-  UDATA _groupPerm;
   I_32 _semid;
 };
 

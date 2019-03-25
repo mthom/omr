@@ -26,8 +26,8 @@
 #include "OSCacheImpl.hpp"
 #include "OSSharedMemoryCacheIterator.hpp"
 #include "OSSharedMemoryCacheConfig.hpp"
-//#include "OSSharedMemoryCacheInitializationContext.hpp"
 #include "OSSharedMemoryCachePolicies.hpp"
+#include "OSSharedMemoryCacheSnapshot.hpp"
 
 #include "omr.h"
 #include "omrport.h"
@@ -67,6 +67,7 @@ public:
 
 protected:
   friend class OSSharedMemoryCachePolicies;
+  friend class OSSharedMemoryCacheSnapshot;
   
   virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 
@@ -103,6 +104,6 @@ protected:
   bool _startupCompleted;
   bool _openSharedMemory;
 
-  OSSharedMemoryCachePolicies* _policies;
+  OSSharedMemoryCachePolicies* _policies;  
 };
 #endif

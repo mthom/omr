@@ -56,7 +56,9 @@ public:
   virtual bool readOnlyOpenMode();
   
   virtual I_32 fileMode();
-  virtual I_32 openMode();
+  virtual I_32 openMode(); //TODO: this should set _groupPerm = 1 if groupAccessEnabled() is true.
+  virtual UDATA groupPermissions(); // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.
+  
   virtual IDATA cacheDirPermissions();
   virtual bool usingNetworkCache();
   
@@ -94,7 +96,7 @@ public:
   virtual bool disableCorruptCacheDumps();
   
   virtual bool verboseEnabled();
-  virtual bool groupAccessEnabled();
+  virtual bool groupAccessEnabled(); // true iff _groupPerm = 1 in the J9 cache.  
   // allocate the cache in the user's home directory.
   virtual void useUserHomeDirectoryForCacheLocation();
   // render the options to a bit vector understood by the functions of the OMR port library.

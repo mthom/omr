@@ -1055,7 +1055,7 @@ SH_OSCachesysv::destroy(bool suppressVerbose, bool isReset)
 	Trc_SHR_OSC_destroy_Entry();
 
 	if (suppressVerbose) {
-		_verboseFlags = 0;
+	  _verboseFlags = 0;
 	}
 
 	/* We will try our best and destroy the OSCache here */

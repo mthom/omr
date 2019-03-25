@@ -84,13 +84,13 @@ OSSharedMemoryCachePolicies::openSharedMemory(const char* fileName, U_32 permiss
 //     }
 //     flags |= OMRSHMEM_PRINT_STORAGE_KEY_WARNING;
 // #endif
-    rc = omrshmem_open(_cache->_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_shmhandle, fileName, _cache->_cacheSize, permissions, OMRMEM_CATEGORY_CLASSES, flags, &_cache->_controlFileStatus);
+    rc = omrshmem_open(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_shmhandle, fileName, _cache->_cacheSize, permissions, OMRMEM_CATEGORY_CLASSES, flags, &_cache->_controlFileStatus);
     break;
   case OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE:
-    rc = omrshmem_openDeprecated(_cache->_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_shmhandle, fileName, permissions, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
+    rc = omrshmem_openDeprecated(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_shmhandle, fileName, permissions, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
     break;
   case OMRSH_SYSV_OLDER_CONTROL_FILE:
-    rc = omrshmem_openDeprecated(_cache->_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_shmhandle, fileName, permissions, OMRSH_SYSV_OLDER_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
+    rc = omrshmem_openDeprecated(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_shmhandle, fileName, permissions, OMRSH_SYSV_OLDER_CONTROL_FILE, OMRMEM_CATEGORY_CLASSES);
     break;
   default:
     Trc_SHR_Assert_ShouldNeverHappen();
@@ -127,7 +127,7 @@ OSSharedMemoryCachePolicies::openSharedSemaphore(LastErrorInfo *lastErrorInfo) /
   // J9 specific. take the default course of action.
   // SH_OSCachesysv::SysVCacheFileTypeHelper(cacheVMVersion, _activeGeneration);
   action = OMRSH_SYSV_REGULAR_CONTROL_FILE;
-  rc = omrshsem_deprecated_open(_cache->_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_semhandle,
+  rc = omrshsem_deprecated_open(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_semhandle,
 				_cache->_semFileName, (int)_cache->_config->_totalNumSems, 0, flags,
 				&_cache->_controlFileStatus); 
 
@@ -142,13 +142,13 @@ OSSharedMemoryCachePolicies::openSharedSemaphore(LastErrorInfo *lastErrorInfo) /
     /*
 	switch(action){
 		case OMRSH_SYSV_REGULAR_CONTROL_FILE:
-			rc = omrshsem_deprecated_open(_cacheLocation, _config->_groupPerm, &_semhandle, _semFileName, (int)_totalNumSems, 0, flags, &_controlFileStatus);
+			rc = omrshsem_deprecated_open(_cacheLocation, _configOptions->groupPermissions(), &_semhandle, _semFileName, (int)_totalNumSems, 0, flags, &_controlFileStatus);
 			break;
 		case OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE:
-			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _config->_groupPerm, &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
+			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _configOptions->groupPermissions(), &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
 			break;
 		case OMRSH_SYSV_OLDER_CONTROL_FILE:
-			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _config->_groupPerm, &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_CONTROL_FILE);
+			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _configOptions->groupPermissions(), &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_CONTROL_FILE);
 			break;
 		default:
 			Trc_SHR_Assert_ShouldNeverHappen();
@@ -445,7 +445,7 @@ OSSharedMemoryCachePolicies::checkSharedSemaphoreAccess(LastErrorInfo *lastError
 	  }
 	  if (sameGroup) {
 	    /* This process belongs to same group as owner or creator of the semaphore set. */
-	    if (0 == _cache->_config->_groupPerm) {
+	    if (0 == _cache->_configOptions->groupPermissions()) {
 	      /* If 'groupAccess' option is not set, it implies this process wants to attach to a shared cache that it owns or created.
 	       * But this process is neither creator nor owner of the semaphore set.
 	       * This implies we should not allow this process to use the cache.
@@ -552,7 +552,7 @@ OSSharedMemoryCachePolicies::checkSharedMemoryAccess(LastErrorInfo *lastErrorInf
 	}
 	if (sameGroup) {
 	  /* This process belongs to same group as owner or creator of the shared memory. */
-	  if (0 == _cache->_config->_groupPerm) {
+	  if (0 == _cache->_configOptions->groupPermissions()) {
 	    /* If 'groupAccess' option is not set, it implies this process wants to attach to a shared cache that it owns or created.
 	     * But this process is neither creator nor owner of the semaphore set.
 	     * This implies we should not allow this process to use the cache.
@@ -661,7 +661,7 @@ OSSharedMemoryCachePolicies::cleanupSystemResources(void)
 
   if ((NULL != _cache->_config->_shmhandle) && (OMRSH_SHM_ACCESS_ALLOWED == _cache->_config->_shmAccess)) {
 #if defined(WIN32)
-    if (omrshmem_destroy(_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_shmhandle) == 0) {
+    if (omrshmem_destroy(_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_shmhandle) == 0) {
       OSC_TRACE(_cache->_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SHM);
     } else {
       // TODO: isn't this the same lastErrorInfo->populate()?? Why don't we use it?
@@ -676,7 +676,7 @@ OSSharedMemoryCachePolicies::cleanupSystemResources(void)
 #else
     I_32 shmid = omrshmem_getid(_cache->_config->_shmhandle);
 
-    if (omrshmem_destroy(_cache->_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_shmhandle) == 0) {
+    if (omrshmem_destroy(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_shmhandle) == 0) {
       OSC_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_HANDLE_ERROR_ACTION_DESTROYED_SHM_WITH_SHMID, shmid);
     } else {
       I_32 errorno = omrerror_last_error_number();
@@ -724,7 +724,7 @@ OSSharedMemoryCachePolicies::openSharedMemoryWrapper(const char *fileName, LastE
 #if !defined(WIN32)
   rc = openSharedMemory(fileName, permissions, &localLastErrorInfo);
 #else
-  rc = omrshmem_open(_cache->_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_shmhandle, fileName, _cacheSize, permissions, OMRMEM_CATEGORY_CLASSES_SHC_CACHE, flags, NULL);
+  rc = omrshmem_open(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_shmhandle, fileName, _cacheSize, permissions, OMRMEM_CATEGORY_CLASSES_SHC_CACHE, flags, NULL);
   localLastErrorInfo.populate(OMRPORTLIB);
 //	localLastErrorInfo.lastErrorCode = omrerror_last_error_number();
 //	localLastErrorInfo.lastErrorMsg = omrerror_last_error_message();
@@ -750,7 +750,7 @@ OSSharedMemoryCachePolicies::openSharedMemoryWrapper(const char *fileName, LastE
       _cache->_configOptions->setReadOnlyOpenMode();
       //_openMode |= J9OSCACHE_OPEN_MODE_DO_READONLY;
       permissions = OMRSH_SHMEM_PERM_READ;
-      rc = omrshmem_open(_cache->_cacheLocation, _cache->_config->_groupPerm, &_cache->_config->_shmhandle,
+      rc = omrshmem_open(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(), &_cache->_config->_shmhandle,
 			 fileName, _cache->_cacheSize, permissions, OMRMEM_CATEGORY_CLASSES_SHC_CACHE,
 			 OMRSHMEM_NO_FLAGS, &_cache->_controlFileStatus);
 	/* if omrshmem_open is successful, portable error number is set to 0 */
