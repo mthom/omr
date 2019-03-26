@@ -791,7 +791,7 @@ OSSharedMemoryCache::openCache(const char* cacheDirName) //, bool semCreated) , 
 	/* Absence of shared memory is equivalent to non-existing cache. Do not display any error message,
 	 * but do call cleanupSysVResources() to remove any semaphore set in case we opened it successfully.
 	 */
-	cleanupSysvResources();
+	_policies->cleanupSystemResources();
       } else if (_configOptions->openToStatExistingCache() || _configOptions->openButDoNotCreate()) {//OMR_ARE_ANY_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_STATS | OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE)) {
 	omrnls_printf( J9NLS_ERROR, J9NLS_SHRC_OSCACHE_NOT_EXIST);
       }
@@ -996,6 +996,13 @@ OSSharedMemoryCache::printErrorMessage(LastErrorInfo *lastErrorInfo)
 }
 
 OSSharedMemoryCachePolicies*
-OSSharedMemoryCache::constructSharedMemoryPolicy() {
+OSSharedMemoryCache::constructSharedMemoryPolicy()
+{
   return new OSSharedMemoryCachePolicies(this);
+}
+
+IDATA OSSharedMemoryCache::restoreFromSnapshot(IDATA numLocks)
+{
+  OSSharedMemoryCacheSnapshot* snapshot = constructSharedMemoryCacheSnapshot();
+  return snapshot->restoreFromSnapshot(numLocks);
 }

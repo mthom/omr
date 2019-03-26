@@ -77,6 +77,10 @@ protected:
   // factory method to construct a policy object that decides how the
   // interface to shared memory *and* semaphores is handled.
   virtual OSSharedMemoryCachePolicies* constructSharedMemoryPolicy();
+
+  // factory method to construct a snapshot object. it's pure because OSSharedMemoryCacheSnapshot
+  // class is abstract.
+  virtual OSSharedMemoryCacheSnapshot* constructSharedMemoryCacheSnapshot() = 0;
   
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
   virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);
@@ -86,7 +90,9 @@ protected:
 
   // this is largely J9 specific. let it be overloaded.
   virtual IDATA verifyCacheHeader() = 0;
-  void cleanupSysvResources();
+
+  IDATA restoreFromSnapshot(IDATA numLocks);
+  
   IDATA detachRegion();
 
   void* attach();

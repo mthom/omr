@@ -47,7 +47,7 @@ public:
   virtual I_32 verifySharedSemaphoreGroupAccess(LastErrorInfo* lastErrorInfo);
   virtual I_32 verifySharedMemoryGroupAccess(LastErrorInfo* lastErrorInfo);
 #endif
-
+  // was cleanupSysvResources.
   virtual void cleanupSystemResources();
   
   virtual SH_SysvSemAccess checkSharedSemaphoreAccess(LastErrorInfo* lastErrorInfo);
