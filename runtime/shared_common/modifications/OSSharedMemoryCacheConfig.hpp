@@ -107,6 +107,7 @@ public:
 protected:
   friend class OSSharedMemoryCache;
   friend class OSSharedMemoryCachePolicies;
+  friend class OSSharedMemoryCacheStats;
 
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);

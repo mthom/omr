@@ -68,6 +68,7 @@ public:
 protected:
   friend class OSSharedMemoryCachePolicies;
   friend class OSSharedMemoryCacheSnapshot;
+  friend class OSSharedMemoryCacheStats;
   
   virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 

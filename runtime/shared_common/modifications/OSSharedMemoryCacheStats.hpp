@@ -19,20 +19,24 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#if !defined(OS_SHARED_MEMORY_CACHE_UTILS_HPP_INCLUDED)
-#define OS_SHARED_MEMORY_CACHE_UTILS_HPP_INCLUDED
 
-#include "omrport.h"
+#if !defined(OS_SHARED_MEMORY_CACHE_STATS_HPP_INCLUDED)
+#define OS_SHARED_MEMORY_CACHE_STATS_HPP_INCLUDED
 
-#include "OSCache.hpp"
-#include "OSCacheImpl.hpp"
+#include "OSSharedMemoryCache.hpp"
 
-namespace OSSharedMemoryCacheUtils
+class OSSharedMemoryCacheStats
 {
-#if !defined(WIN32)
-static IDATA
-StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cacheDirName, UDATA groupPerm, const char* cacheName, OMRPortShmemStatistic* statBuf);
-#endif  
-}
+public:
+  OSSharedMemoryCacheStats(OSSharedMemoryCache* cache)
+    : _cache(cache)
+  {}
+
+  virtual IDATA getCacheStatsHelper(const char* cacheDirName, SH_OSCache_Info* cacheInfo);
+  virtual IDATA prepareAndGetCacheStats(SH_OSCache_Info* cacheInfo);
+  virtual void getCacheStats(SH_OSCache_Info* cacheInfo) = 0;
+protected:
+  OSSharedMemoryCache* _cache;
+};
 
 #endif

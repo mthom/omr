@@ -19,20 +19,34 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#if !defined(OS_SHARED_MEMORY_CACHE_UTILS_HPP_INCLUDED)
-#define OS_SHARED_MEMORY_CACHE_UTILS_HPP_INCLUDED
 
-#include "omrport.h"
+#if !defined(OS_SHARED_MEMORY_CACHE_SNAPSHOT_HPP_INCLUDED)
+#define OS_SHARED_MEMORY_CACHE_SNAPSHOT_HPP_INCLUDED
 
-#include "OSCache.hpp"
-#include "OSCacheImpl.hpp"
+class OSSharedMemoryCache;
 
-namespace OSSharedMemoryCacheUtils
+class OSSharedMemoryCacheSnapshot
 {
-#if !defined(WIN32)
-static IDATA
-StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cacheDirName, UDATA groupPerm, const char* cacheName, OMRPortShmemStatistic* statBuf);
-#endif  
-}
+public:
+  OSSharedMemoryCacheSnapshot(OSSharedMemoryCache* cache)
+    : _cache(cache)
+    , _cacheExists(false)
+    , _fd(0)
+  {}  
+
+  // the name of the cache snapshot in the filesystem.
+  virtual char* snapshotName() = 0; // replaces cacheNameWithVGen in restoreFromSnapshot.
+  // is the file size of the attached file descriptor within the expected bounds?
+  virtual bool fileSizeWithinBounds() = 0; // replaces ((fileSize < MIN_CC_SIZE) || (fileSize > MAX_CC_SIZE))
+  // once the snapshot file is found to exist, how do we restore it to the local cache object?
+  virtual IDATA restoreFromExistingSnapshot() = 0;
+
+  virtual IDATA restoreFromSnapshot(IDATA numLocks);
+protected:
+  OSSharedMemoryCache* _cache;
+
+  bool _cacheExists;
+  IDATA _fd;
+};
 
 #endif
