@@ -104,7 +104,8 @@ typedef struct SH_OSCache_Info {
  * cache internals. Those that don't depend on cache internals are static
  * functions, and are stored in the OSCache*Utils namespaces.
  */
-class OSCacheImpl: public OSCache {
+class OSCacheImpl: public OSCache
+{
 public:
   OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks);
   // old J9 cache comment:

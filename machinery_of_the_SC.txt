@@ -808,7 +808,7 @@ Before examining methods, we should look to fields! Here they are.
   //	ClassDebugDataProvider * _debugData;
 
 	/* All composite caches within a JVM point to the same 'J9ShrCompositeCacheCommonInfo'
-	 * structure.
+	 * structure. Set *before* the shared cache is started.
 	 */
 	J9ShrCompositeCacheCommonInfo * _commonCCInfo;
 
