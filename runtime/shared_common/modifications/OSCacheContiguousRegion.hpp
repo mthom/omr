@@ -19,34 +19,32 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(OSCACHE_CONTIGUOUS_REGION_HPP_INCLUDED)
+#define OSCACHE_CONTIGUOUS_REGION_HPP_INCLUDED
 
-#if !defined(COMPOSITE_CACHE_HPP_INCLUDED)
-#define COMPOSITE_CACHE_HPP_INCLUDED
+#include "OSCacheRegion.hpp"
 
-#include "OSCacheImpl.hpp"
-
-#define CC_STARTUP_OK 0
-#define CC_STARTUP_FAILED -1
-#define CC_STARTUP_CORRUPT -2
-#define CC_STARTUP_RESET -3
-#define CC_STARTUP_SOFT_RESET -4
-#define CC_STARTUP_NO_CACHELETS -5
-#define CC_STARTUP_NO_CACHE -6
-
-/* How many bytes to sample from across the cache for calculating the CRC */
-/* Need a value that has negligible impact on performance */
-#define OMRSHR_CRC_MAX_SAMPLES 100000
-
-class CompositeCache
+// A contiguous region in a single cache block.
+class OSCacheContiguousRegion: public OSCacheRegion
 {
 public:
-  CompositeCache(OSCacheImpl* oscache);
+  OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, void* regionStart,
+			  UDATA regionSize, bool pageBoundaryAligned);
 
-  virtual IDATA startup() = 0;
+  // the start address of the region.
+  virtual void* regionStartAddress() const;
+  // the end of the region, possibly adjusted to fall on a page boundary.
+  virtual UDATA regionEnd() const;  
   
+  virtual bool alignToPageBoundary(UDATA osPageSize);
 protected:
-  OSCacheImpl* _oscache;
+  // _regionStart is a *relative* value denoting the beginning of
+  // cache allocation from the start of the cache block in memory,
+  // wherever it winds up. we allow for circumstances where the two
+  // may not coincide.
+  void* _regionStart;
+  UDATA _regionSize;  
+  bool _pageBoundaryAligned;  
 };
 
 #endif
-

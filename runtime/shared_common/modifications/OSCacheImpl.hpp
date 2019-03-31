@@ -113,6 +113,13 @@ public:
    * Advise the OS to release resources used by a section of the shared classes cache
    */
   virtual void dontNeedMetadata(const void* startAddress, size_t length);  
+
+  bool runningReadOnly() const {
+    return _runningReadOnly;
+  }
+
+  // returns true if the cache has successfully passed startup.
+  virtual bool started() = 0;
   
 protected:
   virtual IDATA initCacheDirName(const char* ctrlDirName);//, UDATA cacheDirPermissions, I_32 openMode);

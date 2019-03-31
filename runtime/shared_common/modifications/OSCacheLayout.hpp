@@ -34,8 +34,7 @@
 class OSCacheLayout
 {
 public:
-  OSCacheLayout(UDATA roundToPageSize, UDATA osPageSize)
-    : _roundToPageSize(roundToPageSize)
+  OSCacheLayout(UDATA osPageSize)
     , _osPageSize(osPageSize)
   {}
 
@@ -51,11 +50,14 @@ public:
     }
   }
 
+  virtual void alignRegionsToPageBoundaries();
+
+  /* If a region changes size, the owning cache layout is notified. */
+  virtual bool notifyRegionSizeAdjustment(OSCacheRegion&) = 0;
+
 protected:
   //TODO: switch to TR::vector eventually.
   std::vector<OSCacheRegion*> _regions;
-
-  UDATA _roundToPageSize;
   UDATA _osPageSize;
 };
 

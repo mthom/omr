@@ -19,34 +19,24 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(OSCACHE_CONTIGUOUS_GROWABLE_REGION_HPP_INCLUDED)
+#define OSCACHE_CONTIGUOUS_GROWABLE_REGION_HPP_INCLUDED
 
-#if !defined(COMPOSITE_CACHE_HPP_INCLUDED)
-#define COMPOSITE_CACHE_HPP_INCLUDED
+#include "OSCacheContiguousRegion.hpp"
 
-#include "OSCacheImpl.hpp"
-
-#define CC_STARTUP_OK 0
-#define CC_STARTUP_FAILED -1
-#define CC_STARTUP_CORRUPT -2
-#define CC_STARTUP_RESET -3
-#define CC_STARTUP_SOFT_RESET -4
-#define CC_STARTUP_NO_CACHELETS -5
-#define CC_STARTUP_NO_CACHE -6
-
-/* How many bytes to sample from across the cache for calculating the CRC */
-/* Need a value that has negligible impact on performance */
-#define OMRSHR_CRC_MAX_SAMPLES 100000
-
-class CompositeCache
+/* A region that occupies a contiguous block of memory, that can be
+ * grown, free space permitting.
+ */
+class OSCacheContiguousGrowableRegion: public OSCacheContiguousRegion
 {
 public:
-  CompositeCache(OSCacheImpl* oscache);
+  enum Direction { Forward, Backward };
 
-  virtual IDATA startup() = 0;
+  OSCacheContiguousGrowableRegion(OSCacheLayout* layout, int regionID, void* regionStart,
+				  UDATA regionSize, bool pageBoundaryAligned);
   
 protected:
-  OSCacheImpl* _oscache;
+  Direction _growthDirection;
 };
 
 #endif
-

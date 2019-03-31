@@ -19,34 +19,45 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-
-#if !defined(COMPOSITE_CACHE_HPP_INCLUDED)
-#define COMPOSITE_CACHE_HPP_INCLUDED
+#if !defined(SYNCHRONIZED_CACHE_COUNTER_HPP_INCLUDED)
+#define SYNCHRONIZED_CACHE_COUNTER_HPP_INCLUDED
 
 #include "OSCacheImpl.hpp"
+#include "OSCacheRegion.hpp"
 
-#define CC_STARTUP_OK 0
-#define CC_STARTUP_FAILED -1
-#define CC_STARTUP_CORRUPT -2
-#define CC_STARTUP_RESET -3
-#define CC_STARTUP_SOFT_RESET -4
-#define CC_STARTUP_NO_CACHELETS -5
-#define CC_STARTUP_NO_CACHE -6
+#include "omr.h"
+#include "shrnls.h"
 
-/* How many bytes to sample from across the cache for calculating the CRC */
-/* Need a value that has negligible impact on performance */
-#define OMRSHR_CRC_MAX_SAMPLES 100000
+// contains a 'focus', a pointer to a OSCacheRegion object, and a pointer to a
+// volatile UDATA field within the object. The constructor asserts that the
+// field is contained fully inside the memory spanned by the object.
+template <typename T>
+struct OSCacheRegionFocus {
+  OSCacheRegionFocus(OSCacheRegion* region, T* counter)
+    : _region(region)
+    , _counter(counter)
+  {
+    Trc_SHR_Assert_True(region != NULL
+			&& region + region->regionSize() >= counter + sizeof(T)
+			&& region <= counter);
+  }
+  
+  OSCacheRegion* _region;
+  T* _counter;
+};
 
-class CompositeCache
+class SynchronizedCacheCounter
 {
 public:
-  CompositeCache(OSCacheImpl* oscache);
+  SynchronizedCacheCounter(OSCacheRegion* region, UDATA* counter)
+    : _regionFocus(region, counter)
+  {}
 
-  virtual IDATA startup() = 0;
+  virtual bool incrementCount(OSCacheImpl* osCache);
+  virtual bool decrementCount(OSCacheImpl* osCache);
   
 protected:
-  OSCacheImpl* _oscache;
+  OSCacheRegionFocus<UDATA> _regionFocus;
 };
 
 #endif
-
