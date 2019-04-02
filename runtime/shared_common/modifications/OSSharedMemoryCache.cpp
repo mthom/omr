@@ -27,6 +27,7 @@
 #include "OSCacheConfigOptions.hpp"
 #include "OSCacheUtils.hpp"
 #include "OSSharedMemoryCache.hpp"
+#include "OSSharedMemoryCacheMemoryProtector.hpp"
 
 OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
 					 const char* cacheName,
@@ -864,25 +865,6 @@ OSSharedMemoryCache::setError(IDATA ec)
 }
 
 /**
- * Sets the protection as specified by flags for the memory pages containing all or part of the interval address->(address+len)
- *
- * @param[in] portLibrary An instance of portLibrary
- * @param[in] address 	Pointer to the shared memory region.
- * @param[in] length	The size of memory in bytes spanning the region in which we want to set protection
- * @param[in] flags 	The specified protection to apply to the pages in the specified interval
- *
- * @return 0 if the operations has been successful, -1 if an error has occured
- */
-IDATA
-OSSharedMemoryCache::setRegionPermissions(OSCacheRegion* region)
-{
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-
-  return omrshmem_protect(_cacheLocation, _configOptions->groupPermissions(), region->getRegionStartAddress(), region->getRegionSize(),
-			  region->renderToFlags());
-}
-
-/**
  * Returns the minimum sized region of a shared classes cache on which the process can set permissions, in the number of bytes.
  *
  * @param[in] portLibrary An instance of portLibrary
@@ -999,6 +981,12 @@ OSSharedMemoryCachePolicies*
 OSSharedMemoryCache::constructSharedMemoryPolicy()
 {
   return new OSSharedMemoryCachePolicies(this);
+}
+
+OSCacheMemoryProtector*
+OSSharedMemoryCache::constructMemoryProtector()
+{
+  return new OSSharedMemoryCacheMemoryProtector(*this);
 }
 
 IDATA OSSharedMemoryCache::restoreFromSnapshot(IDATA numLocks)

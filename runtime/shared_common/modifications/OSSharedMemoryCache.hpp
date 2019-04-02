@@ -28,6 +28,7 @@
 #include "OSSharedMemoryCacheConfig.hpp"
 #include "OSSharedMemoryCachePolicies.hpp"
 #include "OSSharedMemoryCacheSnapshot.hpp"
+#include "OSCacheContiguousRegion.hpp"
 
 #include "omr.h"
 #include "omrport.h"
@@ -82,12 +83,13 @@ protected:
   // factory method to construct a snapshot object. it's pure because OSSharedMemoryCacheSnapshot
   // class is abstract.
   virtual OSSharedMemoryCacheSnapshot* constructSharedMemoryCacheSnapshot() = 0;
+
+  virtual OSCacheMemoryProtector* constructMemoryProtector();
   
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
   virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);
     
-  IDATA setRegionPermissions(OSCacheRegion* region);
-  UDATA getPermissionsRegionGranularity();
+  virtual UDATA getPermissionsRegionGranularity();
 
   // this is largely J9 specific. let it be overloaded.
   virtual IDATA verifyCacheHeader() = 0;

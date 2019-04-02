@@ -25,27 +25,34 @@
 #include "OSCacheImpl.hpp"
 #include "OSCacheRegion.hpp"
 
+#include "AtomicSupport.hpp"
 #include "omr.h"
+#include "omrport.h"
 #include "shrnls.h"
+#include "ut_omrshr.h"
 
-// contains a 'focus', a pointer to a OSCacheRegion object, and a pointer to a
-// volatile UDATA field within the object. The constructor asserts that the
-// field is contained fully inside the memory spanned by the object.
+// a 'focus' is a pointer to a OSCacheRegion object, and a pointer to
+// a field internal to the region managed by the OSCacheRegion object. The
+// constructor asserts that the field is contained fully inside the
+// memory spanned by the region.
 template <typename T>
 struct OSCacheRegionFocus {
-  OSCacheRegionFocus(OSCacheRegion* region, T* counter)
+  OSCacheRegionFocus(OSCacheRegion* region, T* field)
     : _region(region)
-    , _counter(counter)
+    , _field(field)
   {
-    Trc_SHR_Assert_True(region != NULL
-			&& region + region->regionSize() >= counter + sizeof(T)
-			&& region <= counter);
+    Trc_SHR_Assert_True(region != NULL && region->isAddressInRegion((void*) field, sizeof(T)));
   }
   
   OSCacheRegion* _region;
-  T* _counter;
+  T* _field;
 };
 
+/* SynchronizedCacheCounter assumes the counter is contained *within*
+ * a region inside the shared cache, where it can be accessed across
+ * different VMs and threads, so a better name might be something like
+ * "SynchronizedInternalCacheCounter," but preferably less verbose.
+ */
 class SynchronizedCacheCounter
 {
 public:
@@ -53,8 +60,8 @@ public:
     : _regionFocus(region, counter)
   {}
 
-  virtual bool incrementCount(OSCacheImpl* osCache);
-  virtual bool decrementCount(OSCacheImpl* osCache);
+  virtual bool incrementCount(OSCacheImpl& osCache);
+  virtual bool decrementCount(OSCacheImpl& osCache);
   
 protected:
   OSCacheRegionFocus<UDATA> _regionFocus;

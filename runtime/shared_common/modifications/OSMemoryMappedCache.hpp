@@ -23,10 +23,12 @@
 #if !defined(OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED
 
+#include "OSCacheRegion.hpp"
 #include "OSCacheImpl.hpp"
 #include "OSMemoryMappedCacheConfig.hpp"
 #include "OSMemoryMappedCacheInitializationContext.hpp"
 #include "OSMemoryMappedCacheIterator.hpp"
+#include "OSMemoryMappedCache.hpp"
 
 #include "omr.h"
 #include "omrport.h"
@@ -50,6 +52,8 @@ public:
   virtual void finalise();
   virtual void cleanup();
 
+  virtual OSCacheMemoryProtector* constructMemoryProtector();
+  
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;
@@ -61,9 +65,8 @@ protected:
   void internalDetach();
 
   IDATA getLockCapabilities();
-  
-  virtual IDATA setRegionPermissions(OSCacheRegion* region);
-  virtual UDATA getPermissionsRegionGranularity(OSCacheRegion*);
+
+  virtual UDATA getPermissionsRegionGranularity();
 
   virtual void setError(IDATA errorCode);
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo) = 0;

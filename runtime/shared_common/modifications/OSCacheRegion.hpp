@@ -24,13 +24,16 @@
 
 #include "omr.h"
 #include "OSCacheRegionSerializer.hpp"
+#include "OSCacheMemoryProtector.hpp"
 
 /* C macros are the fuckin' worst, but here's a few from J9 anyway. */
 #define ROUND_UP_TO(granularity, number) ( (((number) % (granularity)) ? ((number) + (granularity) - ((number) % (granularity))) : (number)))
 #define ROUND_DOWN_TO(granularity, number) ( (((number) % (granularity)) ? ((number) - ((number) % (granularity))) : (number)))
 
+class OSCacheImpl;
 class OSCacheLayout;
 class OSCacheRegionEntryIterator;
+class OSCacheRegionMemoryProtector;
 
 class OSCacheRegion {
 public:
@@ -38,11 +41,14 @@ public:
     : _layout(layout)
     , _regionID(regionID)
   {}
+
+  // does the described block of data fall within the region's memory?
+  virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize) = 0;
   
-  // render the Region's settings as flags that can be used
-  // by the underlying ocmponents of the OMRPortLibrary, as anticipated
-  // by the OSCacheRegion subclass.
-  virtual UDATA renderToFlags() = 0;
+  // render the Region's memory protection settings as flags that can
+  // be used by the underlying ocmponents of the OMRPortLibrary, as
+  // anticipated by the OSCacheRegion subclass.
+  virtual UDATA renderToMemoryProtectionFlags() = 0;
 
   // this is not a predicate, but it may modify state!! If the
   // subclass isn't concerned with aligning to page boundaries, it can
@@ -59,23 +65,20 @@ public:
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
 
   virtual OSCacheRegionEntryIterator* constructIterator() = 0;
-
-  // calculates the size of the region.
-  virtual UDATA regionSize() const = 0;
   
-  virtual int regionID() const {
+  // calculates the size of the region.
+  virtual UDATA regionSize() = 0;
+  
+  virtual int regionID() {
     return _regionID;
   }
 
-  // remove memory protections from the region.
-  virtual void unprotect();
-
   // add memory protections to the region.
-  virtual void protect();
+  virtual IDATA setPermissions(OSCacheMemoryProtector* protector) = 0;
   
 protected:  
   OSCacheLayout* _layout;
-  int regionID;
+  int _regionID;
 };
 
 #endif

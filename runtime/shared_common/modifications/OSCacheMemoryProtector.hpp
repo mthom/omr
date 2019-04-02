@@ -19,47 +19,15 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(OSCACHE_REGION_MEMORY_PROTECTOR_HPP_INCLUDED)
+#define OSCACHE_REGION_MEMORY_PROTECTOR_HPP_INCLUDED
 
+class OSCacheContiguousRegion;
 
-#if !defined(OSCACHE_LAYOUT_HPP_INCLUDED)
-#define OSCACHE_LAYOUT_HPP_INCLUDED
-
-#include "omr.h"
-#include "OSCache.hpp"
-#include "OSCacheRegion.hpp"
-#include "OSCacheRegionSerializer.hpp"
-
-//#include "compiler/infra/vector.hpp"
-#include <vector>
-
-class OSCacheLayout
+class OSCacheMemoryProtector
 {
 public:
-  OSCacheLayout(UDATA osPageSize)
-    : _osPageSize(osPageSize)
-  {}
-
-  void addRegion(OSCacheRegion* region) {
-    _regions.push_back(region);
-  }
-
-  void serialize(OSCache* cache) {
-    OSCacheRegionSerializer* serializer = cache->constructSerializer();
-
-    for(int i = 0; i < _regions.size(); ++i) {
-      _regions[i]->serialize(serializer);
-    }
-  }
-
-  virtual void alignRegionsToPageBoundaries();
-
-  /* If a region changes size, the owning cache layout is notified. */
-  virtual bool notifyRegionSizeAdjustment(OSCacheRegion&) = 0;
-
-protected:
-  //TODO: switch to TR::vector.
-  std::vector<OSCacheRegion*> _regions;
-  UDATA _osPageSize;
+  virtual IDATA setPermissions(OSCacheContiguousRegion&) = 0;
 };
 
 #endif

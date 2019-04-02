@@ -40,7 +40,12 @@ add_library(shared_cache_modifications STATIC
 # OSSharedMemoryCacheHeader.cpp
   OSSharedMemoryCacheUtils.cpp
   OSSharedMemoryCacheSnapshot.cpp
-  OSSharedMemoryCacheStats.cpp  
+  OSSharedMemoryCacheStats.cpp
+  SynchronizedCacheCounter.cpp
+  OSCacheLayout.cpp
+  OSCacheContiguousRegion.cpp
+  OSMemoryMappedCacheMemoryProtector.cpp
+  OSSharedMemoryCacheMemoryProtector.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/../ut_omrshr.c
 )
 

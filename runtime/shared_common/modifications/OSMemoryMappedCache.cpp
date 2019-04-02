@@ -23,6 +23,7 @@
 #include "OSMemoryMappedCache.hpp"
 #include "OSCacheUtils.hpp"
 #include "OSMemoryMappedCacheUtils.hpp"
+#include "OSMemoryMappedCacheMemoryProtector.hpp"
 
 #include "shrnls.h"
 #include "ut_omrshr.h"
@@ -816,25 +817,6 @@ OSMemoryMappedCache::getLockCapabilities()
 }
 
 /**
- * Sets the protection as specified by flags for the memory pages
- * containing all or part of the interval address->(address+len)
- *
- * @param[in] portLibrary An instance of portLibrary
- * @param[in] address 	Pointer to the shared memory region.
- * @param[in] length	The size of memory in bytes spanning the region in which we want to set protection
- * @param[in] flags 	The specified protection to apply to the pages in the specified interval
- *
- * @return 0 if the operations has been successful, -1 if an error has occured
- */
-IDATA
-OSMemoryMappedCache::setRegionPermissions(OSCacheRegion* region)
-{
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-
-  return omrmmap_protect(region->getRegionStartAddress(), region->getRegionSize(), region->renderToFlags());
-}
-
-/**
  * Returns the minimum sized region of a shared classes cache on which the process can set permissions, in the number of bytes.
  *
  * @param[in] portLibrary An instance of portLibrary
@@ -842,7 +824,7 @@ OSMemoryMappedCache::setRegionPermissions(OSCacheRegion* region)
  * @return the minimum size of region on which we can control permissions size or 0 if this is unsupported
  */
 UDATA
-OSMemoryMappedCache::getPermissionsRegionGranularity(OSCacheRegion*)
+OSMemoryMappedCache::getPermissionsRegionGranularity()
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
@@ -943,4 +925,10 @@ OSMemoryMappedCache::errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastE
     Trc_SHR_OSC_Mmap_errorHandler_notPrintingMessage(verboseFlags);
   }
   Trc_SHR_OSC_Mmap_errorHandler_Exit();
+}
+
+OSCacheMemoryProtector*
+OSMemoryMappedCache::constructMemoryProtector()
+{
+  return new OSMemoryMappedCacheMemoryProtector(*this);
 }

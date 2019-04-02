@@ -22,7 +22,10 @@
 #if !defined(OSCACHE_CONTIGUOUS_REGION_HPP_INCLUDED)
 #define OSCACHE_CONTIGUOUS_REGION_HPP_INCLUDED
 
+#include "CacheMemoryProtectionOptions.hpp"
 #include "OSCacheRegion.hpp"
+
+#include "omrport.h"
 
 // A contiguous region in a single cache block.
 class OSCacheContiguousRegion: public OSCacheRegion
@@ -34,17 +37,29 @@ public:
   // the start address of the region.
   virtual void* regionStartAddress() const;
   // the end of the region, possibly adjusted to fall on a page boundary.
-  virtual UDATA regionEnd() const;  
-  
+  virtual void* regionEnd();
+  // the size of the region.
+  virtual UDATA regionSize() const;
+
   virtual bool alignToPageBoundary(UDATA osPageSize);
+  
+  virtual UDATA renderToMemoryProtectionFlags();
+
+  virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize);
+
+    // add memory protections to the region.
+  virtual IDATA setPermissions(OSCacheMemoryProtector* protector);
+  
 protected:
   // _regionStart is a *relative* value denoting the beginning of
   // cache allocation from the start of the cache block in memory,
   // wherever it winds up. we allow for circumstances where the two
   // may not coincide.
   void* _regionStart;
-  UDATA _regionSize;  
-  bool _pageBoundaryAligned;  
+  UDATA _regionSize;
+  bool _pageBoundaryAligned;
+
+  CacheMemoryProtectionOptions* _protectionOptions;
 };
 
 #endif

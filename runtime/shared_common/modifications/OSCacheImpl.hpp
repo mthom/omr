@@ -25,6 +25,7 @@
 
 #include "OSCache.hpp"
 #include "OSCacheConfigOptions.hpp"
+#include "OSCacheMemoryProtector.hpp"
 
 #include "omr.h"
 #include "omrport.h"
@@ -120,6 +121,27 @@ public:
 
   // returns true if the cache has successfully passed startup.
   virtual bool started() = 0;
+  
+  virtual const char* cacheLocation() {
+    return _cacheLocation;
+  }
+
+  OMRPortLibrary* portLibrary() {
+    return _portLibrary;
+  }
+
+  OSCacheConfigOptions* configOptions() {
+    return _configOptions;
+  }
+
+  // constructs a memory protection visitor to specialize on both the
+  // OSCacheRegion subclass and the memory semantics of the shared cache.
+  virtual OSCacheMemoryProtector* constructMemoryProtector() = 0;
+
+  // this is a template method (the design patterns kind, not the C++ kind)
+  // that constructs a OSCacheMemoryProtector and passes the visited region
+  // along to it.
+  virtual IDATA setRegionPermissions(OSCacheRegion* region);
   
 protected:
   virtual IDATA initCacheDirName(const char* ctrlDirName);//, UDATA cacheDirPermissions, I_32 openMode);

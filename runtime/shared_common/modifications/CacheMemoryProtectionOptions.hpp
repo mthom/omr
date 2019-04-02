@@ -19,47 +19,36 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(CACHE_MEMORY_PROTECTION_HPP_INCLUDED)
+#define CACHE_MEMORY_PROTECTION_HPP_INCLUDED
 
+#include "omrport.h"
 
-#if !defined(OSCACHE_LAYOUT_HPP_INCLUDED)
-#define OSCACHE_LAYOUT_HPP_INCLUDED
-
-#include "omr.h"
-#include "OSCache.hpp"
-#include "OSCacheRegion.hpp"
-#include "OSCacheRegionSerializer.hpp"
-
-//#include "compiler/infra/vector.hpp"
-#include <vector>
-
-class OSCacheLayout
+class CacheMemoryProtectionOptions
 {
 public:
-  OSCacheLayout(UDATA osPageSize)
-    : _osPageSize(osPageSize)
-  {}
-
-  void addRegion(OSCacheRegion* region) {
-    _regions.push_back(region);
-  }
-
-  void serialize(OSCache* cache) {
-    OSCacheRegionSerializer* serializer = cache->constructSerializer();
-
-    for(int i = 0; i < _regions.size(); ++i) {
-      _regions[i]->serialize(serializer);
+  enum ProtectionOptions {
+    Read = 0x1,
+    Write = 0x2
+  };
+  
+  virtual UDATA renderToFlags()
+  {
+    UDATA flags = 0;
+    
+    if(_options & ProtectionOptions::Read) {
+      flags |= OMRPORT_PAGE_PROTECT_READ;
     }
+
+    if(_options & ProtectionOptions::Write) {
+      flags |= OMRPORT_PAGE_PROTECT_WRITE;
+    }
+
+    return flags;
   }
-
-  virtual void alignRegionsToPageBoundaries();
-
-  /* If a region changes size, the owning cache layout is notified. */
-  virtual bool notifyRegionSizeAdjustment(OSCacheRegion&) = 0;
-
+  
 protected:
-  //TODO: switch to TR::vector.
-  std::vector<OSCacheRegion*> _regions;
-  UDATA _osPageSize;
+  UDATA _options;
 };
 
 #endif

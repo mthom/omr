@@ -159,3 +159,23 @@ OSCacheImpl::commonCleanup()
   
   Trc_SHR_OSC_commonCleanup_Exit();
 }
+
+/**
+ * Sets the protection as specified by flags for the memory pages
+ * containing all or part of the interval address->(address+len)
+ *
+ * @param[in] portLibrary An instance of portLibrary
+ * @param[in] address 	Pointer to the shared memory region.
+ * @param[in] length	The size of memory in bytes spanning the region in which we want to set protection
+ * @param[in] flags 	The specified protection to apply to the pages in the specified interval
+ *
+ * @return 0 if the operations has been successful, -1 if an error has occured
+ */
+IDATA
+OSCacheImpl::setRegionPermissions(OSCacheRegion* region)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  OSCacheMemoryProtector* protector = constructMemoryProtector();
+  return region->setPermissions(protector);
+}
