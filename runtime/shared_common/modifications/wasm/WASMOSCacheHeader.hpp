@@ -11,7 +11,8 @@ template <class OSCacheHeader>
 class WASMOSCacheHeader: public OSCacheHeader, virtual public OSCacheRegion
 {
 public:
-  
+  volatile UDATA* _readerCount;
+  UDATA* _cacheCrc;
 };
 
 #endif
