@@ -57,6 +57,10 @@
 #include "env/SystemSegmentProvider.hpp"
 #include "env/DebugSegmentProvider.hpp"
 #include "runtime/CodeCacheManager.hpp"
+#include "omrsrp.h"
+extern "C"{
+  #include "shrinit.h"
+}
 
 #if defined (_MSC_VER) && _MSC_VER < 1900
 #define snprintf _snprintf
@@ -286,7 +290,7 @@ compileMethodFromDetails(
    TR::Region dispatchRegion(scratchSegmentProvider, rawAllocator);
    TR_Memory trMemory(*fe.persistentMemory(), dispatchRegion);
    TR_ResolvedMethod & compilee = *((TR_ResolvedMethod *)details.getMethod());
-
+   MethodNameAndSignature methodNameAndSignature{};
    TR::CompileIlGenRequest request(details);
 
    // initialize return code before compilation starts
@@ -403,7 +407,9 @@ compileMethodFromDetails(
             TR_VerboseLog::vlogRelease();
             trfflush(jitConfig->options.vLogFile);
             }
-
+	 NNSRP_SET(methodNameAndSignature.name,compilee.nameChars());
+	 NNSRP_SET(methodNameAndSignature.signature,compilee.signatureChars());
+	 omrshr_storeCompiledMethod(TR::Compiler->vm._vmThread,&methodNameAndSignature,nullptr,0,compiler.cg()->getCodeStart(),compiler.cg()->getCodeLength(),false);
          if (
                compiler.getOption(TR_PerfTool)
             || compiler.getOption(TR_EmitExecutableELFFile)

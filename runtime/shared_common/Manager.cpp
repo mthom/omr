@@ -233,24 +233,25 @@ SH_Manager::startup(OMR_VMThread* currentThread, U_64* runtimeFlags_, UDATA verb
 	_verboseFlags = verboseFlags_;
 	_htEntries = getHashTableEntriesFromCacheSize(cacheSizeBytes);
 
-	if (omrthread_monitor_init(&_htMutex, 0)) {
-		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
-		M_ERR_TRACE(J9NLS_SHRC_M_FAILED_CREATE_MUTEX);
-		Trc_SHR_M_startup_Exit2(currentThread);
-		goto _startupFailed;
-	}
+//	if (omrthread_monitor_init(&_htMutex, 0)) {
+//		OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
+//		M_ERR_TRACE(J9NLS_SHRC_M_FAILED_CREATE_MUTEX);
+//		Trc_SHR_M_startup_Exit2(currentThread);
+//		goto _startupFailed;
+//	}
 
-	if (_cache->enterLocalMutex(currentThread, _htMutex, "_htMutex", "startup")==0) {
+//	if (_cache->enterLocalMutex(currentThread, _htMutex, "_htMutex", "startup")==0) {
 		if (initializeHashTable(currentThread) == -1) {
 			Trc_SHR_M_startup_Exit1(currentThread);
-			goto _startupFailedWithMutex;
+//			goto _startupFailedWithMutex;
+			goto _startupFailed;
 		}
-		if (localPostStartup(currentThread) == -1) {
-			Trc_SHR_M_startup_Exit3(currentThread);
-			goto _startupFailedWithMutex;
-		}
-		_cache->exitLocalMutex(currentThread, _htMutex, "_htMutex", "startup");
-	}
+//		if (localPostStartup(currentThread) == -1) {
+//			Trc_SHR_M_startup_Exit3(currentThread);
+//			goto _startupFailedWithMutex;
+//		}
+//		_cache->exitLocalMutex(currentThread, _htMutex, "_htMutex", "startup");
+//	}
 
 	_state = MANAGER_STATE_STARTED;
 	Trc_SHR_M_startup_Exit4(currentThread);
@@ -589,11 +590,11 @@ SH_Manager::lockHashTable(OMR_VMThread* currentThread, const char* funcName)
 	
 	while (retryCount-- > 0) {
 		/* WARNING - currentThread can be NULL */
-		if (_cache->enterLocalMutex(currentThread, _htMutex, _htMutexName, funcName) == 0) {
+//		if (_cache->enterLocalMutex(currentThread, _htMutex, _htMutexName, funcName) == 0) {
 			return true;
-		}
+//		}
 	}
-	return false;
+//	return false;
 }
 
 /**
@@ -603,7 +604,7 @@ void
 SH_Manager::unlockHashTable(OMR_VMThread* currentThread, const char* funcName)
 {
 	/* WARNING - currentThread can be NULL */
-	_cache->exitLocalMutex(currentThread, _htMutex, _htMutexName, funcName);
+//	_cache->exitLocalMutex(currentThread, _htMutex, _htMutexName, funcName);
 }
 /*
 UDATA

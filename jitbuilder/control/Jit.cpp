@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include "omrvm.h"
+#include "OMR_VMThread.hpp"
 extern "C"{
   #include "shrinit.h"
 }
@@ -137,13 +138,22 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
       }
 
    OMR_VM *omrvm;
+   OMR_VMThread *vmThread;
    OMR_Initialize(NULL,&omrvm);
+   //omr_attach_vm_to_runtime(omrvm);
+   omr_vmthread_alloc(omrvm,&vmThread);
+//   omr_vmthread_init(vmThread);
+   vmThread->_vm = omrvm;
+//   omr_vmthread_getCurrent(omrvm);
+//   omr_vmthread_firstAttach(omrvm,&vmThread);
    omrshr_init(omrvm,0,nullptr);
+   //omrshr_storeCompiledMethod(vmThread, 
    TR::Compiler->initialize();
-
+   TR::Compiler->vm._vmThread = vmThread;
    // --------------------------------------------------------------------------
    static JitBuilder::FrontEnd fe;
    auto jitConfig = fe.jitConfig();
+//   fe.omrvm((void*)omrvm);
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 

@@ -3060,35 +3060,50 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	UDATA memBytesNeeded = 0;
 	SH_CacheMap* cmPtr = NULL;
 	SH_CacheMap* cm = NULL;
-	U_64 runtimeFlags = vm->sharedCacheAPI->runtimeFlags;
-	UDATA verboseFlags = vm->sharedCacheAPI->verboseFlags;
-	UDATA printStatsOptions = vm->sharedCacheAPI->printStatsOptions;
+	U_64 runtimeFlags = getDefaultRuntimeFlags();//vm->sharedCacheAPI->runtimeFlags;
+	UDATA verboseFlags = OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE_DEFAULT;//vm->sharedCacheAPI->verboseFlags;
+	UDATA printStatsOptions = PRINTSTATS_SHOW_NONE;//vm->sharedCacheAPI->printStatsOptions;
 //	J9HookInterface** hook = vm->internalVMFunctions->getVMHookInterface(vm);
-	UDATA parseResult = vm->sharedCacheAPI->parseResult;
+	UDATA parseResult = 0;//vm->sharedCacheAPI->parseResult;
 	IDATA rc, rcStartup = 0;
-	const char* cacheName = vm->sharedCacheAPI->cacheName;
+	const char* cacheName = CACHE_ROOT_PREFIX;//vm->sharedCacheAPI->cacheName;
 	char* copiedCacheName = NULL;
 	char modifiedCacheName[CACHE_ROOT_MAXLEN];
 	char* modifiedCacheNamePtr = (char*)modifiedCacheName;
-	char* modContext = vm->sharedCacheAPI->modContext;
-	char* expireTime = vm->sharedCacheAPI->expireTime;
-	char* ctrlDirName = vm->sharedCacheAPI->ctrlDirName;
+	char* modContext = NULL;//vm->sharedCacheAPI->modContext;
+	char* expireTime = NULL;//vm->sharedCacheAPI->expireTime;
+	char* ctrlDirName = NULL;//vm->sharedCacheAPI->ctrlDirName;
 //	IDATA returnVal = OMR_SHARED_CACHE_INIT_FAILED; //J9VMDLLMAIN_FAILED;
 	UDATA cmBytes, nameBytes, modContextBytes;
 	OMRSharedCacheConfig* tempConfig;
-	OMRSharedCachePreinitConfig* piconfig = vm->sharedCachePreinitConfig;
-	J9UTF8* mcPtr;
+	//vm->sharedCachePreinitConfig;
+	OMRUTF8* mcPtr;
 	bool doPrintStats = false;
 	bool exitAfterBuildingTempConfig = false;
 	bool cacheHasIntegrity;
 	OMR_VMThread* currentThread = omr_vmthread_getCurrent(vm); // OMR_VMThread* currentThread = vm->internalVMFunctions->currentVMThread(vm);
 	I_32 cacheType = 0;
 
+	runtimeFlags |=((omrshr_isPlatformDefaultPersistent(vm) == TRUE) ? OMRSHR_RUNTIMEFLAG_ENABLE_PERSISTENT_CACHE:0);
+
 	OMRPORT_ACCESS_FROM_VMC(vm);
 	
 	UnitTest::unitTest = UnitTest::NO_TEST;
-	vm->sharedClassConfig = NULL;
-
+//	vm->sharedClassConfig = NULL;
+	if(vm->sharedCacheAPI==nullptr){
+	  vm->sharedCacheAPI = new OMRSharedCacheAPI();
+	}
+	vm->sharedCacheAPI->runtimeFlags = runtimeFlags;
+	OMRSharedCachePreinitConfig* piconfig =  (OMRSharedCachePreinitConfig*)omrmem_allocate_memory(sizeof(OMRSharedCachePreinitConfig), OMRMEM_CATEGORY_VM);
+	piconfig->sharedClassDebugAreaBytes = -1;
+	piconfig->sharedClassMinAOTSize = -1;
+	piconfig->sharedClassMaxAOTSize = -1;
+	piconfig->sharedClassMinJITSize = -1;
+	piconfig->sharedClassMaxJITSize = -1;
+	piconfig->sharedClassSoftMaxBytes = -1;
+	piconfig->sharedClassInternTableNodeCount = -1;
+	piconfig->sharedClassReadWriteBytes = -1;
+	
 	Trc_SHR_INIT_j9shr_init_Entry(currentThread);
 	
 //	if (FALSE == vm->sharedCacheAPI->xShareClassesPresent) {
@@ -3142,28 +3157,28 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //		}
 //	}
 //
-//	if (ensureCorrectCacheSizes(vm, vm->portLibrary, runtimeFlags, verboseFlags, piconfig) != 0) {
-//		goto _error;
-//	}
+	if (ensureCorrectCacheSizes(vm, privateOmrPortLibrary, runtimeFlags, verboseFlags, piconfig) != 0) {
+		goto _error;
+	}
 //	
-//	if (runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_NESTED) {
-//		cacheType = OMRPORT_SHR_CACHE_TYPE_VMEM;
-//	} else {
-//		cacheType = getCacheTypeFromRuntimeFlags(runtimeFlags);
-//	}
+	if (runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_NESTED) {
+		cacheType = OMRPORT_SHR_CACHE_TYPE_VMEM;
+	} else {
+		cacheType = getCacheTypeFromRuntimeFlags(runtimeFlags);
+	}
 //
 //	/* Do not move this line - any failures after this are affected by nonfatal, any before are not */
 //	if (runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_NONFATAL) {
 //		*nonfatal = 1;
 //	}
 //
-//	if (!modifyCacheName(vm, cacheName, verboseFlags, &modifiedCacheNamePtr, USER_SPECIFIED_CACHE_NAME_MAXLEN)) {
+	if (!modifyCacheName(vm, cacheName, verboseFlags, &modifiedCacheNamePtr, USER_SPECIFIED_CACHE_NAME_MAXLEN)) {
 //		/* CMVC 141167: If we fail to modify the name we can't simply exit. 
 //		* We must ensure the runtimeFlags are available during omrshr_lateInit() 
 //		* otherwise we will not be able to see if nonfatal is used. 
 //		*/
 //		exitAfterBuildingTempConfig = true;
-//	}
+	}
 //
 //	if (parseResult==RESULT_DO_PRINTSTATS || 
 //		parseResult==RESULT_DO_PRINTALLSTATS || 
@@ -3209,10 +3224,10 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 
 	cmBytes = SH_CacheMap::getRequiredConstrBytes(false);
 //	nameBytes = (strlen(modifiedCacheNamePtr)+1) * sizeof(char);
-//	modContextBytes = modContext ? ((strlen(modContext) * sizeof(char)) + sizeof(J9UTF8)) : 0;
+	modContextBytes = modContext ? ((strlen(modContext) * sizeof(char)) + sizeof(OMRUTF8)) : 0;
 	
 	//TODO: maybe include bytes for the cache name in this.. once that's up and running.
-	memBytesNeeded = sizeof(OMRSharedCacheConfig) + sizeof(OMRSharedCacheDescriptor); // + cmBytes + nameBytes + modContextBytes;
+	memBytesNeeded = sizeof(OMRSharedCacheConfig) + sizeof(OMRSharedCacheDescriptor) + cmBytes;// + nameBytes + modContextBytes;
 	tempConfig = (OMRSharedCacheConfig*)omrmem_allocate_memory(memBytesNeeded, OMRMEM_CATEGORY_CLASSES);
 	
 	if (!tempConfig) {
@@ -3242,7 +3257,7 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 
 	tempConfig->cacheDescriptorList = (OMRSharedCacheDescriptor*)((UDATA)tempConfig + sizeof(OMRSharedCacheConfig));
 	cmPtr = (SH_CacheMap*)((UDATA)tempConfig->cacheDescriptorList + sizeof(OMRSharedCacheDescriptor));
-	mcPtr = (J9UTF8*)((UDATA)cmPtr + cmBytes);
+	mcPtr = (OMRUTF8*)((UDATA)cmPtr + cmBytes);
 	copiedCacheName = (char*)((UDATA)mcPtr + modContextBytes);
 
 	/* make this list circular */
@@ -3263,11 +3278,11 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	//TODO: see if these are defined.
 	tempConfig->runtimeFlags = runtimeFlags;
 	tempConfig->verboseFlags = verboseFlags;
-	tempConfig->softMaxBytes = vm->sharedCacheAPI->softMaxBytes;
-	tempConfig->minAOT = vm->sharedCacheAPI->minAOT;
-	tempConfig->maxAOT = vm->sharedCacheAPI->maxAOT;
-	tempConfig->minJIT = vm->sharedCacheAPI->minJIT;
-	tempConfig->maxJIT = vm->sharedCacheAPI->maxJIT;
+	tempConfig->softMaxBytes = -1;//vm->sharedCacheAPI->softMaxBytes;
+	tempConfig->minAOT = -1;//vm->sharedCacheAPI->minAOT;
+	tempConfig->maxAOT = -1;//vm->sharedCacheAPI->maxAOT;
+	tempConfig->minJIT = -1;//vm->sharedCacheAPI->minJIT;
+	tempConfig->maxJIT = -1;//vm->sharedCacheAPI->maxJIT;
 	
 	/* Fill in the getJavacoreData address so we can dump information about the shared cache if
 	 * the cache is found corrupted during startup.
@@ -3311,8 +3326,8 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //		}
 //	} else {
 
-	rcStartup = cm->startup(currentThread, piconfig, cacheName, ctrlDirName, 
-				vm->sharedCacheAPI->cacheDirPerm, NULL, &cacheHasIntegrity);
+	rcStartup = cm->startup((OMR_VMThread*)vm, piconfig, cacheName, ctrlDirName, 
+				OMRSH_DIRPERM_ABSENT, NULL, &cacheHasIntegrity);
 	//	}
 
 	if (rcStartup != 0) {
@@ -3595,7 +3610,7 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //		returnVal = J9VMDLLMAIN_SILENT_EXIT_VM;
 //	}
 //
-//	vm->sharedClassConfig->runtimeFlags |= OMRSHR_RUNTIMEFLAG_CACHE_INITIALIZATION_COMPLETE;
+	vm->sharedClassConfig->runtimeFlags |= OMRSHR_RUNTIMEFLAG_CACHE_INITIALIZATION_COMPLETE;
 //
 //	if (RESULT_DO_SNAPSHOTCACHE == parseResult) {
 //		*nonfatal = 0;

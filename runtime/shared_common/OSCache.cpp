@@ -906,7 +906,8 @@ SH_OSCache::checkOSCacheHeader(OSCache_header_version_current* header, J9PortShc
 		/* Check whether the version data contained in the header indeed matches the platform
  		 * specifications of the current target.
  		 */
-
+	        versionData->modlevel = 0;
+		header->versionData.modlevel = 0;
 		if (memcmp(versionData, &(header->versionData), sizeof(J9PortShcVersion)) != 0) {
 			Trc_SHR_OSC_checkOSCacheHeader_wrongVersion();
 			return OMRSH_OSCACHE_HEADER_WRONG_VERSION;

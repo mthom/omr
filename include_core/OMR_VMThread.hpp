@@ -31,7 +31,8 @@
 #include "OMR_BaseNonVirtual.hpp"
 
 extern "C" {
-
+omr_error_t omr_vmthread_alloc(OMR_VM *vm, OMR_VMThread **vmthread);
+omr_error_t omr_vmthread_init(OMR_VMThread *vmthread);
 }
 
 #endif /* OMR_VMTHREAD_HPP_ */

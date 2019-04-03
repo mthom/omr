@@ -442,11 +442,11 @@ SH_CacheMap::startup(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* p
 		*_runtimeFlags &= ~OMRSHR_RUNTIMEFLAG_AUTOKILL_DIFF_BUILDID;
 	}
 
-	if (omrthread_monitor_init(&_refreshMutex, 0)) {
-		CACHEMAP_TRACE(OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE_DEFAULT, J9NLS_ERROR, J9NLS_SHRC_CM_FAILED_CREATE_REFRESH_MUTEX);
-		Trc_SHR_CM_startup_Exit5(currentThread);
-		return -1;
-	}
+//	if (omrthread_monitor_init(&_refreshMutex, 0)) {
+//		CACHEMAP_TRACE(OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE_DEFAULT, J9NLS_ERROR, J9NLS_SHRC_CM_FAILED_CREATE_REFRESH_MUTEX);
+//		Trc_SHR_CM_startup_Exit5(currentThread);
+//		return -1;
+//	}
 	
 	/* _ccHead->startup will set the _actualSize to the real cache size */
 	_runningNested = ((*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_NESTED) != 0);
@@ -923,10 +923,10 @@ SH_CacheMap::startManager(OMR_VMThread* currentThread, SH_Manager* manager)
 		}
 		/* Although the manager startup routine can handle multi-threading without a lock,
 		 * it is important that it is not possible for another thread to call shutDown while this is running */
-		if (!omrthread_monitor_owned_by_self(_refreshMutex)) {
-			enterRefreshMutex(currentThread, "startManager");
-			doExitRefreshMutex = true;
-		}
+	//	if (!omrthread_monitor_owned_by_self(_refreshMutex)) {
+	//		enterRefreshMutex(currentThread, "startManager");
+	//		doExitRefreshMutex = true;
+	//	}
 		rc = (manager->startup(currentThread, _runtimeFlags, _verboseFlags, _actualSize) != 0);
 
 		/* Manager either in wrong state to start or there was an error starting it */
@@ -938,9 +938,9 @@ SH_CacheMap::startManager(OMR_VMThread* currentThread, SH_Manager* manager)
 		if (rc == -1) {
 			return -1;
 		}
-		if (doExitRefreshMutex) {
-			exitRefreshMutex(currentThread, "startManager");
-		}
+	//	if (doExitRefreshMutex) {
+	//		exitRefreshMutex(currentThread, "startManager");
+	//	}
 	}
 	return 1;
 }
@@ -2688,14 +2688,14 @@ SH_CacheMap::addROMClassResourceToCache(OMR_VMThread* currentThread, const void*
 		return (void*)OMRSHR_RESOURCE_STORE_ERROR;
 	}
 	
-	if ((romAddress < _cc->getBaseAddress()) || (romAddress > _cc->getCacheLastEffectiveAddress())) {
+//	if ((romAddress < _cc->getBaseAddress()) || (romAddress > _cc->getCacheLastEffectiveAddress())) {
 		/* The address we've been given is in a different supercache - we can't use this for indexing, so we have to fail */
 		/* TODO: Tracepoint */
-		if (NULL != p_subcstr) {
-			*p_subcstr = omrnls_lookup_message((J9NLS_INFO | J9NLS_DO_NOT_PRINT_MESSAGE_TAG),J9NLS_SHRC_CM_ADDRESS_NOT_IN_CACHE, "address is not in cache");
-		}
-		return (void*)OMRSHR_RESOURCE_STORE_ERROR;
-	}
+//		if (NULL != p_subcstr) {
+//			*p_subcstr = omrnls_lookup_message((J9NLS_INFO | J9NLS_DO_NOT_PRINT_MESSAGE_TAG),J9NLS_SHRC_CM_ADDRESS_NOT_IN_CACHE, "address is not in cache");
+//		}
+//		return (void*)OMRSHR_RESOURCE_STORE_ERROR;
+//	}
 
 	switch (resourceType) {
 	case TYPE_COMPILED_METHOD :
@@ -2763,31 +2763,31 @@ SH_CacheMap::storeROMClassResource(OMR_VMThread* currentThread, const void* romA
 		return (void*)OMRSHR_RESOURCE_STORE_ERROR;
 	}
 
-	if (runEntryPointChecks(currentThread, (void*)romAddress, p_subcstr) == -1) {
-		_ccHead->exitWriteMutex(currentThread, fnName);
-		Trc_SHR_CM_storeROMClassResource_Exit2(currentThread);
-		return (void*)OMRSHR_RESOURCE_STORE_ERROR;
-	}
+//	if (runEntryPointChecks(currentThread, (void*)romAddress, p_subcstr) == -1) {
+//		_ccHead->exitWriteMutex(currentThread, fnName);
+//		Trc_SHR_CM_storeROMClassResource_Exit2(currentThread);
+//		return (void*)OMRSHR_RESOURCE_STORE_ERROR;
+//	}
 
 	resourceKey = resourceDescriptor->generateKey(romAddress);
 
 	/* Determine whether the record already exists in the cache */
-	if ((resourceWrapper = (localRRM->findResource(currentThread, resourceKey))) != 0) {
-		if (!forceReplace) {
-			_ccHead->exitWriteMutex(currentThread, fnName);
-			if (p_subcstr) {
-				*p_subcstr = omrnls_lookup_message((J9NLS_INFO | J9NLS_DO_NOT_PRINT_MESSAGE_TAG), J9NLS_SHRC_CM_DATA_EXISTS, "data already exists");
-			}
-			Trc_SHR_CM_storeROMClassResource_Exit3(currentThread);
-			if ((TYPE_INVALIDATED_COMPILED_METHOD == ITEMTYPE(resourceDescriptor->wrapperToItem(resourceWrapper)))) {
-				return (void*)OMRSHR_RESOURCE_STORE_INVALIDATED;
-			} else {
-				return (void*)OMRSHR_RESOURCE_STORE_EXISTS;
-			}
-		} else {
-			localRRM->markStale(currentThread, resourceKey, resourceDescriptor->wrapperToItem(resourceWrapper));
-		}
-	}
+//	if ((resourceWrapper = (localRRM->findResource(currentThread, resourceKey))) != 0) {
+//		if (!forceReplace) {
+//			_ccHead->exitWriteMutex(currentThread, fnName);
+//			if (p_subcstr) {
+//				*p_subcstr = omrnls_lookup_message((J9NLS_INFO | J9NLS_DO_NOT_PRINT_MESSAGE_TAG), J9NLS_SHRC_CM_DATA_EXISTS, "data already exists");
+//			}
+//			Trc_SHR_CM_storeROMClassResource_Exit3(currentThread);
+//			if ((TYPE_INVALIDATED_COMPILED_METHOD == ITEMTYPE(resourceDescriptor->wrapperToItem(resourceWrapper)))) {
+//				return (void*)OMRSHR_RESOURCE_STORE_INVALIDATED;
+//			} else {
+//				return (void*)OMRSHR_RESOURCE_STORE_EXISTS;
+//			}
+//		} else {
+//			localRRM->markStale(currentThread, resourceKey, resourceDescriptor->wrapperToItem(resourceWrapper));
+//		}
+//	}
 
 	resourceWrapper = addROMClassResourceToCache(currentThread, romAddress, localRRM, resourceDescriptor, p_subcstr);
 	
