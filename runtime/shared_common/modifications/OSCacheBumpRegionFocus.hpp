@@ -20,39 +20,36 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_CACHE_REGION_FOCUS_HPP_INCLUDED)
-#define OS_CACHE_REGION_FOCUS_HPP_INCLUDED
+#if !defined(OS_CACHE_REGION_BUMP_FOCUS_HPP_INCLUDED)
+#define OS_CACHE_REGION_BUMP_FOCUS_HPP_INCLUDED
 
-#include "OSCacheRegion.hpp"
+#include "OSCacheRegionFocus.hpp"
 
-#include "shrnls.h"
-#include "ut_omrshr.h"
-
-// a 'focus' is a pointer to a OSCacheRegion object, and a pointer to
-// a field internal to the region managed by the OSCacheRegion object. The
-// constructor asserts that the field is contained fully inside the
-// memory spanned by the region.
+// this is a regional focus, but unlike the original, its field
+// pointer can be bumped! by a positive amount, no less. Usually the
+// size of a cache entry. This is because regions that are large and
+// can be written to are usually written to in a linear order, from
+// beginning to end, space permitting. The purpose of the class is to increment
+// and return the free pointer, and provide some indication as to whether the
+// region is full (basically, once the pointer steps outside of the region address
+// range, as decided by the region itself, the increment operators returns NULL).
 template <typename T>
-class OSCacheRegionFocus {
+class OSCacheBumpRegionFocus: public OSCacheRegionFocus<T> {
 public:
-  OSCacheRegionFocus(OSCacheRegion* region, T* focus)
-    : _region(region)
-    , _focus(focus)
-  {
-    Trc_SHR_Assert_True(region != NULL && region->isAddressInRegion((void*) focus, sizeof(T)));
-  }
+  OSCacheBumpRegionFocus(OSCacheRegion* region, T* focus)
+    : OSCacheRegionFocus(region, focus)
+  {}
 
-  OSCacheRegion* region() {
-    return _region;
+  // this is how the postfix operator is overloaded, ie. { int a; a++; } <== postfix.
+  T* operator ++(int) {
+    if(!_region->isAddressInRegion((void *) _focus, sizeof(T))) {
+      return NULL;
+    }
+    
+    T* focus = _focus;
+    _focus = (T*) ((UDATA) _focus + sizeof(T));
+    return focus;
   }
-
-  T* focus() {
-    return _focus;
-  }
-  
-protected:
-  OSCacheRegion* _region;
-  T* _focus;
 };
 
 #endif

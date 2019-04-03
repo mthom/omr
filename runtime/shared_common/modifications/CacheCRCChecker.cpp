@@ -4,7 +4,7 @@
 
 U_32 CacheCRCChecker::computeRegionCRC()
 {
-  /* 
+  /*
    * 1535=1.5k - 1.  Chosen so that we aren't stepping on exact power of two boundaries through
    * the cache and yet we use a decent number of samples through the cache.
    * For a 16Meg cache this will cause us to take 10000 samples.
@@ -12,17 +12,15 @@ U_32 CacheCRCChecker::computeRegionCRC()
    */
   
   U_32 stepSize = 1535;
-  U_32 regionSize = _crcFocus._region->regionSize();
+  U_32 regionSize = _crcFocus.region()->regionSize();
 
-  U_32 maxCRCSamples = _configOptions.maxCRCSamples();
-
-  if ((regionSize / stepSize) > maxCRCSamples) {
-    stepSize = regionSize / maxCRCSamples;
+  if ((regionSize / stepSize) > _maxCRCSamples) {
+    stepSize = regionSize / _maxCRCSamples;
   }
 
   U_32 seed = omrcrc32(0, NULL, 0);
   
-  return _crcFocus._region->computeCRC(seed, stepSize);  
+  return _crcFocus.region()->computeCRC(seed, stepSize);  
 }
 
 void CacheCRCChecker::updateRegionCRC()
@@ -38,7 +36,7 @@ void CacheCRCChecker::updateRegionCRC()
   value = computeRegionCRC();
 
   if (value) {
-    *_crcFocus._field = value;
+    *_crcFocus.focus() = value;
   }
 }
 
@@ -47,5 +45,5 @@ void CacheCRCChecker::updateRegionCRC()
 bool CacheCRCChecker::isRegionCRCValid()
 {
   U_32 value = computeRegionCRC();
-  return *_crcFocus._field == value;
+  return *_crcFocus.focus() == value;
 }

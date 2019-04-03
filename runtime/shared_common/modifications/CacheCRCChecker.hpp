@@ -27,9 +27,9 @@
 
 class CacheCRCChecker {
 public:
-  CacheCRCChecker(OSCacheRegion* region, UDATA* crcField, OSCacheConfigOptions& configOptions)
+  CacheCRCChecker(OSCacheRegion* region, UDATA* crcField, U_32 maxCRCSamples)
     : _crcFocus(region, crcField)
-    , _configOptions(configOptions)
+    , _maxCRCSamples(maxCRCSamples)
   {}
 
   // these methods are based off of the named methods, but with the
@@ -45,7 +45,7 @@ public:
   
 protected:
   OSCacheRegionFocus<UDATA> _crcFocus;
-  OSCacheConfigOptions& _configOptions;
+  U_32 _maxCRCSamples;
 };
 
 #endif

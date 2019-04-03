@@ -1,3 +1,4 @@
+#include "CacheAllocator.hpp"
 #include "OSCacheContiguousRegion.hpp"
 #include "OSCacheMemoryProtector.hpp"
 #include "OSCacheLayout.hpp"
@@ -65,4 +66,8 @@ IDATA OSCacheContiguousRegion::setPermissions(OSCacheMemoryProtector* protector)
 U_32 OSCacheContiguousRegion::computeCRC(U_32 seed, U_32 stepSize)
 {
   return omrcrcSparse32(seed, (U_8*) _regionStart, (U_32) _regionSize, stepSize);
+}
+
+void* OSCacheContiguousRegion::allocate(CacheAllocator* allocator) {
+  return allocator->allocate(*this);
 }

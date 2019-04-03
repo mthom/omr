@@ -31,7 +31,7 @@
 #define OMRSH_OSCACHE_MMAP_EYECATCHER "J9SCMAP"
 #define OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH 7
 
-class OSMemoryMappedCacheHeader: public OSCacheRegion
+class OSMemoryMappedCacheHeader: virtual public OSCacheRegion
 {
 public:
   virtual U_64 getHeaderLockOffset() = 0;

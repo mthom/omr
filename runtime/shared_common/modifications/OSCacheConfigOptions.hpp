@@ -83,9 +83,10 @@ public:
   virtual bool statIterate(); // like SHR_STATS_REASON_ITERATE
   virtual bool statList(); // like SHR_STATS_REASON_LIST
 
-  virtual void setOpenReason(StartupReason reason);
-  virtual void setReadOnlyOpenMode();
-
+  virtual OSCacheConfigOptions& setOpenReason(StartupReason reason);
+  virtual OSCacheConfigOptions& setReadOnlyOpenMode();
+  virtual OSCacheConfigOptions& setOpenMode(I_32 openMode);
+  
   virtual U_32 maxCRCSamples();
   
   // does the cache create a file?
@@ -106,8 +107,7 @@ public:
 
   virtual UDATA renderCreateOptionsToFlags();
   virtual UDATA renderVerboseOptionsToFlags();
-  
-  virtual void setOpenMode(I_32 openMode);
+    
   // flags obviated so far:
   /* appendBaseDir (a variable inside getCacheDir)
      appendBaseDir = (NULL == ctrlDirName) || (OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT == cacheType) || (OMRPORT_SHR_CACHE_TYPE_SNAPSHOT == cacheType);

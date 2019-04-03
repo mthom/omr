@@ -35,6 +35,7 @@ class OSCacheLayout;
 class OSCacheRegionEntryIterator;
 class OSCacheRegionMemoryProtector;
 
+class CacheAllocator;
 class CacheCRCChecker;
 
 class OSCacheRegion {
@@ -82,6 +83,8 @@ public:
   virtual CacheCRCChecker* constructCRCChecker() = 0;
 
   virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
+
+  virtual void* allocate(CacheAllocator* allocator) = 0;
   
 protected:  
   OSCacheLayout* _layout;

@@ -40,9 +40,17 @@
 class CompositeCache
 {
 public:
-  CompositeCache(OSCacheImpl* oscache);
+  CompositeCache(OSCacheImpl* oscache)
+    : _oscache(oscache)
+  {}
 
-  virtual IDATA startup() = 0;
+  // yeah, no, let subclasses define factory methods for
+  // allocators. Don't define a pure virtual for one. Makes no
+  // sense. Also, the type system can't hack it.
+  
+  //  virtual CacheAllocator* constructCacheAllocator() = 0;
+  
+  virtual bool startup() = 0;
   
 protected:
   OSCacheImpl* _oscache;

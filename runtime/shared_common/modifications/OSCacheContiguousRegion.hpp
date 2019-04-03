@@ -27,6 +27,8 @@
 
 #include "omrport.h"
 
+class CacheAllocator;
+
 // A contiguous region in a single cache block.
 class OSCacheContiguousRegion: public OSCacheRegion
 {
@@ -52,6 +54,8 @@ public:
 
   virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
 
+  virtual void* allocate(CacheAllocator* allocator);
+  
 protected:
   // _regionStart is a *relative* value denoting the beginning of
   // cache allocation from the start of the cache block in memory,

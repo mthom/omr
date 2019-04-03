@@ -19,40 +19,15 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(CACHE_ALLOCATOR_HPP_INCLUDED)
+#define CACHE_ALLOCATOR_HPP_INCLUDED
 
-#if !defined(OS_CACHE_REGION_FOCUS_HPP_INCLUDED)
-#define OS_CACHE_REGION_FOCUS_HPP_INCLUDED
+#include "OSCacheContiguousRegion.hpp"
 
-#include "OSCacheRegion.hpp"
-
-#include "shrnls.h"
-#include "ut_omrshr.h"
-
-// a 'focus' is a pointer to a OSCacheRegion object, and a pointer to
-// a field internal to the region managed by the OSCacheRegion object. The
-// constructor asserts that the field is contained fully inside the
-// memory spanned by the region.
-template <typename T>
-class OSCacheRegionFocus {
+class CacheAllocator
+{
 public:
-  OSCacheRegionFocus(OSCacheRegion* region, T* focus)
-    : _region(region)
-    , _focus(focus)
-  {
-    Trc_SHR_Assert_True(region != NULL && region->isAddressInRegion((void*) focus, sizeof(T)));
-  }
-
-  OSCacheRegion* region() {
-    return _region;
-  }
-
-  T* focus() {
-    return _focus;
-  }
-  
-protected:
-  OSCacheRegion* _region;
-  T* _focus;
+  virtual void* allocate(OSCacheContiguousRegion&) = 0;
 };
 
 #endif

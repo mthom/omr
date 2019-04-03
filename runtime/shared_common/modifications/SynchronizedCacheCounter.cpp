@@ -9,23 +9,23 @@ bool SynchronizedCacheCounter::incrementCount(OSCacheImpl& osCache)
     return false;
   }
 
-  oldNum = *_regionFocus._field; // _theca->readerCount;
+  oldNum = *_regionFocus.focus(); // _theca->readerCount;
   // Trc_SHR_CC_incReaderCount_Entry(oldNum);
 
   value = 0;
   
   // unprotectHeaderReadWriteArea(currentThread, false);
   //_regionFocus._region->unprotect(); // this toggles memory protection off.
-  osCache.setRegionPermissions(_regionFocus._region);
+  osCache.setRegionPermissions(_regionFocus.region());
   
   do {
     value = oldNum + 1;
-    oldNum = VM_AtomicSupport::lockCompareExchange(_regionFocus._field, oldNum, value);
+    oldNum = VM_AtomicSupport::lockCompareExchange(_regionFocus.focus(), oldNum, value);
   } while ((UDATA)value != (oldNum + 1));
   
   //  protectHeaderReadWriteArea(currentThread, false);
   // _regionFocus._region->protect(); // this toggles it back on.
-  osCache.setRegionPermissions(_regionFocus._region);
+  osCache.setRegionPermissions(_regionFocus.region());
   
   //  Trc_SHR_CC_incReaderCount_Exit(_theca->readerCount);
   return true;
@@ -40,7 +40,7 @@ bool SynchronizedCacheCounter::decrementCount(OSCacheImpl& osCache)
     return false;
   }
 
-  oldNum = *_regionFocus._field; // _theca->readerCount;
+  oldNum = *_regionFocus.focus(); // _theca->readerCount;
   //Trc_SHR_CC_decReaderCount_Entry(oldNum);
 
   value = 0;
@@ -56,7 +56,7 @@ bool SynchronizedCacheCounter::decrementCount(OSCacheImpl& osCache)
     }
     
     value = oldNum - 1;
-    oldNum = VM_AtomicSupport::lockCompareExchange(_regionFocus._field, oldNum, value);
+    oldNum = VM_AtomicSupport::lockCompareExchange(_regionFocus.focus(), oldNum, value);
   } while ((UDATA)value != (oldNum - 1));
 
   //_regionFocus._region->protect(); //protectHeaderReadWriteArea(currentThread, false);
