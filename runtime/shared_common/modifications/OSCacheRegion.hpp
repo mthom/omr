@@ -35,6 +35,8 @@ class OSCacheLayout;
 class OSCacheRegionEntryIterator;
 class OSCacheRegionMemoryProtector;
 
+class CacheCRCChecker;
+
 class OSCacheRegion {
 public:
   OSCacheRegion(OSCacheLayout* layout, int regionID)
@@ -75,6 +77,11 @@ public:
 
   // add memory protections to the region.
   virtual IDATA setPermissions(OSCacheMemoryProtector* protector) = 0;
+
+  // was: CompositeCache::getCacheAreaCRC
+  virtual CacheCRCChecker* constructCRCChecker() = 0;
+
+  virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
   
 protected:  
   OSCacheLayout* _layout;

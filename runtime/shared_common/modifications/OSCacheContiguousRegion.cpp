@@ -2,6 +2,8 @@
 #include "OSCacheMemoryProtector.hpp"
 #include "OSCacheLayout.hpp"
 
+#include "omrutil.h"
+
 OSCacheContiguousRegion::OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, void* regionStart,
 						 UDATA regionSize, bool pageBoundaryAligned)
   : OSCacheRegion(layout, regionID)
@@ -58,4 +60,9 @@ UDATA OSCacheContiguousRegion::renderToMemoryProtectionFlags()
 IDATA OSCacheContiguousRegion::setPermissions(OSCacheMemoryProtector* protector)
 {
   return protector->setPermissions(*this);
+}
+
+U_32 OSCacheContiguousRegion::computeCRC(U_32 seed, U_32 stepSize)
+{
+  return omrcrcSparse32(seed, (U_8*) _regionStart, (U_32) _regionSize, stepSize);
 }

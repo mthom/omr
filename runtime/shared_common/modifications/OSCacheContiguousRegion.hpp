@@ -42,14 +42,16 @@ public:
   virtual UDATA regionSize() const;
 
   virtual bool alignToPageBoundary(UDATA osPageSize);
-  
+
   virtual UDATA renderToMemoryProtectionFlags();
 
   virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize);
 
-    // add memory protections to the region.
+  // add memory protections to the region.
   virtual IDATA setPermissions(OSCacheMemoryProtector* protector);
-  
+
+  virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
+
 protected:
   // _regionStart is a *relative* value denoting the beginning of
   // cache allocation from the start of the cache block in memory,

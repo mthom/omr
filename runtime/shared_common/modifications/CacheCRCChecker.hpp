@@ -19,35 +19,33 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#if !defined(SYNCHRONIZED_CACHE_COUNTER_HPP_INCLUDED)
-#define SYNCHRONIZED_CACHE_COUNTER_HPP_INCLUDED
+#if !defined(CACHE_CRC_CHECKER_HPP_INCLUDED)
+#define CACHE_CRC_CHECKER_HPP_INCLUDED
 
-#include "OSCacheImpl.hpp"
 #include "OSCacheRegionFocus.hpp"
+#include "OSCacheConfigOptions.hpp"
 
-#include "AtomicSupport.hpp"
-#include "omr.h"
-#include "omrport.h"
-#include "shrnls.h"
-#include "ut_omrshr.h"
-
-/* SynchronizedCacheCounter assumes the counter is contained *within*
- * a region inside the shared cache, where it can be accessed across
- * different VMs and threads, so a better name might be something like
- * "SynchronizedInternalCacheCounter," but preferably less verbose.
- */
-class SynchronizedCacheCounter
-{
+class CacheCRCChecker {
 public:
-  SynchronizedCacheCounter(OSCacheRegion* region, UDATA* counter)
-    : _regionFocus(region, counter)
+  CacheCRCChecker(OSCacheRegion* region, UDATA* crcField, OSCacheConfigOptions& configOptions)
+    : _crcFocus(region, crcField)
+    , _configOptions(configOptions)
   {}
 
-  virtual bool incrementCount(OSCacheImpl& osCache);
-  virtual bool decrementCount(OSCacheImpl& osCache);
+  // these methods are based off of the named methods, but with the
+  // exception of getCacheAreaCRC, they were originally cache wide,
+  // but here they're exclusive to a region.
+
+  // was: CompositeCache::getCacheAreaCRC()
+  virtual U_32 computeRegionCRC();
+  // was: CompositeCache::updateCacheCRC()
+  virtual void updateRegionCRC();
+  // was: CompositeCache::checkCacheCRC()
+  virtual bool isRegionCRCValid();
   
 protected:
-  OSCacheRegionFocus<UDATA> _regionFocus;
+  OSCacheRegionFocus<UDATA> _crcFocus;
+  OSCacheConfigOptions& _configOptions;
 };
 
 #endif

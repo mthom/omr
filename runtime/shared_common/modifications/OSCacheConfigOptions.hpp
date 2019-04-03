@@ -85,6 +85,8 @@ public:
 
   virtual void setOpenReason(StartupReason reason);
   virtual void setReadOnlyOpenMode();
+
+  virtual U_32 maxCRCSamples();
   
   // does the cache create a file?
   virtual bool createFile();

@@ -46,6 +46,7 @@ add_library(shared_cache_modifications STATIC
   OSCacheContiguousRegion.cpp
   OSMemoryMappedCacheMemoryProtector.cpp
   OSSharedMemoryCacheMemoryProtector.cpp
+  CacheCRCChecker.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/../ut_omrshr.c
 )
 
