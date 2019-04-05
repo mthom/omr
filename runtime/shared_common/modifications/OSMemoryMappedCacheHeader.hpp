@@ -25,7 +25,6 @@
 #include "sharedconsts.h"
 
 #include "OSCacheContiguousRegion.hpp"
-#include "OSMemoryMappedCacheLayout.hpp"
 #include "OSCacheRegionSerializer.hpp"
 
 #define OMRSH_OSCACHE_MMAP_EYECATCHER "J9SCMAP"

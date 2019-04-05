@@ -26,7 +26,7 @@
 
 #include "OSCacheImpl.hpp"
 #include "OSCacheConfig.hpp"
-#include "OSMemoryMappedCacheLayout.hpp"
+
 #include "OSMemoryMappedCacheAttachingContext.hpp"
 #include "OSMemoryMappedCacheCreatingContext.hpp"
 #include "OSMemoryMappedCacheHeader.hpp"

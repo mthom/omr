@@ -28,7 +28,6 @@
 #include "sharedconsts.h"
 
 #include "OSCacheConfig.hpp"
-#include "OSSharedMemoryCacheLayout.hpp"
 #include "OSSharedMemoryCacheHeader.hpp"
 // #include "OSSharedMemoryCacheAttachingContext.hpp"
 // #include "OSSharedMemoryCacheCreatingContext.hpp"
