@@ -25,6 +25,7 @@
 #include "CacheMemoryProtectionOptions.hpp"
 #include "OSCacheRegion.hpp"
 
+#include "env/TRMemory.hpp"
 #include "omrport.h"
 
 class CacheAllocator;
@@ -33,6 +34,8 @@ class CacheAllocator;
 class OSCacheContiguousRegion: public OSCacheRegion
 {
 public:
+  TR_ALLOC(TR_Memory::SharedCacheRegion)
+  
   OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, void* regionStart,
 			  UDATA regionSize, bool pageBoundaryAligned);
 

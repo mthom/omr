@@ -50,12 +50,16 @@ OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(U_32 numLocks)
   : _numLocks(numLocks)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
   , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
+  , _header(NULL)
+  , _layout(NULL)
 {}
 
 OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig()
   : _numLocks(OMRSH_OSCACHE_MMAP_LOCK_COUNT)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
   , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
+  , _header(NULL)
+  , _layout(NULL)
 {}
 
 IDATA OSMemoryMappedCacheConfig::getWriteLockID()
@@ -289,6 +293,8 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library,
   Trc_SHR_OSC_Mmap_acquireHeaderWriteLock_Exit(rc);
   return (IDATA)rc;
 }
+
+
 
 /**
  * Method to release the write lock on the cache header region

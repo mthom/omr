@@ -39,9 +39,11 @@
 #define RETRY_OBTAIN_WRITE_LOCK_MAX_MS 160
 #define NANOSECS_PER_MILLISEC (I_64)1000000
 
-class OSMemoryMappedCacheConfig : public OSCacheConfig<OSMemoryMappedCacheLayout>
+class OSMemoryMappedCacheConfig : public OSCacheConfig
 {
 public:
+  typedef OSMemoryMappedCacheHeader header_type;
+  
   OSMemoryMappedCacheConfig(U_32 numLocks);
   OSMemoryMappedCacheConfig();
 
@@ -54,19 +56,22 @@ public:
   // let these be decided by the classes of the generational header versions. They will
   // know where the locks lie and how large they are.
   virtual U_64 getLockOffset(UDATA lockID) = 0;
-  virtual U_64 getLockSize(UDATA lockID) = 0;
+  virtual U_64 getLockSize(UDATA lockID) = 0;  
   virtual U_64 getHeaderLockOffset() = 0;
 
+  virtual bool initHeader() = 0;
+  
+  virtual U_64* getHeaderLocation() = 0;
+  virtual U_64 getHeaderSize() = 0;
+  
   // these are _headerStart + _dataStart, wherever that ultimately ends up (in the header is the only
   // part of the answer we assume).
   virtual J9SRP* getDataSectionLocation() = 0;
+  virtual U_64  getDataSectionSize() = 0;
   virtual U_32* getDataLengthFieldLocation() = 0;
 
   // what is the length of the data section in the header?
   virtual U_32 getDataLength(); 
-
-  virtual U_64* getHeaderLocation() = 0;
-  virtual U_64 getHeaderSize() = 0;
 
   virtual U_64* getLastAttachTimeLocation() = 0;
   virtual U_64* getLastDetachTimeLocation() = 0;
@@ -82,12 +87,21 @@ public:
 
   virtual bool updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
   virtual bool updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
+
+  // this is a mediating method called once the mapping is established
+  // in memory.  here, the baton is probably handed to the _layout
+  // object to configure the OSCacheRegion objects.
+  virtual void notifyRegionMappingStartAddress(void*) = 0;
   
 protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;
   friend class OSMemoryMappedCacheAttachingContext;
-
+  
+  // this function is meant to eliminate dangling pointers once the
+  // memory mapped file is detached in detach().
+  virtual void detachRegions() = 0;
+  
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly, LastErrorInfo* lastErrorInfo);
 
@@ -104,7 +118,8 @@ protected:
   bool isCacheAccessible() const;
 
   OSMemoryMappedCacheHeader* _header;
-
+  OSCacheLayout* _layout;
+  
   I_64 _actualFileLength;
   UDATA _fileHandle;
 

@@ -47,7 +47,7 @@ public:
   virtual bool decrementCount(OSCacheImpl& osCache);
   
 protected:
-  OSCacheRegionFocus<UDATA> _regionFocus;
+  OSCacheRegionFocus<volatile UDATA> _regionFocus;
 };
 
 #endif

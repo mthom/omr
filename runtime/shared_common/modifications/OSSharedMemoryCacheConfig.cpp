@@ -27,6 +27,11 @@
 #include "shrnls.h"
 #include "ut_omrshr.h"
 
+OSSharedMemoryCacheConfig::OSSharedMemoryCacheConfig(U_32 numLocks)
+  : _numLocks(numLocks)
+  , _header(NULL)
+{}
+
 IDATA
 OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo *lastErrorInfo)
 {

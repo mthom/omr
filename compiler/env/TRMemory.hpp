@@ -424,7 +424,9 @@ public:
       RelocationDebugInfo,
       AOTClassInfo,
       SharedCache,
-
+      SharedCacheRegion,
+      SharedCacheLayout,
+      
       RegisterPair,
       S390Instruction,
 

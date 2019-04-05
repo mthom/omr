@@ -36,7 +36,6 @@
 // frequently. This is vastly preferable to peppering the cache code
 // with dynamic_cast's wherever it needs to know about the layout
 // IMHO.
-template <class OSCacheLayout>
 class OSCacheConfig
 {
 public:
@@ -45,9 +44,7 @@ public:
 
   // sometimes the lock IDs are keyed against regions, sometimes not.
   virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL) = 0;
-  virtual IDATA releaseLock(UDATA lockID) = 0;  
-protected:
-  OSCacheLayout* _layout;
+  virtual IDATA releaseLock(UDATA lockID) = 0;
 };
 
 #endif

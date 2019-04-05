@@ -664,7 +664,7 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
   _attachCount++;  
   
   if (_configOptions->verboseEnabled()) { //_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
-    U_32 dataLength = _config->getDataSectionLength();
+    U_32 dataLength = _config->getDataSectionSize();
     OSC_TRACE2(_configOptions, J9NLS_SHRC_OSCACHE_ATTACH_SUCCESS, _cacheName, dataLength);
   }
 

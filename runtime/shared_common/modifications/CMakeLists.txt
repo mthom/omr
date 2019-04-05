@@ -63,6 +63,7 @@ target_include_directories(shared_cache_modifications
 		${j9vm_SOURCE_DIR}/shared_util
 		${j9vm_SOURCE_DIR}/verbose
 		${PROJECT_SOURCE_DIR}/nls
+		${PROJECT_SOURCE_DIR}/compiler
 		${PROJECT_SOURCE_DIR}/include_core
 		${PROJECT_SOURCE_DIR}/runtime/port/sysvipc
 		${PROJECT_SOURCE_DIR}/port/sysvipc

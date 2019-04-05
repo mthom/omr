@@ -73,6 +73,7 @@ protected:
   
   virtual void runExitProcedure();
   virtual void handleCacheHeaderCorruption(IDATA headerRc);
+  
 #if defined(OMRSH_MSYNC_SUPPORT)
   virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
 #endif

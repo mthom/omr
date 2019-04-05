@@ -29,7 +29,8 @@
 #include "OSCacheRegion.hpp"
 #include "OSCacheRegionSerializer.hpp"
 
-//#include "compiler/infra/vector.hpp"
+// for TR::vector.
+// #include "infra/vector.hpp"
 #include <vector>
 
 class OSCacheLayout
@@ -38,10 +39,6 @@ public:
   OSCacheLayout(UDATA osPageSize)
     : _osPageSize(osPageSize)
   {}
-
-  void addRegion(OSCacheRegion* region) {
-    _regions.push_back(region);
-  }
 
   void serialize(OSCache* cache) {
     OSCacheRegionSerializer* serializer = cache->constructSerializer();
@@ -56,10 +53,18 @@ public:
   /* If a region changes size, the owning cache layout is notified. */
   virtual bool notifyRegionSizeAdjustment(OSCacheRegion&) = 0;
 
+  virtual OSCacheRegion* operator[](uint64_t i) {
+    return _regions[i];
+  }
+  
 protected:
-  //TODO: switch to TR::vector.
-  std::vector<OSCacheRegion*> _regions;
+  void addRegion(OSCacheRegion* region) {
+    _regions.push_back(region);
+  }
+
   UDATA _osPageSize;
+  //TODO: eventually convert to TR::vector.
+  std::vector<OSCacheRegion*> _regions;
 };
 
 #endif

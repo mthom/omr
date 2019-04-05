@@ -75,12 +75,14 @@ typedef enum SH_SysvShmAccess {
 // #define SHM_CACHEDATASIZE(size) (size-SHM_CACHEHEADERSIZE)
 // #define SHM_DATASTARTFROMHEADER(header) SRP_GET(header->oscHdr.dataStart, void*);
 
-class OSSharedMemoryCacheConfig : public OSCacheConfig<OSSharedMemoryCacheLayout>
+class OSSharedMemoryCacheConfig: public OSCacheConfig
 {
 public:
+  typedef OSSharedMemoryCacheHeader header_type;
+  
   OSSharedMemoryCacheConfig(U_32 numLocks);
   OSSharedMemoryCacheConfig();
-
+  
   virtual IDATA getWriteLockID(void);
   virtual IDATA getReadWriteLockID(void);
 
@@ -94,12 +96,14 @@ public:
   virtual U_64 getLockOffset(UDATA lockID) = 0;
   virtual U_64 getLockSize(UDATA lockID) = 0;
 
+  virtual bool initHeader() = 0;  
+  
   virtual U_64* getHeaderLocation() = 0;
   virtual U_64* getHeaderSize() = 0;
 
   // this is _dataStart, wherever that ultimately ends up.
   virtual U_64* getDataSectionLocation() = 0;
-  virtual U_32 getDataSectionLength() = 0;
+  virtual U_32 getDataSectionSize() = 0;
 
   virtual void setHeaderLocation(void* location) = 0;
   virtual void setDataSectionLocation(void* location) = 0;

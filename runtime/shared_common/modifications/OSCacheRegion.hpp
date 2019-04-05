@@ -45,6 +45,9 @@ public:
     , _regionID(regionID)
   {}
 
+  // the start address of the region.
+  virtual void* regionStartAddress() const = 0;
+  
   // does the described block of data fall within the region's memory?
   virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize) = 0;
   
@@ -70,7 +73,7 @@ public:
   virtual OSCacheRegionEntryIterator* constructIterator() = 0;
   
   // calculates the size of the region.
-  virtual UDATA regionSize() = 0;
+  virtual UDATA regionSize() const = 0;
   
   virtual int regionID() {
     return _regionID;
@@ -85,7 +88,7 @@ public:
   virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
 
   virtual void* allocate(CacheAllocator* allocator) = 0;
-  
+
 protected:  
   OSCacheLayout* _layout;
   int _regionID;

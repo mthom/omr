@@ -318,8 +318,8 @@ bool OSMemoryMappedCache::closeCacheFile()
   bool result = true;
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
-  Trc_SHR_Assert_Equals(_config->_layout->_headerStart, NULL);
-  Trc_SHR_Assert_Equals(_config->_layout->_dataStart, NULL);
+  Trc_SHR_Assert_Equals(_config->getHeaderLocation(), NULL);
+  Trc_SHR_Assert_Equals(_config->getDataSectionLocation(), NULL);
 
   if(-1 == _config->_fileHandle) {
     return true;
@@ -412,7 +412,7 @@ IDATA OSMemoryMappedCache::internalAttach() //bool isNewCache, UDATA generation)
     goto error;
   }
 
-  _config->_layout->_headerStart = _mapFileHandle->pointer;
+  _config->notifyRegionMappingStartAddress(_mapFileHandle->pointer);
   // Trc_SHR_OSC_Mmap_internalAttach_goodmapfile(_layout->_headerStart);
 
   if(!_initContext->initAttach(rc)) {
@@ -462,7 +462,7 @@ void OSMemoryMappedCache::internalDetach()
 
   Trc_SHR_OSC_Mmap_internalDetach_Entry();
 
-  if (NULL == _config->_layout->_headerStart) {
+  if (NULL == _config->getHeaderLocation()) { //_layout->_headerStart) {
     Trc_SHR_OSC_Mmap_internalDetach_notattached();
     return;
   }
@@ -477,9 +477,10 @@ void OSMemoryMappedCache::internalDetach()
   }
   Trc_SHR_OSC_Mmap_internalDetach_goodReleaseAttachReadLock();
 
-  _config->_layout->_headerStart = NULL;
-  _config->_layout->_dataStart = NULL;
-  _config->_layout->_dataLength = 0;
+  _config->detachRegions();
+//  _config->_layout->_headerStart = NULL;
+//  _config->getDataSectionLocation() = NULL;
+//  _config->getDataLength() = 0;
   /* The member variable '_actualFileLength' is not set to zero b/c
    * the cache size may be needed to reset the cache (e.g. in the
    * case of a build id mismatch, the cache may be reset, and
@@ -487,9 +488,9 @@ void OSMemoryMappedCache::internalDetach()
    * same size).
    */
 
-  Trc_SHR_OSC_Mmap_internalDetach_Exit(_config->_layout->_headerStart,
-				       _config->_layout->_dataStart,
-				       _config->_layout->_dataLength);
+  Trc_SHR_OSC_Mmap_internalDetach_Exit(_config->getHeaderLocation(),
+				       _config->getDataSectionLocation(),
+				       _config->getDataLength());
   return;
 }
 
@@ -514,7 +515,7 @@ OSMemoryMappedCache::destroy(bool suppressVerbose, bool isReset)
 
   Trc_SHR_OSC_Mmap_destroy_Entry();
 
-  if (_config->_layout->_headerStart != NULL) {
+  if (_config->getHeaderLocation() != NULL) {
     detach();
   }
 
@@ -587,7 +588,7 @@ OSMemoryMappedCache::cleanup()
     return;
   }
 
-  if (_config->_layout->_headerStart) {
+  if (_config->getHeaderLocation()) {
     if (_config->acquireHeaderWriteLock(_portLibrary, _runningReadOnly, NULL) != -1) {//_activeGeneration, NULL) != -1) {
       if (_config->updateLastDetachedTime(_portLibrary, _runningReadOnly)) {
 	Trc_SHR_OSC_Mmap_cleanup_goodUpdateLastDetachedTime();
@@ -611,7 +612,7 @@ OSMemoryMappedCache::cleanup()
     }
   }
 
-  if (_config->_layout->_headerStart) {
+  if (_config->getHeaderLocation()) {
     detach();
   }
 
@@ -650,11 +651,11 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
   // Trc_SHR_OSC_Mmap_attach_Entry1(UnitTest::unitTest);
 
   /* If we are already attached, just return */
-  if (_config->_layout->_dataStart) {
-    Trc_SHR_OSC_Mmap_attach_alreadyattached(_config->_layout->_headerStart,
-					    _config->_layout->_dataStart,
-					    _config->_layout->_dataLength);
-    return _config->_layout->_dataStart;
+  if (_config->getDataSectionLocation()) {
+    Trc_SHR_OSC_Mmap_attach_alreadyattached(_config->getHeaderLocation(),
+					    _config->getDataSectionLocation(),
+					    _config->getDataLength());
+    return _config->getDataSectionLocation();
   }
 
   if (_config->acquireHeaderWriteLock(_portLibrary, _runningReadOnly, &lastErrorInfo) == -1) { //_activeGeneration, &lastErrorInfo) == -1) {
@@ -705,8 +706,8 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
     OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_MMAP_ATTACH_ATTACHED, _cacheName);
   }
 
-  Trc_SHR_OSC_Mmap_attach_Exit(_config->_layout->_dataStart);
-  return _config->_layout->_dataStart;
+  Trc_SHR_OSC_Mmap_attach_Exit(_config->getDataSectionLocation());
+  return _config->getDataSectionLocation();
 
 detach:
   internalDetach();//_activeGeneration);

@@ -24,14 +24,14 @@
 
 #include "sharedconsts.h"
 
-#include "OSCacheRegion.hpp"
+#include "OSCacheContiguousRegion.hpp"
 #include "OSMemoryMappedCacheLayout.hpp"
 #include "OSCacheRegionSerializer.hpp"
 
 #define OMRSH_OSCACHE_MMAP_EYECATCHER "J9SCMAP"
 #define OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH 7
 
-class OSMemoryMappedCacheHeader: virtual public OSCacheRegion
+class OSMemoryMappedCacheHeader: virtual public OSCacheContiguousRegion
 {
 public:
   virtual U_64 getHeaderLockOffset() = 0;
