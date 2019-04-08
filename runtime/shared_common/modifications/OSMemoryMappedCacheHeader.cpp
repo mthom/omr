@@ -23,3 +23,8 @@
 #include "omrport.h"
 
 #include "OSMemoryMappedCacheHeader.hpp"
+
+void OSMemoryMappedCacheHeader::init()
+{
+  
+}

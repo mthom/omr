@@ -26,12 +26,15 @@
 
 #include "OSCacheContiguousRegion.hpp"
 
+#define OMRSH_OSCACHE_SYSV_EYECATCHER "J9SMMAP"
+#define OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH 7
+
 class OSSharedMemoryCacheHeader: public OSCacheContiguousRegion
 {
 public:
 //  virtual U_64 getHeaderLockOffset() = 0;
 //  virtual U_64 getAttachLockOffset() = 0;
-  // was: initOSCacheHeader.
+
   virtual void init() = 0; //OSMemoryMappedCacheLayout* layout) = 0;
   
 //  U_64 getAttachLockSize() {
@@ -40,7 +43,7 @@ public:
 protected:
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
 
-  // TODO: add eyecatcher of length J9SH_OSCACHE_MMAP_EYECATCHER.
+  char _eyecatcher[OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH+1];
   
   // from the OSCache_header* and OSCachesysv_header* structs.
   // these have been moved to the OSSharedMemoryCacheLayout class.
