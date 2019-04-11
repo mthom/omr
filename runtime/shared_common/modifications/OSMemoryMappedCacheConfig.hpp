@@ -23,6 +23,8 @@
 #define OS_MEMORY_MAPPED_CACHE_CONFIG_HPP_INCLUDED
 
 #include "sharedconsts.h"
+#include "shrnls.h"
+#include "ut_omrshr.h"
 
 #include "OSCacheImpl.hpp"
 #include "OSCacheConfig.hpp"
@@ -30,6 +32,7 @@
 #include "OSMemoryMappedCacheAttachingContext.hpp"
 #include "OSMemoryMappedCacheCreatingContext.hpp"
 #include "OSMemoryMappedCacheHeader.hpp"
+#include "OSMemoryMappedCacheHeaderMapping.hpp"
 
 #define OMRSH_OSCACHE_MMAP_LOCK_COUNT 5
 #define OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK 0
@@ -43,7 +46,7 @@ class OSMemoryMappedCacheConfig : public OSCacheConfig
 {
 public:
   typedef OSMemoryMappedCacheHeader header_type;
-  
+
   OSMemoryMappedCacheConfig(U_32 numLocks);
   OSMemoryMappedCacheConfig();
 
@@ -52,34 +55,78 @@ public:
 
   virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL);
   virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
-  
+
   // let these be decided by the classes of the generational header versions. They will
   // know where the locks lie and how large they are.
-  virtual U_64 getLockOffset(UDATA lockID) = 0;
-  virtual U_64 getLockSize(UDATA lockID) = 0;  
-  virtual U_64 getHeaderLockOffset() = 0;
+  virtual U_64 getLockOffset(UDATA lockID) {
+    Trc_SHR_Assert_True(lockID < _numLocks);
+    return offsetof(OSMemoryMappedCacheHeaderMapping, _dataLocks)
+         + sizeof(*_mapping->_dataLocks) * lockID;
+  }
 
-  virtual bool initHeader() = 0;
+  virtual U_64 getLockSize(UDATA lockID) {
+    return sizeof(*_mapping->_dataLocks);
+  }
+
+  U_64 getAttachLockSize() {
+    return sizeof(_mapping->_attachLock);
+  }
+
+  U_64 getHeaderLockSize() {
+    return sizeof(_mapping->_headerLock);
+  }
+
+  virtual U_64 getHeaderLockOffset() {
+    return offsetof(OSMemoryMappedCacheHeaderMapping, _headerLock);
+  }
+
+  virtual U_64 getAttachLockOffset() {
+    return offsetof(OSMemoryMappedCacheHeaderMapping, _attachLock);
+  }
+
+  virtual void* getHeaderLocation() {
+    return _header->regionStartAddress();
+  }
+
+  virtual UDATA getHeaderSize() {
+    return _header->regionSize();
+  }
+
+  // these are _headerStart + _dataStart, wherever that ultimately
+  // ends up (in the header is the only part of the answer we assume).
+
+  // this should NOT read from the header! Instead, read from the region
+  // objects contained in the layout.
+  virtual void* getDataSectionFieldLocation() = 0;
+
+  virtual UDATA getDataSectionSize() = 0;
+
+  virtual void setCacheSizeInHeader(U_32 size) {
+    *getCacheSizeFieldLocation() = size;
+  }
+
+  virtual U_32* getCacheSizeFieldLocation() = 0;
   
-  virtual U_64* getHeaderLocation() = 0;
-  virtual U_64 getHeaderSize() = 0;
+  virtual U_32 getCacheSize() = 0;
   
-  // these are _headerStart + _dataStart, wherever that ultimately ends up (in the header is the only
-  // part of the answer we assume).
-  virtual J9SRP* getDataSectionLocation() = 0;
-  virtual U_64  getDataSectionSize() = 0;
+  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
+
   virtual U_32* getDataLengthFieldLocation() = 0;
 
-  // what is the length of the data section in the header?
-  virtual U_32 getDataLength(); 
+  virtual I_64* getLastAttachTimeLocation() {
+    return &_mapping->_lastAttachedTime;
+  }
 
-  virtual U_64* getLastAttachTimeLocation() = 0;
-  virtual U_64* getLastDetachTimeLocation() = 0;
-  virtual U_64* getLastCreateTimeLocation() = 0;
+  virtual I_64* getLastDetachTimeLocation() {
+    return &_mapping->_lastDetachedTime;
+  }
+
+  virtual I_64* getLastCreateTimeLocation() {
+    return &_mapping->_createTime;
+  }
 
   virtual U_64* getInitCompleteLocation() = 0;
 
-  virtual bool setCacheLength(LastErrorInfo* lastErrorInfo) = 0;
   virtual bool setCacheInitComplete() = 0; // a header dependent thing. hence it's a pure virtual function.
 
   // replaces SH_OSCachemmap::isCacheHeaderValid(..).
@@ -88,20 +135,15 @@ public:
   virtual bool updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
   virtual bool updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
 
-  // this is a mediating method called once the mapping is established
-  // in memory.  here, the baton is probably handed to the _layout
-  // object to configure the OSCacheRegion objects.
-  virtual void notifyRegionMappingStartAddress(void*) = 0;
-  
 protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;
   friend class OSMemoryMappedCacheAttachingContext;
-  
+
   // this function is meant to eliminate dangling pointers once the
   // memory mapped file is detached in detach().
   virtual void detachRegions() = 0;
-  
+
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly, LastErrorInfo* lastErrorInfo);
 
@@ -117,9 +159,10 @@ protected:
   inline bool cacheFileAccessAllowed() const;
   bool isCacheAccessible() const;
 
+  OSMemoryMappedCacheHeaderMapping* _mapping;
   OSMemoryMappedCacheHeader* _header;
   OSCacheLayout* _layout;
-  
+
   I_64 _actualFileLength;
   UDATA _fileHandle;
 

@@ -6,11 +6,12 @@
 #include "SynchronizedCacheCounter.hpp"
 #include "OSCacheRegionBumpFocus.hpp"
 
+template <class OSCacheType>
 class WASMCompositeCache {
 public:
-  WASMCompositeCache(OSCacheImpl* osCache);
+  WASMCompositeCache(OSCacheType* osCache);
 
-  bool startup();
+  bool startup(const char* cacheName, const char* ctrlDirName);
 
   // allocate space for an entry! What kind of entry, I dunno..  code
   // or relocation data! Possibly validation data in the future. Who
@@ -23,7 +24,7 @@ private:
   // not nullable once set, but we do eventually want to destroy it,
   // and when we do, perhaps the pointer should become NULL? or not?
   // the reference may not continue after its OSCache is destroyed.
-  OSCacheImpl* _osCache;
+  OSCacheType* _osCache;
 
   SynchronizedCacheCounter _readerCount;
   CacheCRCChecker _crcChecker;

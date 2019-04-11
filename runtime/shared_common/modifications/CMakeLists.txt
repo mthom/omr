@@ -31,13 +31,13 @@ add_library(shared_cache_modifications STATIC
   OSMemoryMappedCacheAttachingContext.cpp
   OSMemoryMappedCacheCreatingContext.cpp
   OSMemoryMappedCacheConfig.cpp
-# OSMemoryMappedCacheHeader.cpp
+  OSMemoryMappedCacheHeader.cpp
   OSMemoryMappedCacheUtils.cpp
   OSSharedMemoryCacheIterator.cpp
   OSSharedMemoryCachePolicies.cpp
   OSSharedMemoryCache.cpp  
   OSSharedMemoryCacheConfig.cpp
-# OSSharedMemoryCacheHeader.cpp
+  OSSharedMemoryCacheHeader.cpp
   OSSharedMemoryCacheUtils.cpp
   OSSharedMemoryCacheSnapshot.cpp
   OSSharedMemoryCacheStats.cpp

@@ -1,8 +1,7 @@
-#if !defined(WASM_OS_CACHE_LAYOUT_HPP_INCLUDED)
-#define WASM_OS_CACHE_LAYOUT_HPP_INCLUDED
+#if !defined(WASM_OS_CACHE_CONFIG_HPP_INCLUDED)
+#define WASM_OS_CACHE_CONFIG_HPP_INCLUDED
 
 #include "OSCacheConfig.hpp"
-
 
 #include "WASMOSCacheHeader.hpp"
 #include "WASMOSCacheLayout.hpp"
@@ -15,7 +14,7 @@
 // too, hence the virtual base class of OSCacheRegion.  OSCacheRegion
 // doesn't currently contain state, so the virtual designator isn't
 // necessary *now*, but who knows, that might change.
-template <typename OSCacheConfigImpl>
+template <class OSCacheConfigImpl>
 class WASMOSCacheConfig: public OSCacheConfigImpl
 {
 public:
@@ -23,19 +22,14 @@ public:
 
   typedef typename OSCacheConfigImpl::header_type header_type;
 
-  WASMOSCacheConfig(U_32 numLocks, UDATA osPageSize, UDATA dataSectionSize)
+  WASMOSCacheConfig(U_32 numLocks, UDATA osPageSize)
     : OSCacheConfigImpl(numLocks)
   {
-    _layout = new WASMOSCacheLayout(osPageSize, dataSectionSize);    
+    _layout = new WASMOSCacheLayout<typename header_type>(osPageSize, osPageSize > 0);
+    _header = _layout->operator[](0);
   }
 
-  virtual bool initHeader() {
-    _header = new WASMOSCacheHeader<typename header_type>(_layout, 0); // 0 == header region ID.
-    return _header->isValid();
-  }
-  
-protected:
-  
+  virtual void notifyRegionMappingStartAddress(void* blockAddress, uintptr_t size);
 };
 
 #endif

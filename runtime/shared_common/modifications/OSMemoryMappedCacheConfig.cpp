@@ -47,7 +47,8 @@ typedef struct OMRSharedCachePreinitConfig {
  */
 
 OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(U_32 numLocks)
-  : _numLocks(numLocks)
+  : _finalised(0)
+  , _numLocks(numLocks)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
   , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
   , _header(NULL)
@@ -268,7 +269,7 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library,
 
   lockOffset = getHeaderLockOffset();
   // sizeof(((OSCachemmap_header_version_current *)NULL)->headerLock);
-  lockLength = sizeof(_header->_headerLock);
+  lockLength = getHeaderLockSize();
 
   Trc_SHR_OSC_Mmap_acquireHeaderWriteLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -326,9 +327,9 @@ OSMemoryMappedCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, UDATA
   }
 
   // (U_64)getMmapHeaderFieldOffsetForGen(generation, OSCACHEMMAP_HEADER_FIELD_HEADER_LOCK);
-  lockOffset = _header->getHeaderLockOffset();
+  lockOffset = getHeaderLockOffset();
   // sizeof(((OSCachemmap_header_version_current *)NULL)->headerLock);
-  lockLength = sizeof(_header->_headerLock);
+  lockLength = getHeaderLockSize();
 
   Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_gettingLock(_fileHandle, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -416,8 +417,8 @@ IDATA OSMemoryMappedCacheConfig::acquireAttachReadLock(OMRPortLibrary* library, 
   }
   */
 
-  lockOffset = _header->getAttachLockOffset();
-  lockLength = _header->getAttachLockSize();
+  lockOffset = getAttachLockOffset();
+  lockLength = getAttachLockSize();
 
   Trc_SHR_OSC_Mmap_acquireAttachReadLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -462,8 +463,8 @@ OSMemoryMappedCacheConfig::tryAcquireAttachWriteLock(OMRPortLibrary* library)//U
 
   Trc_SHR_OSC_Mmap_tryAcquireAttachWriteLock_Entry();
 
-  lockOffset = _header->getAttachLockOffset();
-  lockLength = _header->getAttachLockSize();
+  lockOffset = getAttachLockOffset();
+  lockLength = getAttachLockSize();
 
   Trc_SHR_OSC_Mmap_tryAcquireAttachWriteLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -500,8 +501,8 @@ OSMemoryMappedCacheConfig::releaseAttachWriteLock(OMRPortLibrary* library) //UDA
 
   Trc_SHR_OSC_Mmap_releaseAttachWriteLock_Entry();
 
-  lockOffset = _header->getAttachLockOffset();
-  lockLength = _header->getAttachLockSize();
+  lockOffset = getAttachLockOffset();
+  lockLength = getAttachLockSize();
 
   Trc_SHR_OSC_Mmap_releaseAttachWriteLock_gettingLock(_fileHandle, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -538,9 +539,9 @@ IDATA OSMemoryMappedCacheConfig::releaseAttachReadLock(OMRPortLibrary* library)
   Trc_SHR_OSC_Mmap_releaseAttachReadLock_Entry();
 
   //(U_64)getMmapHeaderFieldOffsetForGen(generation, OSCACHEMMAP_HEADER_FIELD_ATTACH_LOCK);
-  lockOffset = _header->getAttachLockOffset();
+  lockOffset = getAttachLockOffset();
   //sizeof(((OSCachemmap_header_version_current *)NULL)->attachLock);
-  lockLength = _header->getAttachLockSize();
+  lockLength = getAttachLockSize();
 
   Trc_SHR_OSC_Mmap_releaseAttachReadLock_gettingLock(_fileHandle, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -595,8 +596,8 @@ OSMemoryMappedCacheConfig::updateLastAttachedTime(OMRPortLibrary* library, UDATA
   }
 
   I_64 newTime = omrtime_current_time_millis();
-  Trc_SHR_OSC_Mmap_updateLastAttachedTime_time(newTime, _header->_lastAttachedTime);
-  _header->_lastAttachedTime = newTime;
+  Trc_SHR_OSC_Mmap_updateLastAttachedTime_time(newTime, _header->_mapping->_lastAttachedTime);
+  _header->_mapping->_lastAttachedTime = newTime;
 
   Trc_SHR_OSC_Mmap_updateLastAttachedTime_Exit();
   return true;
@@ -623,8 +624,8 @@ OSMemoryMappedCacheConfig::updateLastDetachedTime(OMRPortLibrary* library, UDATA
   }
 
   newTime = omrtime_current_time_millis();
-  Trc_SHR_OSC_Mmap_updateLastDetachedTime_time(newTime, _header->_lastDetachedTime);
-  _header->_lastDetachedTime = newTime;
+  Trc_SHR_OSC_Mmap_updateLastDetachedTime_time(newTime, _header->_mapping->_lastDetachedTime);
+  _header->_mapping->_lastDetachedTime = newTime;
 
   Trc_SHR_OSC_Mmap_updateLastDetachedTime_Exit();
   return true;

@@ -20,7 +20,6 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-
 #if !defined(OSCACHE_LAYOUT_HPP_INCLUDED)
 #define OSCACHE_LAYOUT_HPP_INCLUDED
 
@@ -40,14 +39,14 @@ public:
     : _osPageSize(osPageSize)
   {}
 
-  void serialize(OSCache* cache) {
-    OSCacheRegionSerializer* serializer = cache->constructSerializer();
+  void serialize(OSCache* osCache) {
+    OSCacheRegionSerializer* serializer = osCache->constructSerializer();
 
     for(int i = 0; i < _regions.size(); ++i) {
       _regions[i]->serialize(serializer);
     }
   }
-
+  
   virtual void alignRegionsToPageBoundaries();
 
   /* If a region changes size, the owning cache layout is notified. */
@@ -58,13 +57,16 @@ public:
   }
   
 protected:
-  void addRegion(OSCacheRegion* region) {
+  // initialize the region.
+  virtual void init(void* blockAddress, uintptr_t size) = 0;
+
+  virtual void addRegion(OSCacheRegion* region) {
     _regions.push_back(region);
   }
 
   UDATA _osPageSize;
   //TODO: eventually convert to TR::vector.
-  std::vector<OSCacheRegion*> _regions;
+  std::vector<OSCacheRegion*> _regions;  
 };
 
 #endif

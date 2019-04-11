@@ -5,13 +5,19 @@
 
 #include "omrutil.h"
 
-OSCacheContiguousRegion::OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, void* regionStart,
-						 UDATA regionSize, bool pageBoundaryAligned)
+OSCacheContiguousRegion::OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, bool pageBoundaryAligned)
   : OSCacheRegion(layout, regionID)
-  , _regionStart(regionStart)
-  , _regionSize(regionSize)
+  , _regionStart(NULL)
+  , _regionSize(0)
   , _pageBoundaryAligned(pageBoundaryAligned)
 {}
+
+// should be called before alignToPageBoundary.
+bool OSCacheContiguousRegion::adjustRegionStart(void* blockAddress)
+{
+  _regionSize  += ((UDATA) _regionStart - (UDATA) blockAddress);
+  _regionStart = blockAddress;
+}
 
 bool OSCacheContiguousRegion::alignToPageBoundary(UDATA osPageSize)
 {

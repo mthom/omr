@@ -20,27 +20,28 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED
+#if !defined(CACHE_HEADER_MAPPING_IMPL_HPP_INCLUDED)
+#define CACHE_HEADER_MAPPING_IMPL_HPP_INCLUDED
 
-#include "omr.h"
+#include "CacheHeaderMapping.hpp"
 
-#include "OSCacheConfigOptions.hpp"
-#include "OSMemoryMappedCacheInitializationContext.hpp"
-
-class OSMemoryMappedCache;
-class OSMemoryMappedCacheConfig;
-
-class OSMemoryMappedCacheAttachingContext: public OSMemoryMappedCacheInitializationContext
+template <class CacheHeaderType>
+class CacheHeaderMappingImpl
 {
 public:
-  OSMemoryMappedCacheAttachingContext(OSMemoryMappedCache* cache)
-    : OSMemoryMappedCacheInitializationContext(cache)
+  CacheHeaderMappingImpl()
+    : _mapping(NULL)
   {}
+  
+  virtual typename CacheHeaderMapping<CacheHeaderType>::mapping_type* baseMapping() = 0;
 
-  virtual bool startup(IDATA& errorCode);
-  virtual bool initAttach(void* blockAddress, IDATA& rc);
-  virtual bool creatingNewCache();
+  virtual CacheHeaderMappingImpl<CacheHeaderType>& operator=(void* headerStart) {
+    _mapping = static_cast<CacheHeaderMapping<CacheHeaderType>*>(headerStart);
+    return *this;
+  }
+  
+protected:
+  CacheHeaderMapping<CacheHeaderType>* _mapping;
 };
 
 #endif

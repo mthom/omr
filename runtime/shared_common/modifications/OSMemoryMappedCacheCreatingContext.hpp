@@ -34,9 +34,9 @@ public:
   {}
 
   virtual bool startup(IDATA& errorCode);
-  virtual bool initAttach(IDATA& rc);
+  virtual bool initAttach(void* blockAddress, IDATA& rc);
   virtual void setCacheAreaBoundaries();
-  virtual I_32 createCacheHeader(void* header);
+  //  virtual I_32 createCacheHeader();
   virtual bool creatingNewCache();
 };
 

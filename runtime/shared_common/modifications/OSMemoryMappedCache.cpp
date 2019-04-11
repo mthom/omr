@@ -20,11 +20,14 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "OSCacheLayout.hpp"
 #include "OSMemoryMappedCache.hpp"
 #include "OSCacheUtils.hpp"
-#include "OSMemoryMappedCacheUtils.hpp"
 #include "OSMemoryMappedCacheMemoryProtector.hpp"
+#include "OSMemoryMappedCacheSerializer.hpp"
+#include "OSMemoryMappedCacheUtils.hpp"
 
+#include "omrcfg.h"
 #include "shrnls.h"
 #include "ut_omrshr.h"
 
@@ -34,6 +37,7 @@ OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
 					 IDATA numLocks,
 					 OSCacheConfigOptions* configOptions)
   : OSCacheImpl(library, configOptions, numLocks)
+  , _config(NULL)
     //  , _config(new OSMemoryMappedCacheConfig(numLocks)) // this is
     //  an abstract class, so we don't instantiate _config directly.
 {
@@ -319,7 +323,7 @@ bool OSMemoryMappedCache::closeCacheFile()
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
   Trc_SHR_Assert_Equals(_config->getHeaderLocation(), NULL);
-  Trc_SHR_Assert_Equals(_config->getDataSectionLocation(), NULL);
+  Trc_SHR_Assert_Equals(_config->getDataSectionFieldLocation(), NULL);
 
   if(-1 == _config->_fileHandle) {
     return true;
@@ -412,10 +416,11 @@ IDATA OSMemoryMappedCache::internalAttach() //bool isNewCache, UDATA generation)
     goto error;
   }
 
-  _config->notifyRegionMappingStartAddress(_mapFileHandle->pointer);
+  _configOptions->setCacheSize(_mapFileHandle->size);  
+
   // Trc_SHR_OSC_Mmap_internalAttach_goodmapfile(_layout->_headerStart);
 
-  if(!_initContext->initAttach(rc)) {
+  if(!_initContext->initAttach(_mapFileHandle->pointer, rc)) {
     goto error;
   }
 
@@ -479,8 +484,8 @@ void OSMemoryMappedCache::internalDetach()
 
   _config->detachRegions();
 //  _config->_layout->_headerStart = NULL;
-//  _config->getDataSectionLocation() = NULL;
-//  _config->getDataLength() = 0;
+//  _config->getDataSectionFieldLocation() = NULL;
+//  _config->getDataSectionSize() = 0;
   /* The member variable '_actualFileLength' is not set to zero b/c
    * the cache size may be needed to reset the cache (e.g. in the
    * case of a build id mismatch, the cache may be reset, and
@@ -489,8 +494,8 @@ void OSMemoryMappedCache::internalDetach()
    */
 
   Trc_SHR_OSC_Mmap_internalDetach_Exit(_config->getHeaderLocation(),
-				       _config->getDataSectionLocation(),
-				       _config->getDataLength());
+				       _config->getDataSectionFieldLocation(),
+				       _config->getDataSectionSize());
   return;
 }
 
@@ -651,11 +656,11 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
   // Trc_SHR_OSC_Mmap_attach_Entry1(UnitTest::unitTest);
 
   /* If we are already attached, just return */
-  if (_config->getDataSectionLocation()) {
+  if (_config->getDataSectionFieldLocation()) {
     Trc_SHR_OSC_Mmap_attach_alreadyattached(_config->getHeaderLocation(),
-					    _config->getDataSectionLocation(),
-					    _config->getDataLength());
-    return _config->getDataSectionLocation();
+					    _config->getDataSectionFieldLocation(),
+					    _config->getDataSectionSize());
+    return _config->getDataSectionFieldLocation();
   }
 
   if (_config->acquireHeaderWriteLock(_portLibrary, _runningReadOnly, &lastErrorInfo) == -1) { //_activeGeneration, &lastErrorInfo) == -1) {
@@ -706,8 +711,8 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
     OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_MMAP_ATTACH_ATTACHED, _cacheName);
   }
 
-  Trc_SHR_OSC_Mmap_attach_Exit(_config->getDataSectionLocation());
-  return _config->getDataSectionLocation();
+  Trc_SHR_OSC_Mmap_attach_Exit(_config->getDataSectionFieldLocation());
+  return _config->getDataSectionFieldLocation();
 
 detach:
   internalDetach();//_activeGeneration);
@@ -835,7 +840,7 @@ OSMemoryMappedCache::getPermissionsRegionGranularity()
 
   /* This call to capabilities is arguably unnecessary, but it is a good check to do */
   if (omrmmap_capabilities() & OMRPORT_MMAP_CAPABILITY_PROTECT) {
-    return omrmmap_get_region_granularity(_config->getDataSectionLocation());
+    return omrmmap_get_region_granularity(_config->getDataSectionFieldLocation());
   }
 
   return 0;
@@ -917,6 +922,7 @@ OSMemoryMappedCache::errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastE
     if ((NULL != lastErrorInfo) && (0 != lastErrorInfo->_lastErrorCode)) {
       I_32 errorno = lastErrorInfo->_lastErrorCode;
       const char* errormsg = lastErrorInfo->_lastErrorMsg;
+      
       Trc_SHR_OSC_Mmap_errorHandler_printingPortMessages();
       omrnls_printf(J9NLS_ERROR, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, errorno);
       Trc_SHR_Assert_True(errormsg != NULL);
@@ -932,4 +938,22 @@ OSCacheMemoryProtector*
 OSMemoryMappedCache::constructMemoryProtector()
 {
   return new OSMemoryMappedCacheMemoryProtector(*this);
+}
+
+OSCacheRegionSerializer*
+OSMemoryMappedCache::constructSerializer() {
+  return new OSMemoryMappedCacheSerializer(_portLibrary);
+}
+
+void
+OSMemoryMappedCache::installConfig(OSMemoryMappedCacheConfig* config)
+{
+  _config = config;
+}
+
+void
+OSMemoryMappedCache::serializeCacheLayout(void* blockAddress)
+{
+  _config->notifyRegionMappingStartAddress(blockAddress, _configOptions->cacheSize());
+  _config->_layout->serialize(this);
 }

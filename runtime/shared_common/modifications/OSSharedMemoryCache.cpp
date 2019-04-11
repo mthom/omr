@@ -20,6 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "omrcfg.h"
 #include "sharedconsts.h"
 #include "shrnls.h"
 #include "ut_omrshr.h"
@@ -28,13 +29,15 @@
 #include "OSCacheUtils.hpp"
 #include "OSSharedMemoryCache.hpp"
 #include "OSSharedMemoryCacheMemoryProtector.hpp"
+#include "OSSharedMemoryCacheSerializer.hpp"
 
 OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* cacheDirName,
 					 IDATA numLocks,
 					 OSCacheConfigOptions* configOptions)
-  : OSCacheImpl(library, configOptions, numLocks)  
+  : OSCacheImpl(library, configOptions, numLocks)
+  , _config(NULL)
 {
   // I need to revise the arguments to this trace message.
   // Trc_SHR_OSC_Constructor_Entry(cacheName, piconfig->sharedClassCacheSize, createFlag);
@@ -103,7 +106,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
   // versionData->cacheType = OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT;
   //  _cacheSize = (piconfig!= NULL) ? (U_32)piconfig->sharedClassCacheSize : (U_32)defaultCacheSize;
   //  _initializer = i;
-    
+
   _config->_totalNumSems = _numLocks + 1;		/* +1 because of header mutex */
   _userSemCntr = 0;
 
@@ -151,7 +154,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 #endif
 
   _policies = constructSharedMemoryPolicy();
-  
+
   while (retryCount > 0) {
     IDATA rc;
 
@@ -214,7 +217,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 
     switch(shsemrc) {
     case OMRPORT_INFO_SHSEM_CREATED:
-#if !defined(WIN32)      
+#if !defined(WIN32)
       if (_configOptions->groupAccessEnabled()) {
 	/* Verify if the group access has been set */
 	struct J9FileStat statBuf;
@@ -339,7 +342,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 	  semid = omrshsem_deprecated_getid(_config->_semhandle);
 	  omrmem_free_memory(_config->_semhandle);
 	}
-	
+
 	if ((OMRPORT_ERROR_SHSEM_OPFAILED == shsemrc) || (OMRPORT_ERROR_SHSEM_OPFAILED_SEMAPHORE_NOT_FOUND == shsemrc)) {
 	  errorHandler(J9NLS_SHRC_OSCACHE_SEMAPHORE_OPFAILED, &lastErrorInfo);
 	  if ((OMRPORT_ERROR_SHSEM_OPFAILED == shsemrc) && (0 != semid)) {
@@ -369,7 +372,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 	  OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE, _controlFileStatus.errorMsg);
 	}
       }
-      
+
       /* While opening shared cache for "destroy" if some error occurs
        * when opening the semaphore set, don't bail out just yet but
        * try to open the shared memory.
@@ -451,7 +454,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
       getTotalSize();
       Trc_SHR_OSC_startup_Exit_Created(cacheName);
       _startupCompleted = true;
-      
+
       return true;
 
     case OS_SHARED_MEMORY_CACHE_OPENED:
@@ -466,7 +469,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
       getTotalSize();
       Trc_SHR_OSC_startup_Exit_Opened(cacheName);
       _startupCompleted=true;
-      
+
       return true;
 
     case OS_SHARED_MEMORY_CACHE_RESTART:
@@ -492,7 +495,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 
   setError(OMRSH_OSCACHE_FAILURE);
   Trc_SHR_OSC_startup_Exit_Failed(cacheName);
-  return false;  
+  return false;
 }
 
 /**
@@ -525,7 +528,7 @@ OSSharedMemoryCache::detachRegion()
   if (_config->_shmhandle != NULL) {
     Trc_SHR_OSC_detachRegion_Debug(_config->getDataSectionLocation(), _config->getHeaderLocation());
     rc = omrshmem_detach(&_config->_shmhandle);
-    
+
     if (rc == -1) {
       LastErrorInfo lastErrorInfo;
       lastErrorInfo.populate(_portLibrary);
@@ -536,8 +539,9 @@ OSSharedMemoryCache::detachRegion()
       rc = OS_SHARED_MEMORY_CACHE_SUCCESS;
     }
 
-    _config->setHeaderLocation(NULL);
-    _config->setDataSectionLocation(NULL);
+    _config->nullifyRegions();
+//    _config->setHeaderLocation(NULL);
+//    _config->setDataSectionLocation(NULL);
   }
 
   Trc_SHR_OSC_detachRegion_Exit();
@@ -616,21 +620,20 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
 
   if (request == NULL) {
     LastErrorInfo lastErrorInfo;
-    lastErrorInfo.populate(_portLibrary);    
+    lastErrorInfo.populate(_portLibrary);
 //    lastErrorInfo.lastErrorCode = omrerror_last_error_number();
 //    lastErrorInfo.lastErrorMsg = omrerror_last_error_message();
     errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_ATTACH, &lastErrorInfo);
-    _config->setDataSectionLocation(NULL);
+//    _config->setDataSectionLocation(NULL);
     _attachCount = 0;
-    
+
     Trc_SHR_OSC_attach_Exit2();
     return NULL;
   }
 
   Trc_SHR_OSC_attach_Debug1(request);
   //  Trc_SHR_OSC_attach_Debug2(sizeof(OSCachesysv_header_version_current));
-
-  _config->setHeaderLocation(request);
+  
   //  _headerStart = request;
 
   if ((headerRc = verifyCacheHeader()) != OMRSH_OSCACHE_HEADER_OK) {
@@ -655,21 +658,20 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
   }
 
   /*_dataStart is set here, and possibly initializeHeader if its a new cache */
+  serializeCacheLayout(request);
 
-  // this has to be overloaded by the header class.
-  _config->_header->init(); //_config->_layout);
 //  _dataStart = SHM_DATASTARTFROMHEADER(((OSCachesysv_header_version_current*)_headerStart));
 //
 //  _dataLength = SHM_CACHEDATASIZE(((OSCachesysv_header_version_current*)_headerStart)->oscHdr.size);
-  _attachCount++;  
-  
+  _attachCount++;
+
   if (_configOptions->verboseEnabled()) { //_verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
     U_32 dataLength = _config->getDataSectionSize();
     OSC_TRACE2(_configOptions, J9NLS_SHRC_OSCACHE_ATTACH_SUCCESS, _cacheName, dataLength);
   }
 
   U_64* dataStart = _config->getDataSectionLocation();
-  
+
   Trc_SHR_OSC_attach_Exit(dataStart);
   return dataStart;
 }
@@ -748,8 +750,9 @@ OSSharedMemoryCache::openCache(const char* cacheDirName) //, bool semCreated) , 
     /* We opened semaphore yet created the cache area -
      * we should set it up, but don't need to init semaphore
      */
-    
-    rc = _config->initializeHeader(cacheDirName, &lastErrorInfo); //versionData, lastErrorInfo);
+
+    // was: call to initializeHeader.
+    rc = installLayout(&lastErrorInfo); //versionData, lastErrorInfo);
     if(rc == OS_SHARED_MEMORY_CACHE_FAILURE) {
       Trc_SHR_OSC_openCache_Exit_CreatedHeaderInitFailed(_cacheName);
       result = OS_SHARED_MEMORY_CACHE_FAILURE;
@@ -898,7 +901,7 @@ OSSharedMemoryCache::isCacheActive() const
   if(statbuf.nattach > 0) {
     return 1;
   }
-  
+
   return 0;
 }
 
@@ -906,14 +909,14 @@ void
 OSSharedMemoryCache::errorHandler(U_32 module_name, U_32 message_num, LastErrorInfo *lastErrorInfo)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-  
+
   if (module_name && message_num && _configOptions->verboseEnabled()) {
     omrnls_printf(J9NLS_ERROR, module_name, message_num);
     if ((NULL != lastErrorInfo) && (0 != lastErrorInfo->_lastErrorCode)) {
       printErrorMessage(lastErrorInfo);
     }
   }
-  
+
   setError(OMRSH_OSCACHE_FAILURE);
   if(!_startupCompleted && _openSharedMemory == false) {
     _policies->cleanupSystemResources();
@@ -928,7 +931,7 @@ OSSharedMemoryCache::printErrorMessage(LastErrorInfo *lastErrorInfo)
   const char * errormsg = lastErrorInfo->_lastErrorMsg;
   I_32 sysFnCode = (errorCode - errorCodeMasked);
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
-  
+
   if (errorCode!=0) {
     /*If errorCode is 0 then there is no error*/
     OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, errorCode);
@@ -971,7 +974,7 @@ OSSharedMemoryCache::printErrorMessage(LastErrorInfo *lastErrorInfo)
     break;
   case OMRPORT_ERROR_SYSV_IPC_ERRNO_EMFILE:
     OSC_ERR_TRACE(_configOptions, J9NLS_SHRC_OSCACHE_ERROR_MAX_OPEN_FILES_REACHED);
-    break;    
+    break;
   default:
     break;
   }
@@ -993,4 +996,40 @@ IDATA OSSharedMemoryCache::restoreFromSnapshot(IDATA numLocks)
 {
   OSSharedMemoryCacheSnapshot* snapshot = constructSharedMemoryCacheSnapshot();
   return snapshot->restoreFromSnapshot(numLocks);
+}
+
+IDATA
+OSSharedMemoryCache::installLayout(LastErrorInfo* lastErrorInfo)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  void* blockAddress = omrshmem_attach(_config->_shmhandle, OMRMEM_CATEGORY_CLASSES_SHC_CACHE);
+
+  if(blockAddress == NULL) {
+    lastErrorInfo->populate(OMRPORTLIB);
+    errorHandler(J9NLS_SHRC_OSCACHE_SHMEM_ATTACH, lastErrorInfo);
+    Trc_SHR_OSC_add_Exit1();
+    return OS_SHARED_MEMORY_CACHE_FAILURE;
+  }
+
+  serializeCacheLayout(blockAddress);
+
+  return OS_SHARED_MEMORY_CACHE_SUCCESS;
+}
+
+void OSSharedMemoryCache::serializeCacheLayout(void* blockAddress)
+{
+  _config->notifyRegionMappingStartAddress(blockAddress, _configOptions->cacheSize());
+  _config->_layout->serialize(this);  
+}
+
+OSCacheRegionSerializer*
+OSSharedMemoryCache::constructSerializer() {
+  return new OSSharedMemoryCacheSerializer(_portLibrary, _cacheLocation == NULL);
+}
+
+void
+OSSharedMemoryCache::installConfig(OSSharedMemoryCacheConfig* config)
+{
+  _config = config;
 }

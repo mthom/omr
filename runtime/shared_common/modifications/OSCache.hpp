@@ -84,18 +84,6 @@ public:
   // argument on the various OSCacheRegion types.
   virtual OSCacheRegionSerializer* constructSerializer() = 0;
 
-  // This is tricky. Initially I thought this function should be
-  // inside the OSCacheLayout, which doesn't only describe the
-  // sequencing of regions within the cache, but also indicates
-  // whether the regions are aligned along page boundaries.  But,
-  // there's also a literal 'start' to the cache, as the address of a
-  // block of memory. OSCacheLayout knows nothing about this
-  // block.. it simply specifies how to lay everything out. So, it's
-  // really the OSCache that knows, as the owner and consolidator of
-  // that information. It should be able to bring that all to the fore
-  // in computing this.
-  virtual void * getOSCacheStart();
-
   // startup routines the Composite Cache expects.
   virtual void* attach() = 0;
   virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;

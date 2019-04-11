@@ -25,33 +25,19 @@
 #include "sharedconsts.h"
 
 #include "OSCacheContiguousRegion.hpp"
+#include "OSCacheRegionSerializer.hpp"
+#include "OSSharedMemoryCacheHeaderMapping.hpp"
 
-#define OMRSH_OSCACHE_SYSV_EYECATCHER "J9SMMAP"
-#define OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH 7
-
-class OSSharedMemoryCacheHeader: public OSCacheContiguousRegion
+class OSSharedMemoryCacheHeader: virtual public OSCacheContiguousRegion
 {
 public:
-//  virtual U_64 getHeaderLockOffset() = 0;
-//  virtual U_64 getAttachLockOffset() = 0;
+  virtual void init(OMRPortLibrary* library, bool inDefaultControlDir);
 
-  virtual void init() = 0; //OSMemoryMappedCacheLayout* layout) = 0;
-  
-//  U_64 getAttachLockSize() {
-//    return sizeof(_attachLock);
-//  }  
 protected:
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
-
-  char _eyecatcher[OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH+1];
+  void alignToExistingHeader(void* headerStart);
   
-  // from the OSCache_header* and OSCachesysv_header* structs.
-  // these have been moved to the OSSharedMemoryCacheLayout class.
-  // U_32 _headerSize;   // from OSCache_header2: dataLength
-  // J9SRP _headerStart; // from OSCache_header2: dataStart
-
-  I_64 _createTime; // from OSCache_sysv_header1 & 2: createTime
-  UDATA _inDefaultControlDir; // from OSCache_sysv_header1 & 2: inDefaultControlDir  
+  CacheHeaderMappingImpl<OSSharedMemoryCacheHeaderMapping>* _mapping;
 };
 
 #endif

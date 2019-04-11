@@ -3,6 +3,13 @@
 #include "WASMOSCacheHeader.hpp"
 #include "WASMOSCacheLayout.hpp"
 
-bool WASMOSCacheLayout::initialize() {
-  //TODO: initialize the header, and initialize the data section.
+void WASMOSCacheLayout::init(void* blockAddress, uintptr_t size)
+{
+  _header->adjustRegionStart(blockAddress);
+  _dataSection->adjustRegionStart((void*) ((UDATA) blockAddress + _header->regionSize()));
+  
+  _header->alignToPageBoundary(_osPageSize);
+  _dataSection->alignToPageBoundary(_osPageSize);
+
+  _blockSize = size;  
 }

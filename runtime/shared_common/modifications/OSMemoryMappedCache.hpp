@@ -47,12 +47,15 @@ public:
   virtual void* attach();
   virtual void detach();
 
-  //TODO: should these functions be virtual?
   virtual void initialize();
   virtual void finalise();
   virtual void cleanup();
 
   virtual OSCacheMemoryProtector* constructMemoryProtector();
+
+  typedef OSMemoryMappedCacheConfig config_type;
+
+  virtual void installConfig(OSMemoryMappedCacheConfig* config);
   
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
@@ -81,6 +84,10 @@ protected:
   virtual OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator(char* resultBuf) = 0;
   virtual bool deleteCacheFile(LastErrorInfo* lastErrorInfo);
 
+  virtual void serializeCacheLayout(void* blockAddress);
+
+  virtual OSCacheRegionSerializer* constructSerializer();
+  
   OSMemoryMappedCacheInitializationContext* _initContext;
   OSMemoryMappedCacheConfig* _config;
 

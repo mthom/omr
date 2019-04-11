@@ -27,41 +27,28 @@
 #include "OSCacheContiguousRegion.hpp"
 #include "OSCacheRegionSerializer.hpp"
 
-#define OMRSH_OSCACHE_MMAP_EYECATCHER "J9SCMAP"
-#define OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH 7
+#include "CacheHeaderMappingImpl.hpp"
+#include "OSMemoryMappedCacheHeaderMapping.hpp"
 
 class OSMemoryMappedCacheHeader: virtual public OSCacheContiguousRegion
 {
 public:
-  virtual U_64 getHeaderLockOffset() = 0;
-  virtual U_64 getAttachLockOffset() = 0;
+  OSMemoryMappedCacheHeader(UDATA numLocks, CacheHeaderMappingImpl<OSMemoryMappedCacheHeader>* mapping = NULL)
+    : _numLocks(numLocks)
+    , _mapping(mapping)
+  {}
 
-  virtual void init();
-  
-  U_64 getAttachLockSize() {
-    return sizeof(_attachLock);
-  }
-  
+  virtual void refresh(OMRPortLibrary* library);
+  virtual void create(OMRPortLibrary* library);
+
 protected:
   friend class OSMemoryMappedCacheConfig;
   friend class OSMemoryMappedCacheCreatingContext;
-  
-  virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
 
-  char _eyecatcher[OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH+1];
-  
-  // from the OSCache_header* and OSCachemmap_header* structs.
-  // should belong to layout/region objects.
-  
-  // U_32 _headerSize;   // from OSCache_header2: dataLength
-  // J9SRP _headerStart; // from OSCache_header2: dataStart
+  virtual void refresh(OMRPortLibrary* library, OSMemoryMappedCacheHeaderMapping* mapping);
 
-  I_64 _createTime;   // from OSCache_mmap_header1 & 2: createTime
-  I_64 _lastAttachedTime; // from OSCache_mmap_header1 & 2: lastAttachedTime
-  I_64 _lastDetachedTime; // from OSCache_mmap_header1 & 2: lastDetachedTime
-  I_32 _headerLock; // from OSCache_mmap_header1 & 2: headerLock
-  I_32 _attachLock; // from OSCache_mmap_header1 & 2: attachLock
-  I_32* _dataLocks; // was _dataLocks[_numLocks]; // from OSCache_mmap_header1 & 2: dataLocks
+  UDATA _numLocks;
+  CacheHeaderMappingImpl<OSMemoryMappedCacheHeader>* _mapping;
 };
 
 #endif

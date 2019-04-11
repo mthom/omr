@@ -1,6 +1,7 @@
 #if !defined(WASM_OS_CACHE_HEADER_HPP_INCLUDED)
 #define WASM_OS_CACHE_HEADER_HPP_INCLUDED
 
+#include "CacheHeaderImpl.hpp"
 #include "OSCacheContiguousRegion.hpp"
 
 // this is meant to augment an existing header, like
@@ -11,17 +12,13 @@ template <class OSCacheHeader>
 class WASMOSCacheHeader: public OSCacheHeader, virtual public OSCacheContiguousRegion
 {
 public:
-  TR_ALLOC(WASMOSCacheHeader<OSCacheHeader>)
-  
-  WASMOSCacheHeader(OSCacheLayout* layout, int regionID)
-    : OSCacheContiguousRegion(layout, regionID, NULL, sizeof(WASMOSCacheHeader<OSCacheHeader>), true)
-  {}
+  TR_ALLOC(TR::SharedCacheRegion)
 
-  virtual void init();
-  
-private:  
-  volatile UDATA* _readerCount;
-  UDATA* _cacheCrc;
+  //TODO: needs template specializations.
+  WASMOSCacheHeader(OSCacheLayout* layout, int regionID, bool pageBoundaryAligned);
+
+protected:
+  CacheHeaderImpl<OSCacheHeader>* _mapping;
 };
 
 #endif

@@ -66,11 +66,20 @@ public:
   UDATA isCacheActive() const;
   //  IDATA restoreFromSnapshot(const char* cacheName, UDATA numLocks, bool& cacheExists);
 
+  virtual void installConfig(OSSharedMemoryCacheConfig* config);
+
+  typedef OSSharedMemoryCacheConfig config_type;
+
 protected:
   friend class OSSharedMemoryCachePolicies;
   friend class OSSharedMemoryCacheSnapshot;
   friend class OSSharedMemoryCacheStats;
-  
+
+  // write configuration header (mostly in the header, but also
+  // potentially elsewhere) into the cache block newly attached to
+  // _shmhandle.
+  virtual IDATA installLayout(LastErrorInfo* lastErrorInfo);
+  virtual void serializeCacheLayout(void* blockAddress);
   virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 
   void setError(IDATA ec);
@@ -85,17 +94,17 @@ protected:
   virtual OSSharedMemoryCacheSnapshot* constructSharedMemoryCacheSnapshot() = 0;
 
   virtual OSCacheMemoryProtector* constructMemoryProtector();
-  
+
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
   virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);
-    
+
   virtual UDATA getPermissionsRegionGranularity();
 
   // this is largely J9 specific. let it be overloaded.
   virtual IDATA verifyCacheHeader() = 0;
 
   IDATA restoreFromSnapshot(IDATA numLocks);
-  
+
   IDATA detachRegion();
 
   void* attach();
@@ -113,6 +122,6 @@ protected:
   bool _startupCompleted;
   bool _openSharedMemory;
 
-  OSSharedMemoryCachePolicies* _policies;  
+  OSSharedMemoryCachePolicies* _policies;
 };
 #endif

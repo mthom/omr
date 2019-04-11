@@ -30,12 +30,8 @@
 #include "OSCacheAttachingContext.hpp"
 #include "OSCacheCreatingContext.hpp"
 
-// why is OSCacheLayout a template parameter?? Because Layout classes
-// are typically "bottom level", meaning that they contain information
-// regarding the architecture of the class that's accessed
-// frequently. This is vastly preferable to peppering the cache code
-// with dynamic_cast's wherever it needs to know about the layout
-// IMHO.
+class OSClassLayout;
+
 class OSCacheConfig
 {
 public:
@@ -45,6 +41,14 @@ public:
   // sometimes the lock IDs are keyed against regions, sometimes not.
   virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL) = 0;
   virtual IDATA releaseLock(UDATA lockID) = 0;
+
+  // this is a mediating method called once the mapping is established
+  // in memory.  here, the baton is probably handed to the _layout
+  // object to configure the OSCacheRegion objects.
+  virtual void notifyRegionMappingStartAddress(void* blockAddress, uintptr_t size) = 0;
+
+  // finalise and nullify cache regions in the layout.
+  virtual void nullifyRegions() = 0;
 };
 
 #endif

@@ -36,8 +36,7 @@ class OSCacheContiguousRegion: public OSCacheRegion
 public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
   
-  OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, void* regionStart,
-			  UDATA regionSize, bool pageBoundaryAligned);
+  OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, bool pageBoundaryAligned);
 
   // the start address of the region.
   virtual void* regionStartAddress() const;
@@ -46,6 +45,8 @@ public:
   // the size of the region.
   virtual UDATA regionSize() const;
 
+  virtual bool adjustRegionStart(void* blockAddress);
+  
   virtual bool alignToPageBoundary(UDATA osPageSize);
 
   virtual UDATA renderToMemoryProtectionFlags();

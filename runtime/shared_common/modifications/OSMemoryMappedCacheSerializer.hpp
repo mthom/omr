@@ -20,27 +20,31 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED
+#if !defined(OS_MEMORY_MAPPED_CACHE_SERIALIZER_HPP_INCLUDED)
+#define OS_MEMORY_MAPPED_CACHE_SERIALIZER_HPP_INCLUDED
 
-#include "omr.h"
+#include "OSCacheRegionSerializer.hpp"
+#include "OSMemoryMappedCacheHeader.hpp"
 
-#include "OSCacheConfigOptions.hpp"
-#include "OSMemoryMappedCacheInitializationContext.hpp"
+#include "omrport.h"
 
-class OSMemoryMappedCache;
-class OSMemoryMappedCacheConfig;
+class OSSharedMemoryCacheHeader;
 
-class OSMemoryMappedCacheAttachingContext: public OSMemoryMappedCacheInitializationContext
+class OSMemoryMappedCacheSerializer: public OSCacheRegionSerializer
 {
 public:
-  OSMemoryMappedCacheAttachingContext(OSMemoryMappedCache* cache)
-    : OSMemoryMappedCacheInitializationContext(cache)
+  OSMemoryMappedCacheSerializer(OMRPortLibrary* library)
+    : _library(library)
   {}
 
-  virtual bool startup(IDATA& errorCode);
-  virtual bool initAttach(void* blockAddress, IDATA& rc);
-  virtual bool creatingNewCache();
-};
+  void serialize(OSMemoryMappedCacheHeader* header) {
+    header->create(_library);    
+  }
 
+  void serialize(OSSharedMemoryCacheHeader*) {}
+  void serialize(OSCacheRegion*) {}
+
+protected:
+  OMRPortLibrary* _library;
+};
 #endif

@@ -71,6 +71,8 @@ public:
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
 
   virtual OSCacheRegionEntryIterator* constructIterator() = 0;
+
+  virtual bool adjustRegionStart(void* blockAddress) = 0;
   
   // calculates the size of the region.
   virtual UDATA regionSize() const = 0;

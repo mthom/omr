@@ -28,11 +28,13 @@
 #include "OSMemoryMappedCacheHeader.hpp"
 #include "OSMemoryMappedCacheUtils.hpp"
 
-bool OSMemoryMappedCacheCreatingContext::initAttach(IDATA&)
+bool OSMemoryMappedCacheCreatingContext::initAttach(void* blockAddress, IDATA&)
 {
-  *_cache->_config->getDataLengthFieldLocation() = _cache->_config->getDataLength();
-  *_cache->_config->getDataSectionLocation() = (U_32) (*_cache->_config->getHeaderLocation() + _cache->_config->getHeaderSize());
+  *_cache->_config->getDataLengthFieldLocation() = _cache->_config->getDataSectionSize();
+  //  *_cache->_config->getDataSectionLocation() = (void*) _cache->_config->getHeaderLocation() + _cache->_config->getHeaderSize();
 
+  _cache->serializeCacheLayout(blockAddress);
+  
   return true;
 }
 
@@ -87,6 +89,8 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
     }
   }
 
+  
+  
   rc = _cache->internalAttach(); //true, _activeGeneration);
   if (0 != rc) {
     errorCode = rc;
@@ -96,15 +100,17 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
   }
 
   //(OSCachemmap_header_version_current *)_headerStart;
-  void* cacheHeader = _cache->_config->getHeaderLocation();
+  //OSMemoryMappedCacheHeader* cacheHeader = _cache->_config->_header;
 
   /* Create the cache header */
-  if (!createCacheHeader(cacheHeader)) { //, versionData)) {
-    Trc_SHR_OSC_Mmap_startup_badCreateCacheHeader();
-    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_CREATING_CACHE_HEADER, NULL);
-    // goto _errorPostAttach;
-    return false;
-  }
+  // internalAttach() will take care of this now. Initializing the
+  // header, layout and all.  
+//  if (!createCacheHeader()) { //, cacheHeader, versionData)) {
+//    Trc_SHR_OSC_Mmap_startup_badCreateCacheHeader();
+//    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_CREATING_CACHE_HEADER, NULL);
+//    // goto _errorPostAttach;
+//    return false;
+//  }
 
   Trc_SHR_OSC_Mmap_startup_goodCreateCacheHeader();
 
@@ -140,12 +146,14 @@ bool OSMemoryMappedCacheCreatingContext::creatingNewCache() {
  * @return true on success, false on failure
  * THREADING: Pre-req caller holds the cache header write lock
  */
+/*
 I_32
-OSMemoryMappedCacheCreatingContext::createCacheHeader(void* header)
+OSMemoryMappedCacheCreatingContext::createCacheHeader()
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
-  U_32 headerLen = _cache->_config->getHeaderSize();  // MMAP_CACHEHEADERSIZE;
-  OSMemoryMappedCacheHeader* cacheHeader = (OSMemoryMappedCacheHeader*) header;
+  //  U_32 headerLen = _cache->_config->getHeaderSize();  // MMAP_CACHEHEADERSIZE;
+
+  OSMemoryMappedCacheHeader* cacheHeader = _cache->_config->_header;
   
   if(NULL == cacheHeader) {
     return false;
@@ -153,15 +161,7 @@ OSMemoryMappedCacheCreatingContext::createCacheHeader(void* header)
 
   // commented out because we now lack versionData.
   // Trc_SHR_OSC_Mmap_createCacheHeader_Entry(cacheHeader, headerLen, versionData);
-
-  memset(cacheHeader, 0, headerLen);
-  strncpy(cacheHeader->_eyecatcher, OMRSH_OSCACHE_MMAP_EYECATCHER, OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH);
-
-  cacheHeader->_createTime = omrtime_current_time_millis();
-  cacheHeader->_lastAttachedTime = omrtime_current_time_millis();
-  cacheHeader->_lastDetachedTime = omrtime_current_time_millis();
-
-  cacheHeader->init(); //initOSCacheHeader(&(cacheHeader->oscHdr), versionData, headerLen);
+  cacheHeader->init(OMRPORTLIB); //initOSCacheHeader(&(cacheHeader->oscHdr), versionData, headerLen);
 
 // commented out because we now lack some of this data. sort of. some of it is in fact
 // contained inside the layout object. It will probably be written to the header. who knows.
@@ -176,3 +176,4 @@ OSMemoryMappedCacheCreatingContext::createCacheHeader(void* header)
   Trc_SHR_OSC_Mmap_createCacheHeader_Exit();
   return true;
 }
+*/

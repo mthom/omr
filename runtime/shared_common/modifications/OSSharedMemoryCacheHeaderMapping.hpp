@@ -19,28 +19,45 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+#if !defined(OS_SHARED_MEMORY_CACHE_HEADER_MAPPING_HPP_INCLUDED)
+#define OS_SHARED_MEMORY_CACHE_HEADER_MAPPING_HPP_INCLUDED
 
-#if !defined(OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED
+#include "CacheHeaderMapping.hpp"
 
 #include "omr.h"
 
-#include "OSCacheConfigOptions.hpp"
-#include "OSMemoryMappedCacheInitializationContext.hpp"
+#define OMRSH_OSCACHE_SYSV_EYECATCHER "OMRSMMAP"
+#define OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH 8
 
-class OSMemoryMappedCache;
-class OSMemoryMappedCacheConfig;
+class OSSharedMemoryCacheHeader;
 
-class OSMemoryMappedCacheAttachingContext: public OSMemoryMappedCacheInitializationContext
+template <>
+struct HeaderMapping<OSSharedMemoryCacheHeader> {
+    typedef struct OSSharedMemoryCacheHeaderMapping mapping_type;
+};
+
+struct OSSharedMemoryCacheHeaderMapping: HeaderMapping<OSSharedMemoryCacheHeader>
 {
-public:
-  OSMemoryMappedCacheAttachingContext(OSMemoryMappedCache* cache)
-    : OSMemoryMappedCacheInitializationContext(cache)
+  OSSharedMemoryCacheHeaderMapping()
+    : _createTime(0)
+    , _inDefaultControlDir(1)
+    , _dataSectionLength(0)
   {}
 
-  virtual bool startup(IDATA& errorCode);
-  virtual bool initAttach(void* blockAddress, IDATA& rc);
-  virtual bool creatingNewCache();
+  // the owning header knows the value of numLocks.
+  UDATA size(UDATA numLocks) const {
+      UDATA size = 0;
+
+      size += OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH + 1;
+      size += sizeof(_createTime);
+      size += sizeof(_inDefaultControlDir);
+      
+      return size;
+  }
+
+  char _eyecatcher[OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH+1];
+  I_64 _createTime; // from OSCache_sysv_header1 & 2: createTime
+  UDATA _inDefaultControlDir; // from OSCache_sysv_header1 & 2: inDefaultControlDir
 };
 
 #endif

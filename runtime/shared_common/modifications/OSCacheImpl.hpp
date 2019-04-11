@@ -119,6 +119,9 @@ public:
     return _runningReadOnly;
   }
 
+  virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;
+  virtual void* attach();
+  
   // returns true if the cache has successfully passed startup.
   virtual bool started() = 0;
   
@@ -152,6 +155,8 @@ protected:
   
   void commonInit();
   void commonCleanup();
+
+  virtual void serializeCacheLayout(void* blockAddress) = 0;
   
   OMRPortLibrary* _portLibrary;
   //  I_32  _openMode; // now addressed by the OSCacheConfigOptions class.

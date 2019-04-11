@@ -39,7 +39,7 @@ public:
   // according to the initialization context.
   virtual bool startup(IDATA& errorCode) = 0;
   virtual bool creatingNewCache() = 0;
-  virtual bool initAttach(IDATA& rc) = 0;
+  virtual bool initAttach(void* blockAddress, IDATA& rc) = 0;
 
   bool startupCompleted() const {
     return _startupCompleted;

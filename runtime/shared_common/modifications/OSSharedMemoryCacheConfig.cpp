@@ -30,6 +30,7 @@
 OSSharedMemoryCacheConfig::OSSharedMemoryCacheConfig(U_32 numLocks)
   : _numLocks(numLocks)
   , _header(NULL)
+  , _layout(NULL)
 {}
 
 IDATA

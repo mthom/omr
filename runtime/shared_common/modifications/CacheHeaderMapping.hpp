@@ -20,27 +20,10 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_CACHE_ATTACHING_CONTEXT_HPP_INCLUDED
+#if !defined(HEADER_MAPPING_HPP_INCLUDED)
+#define HEADER_MAPPING_HPP_INCLUDED
 
-#include "omr.h"
-
-#include "OSCacheConfigOptions.hpp"
-#include "OSMemoryMappedCacheInitializationContext.hpp"
-
-class OSMemoryMappedCache;
-class OSMemoryMappedCacheConfig;
-
-class OSMemoryMappedCacheAttachingContext: public OSMemoryMappedCacheInitializationContext
-{
-public:
-  OSMemoryMappedCacheAttachingContext(OSMemoryMappedCache* cache)
-    : OSMemoryMappedCacheInitializationContext(cache)
-  {}
-
-  virtual bool startup(IDATA& errorCode);
-  virtual bool initAttach(void* blockAddress, IDATA& rc);
-  virtual bool creatingNewCache();
-};
+template <class CacheType>
+struct CacheHeaderMapping;
 
 #endif

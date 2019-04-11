@@ -28,6 +28,7 @@
 #include "sharedconsts.h"
 
 #include "OSCacheConfig.hpp"
+#include "OSCacheLayout.hpp"
 #include "OSSharedMemoryCacheHeader.hpp"
 // #include "OSSharedMemoryCacheAttachingContext.hpp"
 // #include "OSSharedMemoryCacheCreatingContext.hpp"
@@ -78,10 +79,10 @@ class OSSharedMemoryCacheConfig: public OSCacheConfig
 {
 public:
   typedef OSSharedMemoryCacheHeader header_type;
-  
+
   OSSharedMemoryCacheConfig(U_32 numLocks);
   OSSharedMemoryCacheConfig();
-  
+
   virtual IDATA getWriteLockID(void);
   virtual IDATA getReadWriteLockID(void);
 
@@ -95,8 +96,6 @@ public:
   virtual U_64 getLockOffset(UDATA lockID) = 0;
   virtual U_64 getLockSize(UDATA lockID) = 0;
 
-  virtual bool initHeader() = 0;  
-  
   virtual U_64* getHeaderLocation() = 0;
   virtual U_64* getHeaderSize() = 0;
 
@@ -104,9 +103,18 @@ public:
   virtual U_64* getDataSectionLocation() = 0;
   virtual U_32 getDataSectionSize() = 0;
 
-  virtual void setHeaderLocation(void* location) = 0;
-  virtual void setDataSectionLocation(void* location) = 0;
+  virtual void setCacheSizeInHeader(U_32 size) {
+    *getCacheSizeFieldLocation() = size;
+  }
 
+  virtual U_32* getCacheSizeFieldLocation() {
+    return &_header->_mapping->_cacheSize;
+  }
+  
+  virtual void setDataSectionLengthInHeader(U_32 size) {
+    *getDataLengthFieldLocation() = size;
+  }
+  
 protected:
   friend class OSSharedMemoryCache;
   friend class OSSharedMemoryCachePolicies;
@@ -115,11 +123,11 @@ protected:
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
 
-  virtual IDATA initializeHeader(const char* cacheDirName, LastErrorInfo* lastErrorInfo) = 0;
-
   IDATA _numLocks;
+  
   OSSharedMemoryCacheHeader* _header;
-
+  OSCacheLayout* _layout;
+  
   SH_SysvSemAccess _semAccess;
   SH_SysvShmAccess _shmAccess;
 

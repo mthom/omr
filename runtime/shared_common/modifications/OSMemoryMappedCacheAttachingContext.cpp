@@ -28,23 +28,23 @@
 #include "OSMemoryMappedCache.hpp"
 
 // the internalAttach logic applied if attaching to an existing cache at startup.
-bool OSMemoryMappedCacheAttachingContext::initAttach(IDATA& rc)
+bool OSMemoryMappedCacheAttachingContext::initAttach(void* blockAddress, IDATA& rc)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
   rc = OMRSH_OSCACHE_FAILURE;
 
-  J9SRP* dataStartField;
-  U_32* dataLengthField;
+  //TODO: should we have a OSCacheRegionInitializer class for initializing Region objects
+  // from previously initialized classes?? I think the answer is yes! Verily! Here it's not
+  // much different from the Serializer case, but in time that will change.
 
-  if ((dataLengthField = _cache->_config->getDataLengthFieldLocation())) {
-    *_cache->_config->getDataLengthFieldLocation() = *dataLengthField;
-  }
+  // DO THIS TOMORROW.
+  
+  _cache->_config->_layout->init(blockAddress, _cache->_configOptions->cacheSize());
+  _cache->_config->_header->init(_cache->portLibrary());  
+  
+  UDATA* dataStartField = (UDATA*) _cache->_config->getDataSectionFieldLocation();
 
-  if ((dataStartField = _cache->_config->getDataSectionLocation())) {
-    *_cache->_config->getDataSectionLocation() = *dataStartField;
-  }
-
-  if (0 == *dataStartField) {
+  if (NULL == *dataStartField) {
     Trc_SHR_OSC_Mmap_internalAttach_corruptcachefile();
     OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_DATA_START_NULL, *dataStartField);
 
