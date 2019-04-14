@@ -25,6 +25,7 @@
 #include "sharedconsts.h"
 
 #include "OSCacheContiguousRegion.hpp"
+#include "OSCacheRegionInitializer.hpp"
 #include "OSCacheRegionSerializer.hpp"
 
 #include "CacheHeaderMappingImpl.hpp"
@@ -34,13 +35,17 @@ class OSMemoryMappedCacheHeader: virtual public OSCacheContiguousRegion
 {
 public:
   OSMemoryMappedCacheHeader(UDATA numLocks, CacheHeaderMappingImpl<OSMemoryMappedCacheHeader>* mapping = NULL)
-    : _numLocks(numLocks)
+    : OSCacheContiguousRegion(NULL, 0, false)
+    , _numLocks(numLocks)
     , _mapping(mapping)
   {}
 
   virtual void refresh(OMRPortLibrary* library);
   virtual void create(OMRPortLibrary* library);
 
+  virtual void serialize(OSCacheRegionSerializer* serializer);
+  virtual void initialize(OSCacheRegionInitializer* initializer);
+  
 protected:
   friend class OSMemoryMappedCacheConfig;
   friend class OSMemoryMappedCacheCreatingContext;

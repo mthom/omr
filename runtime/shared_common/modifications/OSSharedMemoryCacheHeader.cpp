@@ -2,24 +2,35 @@
 #include "OSSharedMemoryCacheConfig.hpp"
 
 void
-OSSharedMemoryCacheHeader::init(OMRPortLibrary* library, bool inDefaultControlDir)
+OSSharedMemoryCacheHeader::create(OMRPortLibrary* library, bool inDefaultControlDir)
+{
+  OSSharedMemoryCacheHeaderMapping* mapping = _mapping->baseMapping();
+  memset(mapping, 0, mapping->size());
+
+  strncpy(mapping->_eyecatcher, OMRSH_OSCACHE_SYSV_EYECATCHER, OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH);
+  refresh(library, mapping, inDefaultControlDir);
+}
+
+void OSSharedMemoryCacheHeader::refresh(OMRPortLibrary* library, OSSharedMemoryCacheHeaderMapping* mapping,
+					bool inDefaultControlDir)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
 
-  void* headerStart = regionStartAddress();
-  UDATA headerSize  = regionSize();
-  
-  memset(headerStart, 0, headerSize);
-
-  alignToExistingHeader(headerStart);
-  
-  strncpy(_mapping->_eyecatcher, OMRSH_OSCACHE_SYSV_EYECATCHER, OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH);
-
-  _mapping->_createTime = omrtime_current_time_millis();
-  _mapping->_inDefaultControlDir = inDefaultControlDir;
+  mapping->_createTime = omrtime_current_time_millis();
+  mapping->_inDefaultControlDir = inDefaultControlDir;
 }
 
-void OSSharedMemoryCacheHeader::alignToExistingHeader(void* headerStart)
+void OSSharedMemoryCacheHeader::refresh(OMRPortLibrary* library, bool inDefaultControlDir)
 {
-  _mapping = (OSSharedMemoryCacheHeaderMapping *) headerStart;
+  refresh(library, _mapping->baseMapping(), inDefaultControlDir);
+}
+
+void OSSharedMemoryCacheHeader::serialize(OSCacheRegionSerializer* serializer)
+{
+  return serializer->serialize(this);
+}
+
+void OSSharedMemoryCacheHeader::initialize(OSCacheRegionInitializer* initializer)
+{
+  return initializer->initialize(this);
 }

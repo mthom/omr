@@ -23,6 +23,7 @@
 #define OSCACHE_REGION_HPP_INCLUDED
 
 #include "omr.h"
+#include "OSCacheRegionInitializer.hpp"
 #include "OSCacheRegionSerializer.hpp"
 #include "OSCacheMemoryProtector.hpp"
 
@@ -69,6 +70,8 @@ public:
   virtual IDATA checkValidity() = 0;
 
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
+
+  virtual void initialize(OSCacheRegionInitializer* initializer) = 0;
 
   virtual OSCacheRegionEntryIterator* constructIterator() = 0;
 

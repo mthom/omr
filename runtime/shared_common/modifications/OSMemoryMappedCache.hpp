@@ -28,6 +28,8 @@
 #include "OSMemoryMappedCacheConfig.hpp"
 #include "OSMemoryMappedCacheInitializationContext.hpp"
 #include "OSMemoryMappedCacheIterator.hpp"
+#include "OSMemoryMappedCacheInitializer.hpp"
+#include "OSMemoryMappedCacheSerializer.hpp"
 #include "OSMemoryMappedCache.hpp"
 
 #include "omr.h"
@@ -50,8 +52,6 @@ public:
   virtual void initialize();
   virtual void finalise();
   virtual void cleanup();
-
-  virtual OSCacheMemoryProtector* constructMemoryProtector();
 
   typedef OSMemoryMappedCacheConfig config_type;
 
@@ -86,7 +86,10 @@ protected:
 
   virtual void serializeCacheLayout(void* blockAddress);
 
+  virtual OSCacheMemoryProtector* constructMemoryProtector();
+
   virtual OSCacheRegionSerializer* constructSerializer();
+  virtual OSCacheRegionInitializer* constructInitializer();
   
   OSMemoryMappedCacheInitializationContext* _initContext;
   OSMemoryMappedCacheConfig* _config;

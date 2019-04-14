@@ -73,16 +73,10 @@ public:
   virtual void setCorruptionContext(IDATA corruptionCode, UDATA corruptValue);
 
   // this is a factory method that produces visitor objects.
-  // these visitors codify how to serialize a region.
+  // these visitors codify how to serialize (resp. initialize) a region.
 
-  // But! We have different serializers for different region
-  // types. So, I'm not sure this is the best place for this. Granted,
-  // the OSCache should decide how to serialize a region, yes. But is
-  // it going to serialize all regions identically? Obviously not.
-
-  // actually, it's fine. when it visits, it can specialize its
-  // argument on the various OSCacheRegion types.
   virtual OSCacheRegionSerializer* constructSerializer() = 0;
+  virtual OSCacheRegionInitializer* constructInitializer() = 0;
 
   // startup routines the Composite Cache expects.
   virtual void* attach() = 0;

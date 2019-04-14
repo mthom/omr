@@ -53,6 +53,7 @@ OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(U_32 numLocks)
   , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
   , _header(NULL)
   , _layout(NULL)
+  , _mapping(NULL)
 {}
 
 OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig()
@@ -61,6 +62,7 @@ OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig()
   , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
   , _header(NULL)
   , _layout(NULL)
+  , _mapping(NULL)
 {}
 
 IDATA OSMemoryMappedCacheConfig::getWriteLockID()
@@ -596,8 +598,8 @@ OSMemoryMappedCacheConfig::updateLastAttachedTime(OMRPortLibrary* library, UDATA
   }
 
   I_64 newTime = omrtime_current_time_millis();
-  Trc_SHR_OSC_Mmap_updateLastAttachedTime_time(newTime, _header->_mapping->_lastAttachedTime);
-  _header->_mapping->_lastAttachedTime = newTime;
+  Trc_SHR_OSC_Mmap_updateLastAttachedTime_time(newTime, _mapping->_lastAttachedTime);
+  _mapping->_lastAttachedTime = newTime;
 
   Trc_SHR_OSC_Mmap_updateLastAttachedTime_Exit();
   return true;
@@ -624,8 +626,8 @@ OSMemoryMappedCacheConfig::updateLastDetachedTime(OMRPortLibrary* library, UDATA
   }
 
   newTime = omrtime_current_time_millis();
-  Trc_SHR_OSC_Mmap_updateLastDetachedTime_time(newTime, _header->_mapping->_lastDetachedTime);
-  _header->_mapping->_lastDetachedTime = newTime;
+  Trc_SHR_OSC_Mmap_updateLastDetachedTime_time(newTime, _mapping->_lastDetachedTime);
+  _mapping->_lastDetachedTime = newTime;
 
   Trc_SHR_OSC_Mmap_updateLastDetachedTime_Exit();
   return true;

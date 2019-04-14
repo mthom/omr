@@ -24,6 +24,7 @@
 #include "shrnls.h"
 
 #include "OSCacheImpl.hpp"
+#include "OSCacheLayout.hpp"
 #include "OSMemoryMappedCacheAttachingContext.hpp"
 #include "OSMemoryMappedCache.hpp"
 
@@ -32,16 +33,11 @@ bool OSMemoryMappedCacheAttachingContext::initAttach(void* blockAddress, IDATA& 
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
   rc = OMRSH_OSCACHE_FAILURE;
-
-  //TODO: should we have a OSCacheRegionInitializer class for initializing Region objects
-  // from previously initialized classes?? I think the answer is yes! Verily! Here it's not
-  // much different from the Serializer case, but in time that will change.
-
-  // DO THIS TOMORROW.
   
-  _cache->_config->_layout->init(blockAddress, _cache->_configOptions->cacheSize());
-  _cache->_config->_header->init(_cache->portLibrary());  
-  
+  _cache->_config->_layout->initialize(_cache, blockAddress, _cache->_configOptions->cacheSize());
+
+  //TODO: fix this! or delegate it to a validity check inside the header, and
+  //shortcut the need for the getter functions.
   UDATA* dataStartField = (UDATA*) _cache->_config->getDataSectionFieldLocation();
 
   if (NULL == *dataStartField) {

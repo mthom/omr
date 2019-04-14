@@ -101,15 +101,15 @@ public:
 
   virtual UDATA getDataSectionSize() = 0;
 
-  virtual void setCacheSizeInHeader(U_32 size) {
-    *getCacheSizeFieldLocation() = size;
-  }
+//  virtual void setCacheSizeInHeader(U_32 size) {
+//    *getCacheSizeFieldLocation() = size;
+//  }
 
   virtual U_32* getCacheSizeFieldLocation() = 0;
   
   virtual U_32 getCacheSize() = 0;
   
-  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
+  //  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
 
   virtual U_32* getDataLengthFieldLocation() = 0;
 

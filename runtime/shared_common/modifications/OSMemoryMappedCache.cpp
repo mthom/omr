@@ -24,6 +24,7 @@
 #include "OSMemoryMappedCache.hpp"
 #include "OSCacheUtils.hpp"
 #include "OSMemoryMappedCacheMemoryProtector.hpp"
+#include "OSMemoryMappedCacheInitializer.hpp"
 #include "OSMemoryMappedCacheSerializer.hpp"
 #include "OSMemoryMappedCacheUtils.hpp"
 
@@ -416,7 +417,7 @@ IDATA OSMemoryMappedCache::internalAttach() //bool isNewCache, UDATA generation)
     goto error;
   }
 
-  _configOptions->setCacheSize(_mapFileHandle->size);  
+  _configOptions->setCacheSize(_mapFileHandle->size);
 
   // Trc_SHR_OSC_Mmap_internalAttach_goodmapfile(_layout->_headerStart);
 
@@ -922,7 +923,7 @@ OSMemoryMappedCache::errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastE
     if ((NULL != lastErrorInfo) && (0 != lastErrorInfo->_lastErrorCode)) {
       I_32 errorno = lastErrorInfo->_lastErrorCode;
       const char* errormsg = lastErrorInfo->_lastErrorMsg;
-      
+
       Trc_SHR_OSC_Mmap_errorHandler_printingPortMessages();
       omrnls_printf(J9NLS_ERROR, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER, errorno);
       Trc_SHR_Assert_True(errormsg != NULL);
@@ -941,8 +942,15 @@ OSMemoryMappedCache::constructMemoryProtector()
 }
 
 OSCacheRegionSerializer*
-OSMemoryMappedCache::constructSerializer() {
+OSMemoryMappedCache::constructSerializer()
+{
   return new OSMemoryMappedCacheSerializer(_portLibrary);
+}
+
+OSCacheRegionInitializer*
+OSMemoryMappedCache::constructInitializer()
+{
+  return new OSMemoryMappedCacheInitializer(_portLibrary);
 }
 
 void

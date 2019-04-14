@@ -50,7 +50,15 @@ void OSMemoryMappedCacheHeader::create(OMRPortLibrary* library)
   for(U_32 i = 0; i < _numLocks; ++i) {
     mapping->_dataLocks[i] = 0;
   }
-  
+
   strncpy(mapping->_eyecatcher, OMRSH_OSCACHE_MMAP_EYECATCHER, OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH);
   refresh(library, mapping);
+}
+
+void OSMemoryMappedCacheHeader::serialize(OSCacheRegionSerializer* serializer) {
+  serializer->serialize(this);
+}
+
+void OSMemoryMappedCacheHeader::initialize(OSCacheRegionInitializer* initializer) {
+  initializer->initialize(this);
 }

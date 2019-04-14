@@ -30,6 +30,7 @@
 #include "OSCacheConfig.hpp"
 #include "OSCacheLayout.hpp"
 #include "OSSharedMemoryCacheHeader.hpp"
+#include "OSSharedMemoryCacheHeaderMapping.hpp"
 // #include "OSSharedMemoryCacheAttachingContext.hpp"
 // #include "OSSharedMemoryCacheCreatingContext.hpp"
 
@@ -103,17 +104,13 @@ public:
   virtual U_64* getDataSectionLocation() = 0;
   virtual U_32 getDataSectionSize() = 0;
 
-  virtual void setCacheSizeInHeader(U_32 size) {
-    *getCacheSizeFieldLocation() = size;
-  }
+//  virtual void setCacheSizeInHeader(U_32 size) {
+//    *getCacheSizeFieldLocation() = size;
+//  }
 
-  virtual U_32* getCacheSizeFieldLocation() {
-    return &_header->_mapping->_cacheSize;
-  }
+  virtual U_32* getCacheSizeFieldLocation() = 0;
   
-  virtual void setDataSectionLengthInHeader(U_32 size) {
-    *getDataLengthFieldLocation() = size;
-  }
+//  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
   
 protected:
   friend class OSSharedMemoryCache;
@@ -124,7 +121,8 @@ protected:
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
 
   IDATA _numLocks;
-  
+
+  OSSharedMemoryCacheHeaderMapping* _mapping;
   OSSharedMemoryCacheHeader* _header;
   OSCacheLayout* _layout;
   

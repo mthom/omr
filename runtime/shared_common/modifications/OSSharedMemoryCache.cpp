@@ -633,7 +633,7 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
 
   Trc_SHR_OSC_attach_Debug1(request);
   //  Trc_SHR_OSC_attach_Debug2(sizeof(OSCachesysv_header_version_current));
-  
+
   //  _headerStart = request;
 
   if ((headerRc = verifyCacheHeader()) != OMRSH_OSCACHE_HEADER_OK) {
@@ -1020,12 +1020,19 @@ OSSharedMemoryCache::installLayout(LastErrorInfo* lastErrorInfo)
 void OSSharedMemoryCache::serializeCacheLayout(void* blockAddress)
 {
   _config->notifyRegionMappingStartAddress(blockAddress, _configOptions->cacheSize());
-  _config->_layout->serialize(this);  
+  _config->_layout->serialize(this);
 }
 
 OSCacheRegionSerializer*
-OSSharedMemoryCache::constructSerializer() {
+OSSharedMemoryCache::constructSerializer()
+{
   return new OSSharedMemoryCacheSerializer(_portLibrary, _cacheLocation == NULL);
+}
+
+OSCacheRegionInitializer*
+OSSharedMemoryCache::constructInitializer()
+{
+  return new OSSharedMemoryCacheInitializer(_portLibrary, _cacheLocation == NULL);
 }
 
 void

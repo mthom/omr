@@ -26,6 +26,8 @@
 #include "OSCacheImpl.hpp"
 #include "OSSharedMemoryCacheIterator.hpp"
 #include "OSSharedMemoryCacheConfig.hpp"
+#include "OSSharedMemoryCacheInitializer.hpp"
+#include "OSSharedMemoryCacheSerializer.hpp"
 #include "OSSharedMemoryCachePolicies.hpp"
 #include "OSSharedMemoryCacheSnapshot.hpp"
 #include "OSCacheContiguousRegion.hpp"
@@ -94,6 +96,9 @@ protected:
   virtual OSSharedMemoryCacheSnapshot* constructSharedMemoryCacheSnapshot() = 0;
 
   virtual OSCacheMemoryProtector* constructMemoryProtector();
+
+  virtual OSCacheRegionSerializer* constructSerializer();
+  virtual OSCacheRegionInitializer* constructInitializer();
 
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
   virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);

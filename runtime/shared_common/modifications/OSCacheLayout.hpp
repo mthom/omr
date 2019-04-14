@@ -46,6 +46,16 @@ public:
       _regions[i]->serialize(serializer);
     }
   }
+
+  virtual void initialize(OSCache* osCache, void* blockAddress, uintptr_t size) {
+    init(blockAddress, size);
+
+    OSCacheRegionInitializer* initializer = osCache->constructInitializer();
+
+    for(int i = 0; i < _regions.size(); ++i) {
+      _regions[i]->initialize(initializer);
+    }
+  }
   
   virtual void alignRegionsToPageBoundaries();
 

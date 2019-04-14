@@ -60,14 +60,15 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
     return false;
   }
 
+  // we no longer need to set the cache length explicitly like this.
   /* Set cache to the correct length */
   // if (!setCacheLength((U_32)piconfig->sharedClassCacheSize, &lastErrorInfo)) {
-  if(_cache->_config->setCacheLength(&lastErrorInfo)) {
-    // Trc_SHR_OSC_Mmap_startup_badSetCacheLength(piconfig->sharedClassCacheSize);
-    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_SETTING_CACHE_LENGTH, &lastErrorInfo);
-    //goto _errorPostHeaderLock;
-    return false;
-  }
+//  if(_cache->_config->setCacheLength(&lastErrorInfo)) {
+//    // Trc_SHR_OSC_Mmap_startup_badSetCacheLength(piconfig->sharedClassCacheSize);
+//    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_SETTING_CACHE_LENGTH, &lastErrorInfo);
+//    //goto _errorPostHeaderLock;
+//    return false;
+//  }
 
   // Trc_SHR_OSC_Mmap_startup_goodSetCacheLength(piconfig->sharedClassCacheSize);
 

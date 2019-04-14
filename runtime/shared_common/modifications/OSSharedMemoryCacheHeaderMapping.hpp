@@ -32,20 +32,19 @@
 class OSSharedMemoryCacheHeader;
 
 template <>
-struct HeaderMapping<OSSharedMemoryCacheHeader> {
+struct CacheHeaderMapping<OSSharedMemoryCacheHeader> {
     typedef struct OSSharedMemoryCacheHeaderMapping mapping_type;
 };
 
-struct OSSharedMemoryCacheHeaderMapping: HeaderMapping<OSSharedMemoryCacheHeader>
+struct OSSharedMemoryCacheHeaderMapping: CacheHeaderMapping<OSSharedMemoryCacheHeader>
 {
   OSSharedMemoryCacheHeaderMapping()
     : _createTime(0)
     , _inDefaultControlDir(1)
-    , _dataSectionLength(0)
   {}
 
   // the owning header knows the value of numLocks.
-  UDATA size(UDATA numLocks) const {
+  UDATA size() const {
       UDATA size = 0;
 
       size += OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH + 1;

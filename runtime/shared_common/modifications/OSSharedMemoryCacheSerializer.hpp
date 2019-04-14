@@ -20,7 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_SHARED_MEMORY_CACHE_SERIALIZER_HPP_INCLUDED
+#if !defined(OS_SHARED_MEMORY_CACHE_SERIALIZER_HPP_INCLUDED)
 #define OS_SHARED_MEMORY_CACHE_SERIALIZER_HPP_INCLUDED
 
 #include "OSCacheRegionSerializer.hpp"
@@ -40,7 +40,7 @@ public:
   {}
 
   void serialize(OSSharedMemoryCacheHeader* header) {
-    header->init(_library, _inDefaultControlDir);
+    header->create(_library, _inDefaultControlDir);
   }
 
   void serialize(OSMemoryMappedCacheHeader*) {}
