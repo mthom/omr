@@ -26,8 +26,8 @@
 #include "shrnls.h"
 #include "ut_omrshr.h"
 
-#include "OSCacheImpl.hpp"
 #include "OSCacheConfig.hpp"
+#include "OSCacheImpl.hpp"
 
 #include "OSMemoryMappedCacheAttachingContext.hpp"
 #include "OSMemoryMappedCacheCreatingContext.hpp"
@@ -47,7 +47,7 @@ class OSMemoryMappedCacheConfig : public OSCacheConfig
 public:
   typedef OSMemoryMappedCacheHeader header_type;
 
-  OSMemoryMappedCacheConfig(U_32 numLocks, OSCacheLayout* layout);
+  OSMemoryMappedCacheConfig(UDATA numLocks);
 
   virtual IDATA getWriteLockID();
   virtual IDATA getReadWriteLockID();
@@ -134,8 +134,6 @@ public:
   virtual bool updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
   virtual bool updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
 
-  virtual void notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress, uintptr_t size);
-  
 protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;
@@ -162,7 +160,6 @@ protected:
 
   OSMemoryMappedCacheHeaderMapping* _mapping;
   OSMemoryMappedCacheHeader* _header;
-  OSCacheLayout* _layout;
 
   I_64 _actualFileLength;
   UDATA _fileHandle;

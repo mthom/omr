@@ -36,10 +36,8 @@ OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* ctrlDirName,
 					 IDATA numLocks,
-					 OSCacheConfigOptions* configOptions,
-					 OSCacheLayout* layout)
+					 OSCacheConfigOptions* configOptions)
   : OSCacheImpl(library, configOptions, numLocks)
-  , _layout(layout)    
 {
   //  an abstract class, so we don't instantiate _config directly.
   initializeConfig();

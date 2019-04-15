@@ -57,9 +57,9 @@ class OSSharedMemoryCache: public OSCacheImpl
 {
 public:
   OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName,
-		      IDATA numLocks, OSCacheConfigOptions* configOptions, OSCacheLayout* layout);
+		      IDATA numLocks, OSCacheConfigOptions* configOptions);
 
-  bool startup(const char* cacheName, const char* ctrlDirName);
+  virtual bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset = false);
 
   virtual void initialize();

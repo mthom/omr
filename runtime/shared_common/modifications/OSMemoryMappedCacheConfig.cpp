@@ -46,19 +46,13 @@ typedef struct OMRSharedCachePreinitConfig {
 } OMRSharedCachePreinitConfig;
  */
 
-OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(UDATA numLocks, OSCacheLayout* layout)
+OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(UDATA numLocks)
   : _numLocks(numLocks)
-  , _layout(layout)
   , _header(NULL)
   , _mapping(NULL)
+  , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
+  , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
 {}
-
-void
-OSMemoryMappedCacheConfig::notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress,
-							   uintptr_t size)
-{
-  _layout->initialize(osCache, blockAddress, size);
-}
 
 IDATA OSMemoryMappedCacheConfig::getWriteLockID()
 {

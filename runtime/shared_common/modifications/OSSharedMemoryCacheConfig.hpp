@@ -28,7 +28,6 @@
 #include "sharedconsts.h"
 
 #include "OSCacheConfig.hpp"
-#include "OSCacheLayout.hpp"
 #include "OSSharedMemoryCacheHeader.hpp"
 #include "OSSharedMemoryCacheHeaderMapping.hpp"
 // #include "OSSharedMemoryCacheAttachingContext.hpp"
@@ -81,7 +80,7 @@ class OSSharedMemoryCacheConfig: public OSCacheConfig
 public:
   typedef OSSharedMemoryCacheHeader header_type;
 
-  OSSharedMemoryCacheConfig(U_32 numLocks, OSCacheLayout* layout);
+  OSSharedMemoryCacheConfig(UDATA numLocks);
 
   virtual IDATA getWriteLockID(void);
   virtual IDATA getReadWriteLockID(void);
@@ -108,7 +107,6 @@ public:
 //  }
 
   virtual U_32* getCacheSizeFieldLocation() = 0;
-  virtual void notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress, uintptr_t size);
     
 //  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
 
@@ -120,11 +118,10 @@ protected:
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
 
-  IDATA _numLocks;
+  UDATA _numLocks;
 
   OSSharedMemoryCacheHeaderMapping* _mapping;
   OSSharedMemoryCacheHeader* _header;
-  OSCacheLayout* _layout;
   
   SH_SysvSemAccess _semAccess;
   SH_SysvShmAccess _shmAccess;

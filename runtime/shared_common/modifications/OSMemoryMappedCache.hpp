@@ -43,7 +43,7 @@ public:
   virtual IDATA getError();
 
   OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,
-		      OSCacheConfigOptions* configOptions, OSCacheLayout* layout);
+		      OSCacheConfigOptions* configOptions);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);

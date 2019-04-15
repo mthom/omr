@@ -21,11 +21,15 @@ public:
   typedef typename OSCacheConfigImpl::header_type header_type;
 
   WASMOSCacheConfig(U_32 numLocks, UDATA osPageSize)
-    : OSCacheConfigImpl(numLocks, new WASMOSCacheLayout<header_type>(osPageSize, osPageSize > 0))
-  {
-    // TODO: move this to initializeConfig.
-    //    _header = _layout->operator[](0);
-  }
+    : OSCacheConfigImpl(numLocks)
+    , _layout(new WASMOSCacheLayout<header_type>(osPageSize, osPageSize > 0))
+  {}
+
+  J9SRP* getDataSectionLocation() override;
+  U_64 getDataSectionSize() override;
+
+private:
+  WASMOSCacheLayout<header_type> _layout;
 };
 
 #endif

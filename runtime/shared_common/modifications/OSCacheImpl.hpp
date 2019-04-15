@@ -78,6 +78,27 @@ typedef enum SH_CacheFileAccess {
 
 #define OMRSH_MAXPATH EsMaxPath
 
+/**
+ * @struct SH_OSCache_Info
+ * Information about a OSCache
+ * If the information is not available, the value will be equals to @arg J9SH_OSCACHE_UNKNOWN
+ */
+typedef struct SH_OSCache_Info {
+        char name[CACHE_ROOT_MAXLEN]; /** The name of the cache */
+        UDATA os_shmid; /** Operating System specific shared memory id */
+        UDATA os_semid; /** Operating System specific semaphore id */
+        I_64 lastattach; /** time from which last attach has happened */
+        I_64 lastdetach; /** time from which last detach has happened */
+        I_64 createtime; /** time from which cache has been created */
+        IDATA nattach; /** number of process attached to this region */
+  //        J9PortShcVersion versionData; /** Cache version data */
+  //        UDATA generation; /** cache generation number */
+  //        UDATA isCompatible; /** Is the cache compatible with this VM */
+        UDATA isCorrupt; /** Is set when the cache is found to be corrupt */
+  //        UDATA isJavaCorePopulated; /** Is set when the javacoreData contains valid data */
+  //        J9SharedClassJavacoreDataDescriptor javacoreData; /** If isCompatible is true, then extra information about the cache is availaible in here*/
+} SH_OSCache_Info;
+
 /*
  * This class houses utility functions that depend on the state of
  * cache internals. Those that don't depend on cache internals are static

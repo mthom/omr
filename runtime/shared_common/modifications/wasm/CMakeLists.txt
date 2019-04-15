@@ -23,6 +23,7 @@
 # omr_add_tracegen(omrshr_mods.tdf)
 
 add_library(wasm_shared_cache STATIC
+  WASMOSCache.cpp
   WASMCompositeCache.cpp
   WASMOSCacheConfig.cpp
   WASMOSCacheHeader.cpp

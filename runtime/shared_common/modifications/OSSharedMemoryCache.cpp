@@ -35,14 +35,12 @@ OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* cacheDirName,
 					 IDATA numLocks,
-					 OSCacheConfigOptions* configOptions,
-					 OSCacheLayout* layout)
+					 OSCacheConfigOptions* configOptions)
   : OSCacheImpl(library, configOptions, numLocks)
-  , _layout(layout)
-{  
+{
   initializeConfig();
-  initialize();  
-  
+  initialize();
+
   startup(cacheName, cacheDirName);
   Trc_SHR_OSC_Constructor_Exit(cacheName);
 }

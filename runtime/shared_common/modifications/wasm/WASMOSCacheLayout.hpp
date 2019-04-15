@@ -38,6 +38,8 @@ public:
     return _blockSize;
   }
 
+  void notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress, uintptr_t size) override;
+  
 protected:
   void init(void* blockAddress, uintptr_t size);
 
