@@ -103,7 +103,7 @@ public:
   virtual U_64* getDataSectionLocation() = 0;
   virtual U_32 getDataSectionSize() = 0;
 
-//  virtual void setCacheSizeInHeader(U_32 size) {
+//  virtual void setCacheSizeInHeader(U_xo32 size) {
 //    *getCacheSizeFieldLocation() = size;
 //  }
 
