@@ -1,30 +1,29 @@
-#if !defined(WASM_OS_CACHE_LAYOUT_HPP_INCLUDED)
-#define WASM_OS_CACHE_LAYOUT_HPP_INCLUDED
+#if !defined(WASM_OSCACHE_LAYOUT_HPP_INCLUDED)
+#define WASM_OSCACHE_LAYOUT_HPP_INCLUDED
 
+#include "OSCacheLayout.hpp"
+#include "OSCacheContiguousRegion.hpp"
 #include "WASMOSCacheHeader.hpp"
 
 #include "env/TRMemory.hpp"
 
+template <class OSCacheHeader>
 class WASMOSCacheLayout: public OSCacheLayout
 {
 public:
   TR_ALLOC(TR_Memory::SharedCacheLayout)
 
-  // the template argument is the templated superclass of the WASMOSCacheHeader.
-  template <typename SuperOSCacheHeader>
   WASMOSCacheLayout(UDATA osPageSize, bool pageBoundaryAligned)
     : _blockSize(0)
     , OSCacheLayout(osPageSize)
   {
     // first two arguments are the OSCacheLayout* and the region ID.
-    _header = new WASMOSCacheHeader<SuperOSCacheHeader>(this, 0, pageBoundaryAligned);
+    _header = new WASMOSCacheHeader<OSCacheHeader>(this, 0, pageBoundaryAligned);
     _dataSection = new OSCacheContiguousRegion(this, 1, _header->regionSize(), pageBoundaryAligned);
 
     addRegion(_header);
     addRegion(_dataSection);
   }
-
-  void init(void* blockAddress, uintptr_t size);
 
   // once the cache is attached to, is the data well-formed?
   bool isValid();
@@ -40,8 +39,10 @@ public:
   }
 
 protected:
+  void init(void* blockAddress, uintptr_t size);
+
   UDATA _blockSize;
-  WASMOSCacheHeader* _header;
+  WASMOSCacheHeader<OSCacheHeader>* _header;
   OSCacheContiguousRegion* _dataSection;
 };
 

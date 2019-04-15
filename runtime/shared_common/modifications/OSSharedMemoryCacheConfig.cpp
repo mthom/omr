@@ -27,12 +27,19 @@
 #include "shrnls.h"
 #include "ut_omrshr.h"
 
-OSSharedMemoryCacheConfig::OSSharedMemoryCacheConfig(U_32 numLocks)
+OSSharedMemoryCacheConfig::OSSharedMemoryCacheConfig(UDATA numLocks, OSCacheLayout* layout)
   : _numLocks(numLocks)
+  , _layout(layout)
   , _header(NULL)
-  , _layout(NULL)
   , _mapping(NULL)
 {}
+
+void
+OSSharedMemoryCacheConfig::notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress,
+							   uintptr_t size)
+{
+  _layout->initialize(osCache, blockAddress, size);
+}
 
 IDATA
 OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo *lastErrorInfo)

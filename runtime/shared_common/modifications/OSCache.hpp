@@ -23,8 +23,10 @@
 #if !defined(OSCACHE_HPP_INCLUDED)
 #define OSCACHE_HPP_INCLUDED
 
-#include "OSCacheRegion.hpp"
 #include "OSCacheConfigOptions.hpp"
+#include "OSCacheRegion.hpp"
+#include "OSCacheRegionInitializer.hpp"
+#include "OSCacheRegionSerializer.hpp"
 
 #include "omr.h"
 #include "sharedconsts.h"
@@ -68,7 +70,7 @@ public:
   // this as well.
   virtual SH_CacheAccess isCacheAccessible(void) const { return J9SH_CACHE_ACCESS_ALLOWED; }
 
-  // this belongs to the OSCache hierarchy at the highest level. That's clear, I think.
+  // this belongs to the OSCache hierarchy at the highest level.
   virtual void getCorruptionContext(IDATA *corruptionCode, UDATA *corruptValue);
   virtual void setCorruptionContext(IDATA corruptionCode, UDATA corruptValue);
 
@@ -105,8 +107,6 @@ protected:
   IDATA _corruptionCode;
   UDATA _corruptValue;
 
-  //  it's best if caches embed their own configuration objects.
-  //  OSCacheConfig* _config;
   OSCacheConfigOptions* _configOptions;
 };
 

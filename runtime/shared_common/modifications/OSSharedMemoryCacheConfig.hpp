@@ -81,8 +81,7 @@ class OSSharedMemoryCacheConfig: public OSCacheConfig
 public:
   typedef OSSharedMemoryCacheHeader header_type;
 
-  OSSharedMemoryCacheConfig(U_32 numLocks);
-  OSSharedMemoryCacheConfig();
+  OSSharedMemoryCacheConfig(U_32 numLocks, OSCacheLayout* layout);
 
   virtual IDATA getWriteLockID(void);
   virtual IDATA getReadWriteLockID(void);
@@ -109,9 +108,10 @@ public:
 //  }
 
   virtual U_32* getCacheSizeFieldLocation() = 0;
-  
+  virtual void notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress, uintptr_t size);
+    
 //  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
-  
+
 protected:
   friend class OSSharedMemoryCache;
   friend class OSSharedMemoryCachePolicies;

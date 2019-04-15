@@ -1,3 +1,4 @@
+#include "WASMOSCacheConfig.hpp"
 #include "WASMCompositeCache.hpp"
 
 template <class OSCacheType>

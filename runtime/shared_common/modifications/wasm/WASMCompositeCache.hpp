@@ -3,13 +3,15 @@
 
 #include "CacheCRCChecker.hpp"
 #include "OSCacheImpl.hpp"
+#include "OSCacheBumpRegionFocus.hpp"
 #include "SynchronizedCacheCounter.hpp"
-#include "OSCacheRegionBumpFocus.hpp"
+
+class WASMCacheEntry;
 
 template <class OSCacheType>
 class WASMCompositeCache {
 public:
-  WASMCompositeCache(OSCacheType* osCache);
+  WASMCompositeCache(OSCacheType* osCache, UDATA osPageSize);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
 
@@ -28,7 +30,7 @@ private:
 
   SynchronizedCacheCounter _readerCount;
   CacheCRCChecker _crcChecker;
-  OSCacheRegionBumpFocus<U_8*> _codeUpdatePtr;
+  OSCacheBumpRegionFocus<U_8> _codeUpdatePtr;
 };
 
 #endif

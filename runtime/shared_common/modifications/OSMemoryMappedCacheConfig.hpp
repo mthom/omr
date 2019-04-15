@@ -47,8 +47,7 @@ class OSMemoryMappedCacheConfig : public OSCacheConfig
 public:
   typedef OSMemoryMappedCacheHeader header_type;
 
-  OSMemoryMappedCacheConfig(U_32 numLocks);
-  OSMemoryMappedCacheConfig();
+  OSMemoryMappedCacheConfig(U_32 numLocks, OSCacheLayout* layout);
 
   virtual IDATA getWriteLockID();
   virtual IDATA getReadWriteLockID();
@@ -135,6 +134,8 @@ public:
   virtual bool updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
   virtual bool updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
 
+  virtual void notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress, uintptr_t size);
+  
 protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;

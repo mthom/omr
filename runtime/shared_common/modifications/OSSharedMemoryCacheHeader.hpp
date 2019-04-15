@@ -41,6 +41,10 @@ public:
   virtual void refresh(OMRPortLibrary* library, bool inDefaultControlDir);
 
 protected:
+  virtual CacheHeaderMappingImpl<OSSharedMemoryCacheHeader>* baseMapping() {
+    return _mapping;
+  }
+  
   virtual void refresh(OMRPortLibrary* library, OSSharedMemoryCacheHeaderMapping* mapping,
 		       bool inDefaultControlDir);
   

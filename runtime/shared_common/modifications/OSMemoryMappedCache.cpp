@@ -36,12 +36,13 @@ OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* ctrlDirName,
 					 IDATA numLocks,
-					 OSCacheConfigOptions* configOptions)
+					 OSCacheConfigOptions* configOptions,
+					 OSCacheLayout* layout)
   : OSCacheImpl(library, configOptions, numLocks)
-  , _config(NULL)
-    //  , _config(new OSMemoryMappedCacheConfig(numLocks)) // this is
-    //  an abstract class, so we don't instantiate _config directly.
+  , _layout(layout)    
 {
+  //  an abstract class, so we don't instantiate _config directly.
+  initializeConfig();
   initialize();
   // expect the open mode has been set in the configOptions object already.
   // configOptions.setOpenMode(openMode);
@@ -954,14 +955,8 @@ OSMemoryMappedCache::constructInitializer()
 }
 
 void
-OSMemoryMappedCache::installConfig(OSMemoryMappedCacheConfig* config)
-{
-  _config = config;
-}
-
-void
 OSMemoryMappedCache::serializeCacheLayout(void* blockAddress)
 {
-  _config->notifyRegionMappingStartAddress(blockAddress, _configOptions->cacheSize());
+  _config->notifyRegionMappingStartAddress(this, blockAddress, _configOptions->cacheSize());
   _config->_layout->serialize(this);
 }

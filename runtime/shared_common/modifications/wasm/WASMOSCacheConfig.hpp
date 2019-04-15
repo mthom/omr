@@ -1,9 +1,7 @@
 #if !defined(WASM_OS_CACHE_CONFIG_HPP_INCLUDED)
 #define WASM_OS_CACHE_CONFIG_HPP_INCLUDED
 
-#include "OSCacheConfig.hpp"
-
-#include "WASMOSCacheHeader.hpp"
+#include "OSCache.hpp"
 #include "WASMOSCacheLayout.hpp"
 
 #include "env/TRMemory.hpp"
@@ -23,13 +21,11 @@ public:
   typedef typename OSCacheConfigImpl::header_type header_type;
 
   WASMOSCacheConfig(U_32 numLocks, UDATA osPageSize)
-    : OSCacheConfigImpl(numLocks)
+    : OSCacheConfigImpl(numLocks, new WASMOSCacheLayout<header_type>(osPageSize, osPageSize > 0))
   {
-    _layout = new WASMOSCacheLayout<typename header_type>(osPageSize, osPageSize > 0);
-    _header = _layout->operator[](0);
+    // TODO: move this to initializeConfig.
+    //    _header = _layout->operator[](0);
   }
-
-  virtual void notifyRegionMappingStartAddress(void* blockAddress, uintptr_t size);
 };
 
 #endif

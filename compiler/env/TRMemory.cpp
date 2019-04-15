@@ -280,6 +280,7 @@ const char * objectName[] =
    "TR_SharedCache",
    "OSCacheRegion",
    "OSCacheLayout",
+   "OSCacheConfig",
 
    "TR::RegisterPair",
    "TR::Instruction",

@@ -30,7 +30,7 @@ public:
   OSCacheConfigOptions(I_32 _openMode)
     : _openMode(_openMode)
   {}
-  
+
   // cache creation/opening options. used mostly in startup routines.
   enum CreateOptions {
     OpenForStats,
@@ -54,14 +54,14 @@ public:
   virtual bool isUserSpecifiedCacheDir();
   // is the cache being opened in read-only mode?
   virtual bool readOnlyOpenMode();
-  
+
   virtual I_32 fileMode();
   virtual I_32 openMode(); //TODO: this should set _groupPerm = 1 if groupAccessEnabled() is true.
   virtual UDATA groupPermissions(); // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.
-  
+
   virtual IDATA cacheDirPermissions();
   virtual bool usingNetworkCache();
-  
+
   // TODO: the restore check only applies to the shared memory cache,
   // so we should probably create an OSSharedMemoryCacheConfigOptions
   // subclass, and put it there.. then OSSharedMemoryCache will own a
@@ -89,10 +89,10 @@ public:
 
   // the block size of the cache.
   virtual U_32 cacheSize() = 0;
-  virtual OSCacheConfigOptions& setCacheSize(uintptr_t size) = 0;  
-  
+  virtual OSCacheConfigOptions& setCacheSize(uintptr_t size) = 0;
+
   virtual U_32 maxCRCSamples();
-  
+
   // does the cache create a file?
   virtual bool createFile();
 
@@ -101,9 +101,9 @@ public:
 
   // when the cache is corrupt, do we dump its contents?
   virtual bool disableCorruptCacheDumps();
-  
+
   virtual bool verboseEnabled();
-  virtual bool groupAccessEnabled(); // true iff _groupPerm = 1 in the J9 cache.  
+  virtual bool groupAccessEnabled(); // true iff _groupPerm = 1 in the J9 cache.
   // allocate the cache in the user's home directory.
   virtual void useUserHomeDirectoryForCacheLocation();
   // render the options to a bit vector understood by the functions of the OMR port library.
@@ -111,7 +111,7 @@ public:
 
   virtual UDATA renderCreateOptionsToFlags();
   virtual UDATA renderVerboseOptionsToFlags();
-    
+
   // flags obviated so far:
   /* appendBaseDir (a variable inside getCacheDir)
      appendBaseDir = (NULL == ctrlDirName) || (OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT == cacheType) || (OMRPORT_SHR_CACHE_TYPE_SNAPSHOT == cacheType);
@@ -120,7 +120,7 @@ public:
    */
 protected:
   I_32 _openMode;
-  
+
   CreateOptions _createOptions;
   RuntimeOptions _runtimeOptions;
   VerboseOptions _verboseOptions;

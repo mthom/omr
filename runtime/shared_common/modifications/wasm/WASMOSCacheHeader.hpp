@@ -1,8 +1,13 @@
 #if !defined(WASM_OS_CACHE_HEADER_HPP_INCLUDED)
 #define WASM_OS_CACHE_HEADER_HPP_INCLUDED
 
-#include "CacheHeaderImpl.hpp"
+#include "CacheHeaderMappingImpl.hpp"
 #include "OSCacheContiguousRegion.hpp"
+
+#include "env/TRMemory.hpp"
+
+template <class OSCacheHeader>
+class WASMOSCacheLayout;
 
 // this is meant to augment an existing header, like
 // OSMemoryMappedCacheHeader, or OSSharedMemoryCacheHeader.  also,
@@ -12,13 +17,11 @@ template <class OSCacheHeader>
 class WASMOSCacheHeader: public OSCacheHeader, virtual public OSCacheContiguousRegion
 {
 public:
-  TR_ALLOC(TR::SharedCacheRegion)
+  TR_ALLOC(TR_Memory::SharedCacheRegion)
 
-  //TODO: needs template specializations.
-  WASMOSCacheHeader(OSCacheLayout* layout, int regionID, bool pageBoundaryAligned);
-
-protected:
-  CacheHeaderImpl<OSCacheHeader>* _mapping;
+  WASMOSCacheHeader(WASMOSCacheLayout<OSCacheHeader>* layout, int regionID, bool pageBoundaryAligned)
+    : OSCacheContiguousRegion(layout, regionID, pageBoundaryAligned)
+  {}
 };
 
 #endif

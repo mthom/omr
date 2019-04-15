@@ -35,15 +35,14 @@ OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* cacheDirName,
 					 IDATA numLocks,
-					 OSCacheConfigOptions* configOptions)
+					 OSCacheConfigOptions* configOptions,
+					 OSCacheLayout* layout)
   : OSCacheImpl(library, configOptions, numLocks)
-  , _config(NULL)
-{
-  // I need to revise the arguments to this trace message.
-  // Trc_SHR_OSC_Constructor_Entry(cacheName, piconfig->sharedClassCacheSize, createFlag);
-  initialize();
-  // expect the open mode has been set in the configOptions object already.
-  // configOptions.setOpenMode(openMode);
+  , _layout(layout)
+{  
+  initializeConfig();
+  initialize();  
+  
   startup(cacheName, cacheDirName);
   Trc_SHR_OSC_Constructor_Exit(cacheName);
 }
@@ -1019,7 +1018,7 @@ OSSharedMemoryCache::installLayout(LastErrorInfo* lastErrorInfo)
 
 void OSSharedMemoryCache::serializeCacheLayout(void* blockAddress)
 {
-  _config->notifyRegionMappingStartAddress(blockAddress, _configOptions->cacheSize());
+  _config->notifyRegionMappingStartAddress(this, blockAddress, _configOptions->cacheSize());
   _config->_layout->serialize(this);
 }
 
@@ -1033,10 +1032,4 @@ OSCacheRegionInitializer*
 OSSharedMemoryCache::constructInitializer()
 {
   return new OSSharedMemoryCacheInitializer(_portLibrary, _cacheLocation == NULL);
-}
-
-void
-OSSharedMemoryCache::installConfig(OSSharedMemoryCacheConfig* config)
-{
-  _config = config;
 }

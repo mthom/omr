@@ -426,6 +426,7 @@ public:
       SharedCache,
       SharedCacheRegion,
       SharedCacheLayout,
+      SharedCacheConfig,
       
       RegisterPair,
       S390Instruction,

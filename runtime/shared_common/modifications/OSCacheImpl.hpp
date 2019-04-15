@@ -20,8 +20,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OSCACHE_PERSISTENT_HPP_INCLUDED)
-#define OSCACHE_PERSISTENT_HPP_INCLUDED
+#if !defined(OSCACHE_IMPL_HPP_INCLUDED)
+#define OSCACHE_IMPL_HPP_INCLUDED
 
 #include "OSCache.hpp"
 #include "OSCacheConfigOptions.hpp"
@@ -36,7 +36,6 @@ typedef enum SH_CacheFileAccess {
 	OMRSH_CACHE_FILE_ACCESS_GROUP_ACCESS_REQUIRED,
 	OMRSH_CACHE_FILE_ACCESS_OTHERS_NOT_ALLOWED,
 } SH_CacheFileAccess;
-
 
 #define OMRSH_OSCACHE_CREATE 			0x1
 #define OMRSH_OSCACHE_OPEXIST_DESTROY	0x2
@@ -78,27 +77,6 @@ typedef enum SH_CacheFileAccess {
 #define OSC_WARNING_TRACE1(configOptions, var, p1) if (configOptions->verboseEnabled()) omrnls_printf(J9NLS_WARNING, var, p1)
 
 #define OMRSH_MAXPATH EsMaxPath
-
-/**
- * @struct SH_OSCache_Info
- * Information about a OSCache
- * If the information is not available, the value will be equals to @arg J9SH_OSCACHE_UNKNOWN
- */
-typedef struct SH_OSCache_Info {
-        char name[CACHE_ROOT_MAXLEN]; /** The name of the cache */
-        UDATA os_shmid; /** Operating System specific shared memory id */
-        UDATA os_semid; /** Operating System specific semaphore id */
-        I_64 lastattach; /** time from which last attach has happened */
-        I_64 lastdetach; /** time from which last detach has happened */
-        I_64 createtime; /** time from which cache has been created */
-        IDATA nattach; /** number of process attached to this region */
-  //        J9PortShcVersion versionData; /** Cache version data */
-  //        UDATA generation; /** cache generation number */
-  //        UDATA isCompatible; /** Is the cache compatible with this VM */
-        UDATA isCorrupt; /** Is set when the cache is found to be corrupt */
-  //        UDATA isJavaCorePopulated; /** Is set when the javacoreData contains valid data */
-  //        J9SharedClassJavacoreDataDescriptor javacoreData; /** If isCompatible is true, then extra information about the cache is availaible in here*/
-} SH_OSCache_Info;
 
 /*
  * This class houses utility functions that depend on the state of
@@ -157,6 +135,7 @@ protected:
   void commonCleanup();
 
   virtual void serializeCacheLayout(void* blockAddress) = 0;
+  virtual void initializeConfig() = 0;  
   
   OMRPortLibrary* _portLibrary;
   //  I_32  _openMode; // now addressed by the OSCacheConfigOptions class.

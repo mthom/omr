@@ -24,6 +24,7 @@
 #define OS_SHARED_MEMORY_CACHE_HPP_INCLUDED
 
 #include "OSCacheImpl.hpp"
+#include "OSCacheLayout.hpp"
 #include "OSSharedMemoryCacheIterator.hpp"
 #include "OSSharedMemoryCacheConfig.hpp"
 #include "OSSharedMemoryCacheInitializer.hpp"
@@ -56,7 +57,7 @@ class OSSharedMemoryCache: public OSCacheImpl
 {
 public:
   OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName,
-		      IDATA numLocks, OSCacheConfigOptions* configOptions);
+		      IDATA numLocks, OSCacheConfigOptions* configOptions, OSCacheLayout* layout);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset = false);
@@ -67,8 +68,6 @@ public:
   SH_CacheAccess isCacheAccessible() const;
   UDATA isCacheActive() const;
   //  IDATA restoreFromSnapshot(const char* cacheName, UDATA numLocks, bool& cacheExists);
-
-  virtual void installConfig(OSSharedMemoryCacheConfig* config);
 
   typedef OSSharedMemoryCacheConfig config_type;
 

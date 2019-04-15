@@ -37,17 +37,17 @@ template <typename T>
 class OSCacheBumpRegionFocus: public OSCacheRegionFocus<T> {
 public:
   OSCacheBumpRegionFocus(OSCacheRegion* region, T* focus)
-    : OSCacheRegionFocus(region, focus)
+    : OSCacheRegionFocus<T>(region, focus)
   {}
 
   // this is how the postfix ++ operator is overloaded, ie. { int a; a++; } <== postfix.
   T* operator ++(int) {
-    if(!_region->isAddressInRegion((void *) _focus, sizeof(T))) {
+    if(!this->_region->isAddressInRegion((void *) this->_focus, sizeof(T))) {
       return NULL;
     }
     
-    T* focus = _focus;
-    _focus = (T*) ((UDATA) _focus + sizeof(T));
+    T* focus = this->_focus;
+    this->_focus = (T*) ((UDATA) this->_focus + sizeof(T));
     return focus;
   }
 };

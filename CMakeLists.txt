@@ -166,10 +166,13 @@ if(OMR_SHARED_CACHE)
   add_subdirectory(runtime/shared_common)  
 endif(OMR_SHARED_CACHE)
 
+if(WASM_SHARED_CACHE)
+  add_subdirectory(runtime/shared_common/modifications/wasm)
+endif(WASM_SHARED_CACHE)  
+
 if(OMR_SHARED_CACHE_MODS)
   add_subdirectory(runtime/shared_common/modifications)
 endif(OMR_SHARED_CACHE_MODS)
-
 
 # This should come last to ensure dependencies
 # are defined

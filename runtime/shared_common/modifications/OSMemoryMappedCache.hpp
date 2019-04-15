@@ -25,6 +25,7 @@
 
 #include "OSCacheRegion.hpp"
 #include "OSCacheImpl.hpp"
+#include "OSCacheLayout.hpp"
 #include "OSMemoryMappedCacheConfig.hpp"
 #include "OSMemoryMappedCacheInitializationContext.hpp"
 #include "OSMemoryMappedCacheIterator.hpp"
@@ -41,7 +42,8 @@ class OSMemoryMappedCache: public OSCacheImpl {
 public:
   virtual IDATA getError();
 
-  OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks, OSCacheConfigOptions* configOptions);
+  OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,
+		      OSCacheConfigOptions* configOptions, OSCacheLayout* layout);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);
@@ -55,8 +57,6 @@ public:
 
   typedef OSMemoryMappedCacheConfig config_type;
 
-  virtual void installConfig(OSMemoryMappedCacheConfig* config);
-  
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;

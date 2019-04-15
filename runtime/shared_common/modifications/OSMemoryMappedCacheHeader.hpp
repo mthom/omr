@@ -50,6 +50,10 @@ protected:
   friend class OSMemoryMappedCacheConfig;
   friend class OSMemoryMappedCacheCreatingContext;
 
+  virtual CacheHeaderMappingImpl<OSMemoryMappedCacheHeader>* baseMapping() {
+    return _mapping;
+  }
+  
   virtual void refresh(OMRPortLibrary* library, OSMemoryMappedCacheHeaderMapping* mapping);
 
   UDATA _numLocks;

@@ -23,10 +23,10 @@
 #if !defined(OSCACHE_LAYOUT_HPP_INCLUDED)
 #define OSCACHE_LAYOUT_HPP_INCLUDED
 
-#include "omr.h"
 #include "OSCache.hpp"
 #include "OSCacheRegion.hpp"
-#include "OSCacheRegionSerializer.hpp"
+
+#include "omr.h"
 
 // for TR::vector.
 // #include "infra/vector.hpp"
@@ -39,7 +39,7 @@ public:
     : _osPageSize(osPageSize)
   {}
 
-  void serialize(OSCache* osCache) {
+  virtual void serialize(OSCache* osCache) {
     OSCacheRegionSerializer* serializer = osCache->constructSerializer();
 
     for(int i = 0; i < _regions.size(); ++i) {
@@ -67,9 +67,9 @@ public:
   }
   
 protected:
-  // initialize the region.
+  // initialize the cache block.
   virtual void init(void* blockAddress, uintptr_t size) = 0;
-
+  
   virtual void addRegion(OSCacheRegion* region) {
     _regions.push_back(region);
   }
