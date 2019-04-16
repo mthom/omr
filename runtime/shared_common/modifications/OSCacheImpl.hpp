@@ -154,9 +154,6 @@ protected:
   
   void commonInit();
   void commonCleanup();
-
-  virtual void serializeCacheLayout(void* blockAddress) = 0;
-  virtual void initializeConfig() = 0;  
   
   OMRPortLibrary* _portLibrary;
   //  I_32  _openMode; // now addressed by the OSCacheConfigOptions class.

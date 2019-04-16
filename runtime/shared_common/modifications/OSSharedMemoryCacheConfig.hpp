@@ -89,6 +89,9 @@ public:
 			    LastErrorInfo* lastErrorInfo = NULL);
   virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
 
+  virtual void serializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize) = 0;
+  virtual void initializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize) = 0;
+  
   // let these be decided by the classes of the generational header
   // versions. They will know where the locks lie and how large they
   // are.

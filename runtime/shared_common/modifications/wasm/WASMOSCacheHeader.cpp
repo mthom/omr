@@ -1,22 +1,5 @@
 #include "WASMOSCacheHeader.hpp"
 
-/*
-template <>
-void
-WASMOSCacheHeader<OSMemoryMappedCacheHeader>::refresh(OMRPortLibrary* library)
-{
-  OSMemoryMappedCacheHeader::refresh(library);
-  
-  UDATA* remOffset = (UDATA*) regionStartAddress() + regionSize();
-
-  _readerCount = remOffset;
-  _cacheCrc = remOffset + sizeof(volatile UDATA*);
-
-  *_readerCount = 0;
-  *_cacheCrc = 0;
-}
-*/
-
 WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>*
 WASMOSCacheHeader<OSMemoryMappedCacheHeader>::derivedMapping()
 {
@@ -29,15 +12,40 @@ WASMOSCacheHeader<OSSharedMemoryCacheHeader>::derivedMapping()
   return static_cast<WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>*>(_mapping->_mapping);
 }
 
+template <class OSCacheHeader>
+void refresh_mapping(WASMOSCacheConfigOptions* configOptions,
+		     WASMOSCacheHeaderMapping<OSCacheHeader>* mapping)
+{
+  mapping->_cacheSize = configOptions->cacheSize();
+  mapping->_readerCount = 0;
+  mapping->_cacheCrc = 0;
+  mapping->_dataSectionSize = configOptions->dataSectionSize();
+}
+
 void
 WASMOSCacheHeader<OSMemoryMappedCacheHeader>::create(OMRPortLibrary* library)
 {
   OSMemoryMappedCacheHeader::create(library);
+  refresh_mapping(_configOptions, derivedMapping());
+}
 
-  WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* mapping = derivedMapping();
+void
+WASMOSCacheHeader<OSMemoryMappedCacheHeader>::refresh(OMRPortLibrary* library)
+{
+  OSMemoryMappedCacheHeader::refresh(library);
+  refresh_mapping(_configOptions, derivedMapping());
+}
 
-  mapping->_cacheSize = _configOptions->cacheSize();
-  mapping->_readerCount = 0;
-  mapping->_cacheCrc = 0;
-  mapping->_dataSectionSize = _configOptions->dataSectionSize();
+void
+WASMOSCacheHeader<OSSharedMemoryCacheHeader>::create(OMRPortLibrary* library, bool inDefaultControlDir)
+{
+  OSSharedMemoryCacheHeader::create(library, inDefaultControlDir);
+  refresh_mapping(_configOptions, derivedMapping());
+}
+
+void
+WASMOSCacheHeader<OSSharedMemoryCacheHeader>::refresh(OMRPortLibrary* library, bool inDefaultControlDir)
+{
+  OSSharedMemoryCacheHeader::refresh(library, inDefaultControlDir);
+  refresh_mapping(_configOptions, derivedMapping());
 }

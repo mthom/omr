@@ -6,11 +6,13 @@
 #include "OSSharedMemoryCacheHeader.hpp"
 #include "WASMOSCacheConfigOptions.hpp"
 #include "WASMOSCacheHeaderMapping.hpp"
-#include "WASMOSCacheLayout.hpp"
 
 #include "env/TRMemory.hpp"
 
 #include "omr.h"
+
+template <class OSCacheHeader>
+class WASMOSCacheLayout;
 
 template <class OSCacheHeader>
 class WASMOSCacheHeader;
@@ -41,7 +43,7 @@ public:
 
 protected:
   WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* derivedMapping();
-  
+
   WASMOSCacheConfigOptions* _configOptions;
 };
 
@@ -53,17 +55,17 @@ public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
 
   WASMOSCacheHeader(WASMOSCacheLayout<OSSharedMemoryCacheHeader>* layout,
-		    WASMOSCacheConfigOptions* configOptions,		    
+		    WASMOSCacheConfigOptions* configOptions,
 		    int regionID, bool pageBoundaryAligned)
     : OSSharedMemoryCacheHeader(new WASMOSCacheHeaderMappingImpl<OSSharedMemoryCacheHeader>())
     , OSCacheContiguousRegion(layout, regionID, pageBoundaryAligned)
     , _configOptions(configOptions)
   {}
-  
+
   void refresh(OMRPortLibrary* library, bool inDefaultControlDir) override;
   void create(OMRPortLibrary* library, bool inDefaultControlDir) override;
 
-  using OSSharedMemoryCacheHeader::regionStartAddress;  
+  using OSSharedMemoryCacheHeader::regionStartAddress;
 
   UDATA regionSize() const override {
     return OSSharedMemoryCacheHeader::regionSize() + sizeof(volatile UDATA) + sizeof(UDATA);
@@ -71,8 +73,8 @@ public:
 
 protected:
   WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
-  
-  WASMOSCacheConfigOptions* _configOptions;  
+
+  WASMOSCacheConfigOptions* _configOptions;
 };
 
 #endif

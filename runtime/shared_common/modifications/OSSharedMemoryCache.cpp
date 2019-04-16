@@ -35,10 +35,11 @@ OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
 					 const char* cacheName,
 					 const char* cacheDirName,
 					 IDATA numLocks,
+					 OSSharedMemoryCacheConfig* config,
 					 OSCacheConfigOptions* configOptions)
   : OSCacheImpl(library, configOptions, numLocks)
+  , _config(config)
 {
-  initializeConfig();
   initialize();
 
   startup(cacheName, cacheDirName);
@@ -655,7 +656,7 @@ OSSharedMemoryCache::attach() //OMR_VMThread *currentThread, J9PortShcVersion* e
   }
 
   /*_dataStart is set here, and possibly initializeHeader if its a new cache */
-  serializeCacheLayout(request);
+  _config->initializeCacheLayout(this, request, _configOptions->cacheSize());
 
 //  _dataStart = SHM_DATASTARTFROMHEADER(((OSCachesysv_header_version_current*)_headerStart));
 //
@@ -995,6 +996,7 @@ IDATA OSSharedMemoryCache::restoreFromSnapshot(IDATA numLocks)
   return snapshot->restoreFromSnapshot(numLocks);
 }
 
+// this function is CREATIVE. It involves creating a cache.
 IDATA
 OSSharedMemoryCache::installLayout(LastErrorInfo* lastErrorInfo)
 {
@@ -1009,15 +1011,9 @@ OSSharedMemoryCache::installLayout(LastErrorInfo* lastErrorInfo)
     return OS_SHARED_MEMORY_CACHE_FAILURE;
   }
 
-  serializeCacheLayout(blockAddress);
+  _config->serializeCacheLayout(this, blockAddress, _configOptions->cacheSize());
 
   return OS_SHARED_MEMORY_CACHE_SUCCESS;
-}
-
-void OSSharedMemoryCache::serializeCacheLayout(void* blockAddress)
-{
-  _config->notifyRegionMappingStartAddress(this, blockAddress, _configOptions->cacheSize());
-  _config->_layout->serialize(this);
 }
 
 OSCacheRegionSerializer*

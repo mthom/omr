@@ -30,10 +30,10 @@
 
 bool OSMemoryMappedCacheCreatingContext::initAttach(void* blockAddress, IDATA&)
 {
-  *_cache->_config->getDataLengthFieldLocation() = _cache->_config->getDataSectionSize();
+  // *_cache->_config->getDataLengthFieldLocation() = _cache->_config->getDataSectionSize();
   //  *_cache->_config->getDataSectionLocation() = (void*) _cache->_config->getHeaderLocation() + _cache->_config->getHeaderSize();
 
-  _cache->serializeCacheLayout(blockAddress);
+  _cache->_config->serializeCacheLayout(_cache, blockAddress, _cache->_configOptions->cacheSize());
   
   return true;
 }

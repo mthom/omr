@@ -43,6 +43,11 @@ public:
 
   virtual I_32 fileMode() {
   }
+
+  // let's say this is 8MB for now? I dunno.
+  virtual U_32 dataSectionSize() {
+    return 8 * 1024 * 1024;
+  }
   
   virtual I_32 openMode(); //TODO: this should set _groupPerm = 1 if groupAccessEnabled() is true.
   virtual UDATA groupPermissions(); // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.

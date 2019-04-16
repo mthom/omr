@@ -1,7 +1,6 @@
 #if !defined(WASM_OS_CACHE_CONFIG_HPP_INCLUDED)
 #define WASM_OS_CACHE_CONFIG_HPP_INCLUDED
 
-#include "OSCache.hpp"
 #include "WASMOSCacheLayout.hpp"
 
 #include "env/TRMemory.hpp"
@@ -28,6 +27,9 @@ public:
   J9SRP* getDataSectionLocation() override;
   U_64 getDataSectionSize() override;
 
+  virtual void serializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize);
+  virtual void initializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize);
+  
 private:
   WASMOSCacheLayout<header_type> _layout;
 };

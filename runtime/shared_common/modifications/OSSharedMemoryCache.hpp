@@ -53,11 +53,14 @@
 //#define SHM_CACHEDATASIZE(size) (size-SHM_CACHEHEADERSIZE)
 //#define SHM_DATASTARTFROMHEADER(header) SRP_GET(header->oscHdr.dataStart, void*);
 
+class OSSharedMemoryCacheConfig;
+
 class OSSharedMemoryCache: public OSCacheImpl
 {
 public:
   OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName,
-		      IDATA numLocks, OSCacheConfigOptions* configOptions);
+		      IDATA numLocks, OSSharedMemoryCacheConfig* config,
+		      OSCacheConfigOptions* configOptions);
 
   virtual bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset = false);
@@ -76,13 +79,9 @@ protected:
   friend class OSSharedMemoryCacheSnapshot;
   friend class OSSharedMemoryCacheStats;
 
-  // write configuration header (mostly in the header, but also
-  // potentially elsewhere) into the cache block newly attached to
-  // _shmhandle.
-  virtual IDATA installLayout(LastErrorInfo* lastErrorInfo);
-  virtual void serializeCacheLayout(void* blockAddress);
   virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 
+  IDATA installLayout(LastErrorInfo* lastErrorInfo);
   void setError(IDATA ec);
   IDATA openCache(const char* cacheName);
 
@@ -103,7 +102,7 @@ protected:
   virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);
 
   virtual UDATA getPermissionsRegionGranularity();
-
+  
   // this is largely J9 specific. let it be overloaded.
   virtual IDATA verifyCacheHeader() = 0;
 

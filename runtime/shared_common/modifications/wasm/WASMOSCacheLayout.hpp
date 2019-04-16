@@ -36,12 +36,11 @@ public:
 
   UDATA actualCacheSize() {
     return _blockSize;
-  }
+  }  
 
-  void notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress, uintptr_t size) override;
+  void init(void* blockAddress, uintptr_t size);
   
 protected:
-  void init(void* blockAddress, uintptr_t size);
 
   UDATA _blockSize;
   WASMOSCacheHeader<OSCacheHeader>* _header;

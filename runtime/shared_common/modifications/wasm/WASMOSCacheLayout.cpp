@@ -14,11 +14,3 @@ void WASMOSCacheLayout<OSCacheHeader>::init(void* blockAddress, uintptr_t size)
 
   _blockSize = size;  
 }
-
-template <class OSCacheHeader>
-void
-WASMOSCacheLayout<OSCacheHeader>::notifyRegionMappingStartAddress(OSCache* osCache, void* blockAddress,
-								  uintptr_t size)
-{
-  _layout->initialize(osCache, blockAddress, size);
-}

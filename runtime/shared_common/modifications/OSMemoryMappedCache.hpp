@@ -36,14 +36,16 @@
 #include "omr.h"
 #include "omrport.h"
 
+class OSMemoryMappedCacheConfig;
+
 // an implementation of a persistent shared cache that uses omrmmap primitives
 // and region-based locks on sections of files.
 class OSMemoryMappedCache: public OSCacheImpl {
 public:
   virtual IDATA getError();
-
+  
   OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,
-		      OSCacheConfigOptions* configOptions);
+		      OSMemoryMappedCacheConfig* config, OSCacheConfigOptions* configOptions);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);
@@ -54,7 +56,7 @@ public:
   virtual void initialize();
   virtual void finalise();
   virtual void cleanup();
-
+  
   typedef OSMemoryMappedCacheConfig config_type;
 
 protected:
@@ -83,8 +85,6 @@ protected:
 
   virtual OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator(char* resultBuf) = 0;
   virtual bool deleteCacheFile(LastErrorInfo* lastErrorInfo);
-
-  virtual void serializeCacheLayout(void* blockAddress);
 
   virtual OSCacheMemoryProtector* constructMemoryProtector();
 

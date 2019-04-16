@@ -16,16 +16,15 @@ class WASMOSCache: public SuperOSCache
 {
 public:
   TR_ALLOC(TR_Memory::SharedCache)
-
+  
   WASMOSCache(OMRPortLibrary* library,
 	      const char* cacheName,
 	      const char* ctrlDirName,
 	      IDATA numLocks,
-	      WASMOSCacheConfigOptions* configOptions);
+	      WASMOSCacheConfigOptions* configOptions,
+	      UDATA osPageSize = 0);
 
   using SuperOSCache::startup;
-
-  void initializeConfig() override;
 };
 
 #endif

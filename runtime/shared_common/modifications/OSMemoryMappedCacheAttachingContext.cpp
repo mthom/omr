@@ -34,20 +34,20 @@ bool OSMemoryMappedCacheAttachingContext::initAttach(void* blockAddress, IDATA& 
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
   rc = OMRSH_OSCACHE_FAILURE;
   
-  _cache->_config->_layout->initialize(_cache, blockAddress, _cache->_configOptions->cacheSize());
+  _cache->_config->initializeCacheLayout(_cache, blockAddress, _cache->_configOptions->cacheSize());
 
   //TODO: fix this! or delegate it to a validity check inside the header, and
   //shortcut the need for the getter functions.
-  UDATA* dataStartField = (UDATA*) _cache->_config->getDataSectionFieldLocation();
-
-  if (NULL == *dataStartField) {
-    Trc_SHR_OSC_Mmap_internalAttach_corruptcachefile();
-    OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_DATA_START_NULL, *dataStartField);
-
-    _cache->setCorruptionContext(CACHE_DATA_NULL, (UDATA)*dataStartField);
-    rc = OMRSH_OSCACHE_CORRUPT;
-    return false;
-  }
+//  UDATA* dataStartField = (UDATA*) _cache->_config->getDataSectionFieldLocation();
+//
+//  if (NULL == *dataStartField) {
+//    Trc_SHR_OSC_Mmap_internalAttach_corruptcachefile();
+//    OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_DATA_START_NULL, *dataStartField);
+//
+//    _cache->setCorruptionContext(CACHE_DATA_NULL, (UDATA)*dataStartField);
+//    rc = OMRSH_OSCACHE_CORRUPT;
+//    return false;
+//  }
 
   return true;
 }

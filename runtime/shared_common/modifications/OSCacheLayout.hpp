@@ -38,24 +38,6 @@ public:
   OSCacheLayout(UDATA osPageSize)
     : _osPageSize(osPageSize)
   {}
-
-  virtual void serialize(OSCache* osCache) {
-    OSCacheRegionSerializer* serializer = osCache->constructSerializer();
-
-    for(int i = 0; i < _regions.size(); ++i) {
-      _regions[i]->serialize(serializer);
-    }
-  }
-
-  virtual void initialize(OSCache* osCache, void* blockAddress, uintptr_t size) {
-    init(blockAddress, size);
-
-    OSCacheRegionInitializer* initializer = osCache->constructInitializer();
-
-    for(int i = 0; i < _regions.size(); ++i) {
-      _regions[i]->initialize(initializer);
-    }
-  }
   
   virtual void alignRegionsToPageBoundaries();
 
@@ -64,6 +46,10 @@ public:
 
   virtual OSCacheRegion* operator[](uint64_t i) {
     return _regions[i];
+  }
+
+  virtual int numberOfRegions() const {
+    return _regions.size();
   }
   
 protected:
