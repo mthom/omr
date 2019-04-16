@@ -1,13 +1,16 @@
-#if !defined(WASM_OS_CACHE_HEADER_HPP_INCLUDED)
-#define WASM_OS_CACHE_HEADER_HPP_INCLUDED
+#if !defined(WASM_OSCACHE_HEADER_HPP_INCLUDED)
+#define WASM_OSCACHE_HEADER_HPP_INCLUDED
 
 #include "OSCacheContiguousRegion.hpp"
 #include "OSMemoryMappedCacheHeader.hpp"
 #include "OSSharedMemoryCacheHeader.hpp"
 #include "WASMOSCacheConfigOptions.hpp"
 #include "WASMOSCacheHeaderMapping.hpp"
+#include "WASMOSCacheLayout.hpp"
 
 #include "env/TRMemory.hpp"
+
+#include "omr.h"
 
 template <class OSCacheHeader>
 class WASMOSCacheHeader;
@@ -19,17 +22,26 @@ class WASMOSCacheHeader<OSMemoryMappedCacheHeader>: public OSMemoryMappedCacheHe
 public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
 
-  WASMOSCacheHeader(WASMOSCacheLayout<OSMemoryMappedCacheHeader>* layout, int regionID,
-		    bool pageBoundaryAligned);
+  WASMOSCacheHeader(WASMOSCacheLayout<OSMemoryMappedCacheHeader>* layout,
+		    WASMOSCacheConfigOptions* configOptions,
+		    int regionID, bool pageBoundaryAligned)
+    : OSMemoryMappedCacheHeader(5, new WASMOSCacheHeaderMappingImpl<OSMemoryMappedCacheHeader>())
+    , OSCacheContiguousRegion(layout, regionID, pageBoundaryAligned)
+    , _configOptions(configOptions)
+  {}
 
   void refresh(OMRPortLibrary* library) override;
   void create(OMRPortLibrary* library) override;
 
-  using OSSharedMemoryCacheHeader::regionStartAddress;
-  
-  UDATA regionSize() const override;
+  using OSMemoryMappedCacheHeader::regionStartAddress;
+
+  UDATA regionSize() const override {
+    return OSMemoryMappedCacheHeader::regionSize() + sizeof(volatile UDATA) + sizeof(UDATA);
+  }
 
 protected:
+  WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* derivedMapping();
+  
   WASMOSCacheConfigOptions* _configOptions;
 };
 
@@ -40,17 +52,26 @@ class WASMOSCacheHeader<OSSharedMemoryCacheHeader>: public OSSharedMemoryCacheHe
 public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
 
-  WASMOSCacheHeader(WASMOSCacheLayout<OSSharedMemoryCacheHeader>* layout, int regionID,
-		    bool pageBoundaryAligned);
+  WASMOSCacheHeader(WASMOSCacheLayout<OSSharedMemoryCacheHeader>* layout,
+		    WASMOSCacheConfigOptions* configOptions,		    
+		    int regionID, bool pageBoundaryAligned)
+    : OSSharedMemoryCacheHeader(new WASMOSCacheHeaderMappingImpl<OSSharedMemoryCacheHeader>())
+    , OSCacheContiguousRegion(layout, regionID, pageBoundaryAligned)
+    , _configOptions(configOptions)
+  {}
   
   void refresh(OMRPortLibrary* library, bool inDefaultControlDir) override;
   void create(OMRPortLibrary* library, bool inDefaultControlDir) override;
 
-  using OSSharedMemoryCacheHeader::regionStartAddress;
-  
-  UDATA regionSize() const override;
+  using OSSharedMemoryCacheHeader::regionStartAddress;  
+
+  UDATA regionSize() const override {
+    return OSSharedMemoryCacheHeader::regionSize() + sizeof(volatile UDATA) + sizeof(UDATA);
+  }
 
 protected:
+  WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
+  
   WASMOSCacheConfigOptions* _configOptions;  
 };
 

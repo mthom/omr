@@ -20,8 +20,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(HEADER_MAPPING_HPP_INCLUDED)
-#define HEADER_MAPPING_HPP_INCLUDED
+#if !defined(CACHE_HEADER_MAPPING_HPP_INCLUDED)
+#define CACHE_HEADER_MAPPING_HPP_INCLUDED
 
 template <class CacheType>
 struct CacheHeaderMapping;

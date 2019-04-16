@@ -4,7 +4,7 @@
 #include "CacheHeaderMappingImpl.hpp"
 
 template <class OSCacheHeader>
-class WASMOSCacheHeader<OSCacheHeader>;
+class WASMOSCacheHeader;
 
 template <class OSCacheHeader>
 struct WASMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
@@ -22,10 +22,8 @@ class WASMOSCacheHeaderMappingImpl: public CacheHeaderMappingImpl<OSCacheHeader>
 {
 public:
   virtual typename CacheHeaderMapping<OSCacheHeader>::mapping_type* baseMapping() {
-    return &static_cast<WASMOSCacheHeaderMapping<OSCacheHeader>*>(_mapping)->_mapping;
-  }
-
-  friend class WASMOSCacheHeader<OSCacheHeader>;
+    return &static_cast<WASMOSCacheHeaderMapping<OSCacheHeader>*>(this->_mapping)->_mapping;
+  } 
 };
 
 #endif

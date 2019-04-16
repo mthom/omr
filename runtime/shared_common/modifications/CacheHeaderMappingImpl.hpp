@@ -40,7 +40,6 @@ public:
     return *this;
   }
   
-protected:
   CacheHeaderMapping<CacheHeaderType>* _mapping;
 };
 

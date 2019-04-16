@@ -24,10 +24,10 @@
 
 add_library(wasm_shared_cache STATIC
   WASMOSCache.cpp
-  WASMCompositeCache.cpp
-  WASMOSCacheConfig.cpp
   WASMOSCacheHeader.cpp
   WASMOSCacheLayout.cpp
+  WASMOSCacheConfig.cpp
+  WASMCompositeCache.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/../../ut_omrshr.c
 )
 

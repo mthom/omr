@@ -1,21 +1,6 @@
 #include "WASMOSCacheHeader.hpp"
 
-template <class OSCacheHeader>
-WASMOSCacheHeader<OSCacheHeader>::WASMOSCacheHeader(WASMOSCacheLayout<OSCacheHeader>* layout,
-						    WASMOSCacheConfigOptions* configOptions,
-						    int regionID, bool pageBoundaryAligned)
-  : OSCacheContiguousRegion(layout, regionID, pageBoundaryAligned)
-  , _numLocks(5)
-  , _mapping(new WASMOSCacheHeaderMappingImpl<OSCacheHeader>())
-  , _configOptions(configOptions)
-{}
-
-template <class OSCacheHeader>
-UDATA WASMOSCacheHeader<OSCacheHeader>::regionSize()
-{
-  return OSCacheHeader::regionSize() + sizeof(volatile UDATA) + sizeof(UDATA);
-}
-
+/*
 template <>
 void
 WASMOSCacheHeader<OSMemoryMappedCacheHeader>::refresh(OMRPortLibrary* library)
@@ -30,15 +15,20 @@ WASMOSCacheHeader<OSMemoryMappedCacheHeader>::refresh(OMRPortLibrary* library)
   *_readerCount = 0;
   *_cacheCrc = 0;
 }
+*/
 
-template <OSCacheHeader>
-WASMOSCacheHeaderMapping<OSCacheHeader>*
-WASMOSCacheHeader::derivedMapping()
+WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>*
+WASMOSCacheHeader<OSMemoryMappedCacheHeader>::derivedMapping()
 {
-  return dynamic_cast<WASMOSCacheHeaderMapping<OSCacheHeader>*>(_mapping);
+  return static_cast<WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>*>(_mapping->_mapping);
 }
 
-template <>
+WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>*
+WASMOSCacheHeader<OSSharedMemoryCacheHeader>::derivedMapping()
+{
+  return static_cast<WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>*>(_mapping->_mapping);
+}
+
 void
 WASMOSCacheHeader<OSMemoryMappedCacheHeader>::create(OMRPortLibrary* library)
 {
