@@ -22,6 +22,7 @@
 #if !defined(OS_CACHE_UTILS_HPP_INCLUDED)
 #define OS_CACHE_UTILS_HPP_INCLUDED
 
+#include "OSCacheConfigOptions.hpp"
 #include "OSCacheImpl.hpp"
 
 namespace OSCacheUtils

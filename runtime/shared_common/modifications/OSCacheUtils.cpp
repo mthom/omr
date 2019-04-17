@@ -45,7 +45,7 @@ namespace OSCacheUtils
 
 // this was originally called getCacheDir -- I renamed it to do away with
 // the ambiguity of 'getCacheDir', ie. we are 'getting' the directory? what?
-IDATA
+static IDATA
 getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions* configOptions)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
