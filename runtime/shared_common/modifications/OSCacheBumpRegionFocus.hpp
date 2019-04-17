@@ -25,6 +25,8 @@
 
 #include "OSCacheRegionFocus.hpp"
 
+#include "omrport.h"
+
 // this is a regional focus, but unlike the original, its field
 // pointer can be bumped! by a positive amount, no less. Usually the
 // size of a cache entry. This is because regions that are large and
@@ -40,15 +42,41 @@ public:
     : OSCacheRegionFocus<T>(region, focus)
   {}
 
+  inline operator T*() {
+    return this->_focus;
+  }
+
+  inline operator const T*() const {
+    return this->_focus;
+  }
+
+  OSCacheBumpRegionFocus& operator +=(UDATA bump) {
+    if(!blockInRange(bump)) {
+      return *this;
+    }
+
+    this->_focus = (T*) ((U_8*) this->_focus + bump);
+    return *this;
+  }
+
   // this is how the postfix ++ operator is overloaded, ie. { int a; a++; } <== postfix.
   T* operator ++(int) {
-    if(!this->_region->isAddressInRegion((void *) this->_focus, sizeof(T))) {
+    if(!blockInRange(sizeof(T))) {
       return NULL;
     }
-    
+
     T* focus = this->_focus;
-    this->_focus = (T*) ((UDATA) this->_focus + sizeof(T));
+    this->_focus = (T*) ((UDATA*) this->_focus + sizeof(T));
     return focus;
+  }
+
+  inline bool operator <(const OSCacheBumpRegionFocus<T>& rhs) const {
+    return this->_region == rhs._region && this->_focus < rhs._focus;
+  }
+
+protected:
+  inline bool blockInRange(UDATA size) const {
+    return this->_region->isAddressInRegion((void*) this->_focus, size);
   }
 };
 

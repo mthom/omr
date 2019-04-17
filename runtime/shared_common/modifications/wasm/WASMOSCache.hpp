@@ -41,12 +41,12 @@ public:
   }
   
   UDATA* readerCountFocus() {
-    uintptr_t offset = offsetof(WASMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
+    UDATA offset = offsetof(WASMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
     return (UDATA*) headerRegion()->regionStartAddress() + offset;
   }
 
   UDATA* crcFocus() {
-    uintptr_t offset = offsetof(WASMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _cacheCrc);
+    UDATA offset = offsetof(WASMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _cacheCrc);
     return (UDATA*) headerRegion()->regionStartAddress() + offset;
   }
 

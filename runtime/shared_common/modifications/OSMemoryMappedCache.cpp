@@ -460,7 +460,6 @@ OSMemoryMappedCache::detach()
   internalDetach();
 }
 
-
 /* Perform enough work to detach from the cache after having called internalAttach */
 void OSMemoryMappedCache::internalDetach()
 {

@@ -23,9 +23,10 @@
 #define OSCACHE_REGION_HPP_INCLUDED
 
 #include "omr.h"
+
+#include "OSCacheMemoryProtector.hpp"
 #include "OSCacheRegionInitializer.hpp"
 #include "OSCacheRegionSerializer.hpp"
-#include "OSCacheMemoryProtector.hpp"
 
 /* C macros are the fuckin' worst, but here's a few from J9 anyway. */
 #define ROUND_UP_TO(granularity, number) ( (((number) % (granularity)) ? ((number) + (granularity) - ((number) % (granularity))) : (number)))
@@ -33,10 +34,8 @@
 
 class OSCacheImpl;
 class OSCacheLayout;
-class OSCacheRegionEntryIterator;
 class OSCacheRegionMemoryProtector;
 
-class CacheAllocator;
 class CacheCRCChecker;
 
 class OSCacheRegion {
@@ -73,8 +72,6 @@ public:
 
   virtual void initialize(OSCacheRegionInitializer* initializer) = 0;
 
-  virtual OSCacheRegionEntryIterator* constructIterator() = 0;
-
   virtual bool adjustRegionStart(void* blockAddress) = 0;
   
   // calculates the size of the region.
@@ -91,8 +88,6 @@ public:
   virtual CacheCRCChecker* constructCRCChecker() = 0;
 
   virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
-
-  virtual void* allocate(CacheAllocator* allocator) = 0;
 
 protected:  
   OSCacheLayout* _layout;
