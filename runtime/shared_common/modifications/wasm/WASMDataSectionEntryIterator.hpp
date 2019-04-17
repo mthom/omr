@@ -6,23 +6,25 @@
 #include "WASMCacheEntry.hpp"
 
 struct WASMCacheEntryDescriptor {
-  WASMCacheEntryDescriptor(const char* methodSignature, void* codeLocation, U_32 codeLength)
-    : codeLocation(codeLocation)
-    , codeLength(codeLength)
-  {
-    strncpy(methodName, methodSignature, WASM_METHOD_NAME_MAX_LEN);
-  }
+  WASMCacheEntryDescriptor()
+    : entry(NULL)
+    , codeLocation(NULL)
+  {}
 
-  char methodName[WASM_METHOD_NAME_MAX_LEN];
-  void* codeLocation;
-  U_32 codeLength;
+  WASMCacheEntryDescriptor(WASMCacheEntry* entry)
+    : entry(entry)
+    , codeLocation(entry + sizeof(WASMCacheEntry))
+  {}
 
   inline bool atEnd() const {
     return codeLocation == NULL;
   }
+
+  WASMCacheEntry* entry;
+  void* codeLocation;
 };
 
-static WASMCacheEntryDescriptor nullCacheEntryDescriptor("", NULL, 0);
+static WASMCacheEntryDescriptor nullCacheEntryDescriptor;
 
 class WASMDataSectionEntryIterator
 {
@@ -32,7 +34,7 @@ public:
     : _focus(focus)
     , _limit(limit)
   {}
-  
+
   WASMCacheEntryDescriptor next() {
     WASMCacheEntry* entry = _focus;
 
@@ -40,12 +42,12 @@ public:
       return nullCacheEntryDescriptor;
     }
 
-    WASMCacheEntryDescriptor descriptor(entry->methodName, _focus++, entry->codeLength);
+    WASMCacheEntryDescriptor descriptor(_focus++);
     _focus += entry->codeLength;
 
     return descriptor;
   }
-    
+
 protected:
   OSCacheBumpRegionFocus<WASMCacheEntry> _focus;
   const OSCacheBumpRegionFocus<WASMCacheEntry> _limit;
