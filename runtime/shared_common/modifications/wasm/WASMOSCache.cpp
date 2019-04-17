@@ -9,6 +9,6 @@ WASMOSCache<SuperOSCache>::WASMOSCache(OMRPortLibrary* library,
 				       WASMOSCacheConfigOptions* configOptions,
 				       UDATA osPageSize)
   : SuperOSCache(library, cacheName, ctrlDirName, numLocks,
-		 new WASMOSCacheConfig<typename SuperOSCache::config_type>(numLocks, osPageSize),
+		 (_config = new WASMOSCacheConfig<typename SuperOSCache::config_type>(numLocks, osPageSize)),
 		 configOptions)
 {}

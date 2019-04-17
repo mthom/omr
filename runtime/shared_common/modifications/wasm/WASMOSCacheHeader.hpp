@@ -2,6 +2,7 @@
 #define WASM_OSCACHE_HEADER_HPP_INCLUDED
 
 #include "OSCacheContiguousRegion.hpp"
+#include "OSMemoryMappedCacheConfig.hpp"
 #include "OSMemoryMappedCacheHeader.hpp"
 #include "OSSharedMemoryCacheHeader.hpp"
 #include "WASMOSCacheConfigOptions.hpp"
@@ -11,10 +12,13 @@
 
 #include "omr.h"
 
-template <class OSCacheHeader>
+template <class>
+class WASMOSCacheConfig;
+
+template <class>
 class WASMOSCacheLayout;
 
-template <class OSCacheHeader>
+template <class>
 class WASMOSCacheHeader;
 
 template <>
@@ -42,6 +46,9 @@ public:
   }
 
 protected:
+  friend class WASMOSCacheConfig<OSMemoryMappedCacheConfig>;  
+  friend class WASMOSCacheLayout<OSMemoryMappedCacheHeader>;
+  
   WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* derivedMapping();
 
   WASMOSCacheConfigOptions* _configOptions;
@@ -72,6 +79,9 @@ public:
   }
 
 protected:
+  friend class WASMOSCacheLayout<OSSharedMemoryCacheHeader>;
+  friend class WASMOSCacheConfig<OSSharedMemoryCacheHeader>;
+  
   WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
 
   WASMOSCacheConfigOptions* _configOptions;

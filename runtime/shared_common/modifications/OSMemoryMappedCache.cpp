@@ -324,7 +324,7 @@ bool OSMemoryMappedCache::closeCacheFile()
   OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
   Trc_SHR_Assert_Equals(_config->getHeaderLocation(), NULL);
-  Trc_SHR_Assert_Equals(_config->getDataSectionFieldLocation(), NULL);
+  Trc_SHR_Assert_Equals(_config->getDataSectionLocation(), NULL);
 
   if(-1 == _config->_fileHandle) {
     return true;
@@ -485,7 +485,7 @@ void OSMemoryMappedCache::internalDetach()
 
   _config->detachRegions();
 //  _config->_layout->_headerStart = NULL;
-//  _config->getDataSectionFieldLocation() = NULL;
+//  _config->getDataSectionLocation() = NULL;
 //  _config->getDataSectionSize() = 0;
   /* The member variable '_actualFileLength' is not set to zero b/c
    * the cache size may be needed to reset the cache (e.g. in the
@@ -495,7 +495,7 @@ void OSMemoryMappedCache::internalDetach()
    */
 
   Trc_SHR_OSC_Mmap_internalDetach_Exit(_config->getHeaderLocation(),
-				       _config->getDataSectionFieldLocation(),
+				       _config->getDataSectionLocation(),
 				       _config->getDataSectionSize());
   return;
 }
@@ -657,11 +657,11 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
   // Trc_SHR_OSC_Mmap_attach_Entry1(UnitTest::unitTest);
 
   /* If we are already attached, just return */
-  if (_config->getDataSectionFieldLocation()) {
+  if (_config->getDataSectionLocation()) {
     Trc_SHR_OSC_Mmap_attach_alreadyattached(_config->getHeaderLocation(),
-					    _config->getDataSectionFieldLocation(),
+					    _config->getDataSectionLocation(),
 					    _config->getDataSectionSize());
-    return _config->getDataSectionFieldLocation();
+    return _config->getDataSectionLocation();
   }
 
   if (_config->acquireHeaderWriteLock(_portLibrary, _runningReadOnly, &lastErrorInfo) == -1) { //_activeGeneration, &lastErrorInfo) == -1) {
@@ -712,8 +712,8 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
     OSC_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_MMAP_ATTACH_ATTACHED, _cacheName);
   }
 
-  Trc_SHR_OSC_Mmap_attach_Exit(_config->getDataSectionFieldLocation());
-  return _config->getDataSectionFieldLocation();
+  Trc_SHR_OSC_Mmap_attach_Exit(_config->getDataSectionLocation());
+  return _config->getDataSectionLocation();
 
 detach:
   internalDetach();//_activeGeneration);
@@ -841,7 +841,7 @@ OSMemoryMappedCache::getPermissionsRegionGranularity()
 
   /* This call to capabilities is arguably unnecessary, but it is a good check to do */
   if (omrmmap_capabilities() & OMRPORT_MMAP_CAPABILITY_PROTECT) {
-    return omrmmap_get_region_granularity(_config->getDataSectionFieldLocation());
+    return omrmmap_get_region_granularity(_config->getDataSectionLocation());
   }
 
   return 0;

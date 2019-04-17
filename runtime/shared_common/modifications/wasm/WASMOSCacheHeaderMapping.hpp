@@ -1,15 +1,13 @@
-#if !defined(WASM_OS_CACHE_HEADER_MAPPING_HPP_INCLUDED)
-#define WASM_OS_CACHE_HEADER_MAPPING_HPP_INCLUDED
+#if !defined(WASM_OSCACHE_HEADER_MAPPING_HPP_INCLUDED)
+#define WASM_OSCACHE_HEADER_MAPPING_HPP_INCLUDED
 
 #include "CacheHeaderMappingImpl.hpp"
-
-template <class OSCacheHeader>
-class WASMOSCacheHeader;
+#include "OSMemoryMappedCacheHeaderMapping.hpp"
+#include "OSSharedMemoryCacheHeaderMapping.hpp"
 
 template <class OSCacheHeader>
 struct WASMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
 {
-public:
   U_32 _cacheSize;
   typename CacheHeaderMapping<OSCacheHeader>::mapping_type _mapping;
   volatile UDATA _readerCount;

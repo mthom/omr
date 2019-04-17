@@ -2,17 +2,19 @@
 #define WASM_COMPOSITE_CACHE_HPP_INCLUDED
 
 #include "CacheCRCChecker.hpp"
-#include "OSCacheImpl.hpp"
 #include "OSCacheBumpRegionFocus.hpp"
 #include "SynchronizedCacheCounter.hpp"
+
+#include "OSMemoryMappedCache.hpp"
+
+#include "OSCacheImpl.hpp"
 #include "WASMOSCache.hpp"
 
 class WASMCacheEntry;
 
-template <class SuperOSCache>
 class WASMCompositeCache {
 public:
-  WASMCompositeCache(WASMOSCache<SuperOSCache>* osCache, UDATA osPageSize);
+  WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache, UDATA osPageSize);
 
   bool startup(const char* cacheName, const char* ctrlDirName);
 
@@ -27,8 +29,8 @@ private:
   // not nullable once set, but we do eventually want to destroy it,
   // and when we do, perhaps the pointer should become NULL? or not?
   // the reference may not continue after its OSCache is destroyed.
-  WASMOSCache<SuperOSCache>* _osCache;
-
+  WASMOSCache<OSMemoryMappedCache>* _osCache;
+ 
   SynchronizedCacheCounter _readerCount;
   CacheCRCChecker _crcChecker;
   OSCacheBumpRegionFocus<U_8> _codeUpdatePtr;

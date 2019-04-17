@@ -75,10 +75,13 @@ typedef enum SH_SysvShmAccess {
 // #define SHM_CACHEDATASIZE(size) (size-SHM_CACHEHEADERSIZE)
 // #define SHM_DATASTARTFROMHEADER(header) SRP_GET(header->oscHdr.dataStart, void*);
 
+class OSSharedMemoryCache;
+
 class OSSharedMemoryCacheConfig: public OSCacheConfig
 {
 public:
   typedef OSSharedMemoryCacheHeader header_type;
+  typedef OSSharedMemoryCache cache_type;
 
   OSSharedMemoryCacheConfig(UDATA numLocks);
 

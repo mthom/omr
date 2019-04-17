@@ -36,12 +36,11 @@ public:
 
   UDATA actualCacheSize() {
     return _blockSize;
-  }  
-
+  }
+    
   void init(void* blockAddress, uintptr_t size);
-  
-protected:
 
+protected:
   UDATA _blockSize;
   WASMOSCacheHeader<OSCacheHeader>* _header;
   OSCacheContiguousRegion* _dataSection;

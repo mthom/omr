@@ -46,6 +46,7 @@ class OSMemoryMappedCacheConfig : public OSCacheConfig
 {
 public:
   typedef OSMemoryMappedCacheHeader header_type;
+  typedef OSMemoryMappedCache cache_type;
 
   OSMemoryMappedCacheConfig(UDATA numLocks);
 
@@ -99,9 +100,9 @@ public:
 
   // this should NOT read from the header! Instead, read from the region
   // objects contained in the layout.
-  virtual void* getDataSectionFieldLocation() = 0;
+  virtual void* getDataSectionLocation() = 0;
 
-  virtual UDATA getDataSectionSize() = 0;
+  virtual U_32 getDataSectionSize() = 0;
 
 //  virtual void setCacheSizeInHeader(U_32 size) {
 //    *getCacheSizeFieldLocation() = size;

@@ -42,6 +42,8 @@ class OSMemoryMappedCacheConfig;
 // and region-based locks on sections of files.
 class OSMemoryMappedCache: public OSCacheImpl {
 public:
+  typedef OSMemoryMappedCacheHeader header_type;
+  
   virtual IDATA getError();
   
   OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,

@@ -1,18 +1,14 @@
 #include "OSCache.hpp"
 #include "WASMOSCache.hpp"
 #include "WASMOSCacheConfig.hpp"
+#include "WASMOSCacheHeaderMapping.hpp"
 #include "WASMOSCacheLayout.hpp"
 
 template <class OSCacheConfigImpl>
-J9SRP* WASMOSCacheConfig<OSCacheConfigImpl>::getDataSectionLocation()
+U_32 WASMOSCacheConfig<OSCacheConfigImpl>::getDataSectionSize()
 {
-  return (J9SRP*) _layout->_dataSection->regionStart();
-}
-
-template <class OSCacheConfigImpl>
-U_64 WASMOSCacheConfig<OSCacheConfigImpl>::getDataSectionSize()
-{
-  return _layout->_dataSection->regionSize();
+  WASMOSCacheHeaderMapping<header_type>* mapping = _layout->_header->derivedMapping();
+  return mapping->_dataSectionSize;
 }
 
 template <class OSCacheConfigImpl>
