@@ -16,8 +16,9 @@ WASMCompositeCache::WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache
 
 void WASMCompositeCache::populateTables()
 {
-  WASMDataSectionEntryIterator iterator = constructEntryIterator();
-  
+  WASMCacheEntry* dataSectionEnd = (WASMCacheEntry*) _osCache->dataSectionRegion()->regionEnd();
+  WASMDataSectionEntryIterator iterator = constructEntryIterator(dataSectionEnd - sizeof(WASMCacheEntry));
+
   while(true) {
     WASMCacheEntryDescriptor descriptor = iterator.next();
 
@@ -33,12 +34,13 @@ void WASMCompositeCache::populateTables()
 // initialization. Read in the cache size, modify accordingly.  By an
 // argument, whose default should be _codeUpdatePtr.
 WASMDataSectionEntryIterator
-WASMCompositeCache::constructEntryIterator()
+WASMCompositeCache::constructEntryIterator(WASMCacheEntry* delimiter)
 {
-  OSCacheBumpRegionFocus<WASMCacheEntry> focus(_osCache->dataSectionRegion(),
-					       (WASMCacheEntry*) _osCache->dataSectionRegion()->regionStartAddress());
+  OSCacheRegion* dataSectionRegion = _osCache->dataSectionRegion();
+  WASMCacheEntry* dataSectionStartAddress = (WASMCacheEntry*) dataSectionRegion->regionStartAddress();
 
-  OSCacheBumpRegionFocus<WASMCacheEntry> limit(_osCache->dataSectionRegion(), _codeUpdatePtr);
+  OSCacheBumpRegionFocus<WASMCacheEntry> focus(dataSectionRegion, dataSectionStartAddress);
+  OSCacheBumpRegionFocus<WASMCacheEntry> limit(dataSectionRegion, delimiter);
 
   return WASMDataSectionEntryIterator(focus, limit);
 }
@@ -68,9 +70,10 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
     return false;
   }
 
+  // yes, there's an extraneous string copy done here, buuuht, that is fine for now.
   WASMCacheEntry entry(methodName, codeLength);
   WASMCacheEntry* entryLocation = _codeUpdatePtr++;
-  
+
   memcpy(entryLocation, &entry, sizeof(WASMCacheEntry));
   memcpy(_codeUpdatePtr, codeLocation, codeLength);
 

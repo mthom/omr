@@ -282,7 +282,7 @@ OSSharedMemoryCache::startup(const char* cacheName, const char* ctrlDirName)
 
 	if (0 == headerMutexRc) {
 	  rc = openCache(_cacheLocation);//, (shsemrc == OMRPORT_INFO_SHSEM_CREATED));
-	  if (!_configOptions->restoreCheckEnabled() || !_configOptions->restoreEnabled()) {
+	  if (!_configOptions->restoreCheckEnabled() || !_configOptions->restoreCheckEnabled()) {
 	      // OMR_ARE_NO_BITS_SET(_runtimeFlags, OMRSHR_RUNTIMEFLAG_RESTORE | OMRSHR_RUNTIMEFLAG_RESTORE_CHECK)) {
 	    /* When running "restoreFromSnapshot" utility, do not release headerMutex here */
 	    if (0 != _config->releaseHeaderWriteLock(_portLibrary, &lastErrorInfo)) {

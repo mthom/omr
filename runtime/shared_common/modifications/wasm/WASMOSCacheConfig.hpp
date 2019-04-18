@@ -8,8 +8,6 @@
 #define HEADER_REGION_ID 0
 #define DATA_SECTION_REGION_ID 1
 
-#define MAX_CRC_SAMPLES 1024
-
 template <class>
 class WASMOSCache;
 

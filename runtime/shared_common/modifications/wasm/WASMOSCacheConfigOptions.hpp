@@ -4,106 +4,189 @@
 #include "OSCacheConfigOptions.hpp"
 
 #include "omr.h"
+#include "sharedconsts.h" // for the J9SH_CACHE_FILE_MODE_USERDIR_WITH_GROUPACCESS, etc.
+
+#define MAX_CRC_SAMPLES 1024
 
 class WASMOSCacheConfigOptions: public OSCacheConfigOptions
 {
 public:
-  WASMOSCacheConfigOptions();
+  WASMOSCacheConfigOptions()
+    : OSCacheConfigOptions(J9OSCACHE_OPEN_MODE_GROUPACCESS)
+    , _cacheSize(0)
+  {}
 
-  // cache creation/opening options. used mostly in startup routines.
-//  enum CreateOptions {
-//    OpenForStats,
-//    OpenToDestroy,
-//    OpenDoNotCreate
-//  };
-//
-//  enum RuntimeOptions {
-//    GETCACHEDIR_USE_USERHOME, // relates to OMRSHMEM_GETDIR_USE_USERHOME
-//    CACHEDIR_PRESENT // the user specified the cache directory as a runtime flag
-//  };
-//
-//  enum VerboseOptions {
-//  };
-//
-//  enum StartupReason {
-//    Stat
-//  };
-
-  virtual bool useUserHomeDirectoryForCacheDir() {
+  bool useUserHomeDirectoryForCacheDir() {
     return true;
   }
-  
-  virtual bool isUserSpecifiedCacheDir() {
+
+  bool isUserSpecifiedCacheDir() {
     return false;
   }
   // is the cache being opened in read-only mode?
-  virtual bool readOnlyOpenMode() {
+  bool readOnlyOpenMode() {
     return false;
   }
 
-  virtual I_32 fileMode() {
+  I_32 fileMode() {
+    I_32 perm = 0;
+
+    Trc_SHR_OSC_Mmap_getFileMode_Entry();
+
+    if (isUserSpecifiedCacheDir()) {
+      if (openMode() & J9OSCACHE_OPEN_MODE_GROUPACCESS) {
+	perm = J9SH_CACHE_FILE_MODE_USERDIR_WITH_GROUPACCESS;
+      } else {
+	perm = J9SH_CACHE_FILE_MODE_USERDIR_WITHOUT_GROUPACCESS;
+      }
+    } else {
+      if (groupAccessEnabled()) { //openMode() & J9OSCACHE_OPEN_MODE_GROUPACCESS) {
+	perm = J9SH_CACHE_FILE_MODE_DEFAULTDIR_WITH_GROUPACCESS;
+      } else {
+	perm = J9SH_CACHE_FILE_MODE_DEFAULTDIR_WITHOUT_GROUPACCESS;
+      }
+    }
+
+    Trc_SHR_OSC_Mmap_getFileMode_Exit(openMode(), perm);
+    return perm;
   }
 
   // let's say this is 8MB for now? I dunno.
-  virtual U_32 dataSectionSize() {
+  U_32 dataSectionSize() {
     return 8 * 1024 * 1024;
   }
-  
-  virtual I_32 openMode(); //TODO: this should set _groupPerm = 1 if groupAccessEnabled() is true.
-  virtual UDATA groupPermissions(); // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.
 
-  virtual IDATA cacheDirPermissions();
-  virtual bool usingNetworkCache();
+  // the open mode flags are defined in sharedconsts.h
+  I_32 openMode() {
+    return _openMode;
+  }
+
+  // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.
+  UDATA groupPermissions() {
+    return 1; // yes, group permissions are enabled.
+  }
+
+  IDATA cacheDirPermissions() {
+    
+  }
+  
+  bool usingNetworkCache() {
+    return true;
+  }
 
   // TODO: the restore check only applies to the shared memory cache,
   // so we should probably create an OSSharedMemoryCacheConfigOptions
   // subclass, and put it there.. then OSSharedMemoryCache will own a
   // reference to an OSSharedMemoryCacheConfigOptions object.
-  virtual bool restoreCheckEnabled();
+  bool restoreCheckEnabled() {
+    return false;
+  }
 
   // TODO: same as restoreCheckEnabled.
-  virtual bool restoreEnabled();
+  bool restoreEnabled() {
+    return false;
+  }
 
-  virtual bool openButDoNotCreate();
+  bool openButDoNotCreate() {
+    return false;
+  }
+  
   // are we opening the cache in order to destroy?
-  virtual bool openToDestroyExistingCache();
-  virtual bool openToDestroyExpiredCache();
-  virtual bool openToStatExistingCache();
+  bool openToDestroyExistingCache() {
+    return false;
+  }
+  
+  bool openToDestroyExpiredCache() {
+    return false;
+  }
+  
+  bool openToStatExistingCache() {
+    return false;
+  }
 
   // reasons for stats. Should have a StatReason enum.
-  virtual bool statToDestroy(); // like SHR_STATS_REASON_DESTROY
-  virtual bool statExpired(); // like SHR_STATS_REASON_EXPIRE
-  virtual bool statIterate(); // like SHR_STATS_REASON_ITERATE
-  virtual bool statList(); // like SHR_STATS_REASON_LIST
+  bool statToDestroy() {
+    return false; // like SHR_STATS_REASON_DESTROY
+  }
 
-  virtual OSCacheConfigOptions& setOpenReason(StartupReason reason);
-  virtual OSCacheConfigOptions& setReadOnlyOpenMode();
-  virtual OSCacheConfigOptions& setOpenMode(I_32 openMode);
+  bool statExpired() {
+    return false; // like SHR_STATS_REASON_EXPIRE
+  }
+  
+  bool statIterate() {
+    return false; // like SHR_STATS_REASON_ITERATE
+  }
+  
+  bool statList() {
+    return false; // like SHR_STATS_REASON_LIST
+  }
+
+  OSCacheConfigOptions& setOpenReason(StartupReason) { return *this; }
+  OSCacheConfigOptions& setReadOnlyOpenMode() { return *this; }
+  OSCacheConfigOptions& setOpenMode(I_32) { return *this; }
 
   // the block size of the cache.
-  virtual U_32 cacheSize() = 0;
-  virtual OSCacheConfigOptions& setCacheSize(uintptr_t size) = 0;
+  U_32 cacheSize() {
+    return _cacheSize;
+  }
+  
+  OSCacheConfigOptions& setCacheSize(U_32 size) {
+    _cacheSize = size;
+    return *this;
+  }
 
-  virtual U_32 maxCRCSamples();
+  U_32 maxCRCSamples() {
+    return MAX_CRC_SAMPLES;
+  }
 
   // does the cache create a file?
-  virtual bool createFile();
+  bool createFile() {
+    return true;
+  }
 
   // do we try to open the cache read-only if we failed to open the cache with write permissions?
-  virtual bool tryReadOnlyOnOpenFailure();
+  bool tryReadOnlyOnOpenFailure() {
+    return false;
+  }
 
   // when the cache is corrupt, do we dump its contents?
-  virtual bool disableCorruptCacheDumps();
+  bool disableCorruptCacheDumps() {
+    return true;
+  }
 
-  virtual bool verboseEnabled();
-  virtual bool groupAccessEnabled(); // true iff _groupPerm = 1 in the J9 cache.
+  bool verboseEnabled() {
+    return false;
+  }
+  
+  bool groupAccessEnabled() {
+    return true; // true iff _groupPerm = 1 in the J9 cache.
+  }
+  
   // allocate the cache in the user's home directory.
-  virtual void useUserHomeDirectoryForCacheLocation();
+  // we already do this, so this function does nothing.
+  void useUserHomeDirectoryForCacheLocation() {}
+  
   // render the options to a bit vector understood by the functions of the OMR port library.
-  virtual U_32 renderToFlags();
+  // the only place this is used currently is inside OSCacheUtils.cpp, exactly once, to
+  // open a shared memory block. So, the contents of this member function are derived from
+  // OSCache.cpp:getCacheDir.
+  U_32 renderToFlags() {
+    U_32 flags = OMRSHMEM_GETDIR_APPEND_BASEDIR;
 
-  virtual UDATA renderCreateOptionsToFlags();
-  virtual UDATA renderVerboseOptionsToFlags();
+    if(!groupAccessEnabled()) {
+      flags |= OMRSHMEM_GETDIR_USE_USERHOME;
+    }
+
+    return flags;
+  }
+
+  UDATA renderCreateOptionsToFlags() {
+    return 0;
+  }
+  
+  UDATA renderVerboseOptionsToFlags() {
+    return 0;
+  }
 
   // flags obviated so far:
   /* appendBaseDir (a variable inside getCacheDir)
@@ -112,12 +195,13 @@ public:
      flags |= OMRSHMEM_GETDIR_USE_USERHOME; <-- covered by useUserHomeDirectoryForCacheLocation().
    */
 protected:
+  U_32 _cacheSize;
   I_32 _openMode;
-
-  CreateOptions _createOptions;
-  RuntimeOptions _runtimeOptions;
-  VerboseOptions _verboseOptions;
-  StartupReason _startupReason;
+//
+//  CreateOptions _createOptions;
+//  RuntimeOptions _runtimeOptions;
+//  VerboseOptions _verboseOptions;
+//  StartupReason _startupReason;
 };
 
 #endif

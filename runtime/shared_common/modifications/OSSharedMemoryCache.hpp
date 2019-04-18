@@ -62,6 +62,8 @@ public:
 		      IDATA numLocks, OSSharedMemoryCacheConfig* config,
 		      OSCacheConfigOptions* configOptions);
 
+  virtual ~OSSharedMemoryCache();
+
   virtual bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset = false);
 

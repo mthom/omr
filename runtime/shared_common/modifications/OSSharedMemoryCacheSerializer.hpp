@@ -23,8 +23,8 @@
 #if !defined(OS_SHARED_MEMORY_CACHE_SERIALIZER_HPP_INCLUDED)
 #define OS_SHARED_MEMORY_CACHE_SERIALIZER_HPP_INCLUDED
 
+#include "OSCacheContiguousRegion.hpp"
 #include "OSCacheRegionSerializer.hpp"
-#include "OSSharedMemoryCacheConfig.hpp"
 #include "OSSharedMemoryCacheHeader.hpp"
 
 #include "omrport.h"
@@ -34,7 +34,7 @@ class OSMemoryMappedCacheHeader;
 class OSSharedMemoryCacheSerializer: public OSCacheRegionSerializer
 {
 public:
-  OSSharedMemoryCacheSerializer(OMRPortLibrary* library, bool inDefaultControlDir)				
+  OSSharedMemoryCacheSerializer(OMRPortLibrary* library, bool inDefaultControlDir)
     : _library(library)
     , _inDefaultControlDir(inDefaultControlDir)
   {}
@@ -45,7 +45,9 @@ public:
 
   void serialize(OSMemoryMappedCacheHeader*) {}
 
-  void serialize(OSCacheRegion*) {}
+  void serialize(OSCacheContiguousRegion* region) {
+    memset(region->regionStartAddress(), 0, region->regionSize());
+  }
 
 protected:
   OMRPortLibrary* _library;

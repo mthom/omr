@@ -59,6 +59,8 @@ public:
   OSCache(OSCacheConfigOptions* configOptions)
     : _configOptions(configOptions)
   {}
+
+  virtual ~OSCache();
   
   // get the data and total sizes of the cache.
   virtual U_32 getDataSize() = 0;

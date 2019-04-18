@@ -108,6 +108,8 @@ class OSCacheImpl: public OSCache
 {
 public:
   OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks);
+
+  virtual ~OSCacheImpl();
   // old J9 cache comment:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache

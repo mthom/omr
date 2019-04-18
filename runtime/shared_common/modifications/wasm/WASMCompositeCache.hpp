@@ -25,8 +25,8 @@ public:
   bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
 
 private:
-  virtual WASMDataSectionEntryIterator constructEntryIterator();
-
+  virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);
+  
   UDATA dataSectionFreeSpace() const;
   void populateTables();
 
@@ -39,7 +39,7 @@ private:
   CacheCRCChecker _crcChecker;
   OSCacheBumpRegionFocus<WASMCacheEntry> _codeUpdatePtr;
 
-  std::map<std::string, WASMCacheEntry*> _codeEntries;
+  std::map<std::string, WASMCacheEntry*> _codeEntries;  
 };
 
 #endif

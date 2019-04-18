@@ -22,7 +22,7 @@ class WASMOSCache: public SuperOSCache
 {
 public:
   TR_ALLOC(TR_Memory::SharedCache)
-  
+
   WASMOSCache(OMRPortLibrary* library,
 	      const char* cacheName,
 	      const char* ctrlDirName,
@@ -32,14 +32,14 @@ public:
 
   using SuperOSCache::startup;
 
-  OSCacheRegion* headerRegion() {    
-    return _config->_layout->operator[](HEADER_REGION_ID);
+  OSCacheContiguousRegion* headerRegion() {
+    return (OSCacheContiguousRegion*) _config->_layout->operator[](HEADER_REGION_ID);
   }
 
-  OSCacheRegion* dataSectionRegion() {
-    return _config->_layout->operator[](DATA_SECTION_REGION_ID);
+  OSCacheContiguousRegion* dataSectionRegion() {
+    return (OSCacheContiguousRegion*) _config->_layout->operator[](DATA_SECTION_REGION_ID);
   }
-  
+
   UDATA* readerCountFocus() {
     UDATA offset = offsetof(WASMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
     return (UDATA*) headerRegion()->regionStartAddress() + offset;

@@ -44,11 +44,13 @@ class OSMemoryMappedCache: public OSCacheImpl {
 public:
   typedef OSMemoryMappedCacheHeader header_type;
   
-  virtual IDATA getError();
-  
   OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,
 		      OSMemoryMappedCacheConfig* config, OSCacheConfigOptions* configOptions);
 
+  virtual ~OSMemoryMappedCache();
+  
+  virtual IDATA getError(); 
+  
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);
 

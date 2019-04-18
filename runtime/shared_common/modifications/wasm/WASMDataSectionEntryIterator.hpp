@@ -44,7 +44,7 @@ public:
   WASMCacheEntryDescriptor next() {
     WASMCacheEntry* entry = _focus;
 
-    if(entry == NULL || !(_focus < _limit)) {
+    if(entry == NULL || entry->codeLength == 0 || !(_focus < _limit)) {
       return nullCacheEntryDescriptor;
     }
 

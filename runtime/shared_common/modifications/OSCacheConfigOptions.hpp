@@ -31,6 +31,8 @@ public:
     : _openMode(_openMode)
   {}
 
+  virtual ~OSCacheConfigOptions();
+  
   // cache creation/opening options. used mostly in startup routines.
   enum CreateOptions {
     OpenForStats,
@@ -67,9 +69,6 @@ public:
   // subclass, and put it there.. then OSSharedMemoryCache will own a
   // reference to an OSSharedMemoryCacheConfigOptions object.
   virtual bool restoreCheckEnabled();
-
-  // TODO: same as restoreCheckEnabled.
-  virtual bool restoreEnabled();
 
   virtual bool openButDoNotCreate();
   // are we opening the cache in order to destroy?

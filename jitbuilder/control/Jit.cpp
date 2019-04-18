@@ -102,12 +102,26 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    codeCacheConfig._largeCodePageFlags = 0;
    codeCacheConfig._maxNumberOfCodeCaches = 96;
    codeCacheConfig._canChangeNumCodeCaches = true;
-   codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool) 
+   codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool)
                                     ||  TR::Options::getCmdLineOptions()->getOption(TR_EmitExecutableELFFile);
    codeCacheConfig._emitRelocatableELF = TR::Options::getCmdLineOptions()->getOption(TR_EmitRelocatableELFFile);
 
    TR::CodeCache *firstCodeCache = codeCacheManager.initialize(true, 1);
    }
+
+// ignite the seven cannons!
+WASMCompositeCache* initializeSharedCache()
+{
+  OMRPortLibrary* library;
+  
+  omrport_allocate_library(&library);
+  omrport_startup_library(library);  
+  
+  static WASMOSCacheConfigOptions configOptions;
+  static WASMOSCache<OSMemoryMappedCache> osCache(library, "wasm_shared_cache", "",
+						  5, &configOptions);
+  return new WASMCompositeCache(&osCache, 0);
+}
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
@@ -131,6 +145,10 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
       {
       return false;
       }
+
+   if(initializeSharedCache() == NULL) {
+     return false;
+   }
 
    TR::Compiler->initialize();
 
