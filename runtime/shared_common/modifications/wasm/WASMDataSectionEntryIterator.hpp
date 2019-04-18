@@ -16,15 +16,21 @@ struct WASMCacheEntryDescriptor {
     , codeLocation(entry + sizeof(WASMCacheEntry))
   {}
 
-  inline bool atEnd() const {
-    return codeLocation == NULL;
+  inline bool operator ==(const WASMCacheEntryDescriptor& rhs) const {
+    return entry == rhs.entry && codeLocation == rhs.codeLocation;
   }
 
+  operator bool() const;
+  
   WASMCacheEntry* entry;
   void* codeLocation;
 };
 
-static WASMCacheEntryDescriptor nullCacheEntryDescriptor;
+static const WASMCacheEntryDescriptor nullCacheEntryDescriptor;
+
+WASMCacheEntryDescriptor::operator bool() const {
+  return *this == nullCacheEntryDescriptor;
+}
 
 class WASMDataSectionEntryIterator
 {
@@ -48,7 +54,7 @@ public:
     return descriptor;
   }
 
-protected:
+protected:  
   OSCacheBumpRegionFocus<WASMCacheEntry> _focus;
   const OSCacheBumpRegionFocus<WASMCacheEntry> _limit;
 };

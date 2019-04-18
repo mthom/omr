@@ -10,8 +10,28 @@ WASMCompositeCache::WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache
 				MAX_CRC_SAMPLES))
   , _codeUpdatePtr(OSCacheBumpRegionFocus<WASMCacheEntry>(_osCache->dataSectionRegion(),
 							  (WASMCacheEntry*) _osCache->dataSectionRegion()->regionStartAddress()))
-{}
+{
+  populateTables();
+}
 
+void WASMCompositeCache::populateTables()
+{
+  WASMDataSectionEntryIterator iterator = constructEntryIterator();
+  
+  while(true) {
+    WASMCacheEntryDescriptor descriptor = iterator.next();
+
+    if(descriptor) {
+      _codeEntries[descriptor.entry->methodName] = descriptor.entry;
+    } else {
+      break;
+    }
+  }
+}
+
+// limit should reflect the true limit of the cache at
+// initialization. Read in the cache size, modify accordingly.  By an
+// argument, whose default should be _codeUpdatePtr.
 WASMDataSectionEntryIterator
 WASMCompositeCache::constructEntryIterator()
 {
@@ -49,11 +69,14 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   }
 
   WASMCacheEntry entry(methodName, codeLength);
-
-  memcpy(_codeUpdatePtr++, &entry, sizeof(WASMCacheEntry));
+  WASMCacheEntry* entryLocation = _codeUpdatePtr++;
+  
+  memcpy(entryLocation, &entry, sizeof(WASMCacheEntry));
   memcpy(_codeUpdatePtr, codeLocation, codeLength);
 
   _codeUpdatePtr += codeLength;
+
+  _codeEntries[methodName] = entryLocation;
 
   return true;
 }
