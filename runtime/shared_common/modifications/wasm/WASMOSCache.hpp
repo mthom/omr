@@ -50,6 +50,28 @@ public:
     return (UDATA*) headerRegion()->regionStartAddress() + offset;
   }
 
+  U_32 getDataSize() {
+    return dataSectionRegion()->regionSize();
+  }
+
+  U_32 getTotalSize() {
+    return getDataSize() + headerRegion()->regionSize();
+  }
+
+  IDATA initCacheName(const char* cacheName) {
+    strcpy(this->_cacheName, cacheName);
+    return 0;
+  }
+
+  // obviously totally naive, but do it anyway.
+  bool started() {
+    return true;
+  }
+  
+  using SuperOSCache::runExitProcedure;
+  using SuperOSCache::errorHandler;
+  using SuperOSCache::getPermissionsRegionGranularity;
+  
 protected:
   WASMOSCacheConfig<typename SuperOSCache::config_type>* _config;
 };

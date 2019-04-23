@@ -78,7 +78,7 @@ protected:
   virtual UDATA getPermissionsRegionGranularity();
 
   virtual void setError(IDATA errorCode);
-  virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo) = 0;
+  virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
   
   virtual void runExitProcedure();
   virtual void handleCacheHeaderCorruption(IDATA headerRc);
@@ -87,7 +87,7 @@ protected:
   virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
 #endif
 
-  virtual OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator(char* resultBuf) = 0;
+  virtual OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator(char* resultBuf);
   virtual bool deleteCacheFile(LastErrorInfo* lastErrorInfo);
 
   virtual OSCacheMemoryProtector* constructMemoryProtector();

@@ -115,7 +115,7 @@ protected:
    // Initialize 'target' environment for this compiler
    //
    void initializeTargetEnvironment();
-o
+
    // Initialize 'host' environment for this compiler
    //
    void initializeHostEnvironment();

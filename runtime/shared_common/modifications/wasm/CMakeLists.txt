@@ -28,7 +28,7 @@ add_library(wasm_shared_cache STATIC
   WASMOSCacheLayout.cpp
   WASMOSCacheConfig.cpp
   WASMCompositeCache.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/../../ut_omrshr.c
+  ${CMAKE_CURRENT_BINARY_DIR}/../ut_omrshr.c
 )
 
 # Create shared class library.
@@ -57,7 +57,8 @@ target_include_directories(wasm_shared_cache
 )
 
  target_link_libraries(wasm_shared_cache
- 	PRIVATE
+   PRIVATE
+                shared_cache_modifications
 # 		j9vm_interface
  		j9pool
  		j9hashtable

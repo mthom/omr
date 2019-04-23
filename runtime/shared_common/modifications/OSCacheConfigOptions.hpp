@@ -88,7 +88,7 @@ public:
 
   // the block size of the cache.
   virtual U_32 cacheSize() = 0;
-  virtual OSCacheConfigOptions& setCacheSize(uintptr_t size) = 0;
+  virtual OSCacheConfigOptions& setCacheSize(U_32 size) = 0;
 
   virtual U_32 maxCRCSamples();
 

@@ -36,6 +36,8 @@
 #include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
 
+#include "WASMCompositeCache.hpp"
+
 #if defined(TR_TARGET_S390)
 #include "z/codegen/TRSystemLinkage.hpp"
 #endif

@@ -20,7 +20,7 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 ################################################################################
 
-# omr_add_tracegen(omrshr_mods.tdf)
+omr_add_tracegen(omrshr.tdf)
 
 add_library(shared_cache_modifications STATIC
   OSCacheConfigOptions.cpp
@@ -47,7 +47,7 @@ add_library(shared_cache_modifications STATIC
   OSCacheContiguousRegion.cpp
   OSMemoryMappedCacheMemoryProtector.cpp
   OSSharedMemoryCacheMemoryProtector.cpp  
-  ${CMAKE_CURRENT_BINARY_DIR}/../ut_omrshr.c
+  ${CMAKE_CURRENT_BINARY_DIR}/ut_omrshr.c
 )
 
 # Create shared class library.

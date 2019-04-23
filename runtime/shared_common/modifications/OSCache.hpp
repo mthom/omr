@@ -94,16 +94,16 @@ public:
   // reports on the contents of error codes and the corruption context.
   virtual IDATA getError() = 0;
   // calls routines to finalize/shutdown the cache when OMR is exiting.
-  virtual void runExitCode(void) = 0;
+  virtual void runExitProcedure() = 0;
 
   // get the lock capabilities of the cache.
-  virtual IDATA getLockCapabilities(void) = 0;
+  virtual IDATA getLockCapabilities() = 0;
   // the region object has an internal value, "flags", that specify
   // permissions settings, and a few other things.
   virtual IDATA setRegionPermissions(OSCacheRegion* region) = 0;
   // returns the size of the smallest region on which permissions can be set. A return value of 0
   // means the setting of permissions is unsupported.
-  virtual UDATA getPermissionsRegionGranularity(OSCacheRegion* region) = 0;
+  virtual UDATA getPermissionsRegionGranularity() = 0;
 
 protected:
   IDATA _corruptionCode;
