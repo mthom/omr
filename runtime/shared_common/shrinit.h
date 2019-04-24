@@ -29,10 +29,9 @@
 #include "include/SCAbstractAPI.h"
 #include "omrutil.h" // for PRIMENUMBER_HELPER_OUTOFRANGE
 
-UDATA omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const J9SharedDataDescriptor* data, UDATA forceReplace);
-const U_8* omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, J9SharedDataDescriptor* data, IDATA *corruptOffset);
-UDATA omrshr_updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const J9SharedDataDescriptor* data);
-
+UDATA omrshr_storeAttachedData(OMR_VMThread* currentThread, const void* addressInCache, const OMRSharedDataDescriptor* data, UDATA forceReplace);
+const U_8* omrshr_findAttachedData(OMR_VMThread* currentThread, const void* addressInCache, OMRSharedDataDescriptor* data, IDATA *corruptOffset);
+UDATA omrshr_updateAttachedData(OMR_VMThread* currentThread, const void* addressInCache, I_32 updateAtOffset, const OMRSharedDataDescriptor* data);
 UDATA omrshr_updateAttachedUDATA(OMR_VMThread* currentThread, const void* addressInCache, UDATA type, I_32 updateAtOffset, UDATA value);
 void omrshr_freeAttachedDataDescriptor(OMR_VMThread* currentThread, OMRSharedDataDescriptor* data);
 const U_8* omrshr_storeCompiledMethod(OMR_VMThread* currentThread, const MethodNameAndSignature* methodNameAndSignature, const U_8* dataStart, UDATA dataSize, const U_8* codeStart, UDATA codeSize, UDATA forceReplace);

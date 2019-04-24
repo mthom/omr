@@ -22,9 +22,9 @@
 
 #include <stdio.h>
 #include "omrvm.h"
-extern "C"{
-  #include "shrinit.h"
-}
+//extern "C"{
+//  #include "shrinit.h"
+//}
 #include "codegen/CodeGenerator.hpp"
 #include "compile/CompilationTypes.hpp"
 #include "compile/Method.hpp"
