@@ -442,11 +442,11 @@ SH_CacheMap::startup(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* p
 		*_runtimeFlags &= ~OMRSHR_RUNTIMEFLAG_AUTOKILL_DIFF_BUILDID;
 	}
 
-	if (omrthread_monitor_init(&_refreshMutex, 0)) {
-		CACHEMAP_TRACE(OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE_DEFAULT, J9NLS_ERROR, J9NLS_SHRC_CM_FAILED_CREATE_REFRESH_MUTEX);
-		Trc_SHR_CM_startup_Exit5(currentThread);
-		return -1;
-	}
+//	if (omrthread_monitor_init(&_refreshMutex, 0)) {
+//		CACHEMAP_TRACE(OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE_DEFAULT, J9NLS_ERROR, J9NLS_SHRC_CM_FAILED_CREATE_REFRESH_MUTEX);
+//		Trc_SHR_CM_startup_Exit5(currentThread);
+//		return -1;
+//	}
 	
 	/* _ccHead->startup will set the _actualSize to the real cache size */
 	_runningNested = ((*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_NESTED) != 0);

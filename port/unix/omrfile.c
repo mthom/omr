@@ -1147,7 +1147,7 @@ omrfile_fstat(struct OMRPortLibrary *portLibrary, intptr_t fd, struct J9FileStat
 
 	Trc_PRT_file_fstat_Entry(fd);
 
-	portLibrary->error_set_last_error(portLibrary, 0, 0);
+	//portLibrary->error_set_last_error(portLibrary, 0, 0);
 
 	memset(buf, 0, sizeof(J9FileStat));
 

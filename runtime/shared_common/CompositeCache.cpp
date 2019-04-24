@@ -164,6 +164,7 @@ SH_CompositeCacheImpl::SH_SharedCacheHeaderInit::init(BlockPtr data, U_32 len, I
 	WSRP_SET(ca->updateCountPtr, &(ca->updateCount));
 	WSRP_SET(ca->corruptFlagPtr, &(ca->corruptFlag));
 	WSRP_SET(ca->lockedPtr, &(ca->locked));
+	return;
 }
 
 /**
@@ -659,7 +660,8 @@ SH_CompositeCacheImpl::setCorruptCache(OMR_VMThread *currentThread, IDATA corrup
 void
 SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSharedCachePreinitConfig* piConfig)
 {
-	OMR_VM* vm = currentThread->_vm;
+//	OMR_VM* vm = currentThread->_vm;
+        OMR_VM* vm = (OMR_VM*)currentThread;
 	U_32 finalReadWriteSize = 0;
 	BlockPtr finalSegmentStart;
 	U_32 numOfSharedNodes;
@@ -685,6 +687,9 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 		/* If no explicit value for sharedClassReadWriteBytes was set, set it to a proportion of the cache size */
 		finalReadWriteSize = SHC_PAD((_theca->totalBytes / DEFAULT_READWRITE_BYTES_DIVISOR), SHC_WORDALIGN);
 		maxSharedStringTableSize = srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
+
+		maxSharedStringTableSize = 0;//srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(J9SharedInternSRPHashTableEntry), TRUE);
+
 		if (maxSharedStringTableSize == PRIMENUMBERHELPER_OUTOFRANGE) {
 			/*
 			 * We should never be here.
@@ -703,6 +708,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 		 */
 		if (!(*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE)) {
 			numOfSharedNodes = srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
+			numOfSharedNodes = 0;//srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
 			if (numOfSharedNodes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				/**
 				 * This should never happen since finalReadWriteSize is limited up to maxSharedStringTableSize above.
@@ -713,6 +719,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 				Trc_SHR_Assert_ShouldNeverHappen();
 			}
 			finalReadWriteSize = srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
+			finalReadWriteSize = 0;//srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(J9SharedInternSRPHashTableEntry), FALSE);
 		}
 	}
 
@@ -831,8 +838,8 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 
 		if (softMaxValue < usedBytes) {
 			/* softmax is infeasible which is smaller than the bytes already used, adjust it to the min feasible value */
-			CC_WARNING_TRACE1(J9NLS_SHRC_CC_SOFTMAX_INFEASIBLE, usedBytes, false);
-			Trc_SHR_CC_setCacheAreaBoundaries_infeasibleSoftMaxBytes(currentThread, softMaxValue, usedBytes);
+//			CC_WARNING_TRACE1(J9NLS_SHRC_CC_SOFTMAX_INFEASIBLE, usedBytes, false);
+//			Trc_SHR_CC_setCacheAreaBoundaries_infeasibleSoftMaxBytes(currentThread, softMaxValue, usedBytes);
 			setSoftMaxBytes(currentThread, usedBytes);
 		}
 	}
@@ -1037,7 +1044,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, OMRSharedCachePreini
 	bool hasReadWriteMutex = SH_CompositeCacheImpl::hasReadWriteMutex(currentThread);
 	bool doReleaseWriteMutex = false;
 	bool doReleaseReadWriteMutex = false;
-	OMR_VM* vm = currentThread->_vm;
+	OMR_VM* vm = (OMR_VM*)currentThread;//currentThread->_vm;
 	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 
 	/* This function/method may be called indirectly from j9shr_init, return CC_STARTUP_OK if it is already started. */
@@ -1076,15 +1083,15 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, OMRSharedCachePreini
 		}
 	}
 		
-	if (0 != omrthread_monitor_init(&_headerProtectMutex, 0)) {
-		Trc_SHR_CC_startup_Exit10(currentThread);
-		return CC_STARTUP_FAILED;
-	}
+//	if (0 != omrthread_monitor_init(&_headerProtectMutex, 0)) {
+//		Trc_SHR_CC_startup_Exit10(currentThread);
+//		return CC_STARTUP_FAILED;
+//	}
 	
-	if (0 != omrthread_monitor_init(&_runtimeFlagsProtectMutex, 0)) {
-		Trc_SHR_CC_startup_Exit11(currentThread);
-		return CC_STARTUP_FAILED;
-	}
+//	if (0 != omrthread_monitor_init(&_runtimeFlagsProtectMutex, 0)) {
+//		Trc_SHR_CC_startup_Exit11(currentThread);
+//		return CC_STARTUP_FAILED;
+//	}
 	
 	if (isFirstStart) {
 		_commonCCInfo->cacheIsCorrupt = 0;
@@ -1144,14 +1151,14 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, OMRSharedCachePreini
 		bool OSCStarted = false;
 
 //		setCurrentCacheVersion(vm, J2SE_VERSION(currentThread->_vm), &versionData);
-
+		
 		/* Note that OSCache startup does not leave any kind of lock on the cache, so the cache file could in theory
 		 * be recreated by another process whenever we're not holding a lock on it. This can happen until attach() is called */
 
-		OSCStarted = _oscache->startup(vm, ctrlDirName, cacheDirPerm, rootName, piconfig, ((_ccHead == NULL) ? SH_CompositeCacheImpl::getNumRequiredOSLocks() : 0), createFlags, _verboseFlags, *_runtimeFlags, openMode, vm->sharedCacheAPI->storageKeyTesting, &versionData, headerInit, SHR_STARTUP_REASON_NORMAL);
-
-		if ((OMR_ARE_ALL_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_ENABLE_TEST_BAD_BUILDID))
-			&& (OMR_ARE_NO_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_SNAPSHOT))
+//		OSCStarted = _oscache->startup(vm, ctrlDirName, cacheDirPerm, rootName, piconfig, ((_ccHead == NULL) ? SH_CompositeCacheImpl::getNumRequiredOSLocks() : 0), createFlags, _verboseFlags, *_runtimeFlags, openMode, vm->sharedCacheAPI->storageKeyTesting, &versionData, headerInit, SHR_STARTUP_REASON_NORMAL);
+		OSCStarted = _oscache->startup(vm, ctrlDirName, cacheDirPerm, rootName, piconfig, ((_ccHead == NULL) ? SH_CompositeCacheImpl::getNumRequiredOSLocks() : 0), createFlags, _verboseFlags, *_runtimeFlags, openMode, 0, &versionData, headerInit, SHR_STARTUP_REASON_NORMAL);
+		if ((OMR_ARE_ALL_BITS_SET(*runtimeFlags, OMRSHR_RUNTIMEFLAG_ENABLE_TEST_BAD_BUILDID))
+			&& (OMR_ARE_NO_BITS_SET(*runtimeFlags, OMRSHR_RUNTIMEFLAG_SNAPSHOT))
 		) {
 			/*OMRSHR_RUNTIMEFLAG_ENABLE_TEST_BAD_BUILDID is for testing only. It is only
 			 * set the first time OSCache is created. It is unset here instead of in
@@ -1212,19 +1219,20 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, OMRSharedCachePreini
 			}
 		}
 	}
-	if (!hasWriteMutex) {
-		IDATA result;
-		
-		if (_parent == NULL) {
-			result = enterWriteMutex(currentThread, false, fnName);
-		} else {
-			result = _parent->enterWriteMutex(currentThread, false, fnName);
-		}
-		
-		if (result == 0) {
-			hasWriteMutex = doReleaseWriteMutex = true;
-		}
-	}
+//	if (!hasWriteMutex) {
+//		IDATA result;
+//		
+//		if (_parent == NULL) {
+//			result = enterWriteMutex(currentThread, false, fnName);
+//		} else {
+//			result = _parent->enterWriteMutex(currentThread, false, fnName);
+//		}
+//		
+//		if (result == 0) {
+//			hasWriteMutex = doReleaseWriteMutex = true;
+	                hasWriteMutex = true;
+//		}
+//	}
 	if (hasWriteMutex) {
 		_oldUpdateCount = 0;
 		if (cacheMemory != NULL) {
@@ -5717,7 +5725,7 @@ SH_CompositeCacheImpl::setRuntimeCacheFullFlags(OMR_VMThread* currentThread)
 		bool allRuntimeCacheFullFlagsSet = false;
 		U_64 cacheFullFlags = 0;
 
-		omrthread_monitor_enter(_runtimeFlagsProtectMutex);
+//		omrthread_monitor_enter(_runtimeFlagsProtectMutex);
 
 		/* don't set DENY_CACHE_UPDATES - we still need updates for timestamp optimizations */
 		if ((0 == (*_runtimeFlags & OMRSHR_RUNTIMEFLAG_BLOCK_SPACE_FULL)) &&
@@ -5776,7 +5784,7 @@ SH_CompositeCacheImpl::setRuntimeCacheFullFlags(OMR_VMThread* currentThread)
 			}
 		}
 
-		omrthread_monitor_exit(_runtimeFlagsProtectMutex);
+//		omrthread_monitor_exit(_runtimeFlagsProtectMutex);
 
 		if (0 != cacheFullFlags) {
 			if (true == allRuntimeCacheFullFlagsSet) {
@@ -6046,7 +6054,7 @@ SH_CompositeCacheImpl::getFreeJITBytes(OMR_VMThread *currentThread)
 bool
 SH_CompositeCacheImpl::isMprotectPartialPagesSet(OMR_VMThread *currentThread)
 {
-	Trc_SHR_Assert_True((NULL != this->_theca) && hasWriteMutex(currentThread));
+//	Trc_SHR_Assert_True((NULL != this->_theca) && hasWriteMutex(currentThread));
 	return OMR_ARE_ALL_BITS_SET(this->_theca->extraFlags, OMRSHR_EXTRA_FLAGS_MPROTECT_PARTIAL_PAGES);
 }
 
@@ -6058,7 +6066,7 @@ SH_CompositeCacheImpl::isMprotectPartialPagesSet(OMR_VMThread *currentThread)
 bool
 SH_CompositeCacheImpl::isMprotectPartialPagesOnStartupSet(OMR_VMThread *currentThread)
 {
-	Trc_SHR_Assert_True((NULL != this->_theca) && hasWriteMutex(currentThread));
+//	Trc_SHR_Assert_True((NULL != this->_theca) && hasWriteMutex(currentThread));
 	return OMR_ARE_ALL_BITS_SET(this->_theca->extraFlags, OMRSHR_EXTRA_FLAGS_MPROTECT_PARTIAL_PAGES_ON_STARTUP);
 }
 
@@ -6267,17 +6275,17 @@ SH_CompositeCacheImpl::setSoftMaxBytes(OMR_VMThread *currentThread, U_32 softMax
 {
 	OMRPORT_ACCESS_FROM_OMRPORT(_portlib);
 	/* add trace points */
-	Trc_SHR_Assert_True(
-						(NULL != _theca)
-						&& hasWriteMutex(currentThread)
-						&& (getTotalSize() >= softMaxBytes)
-						&& (softMaxBytes >= getUsedBytes())
-						);
+//	Trc_SHR_Assert_True(
+//						(NULL != _theca)
+//						&& hasWriteMutex(currentThread)
+//						&& (getTotalSize() >= softMaxBytes)
+//						&& (softMaxBytes >= getUsedBytes())
+//						);
 
 	_theca->softMaxBytes = softMaxBytes;
 	
 	Trc_SHR_CC_setSoftMaxBytes(currentThread, softMaxBytes);
-	CC_INFO_TRACE1(J9NLS_SHRC_CC_SOFTMX_SET, softMaxBytes, isJCLCall);
+//	CC_INFO_TRACE1(J9NLS_SHRC_CC_SOFTMX_SET, softMaxBytes, isJCLCall);
 	return;
 }
 
