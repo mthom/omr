@@ -937,6 +937,7 @@ OMR::CodeCacheManager::registerStaticRelocation(const TR::StaticRelocation &relo
       newRelocation->_location = relocation.location();
       newRelocation->_type = relocationType;
       newRelocation->_symbol = symbolNumber; //symbol index along the linked list
+      newRelocation->_next = nullptr;
       if(_relocations->_head){
             _relocations->_tail->_next = newRelocation;
             _relocations->_tail = newRelocation;

@@ -311,8 +311,8 @@ SH_OSCache::commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPer
 	OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
 
 	UDATA cacheNameLen=0, cachePathNameLen=0, versionStrLen=0;
-	char fullPathName[OMRSH_MAXPATH];
-
+//	char fullPathName[OMRSH_MAXPATH];
+	char fullPathName[256];
 	Trc_SHR_OSC_commonStartup_Entry();
 
 	_config = piconfig;
@@ -323,7 +323,8 @@ SH_OSCache::commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPer
 	_isUserSpecifiedCacheDir = (OMR_ARE_ALL_BITS_SET(_runtimeFlags, OMRSHR_RUNTIMEFLAG_CACHEDIR_PRESENT));
 
 	/* get the cacheDirName for the first time */
-	if (!(_cacheDirName = (char*)omrmem_allocate_memory(OMRSH_MAXPATH, OMRMEM_CATEGORY_CLASSES))) {
+//	if (!(_cacheDirName = (char*)omrmem_allocate_memory(OMRSH_MAXPATH, OMRMEM_CATEGORY_CLASSES))) {
+	if (!(_cacheDirName = (char*)omrmem_allocate_memory(128, OMRMEM_CATEGORY_CLASSES))) {
 		Trc_SHR_OSC_commonStartup_nomem_cacheDirName();
 		OSC_ERR_TRACE(J9NLS_SHRC_OSCACHE_ALLOC_FAILED);
 		return -1;
@@ -393,6 +394,7 @@ SH_OSCache::commonStartup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPer
 	if (getCachePathName(OMRPORTLIB, _cacheDirName, fullPathName, OMRSH_MAXPATH, _cacheNameWithVGen) == 0) {
 		cachePathNameLen = strlen(fullPathName);
 		if ((_cachePathName = (char*)omrmem_allocate_memory(cachePathNameLen + 1, OMRMEM_CATEGORY_CLASSES))) {
+		        int a = strlen(fullPathName);
 			strcpy(_cachePathName, fullPathName);
 		} else {
 			Trc_SHR_OSC_commonStartup_nomem_cachePathName();
@@ -906,7 +908,8 @@ SH_OSCache::checkOSCacheHeader(OSCache_header_version_current* header, J9PortShc
 		/* Check whether the version data contained in the header indeed matches the platform
  		 * specifications of the current target.
  		 */
-
+	        versionData->modlevel = 0;
+		header->versionData.modlevel = 0;
 		if (memcmp(versionData, &(header->versionData), sizeof(J9PortShcVersion)) != 0) {
 			Trc_SHR_OSC_checkOSCacheHeader_wrongVersion();
 			return OMRSH_OSCACHE_HEADER_WRONG_VERSION;
