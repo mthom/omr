@@ -20,7 +20,7 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 ################################################################################
 
-omr_add_tracegen(omrshr.tdf)
+omr_add_tracegen(omrshr_mods.tdf)
 
 add_library(shared_cache_modifications STATIC
   OSCacheConfigOptions.cpp
