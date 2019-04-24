@@ -23,7 +23,7 @@
 #include "omrcfg.h"
 #include "sharedconsts.h"
 #include "shrnls.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 #include "OSCacheConfigOptions.hpp"
 #include "OSCacheUtils.hpp"

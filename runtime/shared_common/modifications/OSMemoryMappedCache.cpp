@@ -30,7 +30,7 @@
 
 #include "omrcfg.h"
 #include "shrnls.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
 					 const char* cacheName,

@@ -25,6 +25,9 @@
 #include "OSCacheConfigOptions.hpp"
 #include "OSCacheImpl.hpp"
 
+#include "omr.h"
+#include "ut_omrshr_mods.h"
+
 // this must be in a struct and not a namespace -- these functions aren't visible outside the .o otherwise.
 struct OSCacheUtils
 {
@@ -34,6 +37,6 @@ struct OSCacheUtils
   static UDATA statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cacheName, bool displayNotFoundMsg);
   static SH_CacheFileAccess
   checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions* configOptions, LastErrorInfo *lastErrorInfo);
-}
+};
 
 #endif

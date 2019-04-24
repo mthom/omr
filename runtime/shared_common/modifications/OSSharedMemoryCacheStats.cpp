@@ -3,7 +3,7 @@
 #include "OSSharedMemoryCacheUtils.hpp"
 #include "OSSharedMemoryCacheStats.hpp"
 
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 /**
  * Populates cacheInfo with cache statistics.

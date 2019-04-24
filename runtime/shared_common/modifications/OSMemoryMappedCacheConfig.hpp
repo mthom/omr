@@ -24,7 +24,7 @@
 
 #include "sharedconsts.h"
 #include "shrnls.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 #include "OSCacheConfig.hpp"
 #include "OSCacheImpl.hpp"

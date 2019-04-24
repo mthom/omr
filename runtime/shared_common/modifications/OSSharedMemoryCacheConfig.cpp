@@ -25,7 +25,7 @@
 
 #include "omrport.h"
 #include "shrnls.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 OSSharedMemoryCacheConfig::OSSharedMemoryCacheConfig(UDATA numLocks)
   : _numLocks(numLocks)

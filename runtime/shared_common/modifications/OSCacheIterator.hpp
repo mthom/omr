@@ -26,7 +26,7 @@
 
 #include "omr.h"
 #include "omrport.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 class OSCacheIterator
 {

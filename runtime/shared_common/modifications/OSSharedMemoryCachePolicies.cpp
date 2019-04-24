@@ -26,7 +26,7 @@
 #include "OSSharedMemoryCache.hpp"
 
 #include "shrnls.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 #if !defined(WIN32)
 // was OSCachesysv::OpenSysVMemoryHelper

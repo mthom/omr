@@ -30,7 +30,6 @@
                              // "clean the memory segments." More
                              // comments in the source.
 #include "sharedconsts.h"
-#include "ut_omrshr.h"
 
 #include "OSCacheImpl.hpp"
 #include "OSCacheConfigOptions.hpp"
@@ -43,7 +42,7 @@
 
 // this was originally called getCacheDir -- I renamed it to do away with
 // the ambiguity of 'getCacheDir', ie. we are 'getting' the directory? what?
-static IDATA
+IDATA
 OSCacheUtils::getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions* configOptions)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
@@ -91,7 +90,7 @@ OSCacheUtils::getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirNa
  *
  * Returns -1 for error, >=0 for success
  */
-static IDATA
+IDATA
 OSCacheUtils::createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDATA cacheDirPermissions, bool cleanMemorySegments)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
@@ -106,7 +105,7 @@ OSCacheUtils::createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UD
 }
 
 /* Returns the full path of a cache based on the current cacheDir value */
-static IDATA
+IDATA
 OSCacheUtils::getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* buffer, UDATA bufferSize, const char* cacheName)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
@@ -120,7 +119,7 @@ OSCacheUtils::getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDir
   return 0;
 }
 
-static UDATA
+UDATA
 OSCacheUtils::statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cacheName, bool displayNotFoundMsg)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
@@ -153,7 +152,7 @@ OSCacheUtils::statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, c
  *
  * @return enum SH_CacheFileAccess indicating if the process can access the shared cache file set or not
  */
-static SH_CacheFileAccess
+SH_CacheFileAccess
 OSCacheUtils::checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions* configOptions, LastErrorInfo *lastErrorInfo)
 {
   SH_CacheFileAccess cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_ALLOWED;
