@@ -31,6 +31,8 @@
 #include "CacheHeaderMappingImpl.hpp"
 #include "OSMemoryMappedCacheHeaderMapping.hpp"
 
+class OSMemoryMappedCacheConfig;
+
 class OSMemoryMappedCacheHeader: virtual public OSCacheContiguousRegion
 {
 public:
@@ -40,6 +42,8 @@ public:
     , _mapping(mapping)
   {}
 
+  typedef OSMemoryMappedCacheConfig config_type;
+  
   virtual void refresh(OMRPortLibrary* library);
   virtual void create(OMRPortLibrary* library);
 

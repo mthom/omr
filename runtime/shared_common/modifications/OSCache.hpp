@@ -60,7 +60,7 @@ public:
     : _configOptions(configOptions)
   {}
 
-  virtual ~OSCache();
+  virtual ~OSCache() {}
   
   // get the data and total sizes of the cache.
   virtual U_32 getDataSize() = 0;
@@ -73,8 +73,20 @@ public:
   virtual SH_CacheAccess isCacheAccessible(void) const { return J9SH_CACHE_ACCESS_ALLOWED; }
 
   // this belongs to the OSCache hierarchy at the highest level.
-  virtual void getCorruptionContext(IDATA *corruptionCode, UDATA *corruptValue);
-  virtual void setCorruptionContext(IDATA corruptionCode, UDATA corruptValue);
+  virtual void getCorruptionContext(IDATA *corruptionCode, UDATA *corruptValue) {
+	if (NULL != corruptionCode) {
+		*corruptionCode = _corruptionCode;
+	}
+	
+	if (NULL != corruptValue) {
+		*corruptValue = _corruptValue;
+	}    
+  }
+  
+  virtual void setCorruptionContext(IDATA corruptionCode, UDATA corruptValue) {
+    _corruptionCode = corruptionCode;
+    _corruptValue = corruptValue;
+  }
 
   // this is a factory method that produces visitor objects.
   // these visitors codify how to serialize (resp. initialize) a region.

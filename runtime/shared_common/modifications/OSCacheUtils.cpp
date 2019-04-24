@@ -36,8 +36,6 @@
 #include "OSCacheConfigOptions.hpp"
 #include "OSCacheUtils.hpp"
 
-namespace OSCacheUtils
-{
 // writes the name of the cache file directory/control directory to
 // buffer.  if ctrlDirName == NULL, it winds up being the /tmp
 // directory, or if group access is disabled, the user's home
@@ -46,7 +44,7 @@ namespace OSCacheUtils
 // this was originally called getCacheDir -- I renamed it to do away with
 // the ambiguity of 'getCacheDir', ie. we are 'getting' the directory? what?
 static IDATA
-getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions* configOptions)
+OSCacheUtils::getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buffer, UDATA bufferSize, OSCacheConfigOptions* configOptions)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
   IDATA rc;
@@ -93,8 +91,8 @@ getCacheDirName(OMRPortLibrary* portLibrary, const char* ctrlDirName, char* buff
  *
  * Returns -1 for error, >=0 for success
  */
-IDATA
-createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDATA cacheDirPermissions, bool cleanMemorySegments)
+static IDATA
+OSCacheUtils::createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDATA cacheDirPermissions, bool cleanMemorySegments)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
   IDATA rc;
@@ -108,8 +106,8 @@ createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UDATA cacheDirPe
 }
 
 /* Returns the full path of a cache based on the current cacheDir value */
-IDATA
-getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* buffer, UDATA bufferSize, const char* cacheName)
+static IDATA
+OSCacheUtils::getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* buffer, UDATA bufferSize, const char* cacheName)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
 
@@ -122,8 +120,8 @@ getCachePathName(OMRPortLibrary* portLibrary, const char* cacheDirName, char* bu
   return 0;
 }
 
-UDATA
-statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cacheName, bool displayNotFoundMsg)
+static UDATA
+OSCacheUtils::statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cacheName, bool displayNotFoundMsg)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
   char fullPath[OMRSH_MAXPATH];
@@ -155,8 +153,8 @@ statCache(OMRPortLibrary* portLibrary, const char* cacheDirName, const char* cac
  *
  * @return enum SH_CacheFileAccess indicating if the process can access the shared cache file set or not
  */
-SH_CacheFileAccess
-checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions* configOptions, LastErrorInfo *lastErrorInfo)
+static SH_CacheFileAccess
+OSCacheUtils::checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfigOptions* configOptions, LastErrorInfo *lastErrorInfo)
 {
   SH_CacheFileAccess cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_ALLOWED;
 
@@ -243,6 +241,4 @@ checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, OSCacheConfi
 #endif /* !defined(oWIN32) */
 
   return cacheFileAccess;
-}
-  
 }

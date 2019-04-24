@@ -23,6 +23,7 @@
 #define OSCACHE_CONTIGUOUS_REGION_HPP_INCLUDED
 
 #include "CacheMemoryProtectionOptions.hpp"
+#include "OSCacheLayout.hpp"
 #include "OSCacheRegion.hpp"
 
 #include "env/TRMemory.hpp"
@@ -56,9 +57,21 @@ public:
   // add memory protections to the region.
   virtual IDATA setPermissions(OSCacheMemoryProtector* protector);
 
-  virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
+  virtual U_32 computeCRC(U_32 seed, U_32 stepSize);
 
   virtual void* allocate(CacheAllocator* allocator);
+
+  IDATA checkValidity() override {
+    return true;
+  }
+
+  virtual void serialize(OSCacheRegionSerializer* serializer) override {
+    serializer->serialize(this);
+  }
+
+  virtual void initialize(OSCacheRegionInitializer* initializer) override {
+    initializer->initialize(this);
+  }
   
 protected:
   // _regionStart is a *relative* value denoting the beginning of

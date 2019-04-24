@@ -24,6 +24,7 @@
 
 #include "OSCacheUtils.hpp"
 #include "OSCacheImpl.hpp"
+
 #include "ut_omrshr.h"
 
 OSCacheImpl::OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks)

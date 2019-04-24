@@ -26,15 +26,29 @@ public:
   typedef typename OSCacheConfigImpl::header_type header_type;
   typedef typename OSCacheConfigImpl::cache_type cache_type;
 
-  WASMOSCacheConfig(U_32 numLocks, UDATA osPageSize)
+  WASMOSCacheConfig(U_32 numLocks, WASMOSCacheConfigOptions* configOptions, UDATA osPageSize)
     : OSCacheConfigImpl(numLocks)
-    , _layout(new WASMOSCacheLayout<header_type>(osPageSize, osPageSize > 0))
-  {}
+    , _layout(new (PERSISTENT_NEW) WASMOSCacheLayout<header_type>(osPageSize, osPageSize > 0))
+  {
+    WASMOSCacheHeader<header_type>* header = dynamic_cast<WASMOSCacheHeader<header_type>*>(_layout->operator[](HEADER_REGION_ID));
+    header->setConfigOptions(configOptions);
+  }
 
+  void* getDataSectionLocation() override;
   U_32 getDataSectionSize() override;
-
+  U_32* getDataLengthFieldLocation() override;
+  U_64* getInitCompleteLocation() override;
+  bool setCacheInitComplete() override;
+  void nullifyRegions() override;
+  U_32 getCacheSize() override;
+  U_32* getCacheSizeFieldLocation() override;
+  void detachRegions() override;
+  bool isCacheHeaderValid() override;
+  
   virtual void serializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize);
-  virtual void initializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize);
+  virtual void initializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize);    
+  
+  using OSCacheConfigImpl::releaseLock;
   
 private:
   friend class WASMOSCache<cache_type>;

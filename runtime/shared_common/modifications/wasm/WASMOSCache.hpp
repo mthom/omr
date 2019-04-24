@@ -1,6 +1,7 @@
 #if !defined(WASM_OS_CACHE_HPP_INCLUDED)
 #define WASM_OS_CACHE_HPP_INCLUDED
 
+#include "OSCacheIterator.hpp"
 #include "OSCacheRegion.hpp"
 
 #include "WASMOSCacheConfig.hpp"
@@ -50,14 +51,14 @@ public:
     return (UDATA*) headerRegion()->regionStartAddress() + offset;
   }
 
-  U_32 getDataSize() {
-    return dataSectionRegion()->regionSize();
+  U_32 getDataSize() override {
+    return _config->getDataSectionSize();
   }
 
-  U_32 getTotalSize() {
-    return getDataSize() + headerRegion()->regionSize();
+  U_32 getTotalSize() override {
+    return _config->getCacheSize();
   }
-
+  
   IDATA initCacheName(const char* cacheName) {
     strcpy(this->_cacheName, cacheName);
     return 0;
@@ -67,6 +68,8 @@ public:
   bool started() {
     return true;
   }
+
+  OSCacheIterator* constructCacheIterator(char* resultBuf) override;
   
   using SuperOSCache::runExitProcedure;
   using SuperOSCache::errorHandler;

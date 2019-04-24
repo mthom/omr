@@ -1,7 +1,6 @@
 #include "CacheAllocator.hpp"
 #include "OSCacheContiguousRegion.hpp"
 #include "OSCacheMemoryProtector.hpp"
-#include "OSCacheLayout.hpp"
 
 #include "omrutil.h"
 

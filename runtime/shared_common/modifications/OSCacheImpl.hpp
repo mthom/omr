@@ -99,6 +99,8 @@ typedef struct SH_OSCache_Info {
   //        J9SharedClassJavacoreDataDescriptor javacoreData; /** If isCompatible is true, then extra information about the cache is availaible in here*/
 } SH_OSCache_Info;
 
+class OSCacheIterator;
+
 /*
  * This class houses utility functions that depend on the state of
  * cache internals. Those that don't depend on cache internals are static
@@ -109,13 +111,15 @@ class OSCacheImpl: public OSCache
 public:
   OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks);
 
-  virtual ~OSCacheImpl();
+  virtual ~OSCacheImpl() {}
   // old J9 cache comment:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache
    */
-  virtual void dontNeedMetadata(const void* startAddress, size_t length);  
-
+  virtual void dontNeedMetadata(const void* startAddress, size_t length);
+  
+  virtual OSCacheIterator* constructCacheIterator(char* resultBuf) = 0;
+  
   bool runningReadOnly() const {
     return _runningReadOnly;
   }

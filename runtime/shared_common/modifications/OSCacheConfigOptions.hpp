@@ -27,11 +27,11 @@
 class OSCacheConfigOptions
 {
 public:
-  OSCacheConfigOptions(I_32 _openMode)
-    : _openMode(_openMode)
+  OSCacheConfigOptions(I_32 openMode)
+    : _openMode(openMode)
   {}
 
-  virtual ~OSCacheConfigOptions();
+  virtual ~OSCacheConfigOptions() {}
   
   // cache creation/opening options. used mostly in startup routines.
   enum CreateOptions {
@@ -52,64 +52,64 @@ public:
     Stat
   };
 
-  virtual bool useUserHomeDirectoryForCacheDir();
-  virtual bool isUserSpecifiedCacheDir();
+  virtual bool useUserHomeDirectoryForCacheDir() = 0;
+  virtual bool isUserSpecifiedCacheDir() = 0;
   // is the cache being opened in read-only mode?
-  virtual bool readOnlyOpenMode();
+  virtual bool readOnlyOpenMode() = 0;
 
   virtual I_32 fileMode();
-  virtual I_32 openMode(); //TODO: this should set _groupPerm = 1 if groupAccessEnabled() is true.
-  virtual UDATA groupPermissions(); // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.
+  virtual I_32 openMode() = 0;
+  virtual UDATA groupPermissions() = 0; // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.
 
-  virtual IDATA cacheDirPermissions();
-  virtual bool usingNetworkCache();
+  virtual IDATA cacheDirPermissions() = 0;
+  virtual bool usingNetworkCache() = 0;
 
   // TODO: the restore check only applies to the shared memory cache,
   // so we should probably create an OSSharedMemoryCacheConfigOptions
   // subclass, and put it there.. then OSSharedMemoryCache will own a
   // reference to an OSSharedMemoryCacheConfigOptions object.
-  virtual bool restoreCheckEnabled();
+  virtual bool restoreCheckEnabled() = 0;
 
-  virtual bool openButDoNotCreate();
+  virtual bool openButDoNotCreate() = 0;
   // are we opening the cache in order to destroy?
-  virtual bool openToDestroyExistingCache();
-  virtual bool openToDestroyExpiredCache();
-  virtual bool openToStatExistingCache();
+  virtual bool openToDestroyExistingCache() = 0;
+  virtual bool openToDestroyExpiredCache() = 0;
+  virtual bool openToStatExistingCache() = 0;
 
   // reasons for stats. Should have a StatReason enum.
-  virtual bool statToDestroy(); // like SHR_STATS_REASON_DESTROY
-  virtual bool statExpired(); // like SHR_STATS_REASON_EXPIRE
-  virtual bool statIterate(); // like SHR_STATS_REASON_ITERATE
-  virtual bool statList(); // like SHR_STATS_REASON_LIST
+  virtual bool statToDestroy() = 0; // like SHR_STATS_REASON_DESTROY
+  virtual bool statExpired() = 0; // like SHR_STATS_REASON_EXPIRE
+  virtual bool statIterate() = 0; // like SHR_STATS_REASON_ITERATE
+  virtual bool statList() = 0; // like SHR_STATS_REASON_LIST
 
-  virtual OSCacheConfigOptions& setOpenReason(StartupReason reason);
-  virtual OSCacheConfigOptions& setReadOnlyOpenMode();
-  virtual OSCacheConfigOptions& setOpenMode(I_32 openMode);
+  virtual OSCacheConfigOptions& setOpenReason(StartupReason reason) = 0;
+  virtual OSCacheConfigOptions& setReadOnlyOpenMode() = 0;
+  virtual OSCacheConfigOptions& setOpenMode(I_32 openMode)= 0;
 
   // the block size of the cache.
   virtual U_32 cacheSize() = 0;
   virtual OSCacheConfigOptions& setCacheSize(U_32 size) = 0;
 
-  virtual U_32 maxCRCSamples();
+  virtual U_32 maxCRCSamples()= 0;
 
   // does the cache create a file?
-  virtual bool createFile();
+  virtual bool createFile()= 0;
 
   // do we try to open the cache read-only if we failed to open the cache with write permissions?
-  virtual bool tryReadOnlyOnOpenFailure();
+  virtual bool tryReadOnlyOnOpenFailure()= 0;
 
   // when the cache is corrupt, do we dump its contents?
-  virtual bool disableCorruptCacheDumps();
+  virtual bool disableCorruptCacheDumps()= 0;
 
-  virtual bool verboseEnabled();
-  virtual bool groupAccessEnabled(); // true iff _groupPerm = 1 in the J9 cache.
+  virtual bool verboseEnabled()= 0;
+  virtual bool groupAccessEnabled()= 0; // true iff _groupPerm = 1 in the J9 cache.
   // allocate the cache in the user's home directory.
-  virtual void useUserHomeDirectoryForCacheLocation();
+  virtual void useUserHomeDirectoryForCacheLocation()= 0;
   // render the options to a bit vector understood by the functions of the OMR port library.
-  virtual U_32 renderToFlags();
+  virtual U_32 renderToFlags()= 0;
 
-  virtual UDATA renderCreateOptionsToFlags();
-  virtual UDATA renderVerboseOptionsToFlags();
+  virtual UDATA renderCreateOptionsToFlags()= 0;
+  virtual UDATA renderVerboseOptionsToFlags()= 0;
 
   // flags obviated so far:
   /* appendBaseDir (a variable inside getCacheDir)

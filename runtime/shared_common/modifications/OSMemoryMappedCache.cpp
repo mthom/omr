@@ -896,6 +896,20 @@ OSMemoryMappedCache::setError(IDATA errorCode)
 }
 
 /**
+ * Method to return the object's error status code
+ * 
+ * Note;  This method of error reporting is for consistency with SH_OSCachesysv
+ * 
+ * @return The object's error code
+ */
+IDATA
+OSMemoryMappedCache::getError()
+{
+  Trc_SHR_OSC_Mmap_getError_Event(_errorCode);
+  return _errorCode;
+}
+
+/**
  * Method to issue an NLS error message hen an error situation has occurred.  It
  * can optional issue messages detailing the last error recorded in the Port Library.
  *

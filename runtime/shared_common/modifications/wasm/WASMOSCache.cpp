@@ -1,5 +1,8 @@
+#include "OSMemoryMappedCache.hpp"
+
 #include "WASMOSCache.hpp"
 #include "WASMOSCacheConfig.hpp"
+#include "WASMOSCacheIterator.hpp"
 
 template <class SuperOSCache>
 WASMOSCache<SuperOSCache>::WASMOSCache(OMRPortLibrary* library,
@@ -9,6 +12,14 @@ WASMOSCache<SuperOSCache>::WASMOSCache(OMRPortLibrary* library,
 				       WASMOSCacheConfigOptions* configOptions,
 				       UDATA osPageSize)
   : SuperOSCache(library, cacheName, ctrlDirName, numLocks,
-		 (_config = new WASMOSCacheConfig<typename SuperOSCache::config_type>(numLocks, osPageSize)),
+		 (_config = new (PERSISTENT_NEW) WASMOSCacheConfig<typename SuperOSCache::config_type>(numLocks, configOptions, osPageSize)),
 		 configOptions)
 {}
+
+template <class SuperOSCache>
+OSCacheIterator*
+WASMOSCache<SuperOSCache>::constructCacheIterator(char* resultBuf) {
+  return new (PERSISTENT_NEW) WASMOSCacheIterator<typename SuperOSCache::iterator_type>(this->_cacheLocation, resultBuf);
+}
+
+template class WASMOSCache<OSMemoryMappedCache>;

@@ -20,27 +20,28 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OSCACHE_CONFIG_HPP_INCLUDED)
-#define OSCACHE_CONFIG_HPP_INCLUDED
+#if !defined(WASM_OS_CACHE_ITERATOR_HPP_INCLUDED)
+#define WASM_OS_CACHE_ITERATOR_HPP_INCLUDED
+
+#include "OSMemoryMappedCacheIterator.hpp"
 
 #include "omr.h"
-#include "sharedconsts.h"
 
-#include "OSCache.hpp"
-#include "OSCacheAttachingContext.hpp"
-#include "OSCacheCreatingContext.hpp"
+#include "env/TRMemory.hpp"
 
-class OSCacheConfig
+template <class OSCacheIterator>
+class WASMOSCacheIterator: public OSCacheIterator
 {
 public:
-  virtual IDATA getWriteLockID() = 0;
-  virtual IDATA getReadWriteLockID() = 0;
-
-  // sometimes the lock IDs are keyed against regions, sometimes not.
-  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL) = 0;
-  virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID) = 0;
+  TR_ALLOC(TR_Memory::SharedCache)
   
-  virtual void nullifyRegions() = 0;
+  WASMOSCacheIterator(char* cacheDir, char* resultBuf)
+    : OSCacheIterator(cacheDir, resultBuf)
+  {}
+
+  bool isCacheFileName(OMRPortLibrary *portLibrary, char *cacheName) override {
+    return true;
+  }
 };
 
 #endif

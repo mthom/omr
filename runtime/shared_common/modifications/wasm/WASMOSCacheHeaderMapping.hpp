@@ -11,6 +11,7 @@ struct WASMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
   U_32 _cacheSize;
   typename CacheHeaderMapping<OSCacheHeader>::mapping_type _mapping;
   volatile UDATA _readerCount;
+  UDATA _cacheInitComplete;
   UDATA _cacheCrc;
   U_32 _dataSectionSize; // the size of the data section.
 };

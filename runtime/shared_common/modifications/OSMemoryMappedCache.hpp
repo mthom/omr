@@ -28,7 +28,6 @@
 #include "OSCacheLayout.hpp"
 #include "OSMemoryMappedCacheConfig.hpp"
 #include "OSMemoryMappedCacheInitializationContext.hpp"
-#include "OSMemoryMappedCacheIterator.hpp"
 #include "OSMemoryMappedCacheInitializer.hpp"
 #include "OSMemoryMappedCacheSerializer.hpp"
 #include "OSMemoryMappedCache.hpp"
@@ -37,20 +36,19 @@
 #include "omrport.h"
 
 class OSMemoryMappedCacheConfig;
+class OSMemoryMappedCacheIterator;
 
 // an implementation of a persistent shared cache that uses omrmmap primitives
 // and region-based locks on sections of files.
 class OSMemoryMappedCache: public OSCacheImpl {
 public:
   typedef OSMemoryMappedCacheHeader header_type;
-  
+
   OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,
 		      OSMemoryMappedCacheConfig* config, OSCacheConfigOptions* configOptions);
 
-  virtual ~OSMemoryMappedCache();
-  
-  virtual IDATA getError(); 
-  
+  virtual ~OSMemoryMappedCache() {}
+
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);
 
@@ -60,9 +58,12 @@ public:
   virtual void initialize();
   virtual void finalise();
   virtual void cleanup();
-  
-  typedef OSMemoryMappedCacheConfig config_type;
 
+  virtual IDATA getError();
+
+  typedef OSMemoryMappedCacheConfig config_type;
+  typedef OSMemoryMappedCacheIterator iterator_type;
+  
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;
@@ -79,22 +80,21 @@ protected:
 
   virtual void setError(IDATA errorCode);
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
-  
+
   virtual void runExitProcedure();
   virtual void handleCacheHeaderCorruption(IDATA headerRc);
-  
+
 #if defined(OMRSH_MSYNC_SUPPORT)
   virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
 #endif
 
-  virtual OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator(char* resultBuf);
   virtual bool deleteCacheFile(LastErrorInfo* lastErrorInfo);
 
   virtual OSCacheMemoryProtector* constructMemoryProtector();
 
   virtual OSCacheRegionSerializer* constructSerializer();
   virtual OSCacheRegionInitializer* constructInitializer();
-  
+
   OSMemoryMappedCacheInitializationContext* _initContext;
   OSMemoryMappedCacheConfig* _config;
 

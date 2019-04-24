@@ -120,7 +120,6 @@ else()
 	message(FATAL_ERROR "OMR: Build tools are required. See OMR_TOOLS and OMR_TOOLS_IMPORTFILE")
 endif()
 
-
 ###
 ### Built-in OMR Applications.
 ###
@@ -128,6 +127,7 @@ endif()
 # Each application provides it's own glue, so must be included before subdirectories.
 # The example and om are not yet compatible.
 if (OMR_EXAMPLE)
+        message(WARNING "Example: being added")
 	add_subdirectory(example)
 endif (OMR_EXAMPLE)
 

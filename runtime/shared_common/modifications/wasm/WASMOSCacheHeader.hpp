@@ -29,13 +29,11 @@ public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
 
   WASMOSCacheHeader(WASMOSCacheLayout<OSMemoryMappedCacheHeader>* layout,
-		    WASMOSCacheConfigOptions* configOptions,
 		    int regionID, bool pageBoundaryAligned)
     : OSMemoryMappedCacheHeader(5, new WASMOSCacheHeaderMappingImpl<OSMemoryMappedCacheHeader>())
-    , OSCacheContiguousRegion(layout, regionID, pageBoundaryAligned)
-    , _configOptions(configOptions)
-  {}
-
+    , OSCacheContiguousRegion((OSCacheLayout*) layout, regionID, pageBoundaryAligned)
+  {}  
+  
   void refresh(OMRPortLibrary* library) override;
   void create(OMRPortLibrary* library) override;
 
@@ -50,7 +48,10 @@ protected:
   friend class WASMOSCacheLayout<OSMemoryMappedCacheHeader>;
   
   WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* derivedMapping();
-
+  void setConfigOptions(WASMOSCacheConfigOptions* configOptions) {
+    _configOptions = configOptions;
+  }
+  
   WASMOSCacheConfigOptions* _configOptions;
 };
 
@@ -62,11 +63,9 @@ public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
 
   WASMOSCacheHeader(WASMOSCacheLayout<OSSharedMemoryCacheHeader>* layout,
-		    WASMOSCacheConfigOptions* configOptions,
 		    int regionID, bool pageBoundaryAligned)
     : OSSharedMemoryCacheHeader(new WASMOSCacheHeaderMappingImpl<OSSharedMemoryCacheHeader>())
-    , OSCacheContiguousRegion(layout, regionID, pageBoundaryAligned)
-    , _configOptions(configOptions)
+    , OSCacheContiguousRegion((OSCacheLayout*) layout, regionID, pageBoundaryAligned)
   {}
 
   void refresh(OMRPortLibrary* library, bool inDefaultControlDir) override;
@@ -83,7 +82,10 @@ protected:
   friend class WASMOSCacheConfig<OSSharedMemoryCacheHeader>;
   
   WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
-
+  void setConfigOptions(WASMOSCacheConfigOptions* configOptions) {
+    _configOptions = configOptions;
+  }
+  
   WASMOSCacheConfigOptions* _configOptions;
 };
 

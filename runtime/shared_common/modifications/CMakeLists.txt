@@ -47,7 +47,7 @@ add_library(shared_cache_modifications STATIC
   OSCacheContiguousRegion.cpp
   OSMemoryMappedCacheMemoryProtector.cpp
   OSSharedMemoryCacheMemoryProtector.cpp  
-  ${CMAKE_CURRENT_BINARY_DIR}/ut_omrshr.c
+  ${CMAKE_CURRENT_BINARY_DIR}/ut_omrshr_mods.c
 )
 
 # Create shared class library.
@@ -67,7 +67,7 @@ target_include_directories(shared_cache_modifications
 		${PROJECT_SOURCE_DIR}/include_core
 		${PROJECT_SOURCE_DIR}/runtime/port/sysvipc
 		${PROJECT_SOURCE_DIR}/port/sysvipc
-		${PROJECT_SOURCE_DIR}/runtime/shared_common
+		${PROJECT_SOURCE_DIR}/runtime/shared_common/modifications
 	PUBLIC
 		${CMAKE_CURRENT_BINARY_DIR}
 		include
