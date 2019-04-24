@@ -28,7 +28,6 @@ add_library(wasm_shared_cache STATIC
   WASMOSCacheLayout.cpp
   WASMOSCacheConfig.cpp
   WASMCompositeCache.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/../ut_omrshr_mods.c
 )
 
 # Create shared class library.

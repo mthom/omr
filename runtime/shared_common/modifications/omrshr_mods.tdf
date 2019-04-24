@@ -20,11 +20,11 @@
 // SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 //******************************************************************************
 
-Executable=omrshr
+Executable=omrshr_mods
 Submodules=j9vmutil,j9util,pool,avl,simplepool
 DATFileName=J9TraceFormat.dat
 
-TraceEvent=Trc_SHR_VMInitStages_Event1 Overhead=1 Level=1 Test Template="Trace engine initialized for module omrshr"
+TraceEvent=Trc_SHR_VMInitStages_Event1 Overhead=1 Level=1 Test Template="Trace engine initialized for module omrshr_mods"
 
 TraceEntry=Trc_SHR_CM_LinkListImpl_link_Entry Obsolete Noenv Overhead=1 Level=6 Template="CM LinkedListImpl::link: Adding link 0x%p to link 0x%p"
 TraceExit=Trc_SHR_CM_LinkListImpl_link_Exit1 Obsolete Noenv Overhead=1 Level=6 Template="CM LinkedListImpl::link: Created new link 0x%p"
