@@ -20,7 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 #include "omr.h"
 #include "sharedconsts.h"
 

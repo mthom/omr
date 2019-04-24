@@ -29,6 +29,7 @@
 
 #include "omr.h"
 #include "omrport.h"
+#include "ut_omrshr_mods.h"
 
 typedef enum SH_CacheFileAccess {
 	OMRSH_CACHE_FILE_ACCESS_ALLOWED 				= 0,
