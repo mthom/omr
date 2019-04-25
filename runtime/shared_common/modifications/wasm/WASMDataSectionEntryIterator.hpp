@@ -28,10 +28,6 @@ struct WASMCacheEntryDescriptor {
 
 static const WASMCacheEntryDescriptor nullCacheEntryDescriptor;
 
-WASMCacheEntryDescriptor::operator bool() const {
-  return *this == nullCacheEntryDescriptor;
-}
-
 class WASMDataSectionEntryIterator
 {
 public:

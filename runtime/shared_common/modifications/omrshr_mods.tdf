@@ -21,7 +21,7 @@
 //******************************************************************************
 
 Executable=omrshr_mods
-Submodules=j9vmutil,j9util,pool,avl,simplepool
+Submodules=pool,avl
 DATFileName=J9TraceFormat.dat
 
 TraceEvent=Trc_SHR_VMInitStages_Event1 Overhead=1 Level=1 Test Template="Trace engine initialized for module omrshr_mods"

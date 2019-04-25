@@ -48,7 +48,6 @@ CONFIGURE_ARGS += \
 	--enable-OMR_THR_SPIN_WAKE_CONTROL \
 	--enable-OMR_JITBUILDER \
 	--enable-OMR_ENV_DATA64 \
-	--enable-OMR_SHARED_CACHE
 
 CONFIGURE_ARGS += \
 	--disable-DDR \

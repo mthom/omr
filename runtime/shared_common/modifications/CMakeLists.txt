@@ -70,8 +70,7 @@ target_include_directories(shared_cache_modifications
 		${PROJECT_SOURCE_DIR}/runtime/shared_common/modifications
 	PUBLIC
 		${CMAKE_CURRENT_BINARY_DIR}
-		include
-		.
+		include		.
 )
 
  target_link_libraries(shared_cache_modifications

@@ -30,7 +30,7 @@ macro(create_jitbuilder_test target)
 	target_include_directories(${target} PUBLIC cpp/include)
 	target_link_libraries(${target}
 		jitbuilder
-		shared_cache
+		shared_cache_modifications
 		${CMAKE_DL_LIBS})
 	add_test(NAME ${target}_example_as_test COMMAND ${target})
 endmacro(create_jitbuilder_test)

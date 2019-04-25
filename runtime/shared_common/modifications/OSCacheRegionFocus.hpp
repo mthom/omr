@@ -26,7 +26,7 @@
 #include "OSCacheRegion.hpp"
 
 #include "shrnls.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 // a 'focus' is a pointer to a OSCacheRegion object, and a pointer to
 // a field internal to the region managed by the OSCacheRegion object. The

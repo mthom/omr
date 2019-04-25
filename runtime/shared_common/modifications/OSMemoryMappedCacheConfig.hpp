@@ -159,7 +159,7 @@ protected:
   IDATA tryAcquireAttachWriteLock(OMRPortLibrary* library);
   IDATA releaseAttachWriteLock(OMRPortLibrary* library);
 
-  inline bool cacheFileAccessAllowed() const;
+  bool cacheFileAccessAllowed() const;
   bool isCacheAccessible() const;
 
   OSMemoryMappedCacheHeaderMapping* _mapping;

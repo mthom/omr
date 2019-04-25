@@ -126,7 +126,7 @@ public:
   }
 
   virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;
-  virtual void* attach();
+  //  virtual void* attach();
   
   // returns true if the cache has successfully passed startup.
   virtual bool started() = 0;

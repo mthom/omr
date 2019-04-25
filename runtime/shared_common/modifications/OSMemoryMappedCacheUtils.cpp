@@ -25,8 +25,6 @@
 #include "OSMemoryMappedCacheUtils.hpp"
 #include "OSMemoryMappedCacheConfig.hpp"
 
-namespace OSMemoryMappedCacheUtils
-{  
 /**
  * This method checks whether the group access of the shared cache file is successfully set when a new cache/snapshot is created with "groupAccess" suboption
  *
@@ -39,7 +37,7 @@ namespace OSMemoryMappedCacheUtils
  * 			1 Group access is set.
  */
 I_32
-verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle, LastErrorInfo *lastErrorInfo)
+OSMemoryMappedCacheUtils::verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle, LastErrorInfo *lastErrorInfo)
 {
   I_32 rc = 1;
 #if !defined(WIN32)
@@ -194,5 +192,3 @@ verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle, LastEr
 // //  */
 // //  }
 // }
-  
-}

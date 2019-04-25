@@ -29,7 +29,7 @@
 #include "omr.h"
 #include "omrport.h"
 #include "shrnls.h"
-#include "ut_omrshr.h"
+#include "ut_omrshr_mods.h"
 
 /* SynchronizedCacheCounter assumes the counter is contained *within*
  * a region inside the shared cache, where it can be accessed across

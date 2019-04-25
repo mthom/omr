@@ -36,8 +36,6 @@ public:
     return _blockSize;
   }
     
-  void init(void* blockAddress, uintptr_t size);
-
   // regions in this layout cannot adjust their sizes, so just say
   // it passed.
   bool notifyRegionSizeAdjustment(OSCacheRegion&) override {
@@ -47,6 +45,16 @@ public:
 protected:
   friend class WASMOSCacheConfig<typename OSCacheHeader::config_type>;
 
+  void init(void* blockAddress, uintptr_t size) override {
+    _header->adjustRegionStart(blockAddress);
+    _dataSection->adjustRegionStart((void*) ((UDATA) blockAddress + _header->regionSize()));
+  
+    _header->alignToPageBoundary(_osPageSize);
+    _dataSection->alignToPageBoundary(_osPageSize);
+
+    _blockSize = size;  
+  }
+  
   inline void clearRegions() {
     _regions.clear();
   }

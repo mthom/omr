@@ -78,7 +78,7 @@ OMR::ThunkBuilder::buildIL()
    for (uint32_t p=0; p < _numCalleeParams; p++)
       {
       uint32_t a=p+1;
-      args[a] = BitcastTo(_calleeParamTypes[p],
+      args[a] = ConvertTo(_calleeParamTypes[p],
                    LoadAt(pWord,
                       IndexAt(pWord,
                          Load("args"),

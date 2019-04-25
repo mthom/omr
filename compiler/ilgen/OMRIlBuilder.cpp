@@ -978,24 +978,6 @@ OMR::IlBuilder::ConstInteger(TR::IlType *intType, int64_t value)
    }
 
 TR::IlValue *
-OMR::IlBuilder::BitcastTo(TR::IlType *t, TR::IlValue *v)
-  {
-  TR::DataType typeFrom = v->getDataType();
-  TR::DataType typeTo = t->getPrimitiveType();
-
-  if(typeFrom == typeTo)
-    {
-    TraceIL("IlBuilder[ %p ]::%d is BitcastTo (already has type %s) %d\n",
-	    this, v->getID(), t->getName(), v->getID());
-    return v;
-    }
-  TR::IlValue *convertedValue = bitcastTo(typeTo, v);
-  TraceIL("IlBuilder[ %p ]::%d is BitcastTo(%s) %d\n",
-	  this, convertedValue->getID(), t->getName(), v->getID());
-  return convertedValue;
-  }
-
-TR::IlValue *
 OMR::IlBuilder::ConvertTo(TR::IlType *t, TR::IlValue *v)
    {
    TR::DataType typeFrom = v->getDataType();

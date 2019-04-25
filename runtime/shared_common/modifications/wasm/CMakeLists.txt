@@ -25,9 +25,9 @@
 add_library(wasm_shared_cache STATIC
   WASMOSCache.cpp
   WASMOSCacheHeader.cpp
-  WASMOSCacheLayout.cpp
   WASMOSCacheConfig.cpp
   WASMCompositeCache.cpp
+  WASMDataSectionEntryIterator.cpp
 )
 
 # Create shared class library.
