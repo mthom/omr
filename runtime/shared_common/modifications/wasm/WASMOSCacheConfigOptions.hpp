@@ -57,20 +57,20 @@ public:
   }
 
   // the open mode flags are defined in sharedconsts.h
-  I_32 openMode() {
+  I_32 openMode() override {
     return _openMode;
   }
 
   // returns 1 iff groupAccessEnabled() == true. sometimes we need a UDATA.
-  UDATA groupPermissions() {
+  UDATA groupPermissions() override {
     return 1; // yes, group permissions are enabled.
   }
 
-  IDATA cacheDirPermissions() {
-    
+  IDATA cacheDirPermissions() override {
+    return OMRSH_DIRPERM_DEFAULT;
   }
   
-  bool usingNetworkCache() {
+  bool usingNetworkCache() override {
     return true;
   }
 
@@ -78,25 +78,20 @@ public:
   // so we should probably create an OSSharedMemoryCacheConfigOptions
   // subclass, and put it there.. then OSSharedMemoryCache will own a
   // reference to an OSSharedMemoryCacheConfigOptions object.
-  bool restoreCheckEnabled() {
+  bool restoreCheckEnabled() override {
     return false;
   }
 
-  // TODO: same as restoreCheckEnabled.
-  bool restoreEnabled() {
-    return false;
-  }
-
-  bool openButDoNotCreate() {
+  bool openButDoNotCreate() override {
     return false;
   }
   
   // are we opening the cache in order to destroy?
-  bool openToDestroyExistingCache() {
+  bool openToDestroyExistingCache() override {
     return false;
   }
   
-  bool openToDestroyExpiredCache() {
+  bool openToDestroyExpiredCache() override {
     return false;
   }
   
@@ -196,7 +191,6 @@ public:
    */
 protected:
   U_32 _cacheSize;
-  I_32 _openMode;
 //
 //  CreateOptions _createOptions;
 //  RuntimeOptions _runtimeOptions;

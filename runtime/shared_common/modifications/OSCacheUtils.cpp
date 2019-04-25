@@ -98,7 +98,12 @@ OSCacheUtils::createCacheDir(OMRPortLibrary* portLibrary, char* cacheDirName, UD
 
   Trc_SHR_OSC_createCacheDir_Entry(cacheDirName, cleanMemorySegments);
 
+  omrthread_t self;
+  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+  
   rc = omrshmem_createDir(cacheDirName, cacheDirPermissions, cleanMemorySegments);
+
+  omrthread_detach(self);
 
   Trc_SHR_OSC_createCacheDir_Exit();
   return rc;

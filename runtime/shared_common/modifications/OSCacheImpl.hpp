@@ -112,7 +112,14 @@ class OSCacheImpl: public OSCache
 public:
   OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks);
 
-  virtual ~OSCacheImpl() {}
+  virtual ~OSCacheImpl() {
+        omrthread_t self;
+	omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+    
+	_portLibrary->port_shutdown_library(_portLibrary);
+	omrthread_detach(self);
+  }
+  
   // old J9 cache comment:
   /**
    * Advise the OS to release resources used by a section of the shared classes cache
@@ -155,6 +162,7 @@ public:
 protected:
   virtual IDATA initCacheDirName(const char* ctrlDirName);//, UDATA cacheDirPermissions, I_32 openMode);
   virtual IDATA initCacheName(const char* cacheName) = 0;
+  
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo) = 0;
 
   void initialize();

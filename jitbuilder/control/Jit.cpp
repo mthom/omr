@@ -118,14 +118,24 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 // ignite the seven cannons!
 WASMCompositeCache* initializeSharedCache()
 {
-  OMRPortLibrary* library;
-  
-  omrport_allocate_library(&library);
-  omrport_startup_library(library);  
-  
+  OMRPortLibrary library;
+
+  omrthread_init_library();
+  omrthread_t self;
+  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+
+//  omrport_allocate_library(&library);
+//  omrport_startup_library(library);
+
+  omrport_init_library(&library, sizeof(OMRPortLibrary));
+  omrthread_detach(self);
+
   static WASMOSCacheConfigOptions configOptions;
-  static WASMOSCache<OSMemoryMappedCache> osCache(library, "wasm_shared_cache", "",
+  static WASMOSCache<OSMemoryMappedCache> osCache(&library, "wasm_shared_cache", "/tmp",
 						  5, &configOptions);
+
+  osCache.startup("wasm_shared_cache", "/tmp");
+  
   return new WASMCompositeCache(&osCache, 0);
 }
 
@@ -152,10 +162,6 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
       return false;
       }
 
-   if(initializeSharedCache() == NULL) {
-     return false;
-   }
-
    TR::Compiler->initialize();
 
    // --------------------------------------------------------------------------
@@ -164,6 +170,10 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
+   if(initializeSharedCache() == NULL) {
+     return false;
+   }
+   
    if (commonJitInit(fe, options) < 0)
       return false;
 

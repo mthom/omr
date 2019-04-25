@@ -52,7 +52,19 @@ OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(UDATA numLocks)
   , _mapping(NULL)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
   , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
-{}
+{
+  _lockMutex = new (PERSISTENT_NEW) omrthread_monitor_t[numLocks];
+
+  // the work of this segment is accomplished in OSMemoryMappedCache::startup.
+//  omrthread_t self;
+//  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+//  
+//  for(int i = 0; i < numLocks; ++i) {
+//    omrthread_monitor_init(&_lockMutex[i], 0);
+//  }
+//
+//  omrthread_detach(self);
+}
 
 IDATA OSMemoryMappedCacheConfig::getWriteLockID()
 {

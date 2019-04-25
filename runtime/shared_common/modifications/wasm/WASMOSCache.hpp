@@ -59,11 +59,6 @@ public:
     return _config->getCacheSize();
   }
   
-  IDATA initCacheName(const char* cacheName) {
-    strcpy(this->_cacheName, cacheName);
-    return 0;
-  }
-
   // obviously totally naive, but do it anyway.
   bool started() {
     return true;
@@ -76,6 +71,17 @@ public:
   using SuperOSCache::getPermissionsRegionGranularity;
   
 protected:
+  IDATA initCacheName(const char* cacheName) override {
+    OMRPORT_ACCESS_FROM_OMRPORT(this->_portLibrary);
+    
+    if (!(this->_cacheName = (char*)omrmem_allocate_memory(OMRSH_MAXPATH, OMRMEM_CATEGORY_CLASSES))) {
+      return -1;
+    }
+    
+    strcpy(this->_cacheName, cacheName);
+    return 0;
+  }
+  
   WASMOSCacheConfig<typename SuperOSCache::config_type>* _config;
 };
 

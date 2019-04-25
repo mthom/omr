@@ -26,7 +26,7 @@
 #include "OSCacheImpl.hpp"
 
 OSCacheImpl::OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks)
-  : OSCache(_configOptions)
+  : OSCache(configOptions)
   , _portLibrary(library)
   , _numLocks(numLocks)
 {}

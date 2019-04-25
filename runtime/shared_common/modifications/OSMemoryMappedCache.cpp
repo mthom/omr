@@ -45,8 +45,6 @@ OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
   initialize();
   // expect the open mode has been set in the configOptions object already.
   // configOptions.setOpenMode(openMode);
-
-  startup(cacheName, ctrlDirName);
 }
 
 void OSMemoryMappedCache::initialize()
@@ -64,10 +62,6 @@ void OSMemoryMappedCache::initialize()
   _config->_finalised = 0;
 
   _mapFileHandle = NULL;
-
-  for (UDATA i = 0; i < OMRSH_OSCACHE_MMAP_LOCK_COUNT; i++) {
-    _config->_lockMutex[i] = NULL;
-  }
 
   //TODO: shouldn't this be in the OSCache constructor? Seems both universal and benign in
   //its effects.
@@ -138,6 +132,13 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     goto _errorPreFileOpen;
   }
 
+  if (!(_cachePathName = (char*)omrmem_allocate_memory(OMRSH_MAXPATH, OMRMEM_CATEGORY_CLASSES))) {
+    return false;
+  }
+  
+  strcpy(_cachePathName, _cacheLocation);
+  strcat(_cachePathName, cacheName);
+
   Trc_SHR_OSC_Mmap_startup_commonStartupSuccess();
   /* Detect remote filesystem */
   if (_configOptions->usingNetworkCache()) { // openMode & J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE) {
@@ -199,6 +200,9 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     goto _exitForDestroy;
   }
 
+  omrthread_t self;
+  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+  
   for (UDATA i = 0; i < _numLocks; i++) { // OMRSH_OSCACHE_MMAP_LOCK_COUNT; i++) {
     if (omrthread_monitor_init_with_name(&_config->_lockMutex[i], 0, "Persistent shared classes lock mutex")) {
       Trc_SHR_OSC_Mmap_startup_failed_mutex_init(i);
@@ -206,6 +210,8 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
     }
   }
 
+  omrthread_detach(self);
+  
   Trc_SHR_OSC_Mmap_startup_initialized_mutexes();
 
   /* Get cache header write lock */
