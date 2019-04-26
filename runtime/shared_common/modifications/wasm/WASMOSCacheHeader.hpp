@@ -43,7 +43,7 @@ public:
     const WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* mapping =
       static_cast<const WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>*>(_mapping->_mapping);
 
-    return mapping->_mapping.size(_numLocks) + mapping->addendumSize();
+    return mapping->size();
   }
 
 protected:
@@ -81,7 +81,7 @@ public:
     const WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* mapping =
       static_cast<const WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>*>(_mapping->_mapping);
 
-    return mapping->_mapping.size() + mapping->addendumSize();
+    return mapping->size();
   }
 
 protected:

@@ -28,6 +28,7 @@
 
 #define OMRSH_OSCACHE_MMAP_EYECATCHER "J9SCMAP"
 #define OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH 7
+#define OMRSH_OSCACHE_MMAP_LOCK_COUNT 5
 
 class OSMemoryMappedCacheHeader;
 
@@ -45,25 +46,12 @@ struct OSMemoryMappedCacheHeaderMapping: CacheHeaderMapping<OSMemoryMappedCacheH
     , _headerLock(0)
     , _attachLock(0)
     , _dataSectionLength(0)
-    , _dataLocks(NULL)
   {
     _eyecatcher[0] = '\0';
   }
 
-  // the owning header knows the value of numLocks.
-  UDATA size(UDATA numLocks) const {
-      UDATA size = 0;
-
-      size += OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH + 1;
-      size += sizeof(_createTime);
-      size += sizeof(_lastAttachedTime);
-      size += sizeof(_lastDetachedTime);
-      size += sizeof(_headerLock);
-      size += sizeof(_attachLock);
-      size += sizeof(_dataSectionLength);
-      size += sizeof(*_dataLocks) * numLocks;
-
-      return size;
+  UDATA size() const {
+    return sizeof(OSMemoryMappedCacheHeaderMapping);
   }
 
   char _eyecatcher[OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH+1];
@@ -73,7 +61,7 @@ struct OSMemoryMappedCacheHeaderMapping: CacheHeaderMapping<OSMemoryMappedCacheH
   I_32 _headerLock; // from OSCache_mmap_header1 & 2: headerLock
   I_32 _attachLock; // from OSCache_mmap_header1 & 2: attachLock
   U_32 _dataSectionLength; // the length of the data section.
-  I_32* _dataLocks; // was _dataLocks[_numLocks]; // from OSCache_mmap_header1 & 2: dataLocks
+  I_32 _dataLocks[OMRSH_OSCACHE_MMAP_LOCK_COUNT];
 };
 
 #endif

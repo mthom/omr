@@ -15,16 +15,8 @@ struct WASMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
   UDATA _cacheCrc;
   U_32 _dataSectionSize; // the size of the data section.
 
-  UDATA addendumSize() const {
-    UDATA size = 0;
-    
-    size += sizeof(_cacheSize);
-    size += sizeof(_readerCount);
-    size += sizeof(_cacheInitComplete);
-    size += sizeof(_cacheCrc);
-    size += sizeof(_dataSectionSize);
-
-    return size;
+  UDATA size() const {
+    return sizeof(WASMOSCacheHeaderMapping<OSCacheHeader>);
   }
 };
 

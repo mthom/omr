@@ -43,12 +43,12 @@ public:
 
   UDATA* readerCountFocus() {
     UDATA offset = offsetof(WASMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
-    return (UDATA*) headerRegion()->regionStartAddress() + offset;
+    return (UDATA*) (headerRegion()->regionStartAddress() + offset);
   }
 
   UDATA* crcFocus() {
     UDATA offset = offsetof(WASMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _cacheCrc);
-    return (UDATA*) headerRegion()->regionStartAddress() + offset;
+    return (UDATA*) (headerRegion()->regionStartAddress() + offset);
   }
 
   U_32 getDataSize() override {

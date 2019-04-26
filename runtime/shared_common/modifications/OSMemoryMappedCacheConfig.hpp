@@ -34,7 +34,6 @@
 #include "OSMemoryMappedCacheHeader.hpp"
 #include "OSMemoryMappedCacheHeaderMapping.hpp"
 
-#define OMRSH_OSCACHE_MMAP_LOCK_COUNT 5
 #define OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK 0
 #define OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK 1
 

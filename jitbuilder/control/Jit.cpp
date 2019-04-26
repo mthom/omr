@@ -135,8 +135,10 @@ WASMCompositeCache* initializeSharedCache()
 						  5, &configOptions);
 
   osCache.startup("wasm_shared_cache", "/tmp");
+
+  static WASMCompositeCache cache(&osCache, 0);
   
-  return new WASMCompositeCache(&osCache, 0);
+  return &cache;
 }
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"

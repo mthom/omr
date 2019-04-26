@@ -16,10 +16,18 @@
 #include "WASMDataSectionEntryIterator.hpp"
 #include "WASMOSCache.hpp"
 
+#include "env/TRMemory.hpp"
+
 class WASMCompositeCache {
 public:
+  TR_ALLOC(TR_Memory::SharedCache)
+  
   WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache, UDATA osPageSize);
 
+  virtual ~WASMCompositeCache() {
+    _osCache->cleanup();
+  }
+  
   bool startup(const char* cacheName, const char* ctrlDirName);
 
   bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
