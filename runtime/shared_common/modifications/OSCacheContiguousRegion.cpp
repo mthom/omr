@@ -12,10 +12,10 @@ OSCacheContiguousRegion::OSCacheContiguousRegion(OSCacheLayout* layout, int regi
 {}
 
 // should be called before alignToPageBoundary.
-bool OSCacheContiguousRegion::adjustRegionStart(void* blockAddress)
+bool OSCacheContiguousRegion::adjustRegionStartAndSize(void* blockAddress, uintptr_t size)
 {
-  _regionSize  += ((UDATA) _regionStart - (UDATA) blockAddress);
   _regionStart = blockAddress;
+  _regionSize = size;
 }
 
 bool OSCacheContiguousRegion::alignToPageBoundary(UDATA osPageSize)

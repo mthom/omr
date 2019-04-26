@@ -46,7 +46,7 @@ public:
   // the size of the region.
   virtual UDATA regionSize() const;
 
-  virtual bool adjustRegionStart(void* blockAddress);
+  virtual bool adjustRegionStartAndSize(void* blockAddress, uintptr_t size);
   
   virtual bool alignToPageBoundary(UDATA osPageSize);
 

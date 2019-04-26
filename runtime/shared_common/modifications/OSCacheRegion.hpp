@@ -70,7 +70,7 @@ public:
 
   virtual void initialize(OSCacheRegionInitializer* initializer) = 0;
 
-  virtual bool adjustRegionStart(void* blockAddress) = 0;
+  virtual bool adjustRegionStartAndSize(void* blockAddress, uintptr_t size) = 0;
   
   // calculates the size of the region.
   virtual UDATA regionSize() const = 0;

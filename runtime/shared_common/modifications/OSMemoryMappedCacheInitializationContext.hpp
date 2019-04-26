@@ -38,6 +38,8 @@ public:
   // attach to a freshly created/connected cache. the logic of these varies
   // according to the initialization context.
   virtual bool startup(IDATA& errorCode) = 0;
+  virtual bool attach(IDATA& errorCode) = 0;
+  
   virtual bool creatingNewCache() = 0;
   virtual bool initAttach(void* blockAddress, IDATA& rc) = 0;
 

@@ -246,6 +246,8 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 
     if(!_initContext->startup(errorCode)) {
       goto _errorPostHeaderLock;
+    } else if(!_initContext->attach(errorCode)) {
+      goto _errorPostAttach;
     } else {
       _config->setCacheInitComplete();
 	//this line replaces this:
@@ -277,6 +279,47 @@ _errorPreFileOpen :
   return false;
 }
 
+bool
+OSMemoryMappedCache::setCacheLength(U_32 cacheSize, LastErrorInfo* lastErrorInfo)
+{  
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+
+  Trc_SHR_OSC_Mmap_setCacheLength_Entry(cacheSize);
+	
+  if (NULL != lastErrorInfo) {
+    lastErrorInfo->_lastErrorCode = 0;
+  }
+
+  if (cacheSize < _config->getHeaderSize()) {
+    return false;
+  }
+	
+#if defined(WIN32) || defined(WIN64)
+  if (0 != omrfile_blockingasync_set_length(_config->_fileHandle, cacheSize)) {
+#else
+    if (0 != omrfile_set_length(_config->_fileHandle, cacheSize)) {
+#endif
+      LastErrorInfo localLastErrorInfo;
+      localLastErrorInfo.populate(OMRPORTLIB);
+//      localLastErrorInfo.lastErrorCode = j9error_last_error_number();
+//      localLastErrorInfo.lastErrorMsg = j9error_last_error_message();
+      Trc_SHR_OSC_Mmap_setCacheLength_badfilesetlength();
+      errorHandler(J9NLS_SHRC_OSCACHE_MMAP_SETCACHELENGTH_FILESETLENGTH, &localLastErrorInfo);
+      if (NULL != lastErrorInfo) {
+	memcpy(lastErrorInfo, &localLastErrorInfo, sizeof(LastErrorInfo));
+      }
+      
+      return false;
+    }
+    
+    Trc_SHR_OSC_Mmap_setCacheLength_goodfilesetlength();
+	
+    _cacheSize = cacheSize;
+	
+    Trc_SHR_OSC_Mmap_setCacheLength_Exit();
+    return true;
+}
+  
 bool
 OSMemoryMappedCache::openCacheFile(LastErrorInfo* lastErrorInfo)
 {

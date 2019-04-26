@@ -39,6 +39,7 @@ public:
   {}
 
   virtual bool startup(IDATA& errorCode);
+  virtual bool attach(IDATA& errorCode);
   virtual bool initAttach(void* blockAddress, IDATA& rc);
   virtual bool creatingNewCache();
 };

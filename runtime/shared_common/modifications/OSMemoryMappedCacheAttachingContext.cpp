@@ -70,6 +70,11 @@ bool OSMemoryMappedCacheAttachingContext::initAttach(void* blockAddress, IDATA& 
 bool
 OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode)
 {
+  return attach(errorCode);
+}
+
+bool OSMemoryMappedCacheAttachingContext::attach(IDATA& errorCode)
+{
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
   
   IDATA retryCntr = 0;
@@ -80,13 +85,13 @@ OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode)
   /* no need for this check with the proper configuration. at least.. I don't think. Since we're attaching,
      there should be some sort of version check.
 
-  if (_cacheSize <= sizeof(OSCachemmap_header_version_current)) {
-    Trc_SHR_OSC_Mmap_startup_cacheTooSmall();
-    errorCode = OMRSH_OSCACHE_CORRUPT;
-    OSC_ERR_TRACE1(J9NLS_SHRC_CC_STARTUP_CORRUPT_CACHE_SIZE_INVALID, _cacheSize);
-    setCorruptionContext(CACHE_SIZE_INVALID, (UDATA)_cacheSize);
-    goto _errorPostHeaderLock;
-  }
+     if (_cacheSize <= sizeof(OSCachemmap_header_version_current)) {
+     Trc_SHR_OSC_Mmap_startup_cacheTooSmall();
+     errorCode = OMRSH_OSCACHE_CORRUPT;
+     OSC_ERR_TRACE1(J9NLS_SHRC_CC_STARTUP_CORRUPT_CACHE_SIZE_INVALID, _cacheSize);
+     setCorruptionContext(CACHE_SIZE_INVALID, (UDATA)_cacheSize);
+     goto _errorPostHeaderLock;
+     }
   */
 
   /* At this point, don't check the cache version - we need to attach to older versions in order to destroy */
@@ -100,24 +105,24 @@ OSMemoryMappedCacheAttachingContext::startup(IDATA& errorCode)
   }
   
   if (_cache->_runningReadOnly)
-  {
-    retryCntr = 0;
-    U_32* initCompleteAddr = (U_32*)_cache->_config->getInitCompleteLocation();
+    {
+      retryCntr = 0;
+      U_32* initCompleteAddr = (U_32*)_cache->_config->getInitCompleteLocation();
 
-    /* In readonly, we can't get a header lock, so if the cache is
-       mid-init, give it a chance to complete initialization */    
-    while ((!*initCompleteAddr) && (retryCntr < OMRSH_OSCACHE_READONLY_RETRY_COUNT)) {
-      omrthread_sleep(OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS);
-      ++retryCntr;
-    }
+      /* In readonly, we can't get a header lock, so if the cache is
+	 mid-init, give it a chance to complete initialization */    
+      while ((!*initCompleteAddr) && (retryCntr < OMRSH_OSCACHE_READONLY_RETRY_COUNT)) {
+	omrthread_sleep(OMRSH_OSCACHE_READONLY_RETRY_SLEEP_MILLIS);
+	++retryCntr;
+      }
 
-    if (!*initCompleteAddr) {
-      _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_READONLY_CACHE_NOTINITIALIZED, NULL);
-      Trc_SHR_OSC_Mmap_startup_cacheNotInitialized();
-      //goto _errorPostAttach;
-      return false;
+      if (!*initCompleteAddr) {
+	_cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_READONLY_CACHE_NOTINITIALIZED, NULL);
+	Trc_SHR_OSC_Mmap_startup_cacheNotInitialized();
+	//goto _errorPostAttach;
+	return false;
+      }
     }
-  }
 
   if (_cache->_configOptions->verboseEnabled()) { // _verboseFlags & OMRSHR_VERBOSEFLAG_ENABLE_VERBOSE) {
     if (_cache->_runningReadOnly) {

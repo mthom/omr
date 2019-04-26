@@ -34,7 +34,7 @@ bool OSMemoryMappedCacheCreatingContext::initAttach(void* blockAddress, IDATA&)
   //  *_cache->_config->getDataSectionLocation() = (void*) _cache->_config->getHeaderLocation() + _cache->_config->getHeaderSize();
 
   _cache->_config->serializeCacheLayout(_cache, blockAddress, _cache->_configOptions->cacheSize());
-  
+
   return true;
 }
 
@@ -42,7 +42,7 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
   LastErrorInfo lastErrorInfo;
-  
+
   // this is accessible through the Config object.
   //OSCachemmap_header_version_current *cacheHeader;
   IDATA rc;
@@ -60,15 +60,13 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
     return false;
   }
 
-  // we no longer need to set the cache length explicitly like this.
   /* Set cache to the correct length */
-  // if (!setCacheLength((U_32)piconfig->sharedClassCacheSize, &lastErrorInfo)) {
-//  if(_cache->_config->setCacheLength(&lastErrorInfo)) {
-//    // Trc_SHR_OSC_Mmap_startup_badSetCacheLength(piconfig->sharedClassCacheSize);
-//    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_SETTING_CACHE_LENGTH, &lastErrorInfo);
-//    //goto _errorPostHeaderLock;
-//    return false;
-//  }
+  if (!_cache->setCacheLength(_cacheSize, &lastErrorInfo)) {
+    // Trc_SHR_OSC_Mmap_startup_badSetCacheLength(piconfig->sharedClassCacheSize);
+    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_SETTING_CACHE_LENGTH, &lastErrorInfo);
+    //goto _errorPostHeaderLock;
+    return false;
+  }
 
   // Trc_SHR_OSC_Mmap_startup_goodSetCacheLength(piconfig->sharedClassCacheSize);
 
@@ -90,9 +88,14 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
     }
   }
 
-  
-  
-  rc = _cache->internalAttach(); //true, _activeGeneration);
+  return true;
+}
+
+bool OSMemoryMappedCacheCreatingContext::attach(IDATA& errorCode)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(_cache->portLibrary());
+  IDATA rc = _cache->internalAttach(); //true, _activeGeneration);
+
   if (0 != rc) {
     errorCode = rc;
     Trc_SHR_OSC_Mmap_startup_badAttach();
@@ -105,7 +108,7 @@ bool OSMemoryMappedCacheCreatingContext::startup(IDATA& errorCode)
 
   /* Create the cache header */
   // internalAttach() will take care of this now. Initializing the
-  // header, layout and all.  
+  // header, layout and all.
 //  if (!createCacheHeader()) { //, cacheHeader, versionData)) {
 //    Trc_SHR_OSC_Mmap_startup_badCreateCacheHeader();
 //    _cache->errorHandler(J9NLS_SHRC_OSCACHE_MMAP_STARTUP_ERROR_CREATING_CACHE_HEADER, NULL);
@@ -155,7 +158,7 @@ OSMemoryMappedCacheCreatingContext::createCacheHeader()
   //  U_32 headerLen = _cache->_config->getHeaderSize();  // MMAP_CACHEHEADERSIZE;
 
   OSMemoryMappedCacheHeader* cacheHeader = _cache->_config->_header;
-  
+
   if(NULL == cacheHeader) {
     return false;
   }

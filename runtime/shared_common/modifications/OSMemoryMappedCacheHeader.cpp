@@ -45,8 +45,10 @@ void OSMemoryMappedCacheHeader::create(OMRPortLibrary* library)
 
   OSMemoryMappedCacheHeaderMapping* mapping = _mapping->baseMapping();
 
+  // I think the zero-ing may be unnecessary. Seems to be done by the OMR port library.
   memset(mapping, 0, mapping->size(_numLocks));
-
+  mapping->_dataLocks = (I_32*) (_mapping->_mapping + offsetof(OSMemoryMappedCacheHeaderMapping, _dataLocks));
+  
   for(U_32 i = 0; i < _numLocks; ++i) {
     mapping->_dataLocks[i] = 0;
   }

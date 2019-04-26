@@ -32,6 +32,7 @@ public:
   {
     WASMOSCacheHeader<header_type>* header = dynamic_cast<WASMOSCacheHeader<header_type>*>(_layout->operator[](HEADER_REGION_ID));
     header->setConfigOptions(configOptions);
+    this->_header = header;
   }
 
   void* getDataSectionLocation() override;

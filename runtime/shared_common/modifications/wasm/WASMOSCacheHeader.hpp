@@ -32,26 +32,30 @@ public:
 		    int regionID, bool pageBoundaryAligned)
     : OSMemoryMappedCacheHeader(5, new WASMOSCacheHeaderMappingImpl<OSMemoryMappedCacheHeader>())
     , OSCacheContiguousRegion((OSCacheLayout*) layout, regionID, pageBoundaryAligned)
-  {}  
-  
+  {}
+
   void refresh(OMRPortLibrary* library) override;
   void create(OMRPortLibrary* library) override;
 
   using OSMemoryMappedCacheHeader::regionStartAddress;
 
   UDATA regionSize() const override {
-    return OSMemoryMappedCacheHeader::regionSize() + sizeof(volatile UDATA) + sizeof(UDATA);
+    const WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* mapping =
+      static_cast<const WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>*>(_mapping->_mapping);
+
+    return mapping->_mapping.size(_numLocks) + mapping->addendumSize();
   }
 
 protected:
-  friend class WASMOSCacheConfig<OSMemoryMappedCacheConfig>;  
+  friend class WASMOSCacheConfig<OSMemoryMappedCacheConfig>;
   friend class WASMOSCacheLayout<OSMemoryMappedCacheHeader>;
-  
+
   WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* derivedMapping();
+
   void setConfigOptions(WASMOSCacheConfigOptions* configOptions) {
     _configOptions = configOptions;
   }
-  
+
   WASMOSCacheConfigOptions* _configOptions;
 };
 
@@ -74,18 +78,22 @@ public:
   using OSSharedMemoryCacheHeader::regionStartAddress;
 
   UDATA regionSize() const override {
-    return OSSharedMemoryCacheHeader::regionSize() + sizeof(volatile UDATA) + sizeof(UDATA);
+    const WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* mapping =
+      static_cast<const WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>*>(_mapping->_mapping);
+
+    return mapping->_mapping.size() + mapping->addendumSize();
   }
 
 protected:
   friend class WASMOSCacheLayout<OSSharedMemoryCacheHeader>;
   friend class WASMOSCacheConfig<OSSharedMemoryCacheHeader>;
-  
+
   WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
+
   void setConfigOptions(WASMOSCacheConfigOptions* configOptions) {
     _configOptions = configOptions;
   }
-  
+
   WASMOSCacheConfigOptions* _configOptions;
 };
 

@@ -45,9 +45,11 @@ public:
 protected:
   friend class WASMOSCacheConfig<typename OSCacheHeader::config_type>;
 
-  void init(void* blockAddress, uintptr_t size) override {
-    _header->adjustRegionStart(blockAddress);
-    _dataSection->adjustRegionStart((void*) ((UDATA) blockAddress + _header->regionSize()));
+  void init(void* blockAddress, uintptr_t size) override
+  {
+    _header->adjustRegionStartAndSize(blockAddress, _header->regionSize());
+    _dataSection->adjustRegionStartAndSize((void*) ((UDATA) blockAddress + _header->regionSize()),
+					   size - _header->regionSize());
   
     _header->alignToPageBoundary(_osPageSize);
     _dataSection->alignToPageBoundary(_osPageSize);
