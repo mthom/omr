@@ -40,10 +40,7 @@ public:
   using OSMemoryMappedCacheHeader::regionStartAddress;
 
   UDATA regionSize() const override {
-    const WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* mapping =
-      static_cast<const WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>*>(_mapping->_mapping);
-
-    return mapping->size();
+    return sizeof(WASMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>);
   }
 
 protected:
@@ -78,16 +75,13 @@ public:
   using OSSharedMemoryCacheHeader::regionStartAddress;
 
   UDATA regionSize() const override {
-    const WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* mapping =
-      static_cast<const WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>*>(_mapping->_mapping);
-
-    return mapping->size();
+    return sizeof(WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>);
   }
 
 protected:
   friend class WASMOSCacheLayout<OSSharedMemoryCacheHeader>;
   friend class WASMOSCacheConfig<OSSharedMemoryCacheHeader>;
-
+  
   WASMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
 
   void setConfigOptions(WASMOSCacheConfigOptions* configOptions) {

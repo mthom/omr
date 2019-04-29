@@ -88,7 +88,7 @@ void OSMemoryMappedCache::finalise()
       omrthread_monitor_destroy(_config->_lockMutex[i]);
     }
   }
-
+  
   Trc_SHR_OSC_Mmap_finalise_Exit();
 }
 

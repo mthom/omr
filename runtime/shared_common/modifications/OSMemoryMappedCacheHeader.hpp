@@ -43,21 +43,21 @@ public:
   {}
 
   typedef OSMemoryMappedCacheConfig config_type;
-  
+
   virtual void refresh(OMRPortLibrary* library);
   virtual void create(OMRPortLibrary* library);
 
   virtual void serialize(OSCacheRegionSerializer* serializer);
   virtual void initialize(OSCacheRegionInitializer* initializer);
-  
+
+  virtual OSMemoryMappedCacheHeaderMapping* baseMapping() {
+    return _mapping->baseMapping();
+  }
+
 protected:
   friend class OSMemoryMappedCacheConfig;
   friend class OSMemoryMappedCacheCreatingContext;
 
-  virtual CacheHeaderMappingImpl<OSMemoryMappedCacheHeader>* baseMapping() {
-    return _mapping;
-  }
-  
   virtual void refresh(OMRPortLibrary* library, OSMemoryMappedCacheHeaderMapping* mapping);
 
   UDATA _numLocks;

@@ -26,6 +26,8 @@
 
 void OSMemoryMappedCacheHeader::refresh(OMRPortLibrary* library)
 {
+  *_mapping = regionStartAddress();
+  
   OSMemoryMappedCacheHeaderMapping* mapping = _mapping->baseMapping();
   refresh(library, mapping);
 }

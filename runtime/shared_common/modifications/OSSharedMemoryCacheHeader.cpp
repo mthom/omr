@@ -22,6 +22,7 @@ void OSSharedMemoryCacheHeader::refresh(OMRPortLibrary* library, OSSharedMemoryC
 
 void OSSharedMemoryCacheHeader::refresh(OMRPortLibrary* library, bool inDefaultControlDir)
 {
+  *_mapping = regionStartAddress();  
   refresh(library, _mapping->baseMapping(), inDefaultControlDir);
 }
 

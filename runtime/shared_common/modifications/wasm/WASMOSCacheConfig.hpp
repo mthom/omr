@@ -30,8 +30,8 @@ public:
     : OSCacheConfigImpl(numLocks)
     , _layout(new (PERSISTENT_NEW) WASMOSCacheLayout<header_type>(osPageSize, osPageSize > 0))
   {
-    WASMOSCacheHeader<header_type>* header = dynamic_cast<WASMOSCacheHeader<header_type>*>(_layout->operator[](HEADER_REGION_ID));
-    header->setConfigOptions(configOptions);
+    WASMOSCacheHeader<header_type>* header = dynamic_cast<WASMOSCacheHeader<header_type>*>(_layout->operator[](HEADER_REGION_ID));    
+    header->setConfigOptions(configOptions);    
     this->_header = header;
   }
 

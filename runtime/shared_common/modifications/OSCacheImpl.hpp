@@ -113,11 +113,11 @@ public:
   OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks);
 
   virtual ~OSCacheImpl() {
-//        omrthread_t self;
-//	omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
-//    
-//	_portLibrary->port_shutdown_library(_portLibrary);
-//	omrthread_detach(self);
+    omrthread_t self;
+    omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+    
+    _portLibrary->port_shutdown_library(_portLibrary);
+    omrthread_detach(self);
   }
   
   // old J9 cache comment:

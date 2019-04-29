@@ -8,12 +8,14 @@ template <class OSCacheConfigImpl>
 void WASMOSCacheConfig<OSCacheConfigImpl>::serializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 size)
 {
   _layout->init(blockAddress, size);
-	
+
   OSCacheRegionSerializer* serializer = osCache->constructSerializer();
 
   for(int i = 0; i < _layout->numberOfRegions(); ++i) {
     _layout->operator[](i)->serialize(serializer);
   }
+
+  this->_mapping = this->_header->baseMapping();
 }
 
 template <class OSCacheConfigImpl>
@@ -26,6 +28,8 @@ void WASMOSCacheConfig<OSCacheConfigImpl>::initializeCacheLayout(OSCache* osCach
   for(int i = 0; i < _layout->numberOfRegions(); ++i) {
     _layout->operator[](i)->initialize(initializer);
   }
+
+  this->_mapping = this->_header->baseMapping();
 }
 
 template <class OSCacheConfigImpl>
@@ -79,6 +83,9 @@ U_32* WASMOSCacheConfig<OSCacheConfigImpl>::getCacheSizeFieldLocation() {
 
 template <class OSCacheConfigImpl>
 void WASMOSCacheConfig<OSCacheConfigImpl>::detachRegions() {
+  _layout->operator[](HEADER_REGION_ID)->adjustRegionStartAndSize(NULL, 0);
+  _layout->operator[](DATA_SECTION_REGION_ID)->adjustRegionStartAndSize(NULL, 0);
+
   _layout->clearRegions();
 }
 

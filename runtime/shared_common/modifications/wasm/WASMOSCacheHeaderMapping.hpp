@@ -8,7 +8,7 @@
 template <class OSCacheHeader>
 struct WASMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
 {
-  typename CacheHeaderMapping<OSCacheHeader>::mapping_type _mapping;
+  typename CacheHeaderMapping<OSCacheHeader>::mapping_type _mapping;  
   U_32 _cacheSize;
   volatile UDATA _readerCount;
   UDATA _cacheInitComplete;

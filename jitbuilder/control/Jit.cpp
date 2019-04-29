@@ -81,7 +81,7 @@ initializeAllHelpers(JitBuilder::JitConfig *jitConfig, TR_RuntimeHelper *helperI
 
 static void
 initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
-   {
+{
    TR::CodeCacheConfig &codeCacheConfig = codeCacheManager.codeCacheConfig();
    codeCacheConfig._codeCacheKB = 128;
 
@@ -113,13 +113,12 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    codeCacheConfig._emitRelocatableELF = TR::Options::getCmdLineOptions()->getOption(TR_EmitRelocatableELFFile);
 
    TR::CodeCache *firstCodeCache = codeCacheManager.initialize(true, 1);
-   }
+}
 
-// ignite the seven cannons!
+static OMRPortLibrary library;
+
 WASMCompositeCache* initializeSharedCache()
 {
-  OMRPortLibrary library;
-
   omrthread_init_library();
   omrthread_t self;
   omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
@@ -140,6 +139,8 @@ WASMCompositeCache* initializeSharedCache()
   
   return &cache;
 }
+
+static WASMCompositeCache* cache;
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
@@ -172,12 +173,11 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
-   if(initializeSharedCache() == NULL) {
-     return false;
-   }
+   if((cache = initializeSharedCache()) == NULL)
+     return false;   
    
    if (commonJitInit(fe, options) < 0)
-      return false;
+     return false;
 
    initializeCodeCache(fe.codeCacheManager());
 
@@ -238,4 +238,8 @@ internal_shutdownJit()
 
    TR::CodeCacheManager &codeCacheManager = fe->codeCacheManager();
    codeCacheManager.destroy();
+
+   if(cache != NULL) {
+     delete cache;
+   }
    }
