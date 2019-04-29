@@ -57,6 +57,7 @@
 #include "env/SystemSegmentProvider.hpp"
 #include "env/DebugSegmentProvider.hpp"
 #include "runtime/CodeCacheManager.hpp"
+#include "runtime/SymbolValidationManager.hpp"
 #include "omrsrp.h"
 extern "C"{
   #include "shrinit.h"
@@ -339,7 +340,7 @@ compileMethodFromDetails(
    // FIXME: perhaps use stack memory instead
 
    TR_ASSERT(TR::comp() == NULL, "there seems to be a current TLS TR::Compilation object %p for this thread. At this point there should be no current TR::Compilation object", TR::comp());
-   TR::Compilation compiler(0, omrVMThread, &fe, &compilee, request, options, dispatchRegion, &trMemory, plan);
+   TR::Compilation compiler(0, TR::Compiler->vm._vmThread, &fe, &compilee, request, options, dispatchRegion, &trMemory, plan);
    TR_ASSERT(TR::comp() == &compiler, "the TLS TR::Compilation object %p for this thread does not match the one %p just created.", TR::comp(), &compiler);
 
    try
@@ -410,6 +411,8 @@ compileMethodFromDetails(
 	 NNSRP_SET(methodNameAndSignature.name,compilee.nameChars());
 	 NNSRP_SET(methodNameAndSignature.signature,compilee.signatureChars());
 	 omrshr_storeCompiledMethod(TR::Compiler->vm._vmThread,&methodNameAndSignature,nullptr,0,compiler.cg()->getCodeStart(),compiler.cg()->getCodeLength(),false);
+	 TR::SymbolValidationManager svm(dispatchRegion,&compilee);
+
          if (
                compiler.getOption(TR_PerfTool)
             || compiler.getOption(TR_EmitExecutableELFFile)
