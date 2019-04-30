@@ -83,11 +83,16 @@ void OSMemoryMappedCache::finalise()
 
   _mapFileHandle = NULL;
 
+  omrthread_t self;
+  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+  
   for (UDATA i = 0; i < _config->_numLocks; i++) { // OMRSH_OSCACHE_MMAP_LOCK_COUNT; i++) {
     if(NULL != _config->_lockMutex[i]) {
       omrthread_monitor_destroy(_config->_lockMutex[i]);
     }
   }
+
+  omrthread_detach(self);
   
   Trc_SHR_OSC_Mmap_finalise_Exit();
 }
