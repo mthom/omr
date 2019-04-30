@@ -278,6 +278,9 @@ const char * objectName[] =
    "TR::RelocationDebugInfo",
    "TR::AOTClassInfo",
    "TR_SharedCache",
+   "OSCacheRegion",
+   "OSCacheLayout",
+   "OSCacheConfig",
 
    "TR::RegisterPair",
    "TR::Instruction",

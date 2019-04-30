@@ -25,7 +25,8 @@
 
 #include "omr.h"
 
-#include "OSCacheMemoryMappedInitializationContext.hpp"
+#include "OSCacheConfigOptions.hpp"
+#include "OSMemoryMappedCacheInitializationContext.hpp"
 
 class OSMemoryMappedCache;
 class OSMemoryMappedCacheConfig;
@@ -37,19 +38,10 @@ public:
     : OSMemoryMappedCacheInitializationContext(cache)
   {}
 
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
-  virtual IDATA internalAttach(OSMemoryMappedCache* cache);
+  virtual bool startup(IDATA& errorCode);
+  virtual bool attach(IDATA& errorCode);
+  virtual bool initAttach(void* blockAddress, IDATA& rc);
   virtual bool creatingNewCache();
-  
-  // attach originally had this parameter: ..., J9PortShcVersion* expectedVersionData)
-  virtual void *attach(OMR_VMThread* currentThread);
-  virtual void detach();  
-protected:
-  // this should probably be updated within the MemoryMapped class. It doesn't
-  // apply to the shared memory version.
-  #if defined (J9SHR_MSYNC_SUPPORT)
-  virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
-  #endif
 };
 
 #endif

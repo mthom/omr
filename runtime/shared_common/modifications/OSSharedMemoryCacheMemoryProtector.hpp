@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,28 +19,25 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#if !defined(OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED
+#if !defined(OS_SHARED_MEMORY_CACHE_MEMORY_PROTECTOR_HPP_INCLUDED)
+#define OS_SHARED_MEMORY_CACHE_MEMORY_PROTECTOR_HPP_INCLUDED
 
-#include "sharedconsts.hpp"
+#include "OSCacheMemoryProtector.hpp"
+#include "OSCacheContiguousRegion.hpp"
 
-#include "OSCacheConfigOptions.hpp"
+class OSSharedMemoryClass;
 
-class OSMemoryMappedCache;
-
-class OSMemoryMappedInitializationContext {
+class OSSharedMemoryCacheMemoryProtector : public OSCacheMemoryProtector
+{
 public:
-  OSMemoryMappedInitializationContext(OSMemoryMappedCache* cache)
-    : _cache(cache)
+  OSSharedMemoryCacheMemoryProtector(OSSharedMemoryCache& osCache)
+    : _osCache(osCache)
   {}
-  // attach to a freshly created/connected cache. the logic of these varies
-  // according to the initialization context.
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions) = 0;
-  virtual IDATA internalAttach() = 0;
-  virtual bool creatingNewCache() = 0;
   
+  virtual IDATA setPermissions(OSCacheContiguousRegion& region);
+
 protected:
-  OSMemoryMappedCache* _cache;
+  OSSharedMemoryCache& _osCache;
 };
 
 #endif

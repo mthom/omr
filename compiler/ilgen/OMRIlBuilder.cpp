@@ -1082,6 +1082,7 @@ OMR::IlBuilder::BitcastTo(TR::IlType *t, TR::IlValue *v)
   return convertedValue;
   }
 
+
 TR::IlValue *
 OMR::IlBuilder::convertTo(TR::DataType typeTo, TR::IlValue *v, bool needUnsigned)
    {

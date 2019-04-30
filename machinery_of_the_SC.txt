@@ -607,16 +607,13 @@ J9ShrCompositeCacheCommonInfo, which houses data common to *all*
 composite caches, as the name would suggest. It's:
 
 typedef struct J9ShrCompositeCacheCommonInfo {
-	omrthread_tls_key_t writeMutexEntryCount; /* whaaat.. a write
-	mutex entry count? I have no clue what this might
-	signify. enterWriteMutex allows only single-threaded writing
-	to the cache. The function preamble says so. I don't know what
-	an entry count. omrthread_tls_set sets.. a thread's TLS
-	value. It's thread local storage.. it needs to be free,
-	sometimes. And set to 0 (it's actually uintptr_t). When
-	calling enterWriteMutex, we get the entry count from TLS using
-	writeMutexEntryCount (the TLS entry), increment it, and store
-	it back. */
+	omrthread_tls_key_t writeMutexEntryCount; /* Only used if the
+	   writeMutexID has the value CC_READONLY_LOCK_VALUE, which is true
+	   iff _readOnlyOSCache is true. In that case, no one ever writes to the cache.
+	   This plays the role of a reader count, but.. a 'writer' count. It's used
+	   to tell whether the current thread holds the write mutex, in this case, since
+	   no actual write mutexes are being held. 
+	*/
 	struct J9VMThread* hasWriteMutexThread; /* the thread holding
 	the write mutex. */
 	struct J9VMThread* hasReadWriteMutexThread; // Similar.
@@ -811,7 +808,7 @@ Before examining methods, we should look to fields! Here they are.
   //	ClassDebugDataProvider * _debugData;
 
 	/* All composite caches within a JVM point to the same 'J9ShrCompositeCacheCommonInfo'
-	 * structure.
+	 * structure. Set *before* the shared cache is started.
 	 */
 	J9ShrCompositeCacheCommonInfo * _commonCCInfo;
 
@@ -1574,10 +1571,11 @@ the comment preamble, it.. simply says more than my words ever could.
 
 /**
  * Check whether to use writeHash when loading classes
- *
- * This method helps answer the question: Is it worth us using writeHash when loading classes?
- * The answer is: Yes if another VM has connected since us or if a VM previous to us has detected us
- * and started writeHashing
+ * 
+ * This method helps answer the question: Is it worth us using
+ * writeHash when loading classes?  The answer is: Yes if another VM
+ * has connected since us or if a VM previous to us has detected us
+ * and started writeHashing 
  *
  * Current thread should hold refresh mutex when entering this method.
  *
@@ -1762,8 +1760,8 @@ There is this fun assert:
 Trc_SHR_Assert_False(_storedSegmentUsedBytes | _storedReadWriteUsedBytes | _storedMetaUsedBytes | _storedAOTUsedBytes | _storedJITUsedBytes);
 
 All these bools must be false. We cannot currently be in the process
-of storing any data, to anywhere in the cache. It's by design a single-threaded
-operation.
+of storing any data, to anywhere in the cache. It's by design a
+single-threaded operation.
 
 Next, we set the locations *at* the pointers segmentBuffer and
 readWriteBuffer to NULL, if the pointers themselves aren't NULL, of
@@ -1847,6 +1845,25 @@ represented by _theca->aotBytes - reservedAOT?? WHY?? Seems that we're
 always trying to maintain a buffer of at least the amount of space
 used to *store* AOT/JIT code in reserved space for *future* AOT/JIT
 code. This is the best possible explanation I can give currently.
+
+OK, genius, we realized weeks ago (and then promptly forgot again),
+that itemLen (the calculation returned by the function
+getBytesRequiredForItemWithAlign) includes codeDataLen! This is belied
+by the 'allocate' function, a kitchen sink... it makes the existence
+of a separate codeDataLen parameter appear like a necessity, when in
+fact it's not, it's totally redundant. See the lines
+
+_storedMetaUsedBytes = itemLen - codeDataLen; /* Don't count AOT data
+as metadata */
+
+and
+
+_storedMetaUsedBytes = itemLen - codeDataLen; /* Don't count JIT data
+as metadata */
+
+for corroboration of this!
+
+
 
 Finally, if neither of these conditions applies, then reservedAOT <=
 _theca->aotBytes, and usedBytesInc = itemLen + addBufferLen, the
@@ -2121,9 +2138,9 @@ _theca->lastMetadataType to offer the future some chance at restoring
 the state if a crash does happen. It looks like this:
 
 oldNum = _theca->updateSRP;
+
 /* Store the ShcItem->dataType and jvmID */
 _theca->lastMetadataType = *(U_32 *)&((ShcItem *)((UDATA)_theca + oldNum - (_storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes)))->dataType;
-
 _theca->updateSRP -= _storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes;
 
 Then we check that the 'free' gap in the CompositeCache diagram is at

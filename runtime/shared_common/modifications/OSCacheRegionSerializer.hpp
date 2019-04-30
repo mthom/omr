@@ -22,12 +22,16 @@
 #if !defined(OS_CACHE_REGION_SERIALIZER_HPP_INCLUDED)
 #define OS_CACHE_REGION_SERIALIZER_HPP_INCLUDED
 
-class OSCacheRegion;
+class OSCacheContiguousRegion;
+class OSMemoryMappedCacheHeader;
+class OSSharedMemoryCacheHeader;
 
 class OSCacheRegionSerializer
 {
 public:
-  virtual void serialize(OSCacheRegion*) = 0;
+  virtual void serialize(OSMemoryMappedCacheHeader*) = 0;
+  virtual void serialize(OSSharedMemoryCacheHeader*) = 0;  
+  virtual void serialize(OSCacheContiguousRegion*) = 0;
 };
 
 #endif

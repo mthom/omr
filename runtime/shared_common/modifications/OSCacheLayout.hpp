@@ -20,46 +20,49 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-
 #if !defined(OSCACHE_LAYOUT_HPP_INCLUDED)
 #define OSCACHE_LAYOUT_HPP_INCLUDED
 
-#include "omr.h"
+#include "OSCache.hpp"
 #include "OSCacheRegion.hpp"
-#include "OSCacheRegionSerializer.hpp"
 
-#include "compiler/infra/vector.hpp"
+#include "omr.h"
 
-class OSCache {
-public:
-  virtual OSCacheRegionSerializer* constructSerializer() = 0;
-};
+// for TR::vector.
+// #include "infra/vector.hpp"
+#include <vector>
 
 class OSCacheLayout
 {
 public:
-  OSCacheLayout(UDATA roundToPageSize, UDATA osPageSize)
-    : _roundToPageSize(roundToPageSize)
-    , _osPageSize(osPageSize)
+  OSCacheLayout(UDATA osPageSize)
+    : _osPageSize(osPageSize)
   {}
+  
+  virtual void alignRegionsToPageBoundaries();
 
-  void addRegion(OSCacheRegion* region) {
+  /* If a region changes size, the owning cache layout is notified. */
+  virtual bool notifyRegionSizeAdjustment(OSCacheRegion&) = 0;
+
+  virtual OSCacheRegion* operator[](uint64_t i) {
+    return _regions[i];
+  }
+
+  virtual int numberOfRegions() const {
+    return _regions.size();
+  }
+  
+protected:
+  // initialize the cache block.
+  virtual void init(void* blockAddress, uintptr_t size) = 0;
+  
+  virtual void addRegion(OSCacheRegion* region) {
     _regions.push_back(region);
   }
 
-  void serialize(OSCache* cache) {
-    OSCacheRegionSerializer* serializer = cache->constructSerializer();
-
-    for(int i = 0; i < _regions.size(); ++i) {
-      _regions[i]->serialize(serializer);
-    }
-  }
-
-protected:
-  TR::vector<OSCacheRegion*> _regions;
-
-  UDATA _roundToPageSize;
   UDATA _osPageSize;
+  //TODO: eventually convert to TR::vector.
+  std::vector<OSCacheRegion*> _regions;  
 };
 
 #endif

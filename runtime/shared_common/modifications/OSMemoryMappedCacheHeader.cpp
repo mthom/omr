@@ -23,3 +23,44 @@
 #include "omrport.h"
 
 #include "OSMemoryMappedCacheHeader.hpp"
+
+void OSMemoryMappedCacheHeader::refresh(OMRPortLibrary* library)
+{
+  *_mapping = regionStartAddress();
+  
+  OSMemoryMappedCacheHeaderMapping* mapping = _mapping->baseMapping();
+  refresh(library, mapping);
+}
+
+void OSMemoryMappedCacheHeader::refresh(OMRPortLibrary* library, OSMemoryMappedCacheHeaderMapping* mapping)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
+
+  mapping->_createTime = omrtime_current_time_millis();
+  mapping->_lastAttachedTime = omrtime_current_time_millis();
+  mapping->_lastDetachedTime = omrtime_current_time_millis();
+}
+
+void OSMemoryMappedCacheHeader::create(OMRPortLibrary* library)
+{
+  *_mapping = regionStartAddress();
+
+  OSMemoryMappedCacheHeaderMapping* mapping = _mapping->baseMapping();
+
+  memset(mapping, 0, mapping->size());
+  
+  for(U_32 i = 0; i < _numLocks; ++i) {
+    mapping->_dataLocks[i] = 0;
+  }
+
+  strncpy(mapping->_eyecatcher, OMRSH_OSCACHE_MMAP_EYECATCHER, OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH);
+  refresh(library, mapping);
+}
+
+void OSMemoryMappedCacheHeader::serialize(OSCacheRegionSerializer* serializer) {
+  serializer->serialize(this);
+}
+
+void OSMemoryMappedCacheHeader::initialize(OSCacheRegionInitializer* initializer) {
+  initializer->initialize(this);
+}

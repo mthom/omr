@@ -31,12 +31,19 @@ class OSMemoryMappedCacheCreatingContext : public OSMemoryMappedCacheInitializat
 public:
   OSMemoryMappedCacheCreatingContext(OSMemoryMappedCache* cache)
     : OSMemoryMappedCacheInitializationContext(cache)
+    , _cacheSize(1024 * 1024 * 300) // 300 MBs is the default cache size for memory-mapped files.
   {}
+
+  virtual bool startup(IDATA& errorCode);
+  virtual bool attach(IDATA&);
   
-  virtual bool startup(IDATA& errorCode, IDATA& retryCntr, OSCacheConfigOptions configOptions);
-  virtual void setCacheAreaBoundaries();
+  virtual bool initAttach(void* blockAddress, IDATA& rc);
+  // virtual void setCacheAreaBoundaries();
+  // virtual I_32 createCacheHeader();
   virtual bool creatingNewCache();
-protected:  
-}
+
+protected:
+  U_32 _cacheSize;
+};
 
 #endif

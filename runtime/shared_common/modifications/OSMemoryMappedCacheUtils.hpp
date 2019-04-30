@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -25,13 +25,13 @@
 #include "omrport.h"
 
 #include "OSCache.hpp"
+#include "OSCacheImpl.hpp"
+#include "OSCacheConfigOptions.hpp"
 
-namespace OSMemoryMappedCacheUtils
-{
-static SH_CacheFileAccess checkCacheFileAccess(OMRPortLibrary *portLibrary, UDATA fileHandle, I_32 openMode,
-					       LastErrorInfo* lastErrorInfo);
-static I_32 verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle,
-				       LastErrorInfo *lastErrorInfo);
-}
+struct OSMemoryMappedCacheUtils
+{  
+static I_32 verifyCacheFileGroupAccess(OMRPortLibrary *portLibrary, IDATA fileHandle, LastErrorInfo *lastErrorInfo);
+// static IDATA getCacheStats(OMRPortLibrary* library, const char* cacheDirName, const char* cacheName, SH_OSCache_Info *cacheInfo, OSCacheConfigOptions configOptions);
+};
 
 #endif

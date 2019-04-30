@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -22,33 +22,46 @@
 #if !defined(OS_MEMORY_MAPPED_CACHE_HEADER_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_HEADER_HPP_INCLUDED
 
-#include "sharedconsts.hpp"
+#include "sharedconsts.h"
 
-#include "OSCacheRegion.hpp"
+#include "OSCacheContiguousRegion.hpp"
+#include "OSCacheRegionInitializer.hpp"
+#include "OSCacheRegionSerializer.hpp"
 
-class OSMemoryMappedCacheHeader : public OSCacheRegion
+#include "CacheHeaderMappingImpl.hpp"
+#include "OSMemoryMappedCacheHeaderMapping.hpp"
+
+class OSMemoryMappedCacheConfig;
+
+class OSMemoryMappedCacheHeader: virtual public OSCacheContiguousRegion
 {
 public:
-  virtual U_64 getHeaderLockOffset() = 0;
-  virtual U_64 getAttachLockOffset() = 0;
+  OSMemoryMappedCacheHeader(UDATA numLocks, CacheHeaderMappingImpl<OSMemoryMappedCacheHeader>* mapping = NULL)
+    : OSCacheContiguousRegion(NULL, 0, false)
+    , _numLocks(numLocks)
+    , _mapping(mapping)
+  {}
 
-  U_64 getAttachLockSize() {
-    return sizeof(_attachLock);
+  typedef OSMemoryMappedCacheConfig config_type;
+
+  virtual void refresh(OMRPortLibrary* library);
+  virtual void create(OMRPortLibrary* library);
+
+  virtual void serialize(OSCacheRegionSerializer* serializer);
+  virtual void initialize(OSCacheRegionInitializer* initializer);
+
+  virtual OSMemoryMappedCacheHeaderMapping* baseMapping() {
+    return _mapping->baseMapping();
   }
 
 protected:
-  virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
+  friend class OSMemoryMappedCacheConfig;
+  friend class OSMemoryMappedCacheCreatingContext;
 
-  // from the OSCache_header* and OSCachemmap_header* structs.
-  // U_32 _headerSize;   // from OSCache_header2: dataLength
-  // J9SRP _headerStart; // from OSCache_header2: dataStart
+  virtual void refresh(OMRPortLibrary* library, OSMemoryMappedCacheHeaderMapping* mapping);
 
-  I_64 _createTime;   // from OSCache_mmap_header1 & 2: createTime
-  I_64 _lastAttachedTime; // from OSCache_mmap_header1 & 2: lastAttachedTime
-  I_64 _lastDetachedTime; // from OSCache_mmap_header1 & 2: lastDetachedTime
-  I_32 _headerLock; // from OSCache_mmap_header1 & 2: headerLock
-  I_32 _attachLock; // from OSCache_mmap_header1 & 2: attachLock
-  I_32* _dataLocks; // was _dataLocks[_numLocks]; // from OSCache_mmap_header1 & 2: dataLocks
+  UDATA _numLocks;
+  CacheHeaderMappingImpl<OSMemoryMappedCacheHeader>* _mapping;
 };
 
 #endif

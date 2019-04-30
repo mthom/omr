@@ -23,49 +23,84 @@
 #if !defined(OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED)
 #define OS_MEMORY_MAPPED_CACHE_HPP_INCLUDED
 
-#include "OSPersistentCache.hpp"
+#include "OSCacheRegion.hpp"
+#include "OSCacheImpl.hpp"
+#include "OSCacheLayout.hpp"
 #include "OSMemoryMappedCacheConfig.hpp"
-#include "OSMemoryMappedInitializationContext.hpp"
+#include "OSMemoryMappedCacheInitializationContext.hpp"
+#include "OSMemoryMappedCacheInitializer.hpp"
+#include "OSMemoryMappedCacheSerializer.hpp"
+#include "OSMemoryMappedCache.hpp"
 
 #include "omr.h"
 #include "omrport.h"
 
+class OSMemoryMappedCacheConfig;
+class OSMemoryMappedCacheIterator;
+
 // an implementation of a persistent shared cache that uses omrmmap primitives
 // and region-based locks on sections of files.
-class OSMemoryMappedCache: public OSPersistentCache {
-public:  
-  virtual void getError();
+class OSMemoryMappedCache: public OSCacheImpl {
+public:
+  typedef OSMemoryMappedCacheHeader header_type;
 
-  OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
-					   OMR_VM* vm,
-					   const char* cacheDirName,
-					   const char* cacheName,
-					   IDATA numLocks,
-					   OSMemoryMappedCacheConfigOptions configOptions,
-					   I_32 openMode);
+  OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,
+		      OSMemoryMappedCacheConfig* config, OSCacheConfigOptions* configOptions);
 
-  bool startup(I_32 openMode);
+  virtual ~OSMemoryMappedCache() {}
 
-  //TODO: should these functions be virtual?
-  virtual void initialize(OMRPortLibrary* library);
+  bool startup(const char* cacheName, const char* ctrlDirName);
+  IDATA destroy(bool suppressVerbose, bool isReset);
+
+  virtual void* attach();
+  virtual void detach();
+
+  virtual void initialize();
   virtual void finalise();
+  virtual void cleanup();
+
+  virtual IDATA getError();
+
+  typedef OSMemoryMappedCacheConfig config_type;
+  typedef OSMemoryMappedCacheIterator iterator_type;
   
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;
-  
-  IDATA openCacheFile(LastErrorInfo*);
+
+  bool setCacheLength(U_32 cacheSize, LastErrorInfo*);
+
+  bool openCacheFile(LastErrorInfo*);
   bool closeCacheFile();
-  
+
   IDATA internalAttach();
   void internalDetach();
-  
-  OSMemoryMappedCacheIterator* getMemoryMappedCacheIterator();
 
-  OSMemoryMappedInitializationContext* _init_context;
+  IDATA getLockCapabilities();
+
+  virtual UDATA getPermissionsRegionGranularity();
+
+  virtual void setError(IDATA errorCode);
+  virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
+
+  virtual void runExitProcedure();
+  virtual void handleCacheHeaderCorruption(IDATA headerRc);
+
+#if defined(OMRSH_MSYNC_SUPPORT)
+  virtual IDATA syncUpdates(void* start, UDATA length, U_32 flags);
+#endif
+
+  virtual bool deleteCacheFile(LastErrorInfo* lastErrorInfo);
+
+  virtual OSCacheMemoryProtector* constructMemoryProtector();
+
+  virtual OSCacheRegionSerializer* constructSerializer();
+  virtual OSCacheRegionInitializer* constructInitializer();
+
+  OSMemoryMappedCacheInitializationContext* _initContext;
   OSMemoryMappedCacheConfig* _config;
 
-  OMRMmapHandle *_mapFileHandle;
+  J9MmapHandle *_mapFileHandle;
 };
 
 #endif

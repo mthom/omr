@@ -57,6 +57,8 @@ endif()
 
 # Generated client API files
 set(CPP_API_GENERATOR ${CMAKE_CURRENT_SOURCE_DIR}/apigen/cppgen.py)
+set(SHARED_CACHE_MODS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../runtime/shared_common/modifications)
+set(WASM_SHARED_CACHE_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../runtime/shared_common/modifications/wasm)
 set(JITBUILDER_CPP_API_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release/cpp/include)
 set(JITBUILDER_CPP_API_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}client/cpp)
 set(JITBUILDER_API_DESCRIPTION ${CMAKE_CURRENT_SOURCE_DIR}/apigen/jitbuilder.api.json)
@@ -118,15 +120,18 @@ create_omr_compiler_library(
 #       is adding the actual compiler dir, as opposed to the 'composed'
 #       install directory.
 target_include_directories(jitbuilder
-	INTERFACE
-		${JITBUILDER_CPP_API_HEADER_DIR}
+  INTERFACE
+    ${SHARED_CACHE_MODS_HEADER_DIR}
+    ${WASM_SHARED_CACHE_HEADER_DIR}
+    ${JITBUILDER_CPP_API_HEADER_DIR}
 )
 
 target_link_libraries(jitbuilder
-	PUBLIC
-	        omrvmstartup
-	        shared_cache
-		${OMR_PORT_LIB}
+
+  	PUBLIC
+        shared_cache_modifications
+	wasm_shared_cache
+	${OMR_PORT_LIB}
 )
 
 ## JitBuilder examples only work on 64 bit currently.

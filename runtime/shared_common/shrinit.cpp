@@ -56,9 +56,9 @@ extern "C" {
 //#include "omrconsts.h"
 //#include "jvminit.h"
 #include "omrport.h"
-#include "shrinit.h"
+//#include "srphashtable_api.h"
 //#include "verbose_api.h"
-#include "ut_omrshr.h"
+//#include "ut_omrshr.h"
 #include "shrnls.h"
 //#include "j9exelibnls.h"
 //#include "j2sever.h" 
@@ -72,6 +72,8 @@ extern "C" {
 #include <string.h>
 // #include "util_api.h"
 #include "omrutil.h"
+
+#include "shrinit.h"
 
 extern "C++"{
 //#include "hookhelpers.hpp"
@@ -2845,6 +2847,7 @@ ensureCorrectCacheSizes(OMR_VM *vm, OMRPortLibrary* portlib, U_64 runtimeFlags, 
 			piconfig->sharedClassReadWriteBytes = 0;
 		} else {
 			piconfig->sharedClassReadWriteBytes = 0;//(UDATA)srpHashTable_requiredMemorySize((U_32)piconfig->sharedClassInternTableNodeCount, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
+
 			if (piconfig->sharedClassReadWriteBytes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				SHRINIT_ERR_TRACE2(verboseFlags, J9NLS_SHRC_SHRINIT_VALUE_IS_NOT_SUPPORTED_BY_PRIMENUMBERHELPER, piconfig->sharedClassInternTableNodeCount, getSupportedBiggestNumberByPrimeNumberHelper());
 				return 1;
@@ -3077,6 +3080,7 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	UDATA cmBytes, nameBytes, modContextBytes;
 	OMRSharedCacheConfig* tempConfig;
 	//vm->sharedCachePreinitConfig;
+
 	OMRUTF8* mcPtr;
 	bool doPrintStats = false;
 	bool exitAfterBuildingTempConfig = false;
@@ -3104,7 +3108,9 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	piconfig->sharedClassInternTableNodeCount = -1;
 	piconfig->sharedClassReadWriteBytes = -1;
 	
+
 	Trc_SHR_INIT_j9shr_init_Entry(currentThread);
+	piconfig = (J9SharedClassPreinitConfig*)omrmem_allocate_memory(sizeof(J9SharedClassPreinitConfig), OMRMEM_CATEGORY_VM);//vm->sharedClassPreinitConfig;
 	
 //	if (FALSE == vm->sharedCacheAPI->xShareClassesPresent) {
 //		Trc_SHR_Assert_True(vm->sharedCacheAPI->sharedCacheEnabled);
@@ -3227,8 +3233,10 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 	modContextBytes = modContext ? ((strlen(modContext) * sizeof(char)) + sizeof(OMRUTF8)) : 0;
 	
 	//TODO: maybe include bytes for the cache name in this.. once that's up and running.
-	memBytesNeeded = sizeof(OMRSharedCacheConfig) + sizeof(OMRSharedCacheDescriptor) + cmBytes;// + nameBytes + modContextBytes;
-	tempConfig = (OMRSharedCacheConfig*)omrmem_allocate_memory(memBytesNeeded, OMRMEM_CATEGORY_CLASSES);
+//	memBytesNeeded = sizeof(OMRSharedClassConfig) + sizeof(J9SharedClassCacheDescriptor); // + cmBytes + nameBytes + modContextBytes;
+	memBytesNeeded = sizeof(OMRSharedClassConfig) + sizeof(J9SharedClassCacheDescriptor) + cmBytes;
+	tempConfig = (OMRSharedClassConfig*)omrmem_allocate_memory(memBytesNeeded, OMRMEM_CATEGORY_CLASSES);
+>>>>>>> shared_cache_modifications
 	
 	if (!tempConfig) {
 		SHRINIT_ERR_TRACE(verboseFlags, J9NLS_SHRC_SHRINIT_FAILURE_ALLOCATING_CONFIG);
@@ -3255,8 +3263,8 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //
 	/* Initialize the cache */
 
-	tempConfig->cacheDescriptorList = (OMRSharedCacheDescriptor*)((UDATA)tempConfig + sizeof(OMRSharedCacheConfig));
-	cmPtr = (SH_CacheMap*)((UDATA)tempConfig->cacheDescriptorList + sizeof(OMRSharedCacheDescriptor));
+	tempConfig->cacheDescriptorList = (J9SharedClassCacheDescriptor*)((UDATA)tempConfig + sizeof(OMRSharedClassConfig));
+	cmPtr = (SH_CacheMap*)((UDATA)tempConfig->cacheDescriptorList + sizeof(J9SharedClassCacheDescriptor));
 	mcPtr = (OMRUTF8*)((UDATA)cmPtr + cmBytes);
 	copiedCacheName = (char*)((UDATA)mcPtr + modContextBytes);
 
@@ -3326,10 +3334,11 @@ omrshr_init(OMR_VM *vm, UDATA loadFlags, UDATA* nonfatal)
 //		}
 //	} else {
 
-	rcStartup = cm->startup((OMR_VMThread*)vm, piconfig, cacheName, ctrlDirName, 
-				OMRSH_DIRPERM_ABSENT, NULL, &cacheHasIntegrity);
+//	rcStartup = cm->startup(currentThread, piconfig, cacheName, ctrlDirName, 
+//				vm->sharedCacheAPI->cacheDirPerm, NULL, &cacheHasIntegrity);
 	//	}
-
+	rcStartup = cm->startup((OMR_VMThread*)vm, piconfig, cacheName, ctrlDirName,
+				OMRSH_DIRPERM_ABSENT, NULL, &cacheHasIntegrity);
 	if (rcStartup != 0) {
 		OMRSharedCacheConfig* config = vm->sharedClassConfig;
 		config->sharedClassCache = NULL;

@@ -22,10 +22,10 @@
 
 #include <stdio.h>
 #include "omrvm.h"
-#include "OMR_VMThread.hpp"
-extern "C"{
-  #include "shrinit.h"
-}
+
+//extern "C"{
+//  #include "shrinit.h"
+//}
 #include "codegen/CodeGenerator.hpp"
 #include "compile/CompilationTypes.hpp"
 #include "compile/Method.hpp"
@@ -40,6 +40,8 @@ extern "C"{
 #include "runtime/CodeCache.hpp"
 #include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
+
+#include "WASMCompositeCache.hpp"
 
 #if defined(TR_TARGET_S390)
 #include "z/codegen/TRSystemLinkage.hpp"
@@ -80,7 +82,7 @@ initializeAllHelpers(JitBuilder::JitConfig *jitConfig, TR_RuntimeHelper *helperI
 
 static void
 initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
-   {
+{
    TR::CodeCacheConfig &codeCacheConfig = codeCacheManager.codeCacheConfig();
    codeCacheConfig._codeCacheKB = 128;
 
@@ -107,12 +109,39 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    codeCacheConfig._largeCodePageFlags = 0;
    codeCacheConfig._maxNumberOfCodeCaches = 96;
    codeCacheConfig._canChangeNumCodeCaches = true;
-   codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool) 
+   codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool)
                                     ||  TR::Options::getCmdLineOptions()->getOption(TR_EmitExecutableELFFile);
    codeCacheConfig._emitRelocatableELF = TR::Options::getCmdLineOptions()->getOption(TR_EmitRelocatableELFFile);
 
    TR::CodeCache *firstCodeCache = codeCacheManager.initialize(true, 1);
-   }
+}
+
+static OMRPortLibrary library;
+
+WASMCompositeCache* initializeSharedCache()
+{
+  omrthread_init_library();
+  omrthread_t self;
+  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+
+//  omrport_allocate_library(&library);
+//  omrport_startup_library(library);
+
+  omrport_init_library(&library, sizeof(OMRPortLibrary));
+  omrthread_detach(self);
+
+  static WASMOSCacheConfigOptions configOptions;
+  static WASMOSCache<OSMemoryMappedCache> osCache(&library, "wasm_shared_cache", "/tmp",
+						  5, &configOptions);
+
+  osCache.startup("wasm_shared_cache", "/tmp");
+
+  static WASMCompositeCache cache(&osCache, 0);
+  
+  return &cache;
+}
+
+static WASMCompositeCache* cache;
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
@@ -157,8 +186,11 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
+   if((cache = initializeSharedCache()) == NULL)
+     return false;   
+   
    if (commonJitInit(fe, options) < 0)
-      return false;
+     return false;
 
    initializeCodeCache(fe.codeCacheManager());
 
@@ -204,7 +236,12 @@ internal_initializeJit()
 int32_t
 internal_compileMethodBuilder(TR::MethodBuilder *m, void **entry)
    {
-   return m->Compile(entry);
+   TR::ResolvedMethod resolvedMethod(m);
+   TR::IlGeneratorMethodDetails details(&resolvedMethod);
+   int32_t rc=0;
+   *entry = compileMethodFromDetails(NULL, details, warm, rc);
+   m->typeDictionary()->NotifyCompilationDone();
+   return rc;
    }
 
 void
@@ -214,4 +251,8 @@ internal_shutdownJit()
 
    TR::CodeCacheManager &codeCacheManager = fe->codeCacheManager();
    codeCacheManager.destroy();
+
+   if(cache != NULL) {
+     delete cache;
+   }
    }

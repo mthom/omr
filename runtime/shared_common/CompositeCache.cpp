@@ -164,6 +164,7 @@ SH_CompositeCacheImpl::SH_SharedCacheHeaderInit::init(BlockPtr data, U_32 len, I
 	WSRP_SET(ca->updateCountPtr, &(ca->updateCount));
 	WSRP_SET(ca->corruptFlagPtr, &(ca->corruptFlag));
 	WSRP_SET(ca->lockedPtr, &(ca->locked));
+	return;
 }
 
 /**
@@ -686,6 +687,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 		/* If no explicit value for sharedClassReadWriteBytes was set, set it to a proportion of the cache size */
 		finalReadWriteSize = SHC_PAD((_theca->totalBytes / DEFAULT_READWRITE_BYTES_DIVISOR), SHC_WORDALIGN);
 		maxSharedStringTableSize = 0;//srpHashTable_requiredMemorySize(SHRINIT_MAX_SHARED_STRING_TABLE_NODE_COUNT, sizeof(OMRSharedInternSRPHashTableEntry), TRUE);
+
 		if (maxSharedStringTableSize == PRIMENUMBERHELPER_OUTOFRANGE) {
 			/*
 			 * We should never be here.
@@ -704,6 +706,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 		 */
 		if (!(*_runtimeFlags & OMRSHR_RUNTIMEFLAG_ENABLE_ROUND_TO_PAGE_SIZE)) {
 			numOfSharedNodes = 0;//srpHashTable_calculateTableSize(finalReadWriteSize, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
+
 			if (numOfSharedNodes == PRIMENUMBERHELPER_OUTOFRANGE) {
 				/**
 				 * This should never happen since finalReadWriteSize is limited up to maxSharedStringTableSize above.
@@ -714,6 +717,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 				Trc_SHR_Assert_ShouldNeverHappen();
 			}
 			finalReadWriteSize = 0;//srpHashTable_requiredMemorySize(numOfSharedNodes, sizeof(OMRSharedInternSRPHashTableEntry), FALSE);
+
 		}
 	}
 
@@ -834,6 +838,7 @@ SH_CompositeCacheImpl::setCacheAreaBoundaries(OMR_VMThread* currentThread, OMRSh
 			/* softmax is infeasible which is smaller than the bytes already used, adjust it to the min feasible value */
 //			CC_WARNING_TRACE1(J9NLS_SHRC_CC_SOFTMAX_INFEASIBLE, usedBytes, false);
 			Trc_SHR_CC_setCacheAreaBoundaries_infeasibleSoftMaxBytes(currentThread, softMaxValue, usedBytes);
+
 			setSoftMaxBytes(currentThread, usedBytes);
 		}
 	}
@@ -1145,7 +1150,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, OMRSharedCachePreini
 		bool OSCStarted = false;
 
 //		setCurrentCacheVersion(vm, J2SE_VERSION(currentThread->_vm), &versionData);
-
+		
 		/* Note that OSCache startup does not leave any kind of lock on the cache, so the cache file could in theory
 		 * be recreated by another process whenever we're not holding a lock on it. This can happen until attach() is called */
 
@@ -1154,6 +1159,7 @@ SH_CompositeCacheImpl::startup(OMR_VMThread* currentThread, OMRSharedCachePreini
 
 		if ((OMR_ARE_ALL_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_ENABLE_TEST_BAD_BUILDID))
 			&& (OMR_ARE_NO_BITS_SET(*_runtimeFlags, OMRSHR_RUNTIMEFLAG_SNAPSHOT))
+
 		) {
 			/*OMRSHR_RUNTIMEFLAG_ENABLE_TEST_BAD_BUILDID is for testing only. It is only
 			 * set the first time OSCache is created. It is unset here instead of in

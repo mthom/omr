@@ -22,6 +22,8 @@
 
 #include "omr.h"
 #include "omrport.h"
+#include "sharedconsts.h"
+#include "ut_omrshr_mods.h"
 
 #include "OSMemoryMappedCacheConfig.hpp"
 
@@ -44,18 +46,24 @@ typedef struct OMRSharedCachePreinitConfig {
 } OMRSharedCachePreinitConfig;
  */
 
-OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(U_32 numLocks)
+OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(UDATA numLocks)
   : _numLocks(numLocks)
+  , _header(NULL)
+  , _mapping(NULL)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
-  , _readWriteLockID(OMRSH_OSCACHE_LOCKID_READWRITELOCK)
-{}
-
-OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig()
-  : _numLocks(OMRSH_OSCACHE_MMAP_LOCK_COUNT)
-  , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
-  , _readWriteLockID(OMRSH_OSCACHE_LOCKID_READWRITELOCK)
+  , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
 {
+  _lockMutex = new (PERSISTENT_NEW) omrthread_monitor_t[numLocks];
 
+  // the work of this segment is accomplished in OSMemoryMappedCache::startup.
+//  omrthread_t self;
+//  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+//  
+//  for(int i = 0; i < numLocks; ++i) {
+//    omrthread_monitor_init(&_lockMutex[i], 0);
+//  }
+//
+//  omrthread_detach(self);
 }
 
 IDATA OSMemoryMappedCacheConfig::getWriteLockID()
@@ -70,9 +78,9 @@ IDATA OSMemoryMappedCacheConfig::getReadWriteLockID()
   return _readWriteLockID;
 }
 
-IDATA OSMemoryMappedCacheConfig::acquireLock(UDATA lockID, LastErrorInfo* lastErrorInfo)
+IDATA OSMemoryMappedCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo)
 {
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
 
   I_32 lockFlags = OMRPORT_FILE_WRITE_LOCK | OMRPORT_FILE_WAIT_FOR_LOCK;
   U_64 lockOffset, lockLength;
@@ -92,7 +100,7 @@ IDATA OSMemoryMappedCacheConfig::acquireLock(UDATA lockID, LastErrorInfo* lastEr
   // was: offsetof(OSCachemmap_header_version_current, dataLocks) + (lockID * sizeof(I_32));
   lockOffset = getLockOffset(lockID);
   // was: sizeof(((OSCachemmap_header_version_current *)NULL)->dataLocks[0]);
-  lockLength = getLockSize(LockID);
+  lockLength = getLockSize(lockID);
 
   /* We enter a local mutex before acquiring the file lock. This is because file
    * locks only work between processes, whereas we need to lock between processes
@@ -181,7 +189,7 @@ IDATA OSMemoryMappedCacheConfig::acquireLock(UDATA lockID, LastErrorInfo* lastEr
 
       if (omrthread_monitor_enter(_lockMutex[_readWriteLockID]) != 0) {
 	Trc_SHR_OSC_Mmap_acquireWriteLock_errorTakingWriteMonitor();
-	omrthread_monitor_exit(_lockMutex[J9SH_OSCACHE_MMAP_LOCKID_WRITELOCK]);
+	omrthread_monitor_exit(_lockMutex[getWriteLockID()]);
 	return -1;
       }
 #if defined(WIN32) || defined(WIN64)
@@ -190,7 +198,7 @@ IDATA OSMemoryMappedCacheConfig::acquireLock(UDATA lockID, LastErrorInfo* lastEr
       rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif
 
-      omrthread_monitor_exit(_lockMutex[J9SH_OSCACHE_MMAP_LOCKID_WRITELOCK]);
+      omrthread_monitor_exit(_lockMutex[getWriteLockID()]);
 
     } else if (lockID == _writeLockID) {
       /*	CMVC 153095: Case 3
@@ -220,7 +228,7 @@ IDATA OSMemoryMappedCacheConfig::acquireLock(UDATA lockID, LastErrorInfo* lastEr
 #else
       rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif
-      omrthread_monitor_exit(_lockMutex[J9SH_OSCACHE_MMAP_LOCKID_READWRITELOCK]);
+      omrthread_monitor_exit(_lockMutex[getReadWriteLockID()]);
 
     } else {
       Trc_SHR_Assert_ShouldNeverHappen();
@@ -240,9 +248,10 @@ IDATA OSMemoryMappedCacheConfig::acquireLock(UDATA lockID, LastErrorInfo* lastEr
 
 // was: acquireHeaderWriteLock
 // see the comment above acquireWriteLock. It shouldn't depend on a lockID dependent thing.
-IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(LastErrorInfo* lastErrorInfo)
+IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly,
+							LastErrorInfo* lastErrorInfo)
 {
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
 
   I_32 lockFlags = OMRPORT_FILE_WRITE_LOCK | OMRPORT_FILE_WAIT_FOR_LOCK;
   U_64 lockOffset, lockLength;
@@ -256,14 +265,14 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(LastErrorInfo* lastError
   }
   */
 
-  if (_runningReadOnly) {
+  if (runningReadOnly) {
     Trc_SHR_OSC_Mmap_acquireHeaderWriteLock_ExitReadOnly();
     return 0;
   }
 
   lockOffset = getHeaderLockOffset();
   // sizeof(((OSCachemmap_header_version_current *)NULL)->headerLock);
-  lockLength = sizeof(_header->_headerLock);
+  lockLength = getHeaderLockSize();
 
   Trc_SHR_OSC_Mmap_acquireHeaderWriteLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
@@ -274,7 +283,7 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(LastErrorInfo* lastError
 
   if (-1 == rc) {
     if (NULL != lastErrorInfo) {
-      lastErrorInfo->populate();
+      lastErrorInfo->populate(library);
       /*
       lastErrorInfo->lastErrorCode = omrerror_last_error_number();
       lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
@@ -289,49 +298,66 @@ IDATA OSMemoryMappedCacheConfig::acquireHeaderWriteLock(LastErrorInfo* lastError
   return (IDATA)rc;
 }
 
-IDATA OSMemoryMappedCacheConfig::releaseWriteLock(UDATA lockID)
+
+
+/**
+ * Method to release the write lock on the cache header region
+ *
+ * Needs to be able to work with all generations
+ *
+ * @param [in] generation The generation of the cache header to use when calculating the lock offset
+ *
+ * @return 0 on success, -1 on failure
+ */
+IDATA
+OSMemoryMappedCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library, UDATA runningReadOnly,
+						  LastErrorInfo *lastErrorInfo)
 {
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
 
   U_64 lockOffset, lockLength;
   I_32 rc = 0;
 
-  Trc_SHR_OSC_Mmap_releaseWriteLock_Entry(lockID);
+  Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_Entry();
 
-  if (lockID >= _numLocks) { // was: J9SH_OSCACHE_MMAP_LOCK_COUNT) {
-    Trc_SHR_OSC_Mmap_releaseWriteLock_BadLockID(lockID);
-    return -1;
+  //if (NULL != lastErrorInfo) {
+  //  lastErrorInfo->lastErrorCode = 0;
+  //}
+
+  if (runningReadOnly) {
+    Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_ExitReadOnly();
+    return 0;
   }
 
-  lockOffset = getLockOffset(lockID);
-  lockSize = getLockSize(lockID);
+  // (U_64)getMmapHeaderFieldOffsetForGen(generation, OSCACHEMMAP_HEADER_FIELD_HEADER_LOCK);
+  lockOffset = getHeaderLockOffset();
+  // sizeof(((OSCachemmap_header_version_current *)NULL)->headerLock);
+  lockLength = getHeaderLockSize();
 
-  Trc_SHR_OSC_Mmap_releaseWriteLock_gettingLock(_fileHandle, lockOffset, lockLength);
+  Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_gettingLock(_fileHandle, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
   rc = omrfile_blockingasync_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #else
   rc = omrfile_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #endif
-
   if (-1 == rc) {
-    Trc_SHR_OSC_Mmap_releaseWriteLock_badLock();
+    if (NULL != lastErrorInfo) {
+      lastErrorInfo->populate(library);
+    //  lastErrorInfo->lastErrorCode = omrerror_last_error_number();
+    //  lastErrorInfo->lastErrorMsg = omrerror_last_error_message();
+    }
+    Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_badLock();
   } else {
-    Trc_SHR_OSC_Mmap_releaseWriteLock_goodLock();
+    Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_goodLock();
   }
 
-  Trc_SHR_OSC_Mmap_releaseWriteLock_exiting_monitor(lockID);
-  if (omrthread_monitor_exit(_lockMutex[lockID]) != 0) {
-    Trc_SHR_OSC_Mmap_releaseWriteLock_bad_monitor_exit(lockID);
-    rc = -1;
-  }
-
-  Trc_SHR_OSC_Mmap_releaseWriteLock_Exit(rc);
-  return rc;
+  Trc_SHR_OSC_Mmap_releaseHeaderWriteLock_Exit(rc);
+  return (IDATA)rc;
 }
 
-IDATA OSMemoryMappedCacheConfig::releaseLock(UDATA lockID)
+IDATA OSMemoryMappedCacheConfig::releaseLock(OMRPortLibrary* library, UDATA lockID)
 {
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
 
   U_64 lockOffset, lockLength;
   I_32 rc = 0;
@@ -378,11 +404,10 @@ IDATA OSMemoryMappedCacheConfig::releaseLock(UDATA lockID)
  *
  * @return 0 on success, -1 on failure
  */
-IDATA OSMemoryMappedCacheConfig::acquireAttachReadLock(LastErrorInfo* lastErrorInfo)
+IDATA OSMemoryMappedCacheConfig::acquireAttachReadLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo)
 {
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
 
-  UDATA fileHandle = _header->_fileHandle;
   I_32 lockFlags = OMRPORT_FILE_READ_LOCK | OMRPORT_FILE_WAIT_FOR_LOCK;
   U_64 lockOffset, lockLength;
   I_32 rc = 0;
@@ -395,19 +420,19 @@ IDATA OSMemoryMappedCacheConfig::acquireAttachReadLock(LastErrorInfo* lastErrorI
   }
   */
 
-  lockOffset = _header->getAttachLockOffset();
-  lockLength = _header->getAttachLockSize();
+  lockOffset = getAttachLockOffset();
+  lockLength = getAttachLockSize();
 
-  Trc_SHR_OSC_Mmap_acquireAttachReadLock_gettingLock(fileHandle, lockFlags, lockOffset, lockLength);
+  Trc_SHR_OSC_Mmap_acquireAttachReadLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
-  rc = omrfile_blockingasync_lock_bytes(fileHandle, lockFlags, lockOffset, lockLength);
+  rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #else
-  rc = omrfile_lock_bytes(fileHandle, lockFlags, lockOffset, lockLength);
+  rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif
 
   if (-1 == rc) {
     if (NULL != lastErrorInfo) {
-      lastErrorInfo->populate();
+      lastErrorInfo->populate(library);
     }
     Trc_SHR_OSC_Mmap_acquireAttachReadLock_badLock();
   } else {
@@ -415,6 +440,86 @@ IDATA OSMemoryMappedCacheConfig::acquireAttachReadLock(LastErrorInfo* lastErrorI
   }
 
   Trc_SHR_OSC_Mmap_acquireAttachReadLock_Exit(rc);
+  return rc;
+}
+
+/**
+ * Method to try to acquire the write lock on the cache attach region
+ *
+ * Needs to be able to work with all generations
+ *
+ * This method does not wait for the lock to become available, but
+ * immediately returns whether the lock has been obtained to the caller
+ *
+ * @param [in] generation The generation of the cache header to use when calculating the lock offset
+ *
+ * @return 0 on success, -1 on failure
+ */
+IDATA
+OSMemoryMappedCacheConfig::tryAcquireAttachWriteLock(OMRPortLibrary* library)//UDATA generation)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
+
+  I_32 lockFlags = OMRPORT_FILE_WRITE_LOCK | OMRPORT_FILE_NOWAIT_FOR_LOCK;
+  U_64 lockOffset, lockLength;
+  I_32 rc = 0;
+
+  Trc_SHR_OSC_Mmap_tryAcquireAttachWriteLock_Entry();
+
+  lockOffset = getAttachLockOffset();
+  lockLength = getAttachLockSize();
+
+  Trc_SHR_OSC_Mmap_tryAcquireAttachWriteLock_gettingLock(_fileHandle, lockFlags, lockOffset, lockLength);
+#if defined(WIN32) || defined(WIN64)
+  rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+#else
+  rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+#endif
+  if (-1 == rc) {
+    Trc_SHR_OSC_Mmap_tryAcquireAttachWriteLock_badLock();
+  } else {
+    Trc_SHR_OSC_Mmap_tryAcquireAttachWriteLock_goodLock();
+  }
+
+  Trc_SHR_OSC_Mmap_tryAcquireAttachWriteLock_Exit(rc);
+  return rc;
+}
+
+/**
+ * Method to release the write lock on the cache attach region
+ *
+ * Needs to be able to work with all generations
+ *
+ * @param [in] generation The generation of the cache header to use when calculating the lock offset
+ *
+ * @return 0 on success, -1 on failure
+ */
+IDATA
+OSMemoryMappedCacheConfig::releaseAttachWriteLock(OMRPortLibrary* library) //UDATA generation)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
+
+  U_64 lockOffset, lockLength;
+  I_32 rc = 0;
+
+  Trc_SHR_OSC_Mmap_releaseAttachWriteLock_Entry();
+
+  lockOffset = getAttachLockOffset();
+  lockLength = getAttachLockSize();
+
+  Trc_SHR_OSC_Mmap_releaseAttachWriteLock_gettingLock(_fileHandle, lockOffset, lockLength);
+#if defined(WIN32) || defined(WIN64)
+  rc = omrfile_blockingasync_unlock_bytes(_fileHandle, lockOffset, lockLength);
+#else
+  rc = omrfile_unlock_bytes(_fileHandle, lockOffset, lockLength);
+#endif
+  if (-1 == rc) {
+    Trc_SHR_OSC_Mmap_releaseAttachWriteLock_badLock();
+  } else {
+    Trc_SHR_OSC_Mmap_releaseAttachWriteLock_goodLock();
+  }
+
+  Trc_SHR_OSC_Mmap_releaseAttachWriteLock_Exit(rc);
   return rc;
 }
 
@@ -427,26 +532,25 @@ IDATA OSMemoryMappedCacheConfig::acquireAttachReadLock(LastErrorInfo* lastErrorI
  *
  * @return 0 on success, -1 on failure
  */
-IDATA OSMemoryMappedCacheConfig::releaseAttachReadLock()
+IDATA OSMemoryMappedCacheConfig::releaseAttachReadLock(OMRPortLibrary* library)
 {
-  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
 
-  UDATA fileHandle = _header->_fileHandle;
   U_64 lockOffset, lockLength;
   I_32 rc = 0;
 
   Trc_SHR_OSC_Mmap_releaseAttachReadLock_Entry();
 
   //(U_64)getMmapHeaderFieldOffsetForGen(generation, OSCACHEMMAP_HEADER_FIELD_ATTACH_LOCK);
-  lockOffset = _header->getAttachLockOffset();
+  lockOffset = getAttachLockOffset();
   //sizeof(((OSCachemmap_header_version_current *)NULL)->attachLock);
-  lockLength = _header->getAttachLockSize();
+  lockLength = getAttachLockSize();
 
-  Trc_SHR_OSC_Mmap_releaseAttachReadLock_gettingLock(fileHandle, lockOffset, lockLength);
+  Trc_SHR_OSC_Mmap_releaseAttachReadLock_gettingLock(_fileHandle, lockOffset, lockLength);
 #if defined(WIN32) || defined(WIN64)
-  rc = omrfile_blockingasync_unlock_bytes(fileHandle, lockOffset, lockLength);
+  rc = omrfile_blockingasync_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #else
-  rc = omrfile_unlock_bytes(fileHandle, lockOffset, lockLength);
+  rc = omrfile_unlock_bytes(_fileHandle, lockOffset, lockLength);
 #endif
 
   if (-1 == rc) {
@@ -459,7 +563,73 @@ IDATA OSMemoryMappedCacheConfig::releaseAttachReadLock()
   return rc;
 }
 
-bool OSMemoryMappedCacheConfig::cacheFileAccessAllowed()
+bool OSMemoryMappedCacheConfig::cacheFileAccessAllowed() const
 {
   return _cacheFileAccess == OMRSH_CACHE_FILE_ACCESS_ALLOWED;
+}
+
+bool OSMemoryMappedCacheConfig::isCacheAccessible() const
+{
+  if (OMRSH_CACHE_FILE_ACCESS_ALLOWED == _cacheFileAccess) {
+    return J9SH_CACHE_ACCESS_ALLOWED;
+  } else if (OMRSH_CACHE_FILE_ACCESS_GROUP_ACCESS_REQUIRED == _cacheFileAccess) {
+    return J9SH_CACHE_ACCESS_ALLOWED_WITH_GROUPACCESS;
+  } else {
+    return J9SH_CACHE_ACCESS_NOT_ALLOWED;
+  }
+}
+
+/**
+ * Method to update the last attached time in a cache's header
+ *
+ * @param [in] headerArg  A pointer to the cache header
+ *
+ * @return true on success, false on failure
+ * THREADING: Pre-req caller holds the cache header write lock
+ */
+bool
+OSMemoryMappedCacheConfig::updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
+  Trc_SHR_OSC_Mmap_updateLastAttachedTime_Entry();
+
+  if (runningReadOnly) {
+    Trc_SHR_OSC_Mmap_updateLastAttachedTime_ReadOnly();
+    return true;
+  }
+
+  I_64 newTime = omrtime_current_time_millis();
+  Trc_SHR_OSC_Mmap_updateLastAttachedTime_time(newTime, _mapping->_lastAttachedTime);
+  _mapping->_lastAttachedTime = newTime;
+
+  Trc_SHR_OSC_Mmap_updateLastAttachedTime_Exit();
+  return true;
+}
+
+/**
+ * Method to update the last detached time in a cache's header
+ *
+ * @return true on success, false on failure
+ * THREADING: Pre-req caller holds the cache header write lock
+ */
+bool
+OSMemoryMappedCacheConfig::updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly)
+{
+  OMRPORT_ACCESS_FROM_OMRPORT(library);
+
+  I_64 newTime;
+
+  Trc_SHR_OSC_Mmap_updateLastDetachedTime_Entry();
+
+  if (runningReadOnly) {
+    Trc_SHR_OSC_Mmap_updateLastDetachedTime_ReadOnly();
+    return true;
+  }
+
+  newTime = omrtime_current_time_millis();
+  Trc_SHR_OSC_Mmap_updateLastDetachedTime_time(newTime, _mapping->_lastDetachedTime);
+  _mapping->_lastDetachedTime = newTime;
+
+  Trc_SHR_OSC_Mmap_updateLastDetachedTime_Exit();
+  return true;
 }

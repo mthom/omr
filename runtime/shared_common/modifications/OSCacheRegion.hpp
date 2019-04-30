@@ -19,51 +19,74 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-
-
 #if !defined(OSCACHE_REGION_HPP_INCLUDED)
 #define OSCACHE_REGION_HPP_INCLUDED
 
 #include "omr.h"
 
+#include "OSCacheMemoryProtector.hpp"
+#include "OSCacheRegionInitializer.hpp"
+#include "OSCacheRegionSerializer.hpp"
+
+/* C macros are the fuckin' worst, but here's a few from J9 anyway. */
+#define ROUND_UP_TO(granularity, number) ( (((number) % (granularity)) ? ((number) + (granularity) - ((number) % (granularity))) : (number)))
+#define ROUND_DOWN_TO(granularity, number) ( (((number) % (granularity)) ? ((number) - ((number) % (granularity))) : (number)))
+
+class OSCacheImpl;
 class OSCacheLayout;
+class OSCacheRegionMemoryProtector;
 
 class OSCacheRegion {
 public:
-  // I think we should have a OSCacheRegionLocks class, which normalizes again, y'know,
-  // the different lock capabilities and their implementations. Also allows us
-  // to mix lock types freely within the same cache, not that we'd want to.
-  // The region can own a vector of such objects. It should probably be of fixed sized.
-  // Although dynamically allocated, so I dunno.. a vector?
-  virtual IDATA getLockCapabilities(void) = 0;  
+  OSCacheRegion(OSCacheLayout* layout, int regionID)
+    : _layout(layout)
+    , _regionID(regionID)
+  {}
+
+  // the start address of the region.
+  virtual void* regionStartAddress() const = 0;
   
-  // calculates the size of the region.
-  virtual UDATA getRegionSize() = 0;
+  // does the described block of data fall within the region's memory?
+  virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize) = 0;
+  
+  // render the Region's memory protection settings as flags that can
+  // be used by the underlying ocmponents of the OMRPortLibrary, as
+  // anticipated by the OSCacheRegion subclass.
+  virtual UDATA renderToMemoryProtectionFlags() = 0;
+
+  // this is not a predicate, but it may modify state!! If the
+  // subclass isn't concerned with aligning to page boundaries, it can
+  // just as well be a no-op. return true if re-alignment was
+  // attempted, and succeeded.
+  virtual bool alignToPageBoundary(UDATA osPageSize) = 0;
 
   // check the cache region for corruption using whatever means are
   // available.  I'm not sure this method should belong to the
-  // OSCacheRegion class.  OSCacheConfig may be a more appropriate choice.
+  // OSCacheRegion class.  OSCacheConfig may be a more appropriate
+  // choice.
   virtual IDATA checkValidity() = 0;
 
-protected:  
   virtual void serialize(OSCacheRegionSerializer* serializer) = 0;
+
+  virtual void initialize(OSCacheRegionInitializer* initializer) = 0;
+
+  virtual bool adjustRegionStartAndSize(void* blockAddress, uintptr_t size) = 0;
   
-  // this all hinges on ENABLE_MPROTECT being set. The runtime flags. Of course,
-  // we don't want that flag to be built in. Each region should have the choice of being
-  // protected. Probably, these functions should exist downstream from OSCacheRegion.
-  // We could introduce the class OSCachePageProtectedRegion, perhaps?
+  // calculates the size of the region.
+  virtual UDATA regionSize() const = 0;
+  
+  virtual int regionID() {
+    return _regionID;
+  }
 
-  // OK, the notion of page protection really doesn't apply at the OSCache
-  // level. Only later, when you move up to the composite cache layer, where regions
-  // are subdivided into further regions, does it make sense.
+  // add memory protections to the region.
+  virtual IDATA setPermissions(OSCacheMemoryProtector* protector) = 0;
 
-  // the commented-out arguments are now internal to region objects.
-private:
-  friend class OSClassLayout;
-  // the regionStart is a *relative* value denoting the beginning of
-  // the cache allocation from the start of the cache block in memory,
-  // wherever it winds up. we allow for circumstances where the two
-  // may not coincide.
+  virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
+
+protected:  
+  OSCacheLayout* _layout;
+  int _regionID;
 };
 
 #endif

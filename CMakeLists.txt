@@ -120,7 +120,6 @@ else()
 	message(FATAL_ERROR "OMR: Build tools are required. See OMR_TOOLS and OMR_TOOLS_IMPORTFILE")
 endif()
 
-
 ###
 ### Built-in OMR Applications.
 ###
@@ -163,8 +162,16 @@ if(OMR_JITBUILDER)
 endif(OMR_JITBUILDER)
 
 if(OMR_SHARED_CACHE)
-        add_subdirectory(runtime/shared_common)
+  add_subdirectory(runtime/shared_common)  
 endif(OMR_SHARED_CACHE)
+
+if(WASM_SHARED_CACHE)
+  add_subdirectory(runtime/shared_common/modifications/wasm)
+endif(WASM_SHARED_CACHE)  
+
+if(OMR_SHARED_CACHE_MODS)
+  add_subdirectory(runtime/shared_common/modifications)
+endif(OMR_SHARED_CACHE_MODS)
 
 # This should come last to ensure dependencies
 # are defined

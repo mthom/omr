@@ -101,9 +101,7 @@ SH_OSCachemmap::initialize(OMRPortLibrary* portLibrary, char* memForConstructor,
 	for (UDATA i = 0; i < J9SH_OSCACHE_MMAP_LOCK_COUNT; i++) {
 		_lockMutex[i] = NULL;
 	}
-
-	//TODO: shouldn't this be in the OSCache constructor? Seems both universal and benign in
-	//its effects.
+	
 	_corruptionCode = NO_CORRUPTION;
 	_corruptValue = NO_CORRUPTION;	
 	_cacheFileAccess = J9SH_CACHE_FILE_ACCESS_ALLOWED;
@@ -266,6 +264,7 @@ SH_OSCachemmap::startup(OMR_VM* vm, const char* ctrlDirName, UDATA cacheDirPerm,
 //		if (omrthread_monitor_init_with_name(&_lockMutex[i], 0, "Persistent shared classes lock mutex")) {
 //			Trc_SHR_OSC_Mmap_startup_failed_mutex_init(i);
 //			goto _errorPostFileOpen;
+
 //		}
 //	}
 	Trc_SHR_OSC_Mmap_startup_initialized_mutexes();
@@ -467,7 +466,6 @@ SH_OSCachemmap::dontNeedMetadata(OMR_VMThread* currentThread, const void* startA
 	omrmmap_dont_need(startAddress, length);
 #endif
 }
-
 
 /**
  * Destroy a persistent shared classes cache
@@ -837,7 +835,9 @@ SH_OSCachemmap::releaseWriteLock(UDATA lockID)
 //	if (omrthread_monitor_exit(_lockMutex[lockID]) != 0) {
 //		Trc_SHR_OSC_Mmap_releaseWriteLock_bad_monitor_exit(lockID);
 //		rc = -1;
-//	}
+
+// 	}
+
 	
 	Trc_SHR_OSC_Mmap_releaseWriteLock_Exit(rc);
 	return rc;

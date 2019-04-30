@@ -19,19 +19,37 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#if !defined(OS_MEMORY_MAPPED_CACHE_LAYOUT_HPP_INCLUDED)
-#define OS_MEMORY_MAPPED_CACHE_LAYOUT_HPP_INCLUDED
+#if !defined(OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED)
+#define OS_MEMORY_MAPPED_INIT_CONTEXT_HPP_INCLUDED
 
-#include "OSMemoryMappedCacheLayout.hpp"
+#include "sharedconsts.h"
 
-class OSMemoryMappedCacheLayout : public OSCacheLayout {
+#include "OSCacheConfigOptions.hpp"
+
+class OSMemoryMappedCache;
+
+class OSMemoryMappedCacheInitializationContext {
 public:
-  OSMemoryMappedCacheLayout();
+  OSMemoryMappedCacheInitializationContext(OSMemoryMappedCache* cache)
+    : _cache(cache)
+    , _startupCompleted(false)
+  {}
+  
+  // attach to a freshly created/connected cache. the logic of these varies
+  // according to the initialization context.
+  virtual bool startup(IDATA& errorCode) = 0;
+  virtual bool attach(IDATA& errorCode) = 0;
+  
+  virtual bool creatingNewCache() = 0;
+  virtual bool initAttach(void* blockAddress, IDATA& rc) = 0;
+
+  bool startupCompleted() const {
+    return _startupCompleted;
+  }
+  
 protected:
-  U_32 _cacheSize;
-  void* _headerStart;
-  void* _dataStart;
-  U_32 _dataLength;
+  OSMemoryMappedCache* _cache;
+  bool _startupCompleted;
 };
 
 #endif

@@ -35,6 +35,6 @@ public:
   // it had this parameter: ..., J9PortShcVersion* expectedVersionData)
   virtual void *attach(OMR_VMThread* currentThread) = 0;
   virtual void detach() = 0;
-}
+};
 
 #endif
