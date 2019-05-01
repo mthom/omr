@@ -22,7 +22,7 @@
 
 #include <stdio.h>
 #include "omrvm.h"
-
+#include "OMR_VMThread.hpp"
 //extern "C"{
 //  #include "shrinit.h"
 //}
@@ -143,6 +143,10 @@ WASMCompositeCache* initializeSharedCache()
 
 static WASMCompositeCache* cache;
 
+bool storeCodeEntry(const char *methodName, void *codeLocation){
+  return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+}
+
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
 //   currently this argument isn't needed by anything so this function can stay internal
@@ -175,7 +179,7 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
    vmThread->_vm = omrvm;
 //   omr_vmthread_getCurrent(omrvm);
 //   omr_vmthread_firstAttach(omrvm,&vmThread);
-   omrshr_init(omrvm,0,nullptr);
+// omrshr_init(omrvm,0,nullptr);
    //omrshr_storeCompiledMethod(vmThread, 
    TR::Compiler->initialize();
    TR::Compiler->vm._vmThread = vmThread;
@@ -256,3 +260,10 @@ internal_shutdownJit()
      delete cache;
    }
    }
+
+bool
+internal_storeCodeEntry(char* methodName, void* codeLocation)
+    {
+    return storeCodeEntry((const char*)methodName, codeLocation);
+
+    }

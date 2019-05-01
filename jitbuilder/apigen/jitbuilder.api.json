@@ -35,6 +35,15 @@
         , "flags": []
         , "return": "none"
         , "parms": []
+        },
+	{ "name": "storeCodeEntry"
+        , "overloadsuffix": ""
+        , "flags": []
+        , "return": "boolean"
+        , "parms": [
+            {"name":"methodName","type":"string"},
+            {"name":"codeLocation","type":"pointer"}
+            ]
         }
         ],
     "classes": [

@@ -262,6 +262,4 @@ OMR::VirtualMachineOperandStack::init()
    } else {
      _mb->Store(_stackBaseName, _stackTopRegister->Load(_mb));
    }
-
-   }
 }
