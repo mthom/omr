@@ -256,9 +256,9 @@ internal_shutdownJit()
    TR::CodeCacheManager &codeCacheManager = fe->codeCacheManager();
    codeCacheManager.destroy();
 
-   if(cache != NULL) {
-     delete cache;
-   }
+// if(cache != NULL) {
+//   delete cache;
+// }
    }
 
 bool
