@@ -238,6 +238,15 @@ OMR::CodeGenPhase::performProcessRelocationsPhase(TR::CodeGenerator * cg, TR::Co
          ++iterator;
          }
       }
+      //This is to process aot relocations
+      // Call the platform specific processing of relocations
+      auto theAOT = cg->getAheadOfTimeCompile();
+      theAOT->processRelocations();
+         for (auto aotIterator = self()->getExternalRelocationList().begin(); aotIterator != self()->getExternalRelocationList().end(); ++aotIterator)
+      {
+      // Traverse the AOT/external labels
+	  (*aotIterator)->apply(self());
+      }
    }
 
 

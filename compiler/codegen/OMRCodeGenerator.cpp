@@ -199,7 +199,6 @@ OMR::CodeGenerator::CodeGenerator() :
      _extendedToInt64GlobalRegisters(self()->comp()->allocator()),
      _liveButMaybeUnreferencedLocals(NULL),
      _assignedGlobalRegisters(NULL),
-     _aheadOfTimeCompile(NULL),
      _globalRegisterTable(NULL),
      _currentGRABlockLiveOutSet(NULL),
      _localsIG(NULL),
@@ -276,7 +275,10 @@ OMR::CodeGenerator::CodeGenerator() :
    _disableInternalPointers = self()->comp()->getOption(TR_MimicInterpreterFrameShape) ||
                                self()->comp()->getOptions()->realTimeGC() ||
                                self()->comp()->getOption(TR_DisableInternalPointers);
-
+   if (1){
+           _aheadOfTimeCompile= TR::AheadOfTimeCompile(NULL,comp)
+      std::cout<<"Succeded to initialize the AOT"<<std::endl;
+   }
    uintptrj_t maxSize = TR::Compiler->vm.getOverflowSafeAllocSize(self()->comp());
    int32_t i;
 

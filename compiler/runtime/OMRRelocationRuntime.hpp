@@ -24,6 +24,7 @@
 #define RELOCATION_RUNTIME_INCL
 
 #include "omrcfg.h"
+#include "omr.h"
 
 //OMRPORT #if defined(J9VM_INTERP_AOT_COMPILE_SUPPORT) && defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390))
 //OMRPORT   #define TR_SHARED_CACHE_AOT_SE_PLATFORM
@@ -119,7 +120,7 @@ typedef struct AOTHeader {
     uintptr_t compressedPointerShift;
     uint32_t lockwordOptionHashValue;
     int32_t   arrayLetLeafSize;
-    ProcessorFeatureFlags processorFeatureFlags;
+    OMR::X86::ProcessorFeatureFlags processorFeatureFlags;
 } AOTHeader;
 
 typedef struct AOTRuntimeInfo {
@@ -151,7 +152,7 @@ class RelocationRuntime {
       TR_Memory *trMemory()                                       { return _trMemory; }
       TR::CompilationInfo *compInfo()                              { return _compInfo; }
       OMR_VMThread *currentThread()                                 { return _currentThread; }
-      OMRMethod *method()                                          { return _method; }
+      TR_Method *method()                                          { return _method; }
       TR::CodeCache *codeCache()                                  { return _codeCache; }
       J9MemorySegment *dataCache()                                { return _dataCache; }
       bool useCompiledCopy()                                      { return _useCompiledCopy; }
@@ -161,7 +162,7 @@ class RelocationRuntime {
       uint8_t * methodCodeStart()                                 { return _newMethodCodeStart; }
       UDATA metaDataAllocSize()                                   { return _metaDataAllocSize; }
       TR::AOTMethodHeader *aotMethodHeaderEntry()                  { return _aotMethodHeaderEntry; }
-      J9JITDataCacheHeader *exceptionTableCacheEntry()            { return _exceptionTableCacheEntry; }
+      OMRSharedCacheHeader *exceptionTableCacheEntry()            { return _exceptionTableCacheEntry; }
       uint8_t *newMethodCodeStart()                               { return _newMethodCodeStart; }
       UDATA codeCacheDelta()                                      { return _codeCacheDelta; }
       UDATA dataCacheDelta()                                      { return _dataCacheDelta; }
