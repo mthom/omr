@@ -58,21 +58,24 @@ namespace OMR { typedef OMR::RelocationRecordBinaryTemplate RelocationRecordBina
 #include "infra/Link.hpp"
 #include "infra/Flags.hpp"
 #include "runtime/RelocationRuntime.hpp"
+#include "runtime/RelocationTarget.hpp"
+#include "runtime/Runtime.hpp"
 
 namespace TR {class RelocationRuntime;}
 namespace TR {class RelocationTarget;}
-typedef TR_ExternalRelocationTargetKind TR_RelocationRecordType;
+
+namespace TR {typedef ::TR_ExternalRelocationTargetKind RelocationRecordType;}
 
 // These *BinaryTemplate structs describe the shape of the binary relocation records.
 extern char* AOTcgDiagOn;
 
-// TR_RelocationRecord is the base class for all relocation records.  It is used for all queries on relocation
+// TR::RelocationRecord is the base class for all relocation records.  It is used for all queries on relocation
 // records as well as holding all the "wrapper" parts.  These classes are an interface to the *BinaryTemplate
 // classes which are simply structs that can be used to directly access the binary representation of the relocation
 // records stored in the cache (*BinaryTemplate structs are defined near the end of this file after the
 // RelocationRecord* classes.  The RelocationRecord* classes permit virtual function calls access to the
-// *BinaryTemplate classes and must access the binary structs via the _record field in the TR_RelocationRecord
-// class.  Most consumers should directly manipulate the TR_RelocationRecord* classes since they offer
+// *BinaryTemplate classes and must access the binary structs via the _record field in the TR::RelocationRecord
+// class.  Most consumers should directly manipulate the TR::RelocationRecord* classes since they offer
 // the most flexibility.
 namespace OMR
 {
@@ -88,12 +91,32 @@ struct RelocationRecordBinaryTemplate
    uint32_t _extra;
    #endif
    };
+} //namespace OMR
+
+namespace TR
+{
+   union RelocationRecordPrivateData
+   {
+//   //    TR::RelocationRecordHelperAddressPrivateData helperAddress;
+//   //    TR::RelocationRecordInlinedAllocationPrivateData inlinedAllocation;
+//       TR::RelocationRecordInlinedMethodPrivateData inlinedMethod;
+//       TR::RelocationRecordProfiledInlinedMethodPrivateData profiledInlinedMethod;
+//       TR::RelocationRecordMethodTracingCheckPrivateData methodTracingCheck;
+//       TR::RelocationRecordWithOffsetPrivateData offset;
+//       TR::RelocationRecordArrayCopyPrivateData arraycopy;
+//       TR::RelocationRecordPointerPrivateData pointer;
+//       TR::RelocationRecordMethodCallPrivateData methodCall;
+//       TR::RelocationRecordEmitClassPrivateData emitClass;
+//       TR::RelocationRecordDebugCounterPrivateData debugCounter;
+//       TR::RelocationSymbolFromManagerPrivateData symbolFromManager;
+    int yetToImplement;
+   };
 class RelocationRecord
    {
    
    public:
       RelocationRecord() {}
-      RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record)
+      RelocationRecord(TR::RelocationRuntime *reloRuntime, OMR::RelocationRecordBinaryTemplate *record)
          : _reloRuntime(reloRuntime), _record(record)
          {}
 
@@ -105,7 +128,7 @@ class RelocationRecord
       virtual bool isValidationRecord() { return false; }
 
 
-      static RelocationRecord *create(RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR_RelocationRecordBinaryTemplate *recordPointer);
+      static RelocationRecord *create(RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *recordPointer);
 
       virtual void clean(TR::RelocationTarget *reloTarget);
       virtual int32_t bytesInHeaderAndPayload();
@@ -123,7 +146,7 @@ class RelocationRecord
       void setSize(TR::RelocationTarget *reloTarget, uint16_t size);
       uint16_t size(TR::RelocationTarget *reloTarget);
 
-      void setType(TR::RelocationTarget *reloTarget, TR_RelocationRecordType type);
+      void setType(TR::RelocationTarget *reloTarget, TR::RelocationRecordType type);
       RelocationRecordType type(TR::RelocationTarget *reloTarget);
 
       void setWideOffsets(TR::RelocationTarget *reloTarget);
@@ -148,13 +171,13 @@ class RelocationRecord
          }
 
    protected:
-      OMR::RuntimeAssumption** getMetadataAssumptionList(J9JITExceptionTable *exceptionTable)
-         {
-         return (OMR::RuntimeAssumption**)(&exceptionTable->runtimeAssumptionList);
-         }
+      // OMR::RuntimeAssumption** getMetadataAssumptionList(OMRJITExceptionTable *exceptionTable)
+      //    {
+      //    return (OMR::RuntimeAssumption**)(&exceptionTable->runtimeAssumptionList);
+      //    }
       uint8_t *computeHelperAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation);
 
-      TR_RelocationRecordPrivateData *privateData()
+      TR::RelocationRecordPrivateData *privateData()
          {
          return &_privateData;
          }
@@ -168,10 +191,10 @@ class RelocationRecord
 
 
 
-class TR_RelocationRecordGroup
+class RelocationRecordGroup
    {
    public:
-      TR_RelocationRecordGroup(TR::RelocationRecordBinaryTemplate *groupData) : _group(groupData) {};
+      RelocationRecordGroup(TR::RelocationRecordBinaryTemplate *groupData) : _group(groupData) {};
 
       void setSize(TR::RelocationTarget *reloTarget, uintptr_t size);
       uintptr_t size(TR::RelocationTarget *reloTarget);
@@ -183,31 +206,17 @@ class TR_RelocationRecordGroup
                                TR::RelocationTarget *reloTarget,
                                uint8_t *reloOrigin);
    private:
-      int32_t handleRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR_RelocationRecord *reloRecord, uint8_t *reloOrigin);
+      int32_t handleRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecord *reloRecord, uint8_t *reloOrigin);
 
       TR::RelocationRecordBinaryTemplate *_group;
    };
 
 
-union TR_RelocationRecordPrivateData
-   {
-      TR_RelocationRecordHelperAddressPrivateData helperAddress;
-      TR_RelocationRecordInlinedAllocationPrivateData inlinedAllocation;
-      TR_RelocationRecordInlinedMethodPrivateData inlinedMethod;
-      TR_RelocationRecordProfiledInlinedMethodPrivateData profiledInlinedMethod;
-      TR_RelocationRecordMethodTracingCheckPrivateData methodTracingCheck;
-      TR_RelocationRecordWithOffsetPrivateData offset;
-      TR_RelocationRecordArrayCopyPrivateData arraycopy;
-      TR_RelocationRecordPointerPrivateData pointer;
-      TR_RelocationRecordMethodCallPrivateData methodCall;
-      TR_RelocationRecordEmitClassPrivateData emitClass;
-      TR_RelocationRecordDebugCounterPrivateData debugCounter;
-      TR_RelocationSymbolFromManagerPrivateData symbolFromManager;
-   };
 
-} //namespace OMR
-// No class that derives from TR_RelocationRecord should define any state: all state variables should be declared
-//  in TR_RelocationRecord or the constructor/decode() mechanisms will not work properly
+
+} //namespace TR
+// No class that derives from TR::RelocationRecord should define any state: all state variables should be declared
+//  in TR::RelocationRecord or the constructor/decode() mechanisms will not work properly
 
 
 // Relocation record classes for "real" relocation record types

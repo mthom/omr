@@ -33,10 +33,12 @@
 #include <assert.h>
 #include "codegen/Relocation.hpp"
 #include "compile/OMRMethod.hpp"
+#include "runtime/Runtime.hpp"
 //OMRPORT  #include "runtime/HWProfiler.hpp"
 #include "env/OMREnvironment.hpp"
 #include "env/OMRCPU.hpp" // for TR_ProcessorFeatureFlags
 #include "env/JitConfig.hpp" // for JitConfig, it got moved
+#include "runtime/OMRRelocationRuntimeTypes.hpp" // for JitConfig, it got moved
 
 #ifndef OMR_RELOCATION_RUNTIME_CONNECTOR
 #define OMR_RELOCATION_RUNTIME_CONNECTOR
@@ -49,6 +51,7 @@ namespace TR {
    class RelocationRecord;
    class RelocationRuntimeLogger;
    class RelocationTarget;
+   class RelocationRecordBinaryTemplate;
 // class Resolved method will probably need to be returned back
 // when the generic object model is here, since resolved method is one of 
 // classes that could be used for abstraction
@@ -152,13 +155,13 @@ class RelocationRuntime {
       TR_Memory *trMemory()                                       { return _trMemory; }
       TR::CompilationInfo *compInfo()                              { return _compInfo; }
       OMR_VMThread *currentThread()                                 { return _currentThread; }
-      TR_Method *method()                                          { return _method; }
+      OMRMethod *method()                                          { return _method; }
       TR::CodeCache *codeCache()                                  { return _codeCache; }
       J9MemorySegment *dataCache()                                { return _dataCache; }
       bool useCompiledCopy()                                      { return _useCompiledCopy; }
       bool haveReservedCodeCache()                                { return _haveReservedCodeCache; }
 
-      J9JITExceptionTable * exceptionTable()                      { return _exceptionTable; }
+      OMRJITExceptionTable * exceptionTable()                      { return _exceptionTable; }
       uint8_t * methodCodeStart()                                 { return _newMethodCodeStart; }
       UDATA metaDataAllocSize()                                   { return _metaDataAllocSize; }
       TR::AOTMethodHeader *aotMethodHeaderEntry()                  { return _aotMethodHeaderEntry; }
@@ -186,10 +189,10 @@ class RelocationRuntime {
       TR::PersistentInfo *getPersistentInfo()                      { return comp()->getPersistentInfo(); }
 
       // current main entry point
-      J9JITExceptionTable *prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
+      OMRJITExceptionTable *prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
                                                          TR_FrontEnd *fe,
                                                          TR::CodeCache *aotMCCRuntimeCodeCache,
-                                                         const J9JITDataCacheHeader *cacheEntry,
+                                                         const  OMRSharedCacheHeader *cacheEntry,
                                                          OMRMethod *theMethod,
                                                          bool shouldUseCompiledCopy,
                                                          TR::Options *options,
@@ -299,16 +302,16 @@ class RelocationRuntime {
 
    protected:
 
-      TR::JITConfig *_jitConfig;
+      TR::JitConfig *_jitConfig;
       OMR_VM *_omrVM;
       TR_FrontEnd *_fe;
       TR_Memory *_trMemory;
       TR::CompilationInfo * _compInfo;
 
       TR::RelocationTarget *_reloTarget;
-      TR_RelocationRuntimeLogger *_reloLogger;
+      TR::RelocationRuntimeLogger *_reloLogger;
       TR::AOTStats *_aotStats;
-      J9JITExceptionTable *_exceptionTable;
+      OMRJITExceptionTable *_exceptionTable;
       uint8_t *_newExceptionTableStart;
       uint8_t *_newPersistentInfo;
 
@@ -328,8 +331,8 @@ class RelocationRuntime {
 
       bool _useCompiledCopy;
       UDATA _metaDataAllocSize;
-      TR_AOTMethodHeader *_aotMethodHeaderEntry;
-      J9JITDataCacheHeader *_exceptionTableCacheEntry;
+      TR::AOTMethodHeader *_aotMethodHeaderEntry;
+       OMRSharedCacheHeader *_exceptionTableCacheEntry;
       OMR_VMThread *_currentThread;
       OMRMethod *_method;
 //OMRPORT      J9ConstantPool *_ramCP;
@@ -359,13 +362,14 @@ class RelocationRuntime {
 #endif
 };
 }
-
-class TR_SharedCacheRelocationRuntime : public TR_RelocationRuntime {
+namespace TR
+{
+class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
 public:
       TR_ALLOC(TR_Memory::Relocation);
-      void * operator new(size_t, TR::JITConfig *);
-      TR_SharedCacheRelocationRuntime(TR::JITConfig *jitCfg) :
-         _sharedCacheIsFull(false), RelocationRuntime(jitCfg) {}
+      void * operator new(size_t, TR::JitConfig *);
+      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg) :
+         _sharedCacheIsFull(false), OMR::RelocationRuntime(jitCfg) {}
 
       virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
       virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
@@ -375,7 +379,7 @@ public:
       virtual bool isRomClassForMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
       virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
 
-      virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
+      //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
 
 private:
       uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
@@ -397,5 +401,5 @@ private:
       static const char aotHeaderKey[];
       static const UDATA aotHeaderKeyLength;
 };
-
+} // end namespaceTR
 #endif   // RELOCATION_RUNTIME_INCL

@@ -452,8 +452,8 @@ TR_RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
       /* Perform code relocations */
       if (_aotMethodHeaderEntry->offsetToRelocationDataItems != 0)
          {
-         TR_RelocationRecordBinaryTemplate * binaryReloRecords = (TR_RelocationRecordBinaryTemplate * )((U_8 *)_aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + _aotMethodHeaderEntry->offsetToRelocationDataItems);
-         TR_RelocationRecordGroup reloGroup(binaryReloRecords);
+         TR::RelocationRecordBinaryTemplate * binaryReloRecords = (TR::RelocationRecordBinaryTemplate * )((U_8 *)_aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + _aotMethodHeaderEntry->offsetToRelocationDataItems);
+         TR::elocationRecordGroup reloGroup(binaryReloRecords);
 
          RELO_LOG(reloLogger(), 6, "relocateAOTCodeAndData: jitConfig=%x aotDataCache=%x aotMccCodeCache=%x method=%x tempDataStart=%x exceptionTable=%x\n", jitConfig(), dataCache(), codeCache(), _method, tempDataStart, _exceptionTable);
          RELO_LOG(reloLogger(), 6, "                        oldDataStart=%x codeStart=%x oldCodeStart=%x classReloAmount=%x cacheEntry=%x\n", oldDataStart, codeStart, oldCodeStart, classReloAmount(), cacheEntry);
@@ -498,7 +498,7 @@ TR_RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
       /* Perform meta-data relocations */
       if (_aotMethodHeaderEntry->offsetToMetaDataRelocations != 0)
          {
-         TR_RelocationRecordBinaryTemplate * binaryReloRecords = (TR_RelocationRecordBinaryTemplate * )((U_8 *)_aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + _aotMethodHeaderEntry->offsetToMetaDataRelocationItems);
+         TR::RelocationRecordBinaryTemplate * binaryReloRecords = (TR::RelocationRecordBinaryTemplate * )((U_8 *)_aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + _aotMethodHeaderEntry->offsetToMetaDataRelocationItems);
          TR_RelocationRecordGroup reloGroup(binaryReloRecords);
          int rc = reloGroup.applyRelocations(this, reloTarget, _exceptionTable);
          if (rc != 0)

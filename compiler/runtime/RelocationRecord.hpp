@@ -44,4 +44,4 @@ class OMR_EXTENSIBLE RelocationRecordBinaryTemplate: public OMR::RelocationRecor
 
 }
 
-#endif /* TR_REGISTER_INCL */
+#endif /* RELOCATION_RECORD_INCL */

@@ -69,7 +69,7 @@ extern "C" void ASM_CALL _patchVirtualGuard(uint8_t*, uint8_t*, uint32_t);
 #endif
 
 uint8_t
-TR_RelocationRecordBinaryTemplate::type(TR::RelocationTarget *reloTarget)
+TR::RelocationRecordBinaryTemplate::type(TR::RelocationTarget *reloTarget)
    {
    return reloTarget->loadUnsigned8b(&_type);
    }
@@ -88,17 +88,17 @@ TR_RelocationRecordGroup::size(TR::RelocationTarget *reloTarget)
    return (uintptr_t)reloTarget->loadPointer((uint8_t *) _group);
    }
 
-TR_RelocationRecordBinaryTemplate *
+TR::RelocationRecordBinaryTemplate *
 TR_RelocationRecordGroup::firstRecord(TR::RelocationTarget *reloTarget)
    {
    // first word of the group is a pointer size field for the entire group
-   return (TR_RelocationRecordBinaryTemplate *) (((uintptr_t *)_group)+1);
+   return (TR::RelocationRecordBinaryTemplate *) (((uintptr_t *)_group)+1);
    }
 
-TR_RelocationRecordBinaryTemplate *
+TR::RelocationRecordBinaryTemplate *
 TR_RelocationRecordGroup::pastLastRecord(TR::RelocationTarget *reloTarget)
    {
-   return (TR_RelocationRecordBinaryTemplate *) ((uint8_t *)_group + size(reloTarget));
+   return (TR::RelocationRecordBinaryTemplate *) ((uint8_t *)_group + size(reloTarget));
    }
 
 int32_t
@@ -106,8 +106,8 @@ TR_RelocationRecordGroup::applyRelocations(TR_RelocationRuntime *reloRuntime,
                                            TR::RelocationTarget *reloTarget,
                                            uint8_t *reloOrigin)
    {
-   TR_RelocationRecordBinaryTemplate *recordPointer = firstRecord(reloTarget);
-   TR_RelocationRecordBinaryTemplate *endOfRecords = pastLastRecord(reloTarget);
+   TR::RelocationRecordBinaryTemplate *recordPointer = firstRecord(reloTarget);
+   TR::RelocationRecordBinaryTemplate *endOfRecords = pastLastRecord(reloTarget);
 
    while (recordPointer < endOfRecords)
       {
@@ -152,7 +152,7 @@ TR_RelocationRecordGroup::handleRelocation(TR_RelocationRuntime *reloRuntime,
 
 
 TR_RelocationRecord *
-TR_RelocationRecord::create(TR_RelocationRecord *storage, TR_RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR_RelocationRecordBinaryTemplate *record)
+TR_RelocationRecord::create(TR_RelocationRecord *storage, TR_RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *record)
    {
    TR_RelocationRecord *reloRecord = NULL;
    // based on the type of the relocation record, create an object of a particular variety of TR_RelocationRecord object
@@ -443,13 +443,13 @@ TR_RelocationRecord::clean(TR::RelocationTarget *reloTarget)
 int32_t
 TR_RelocationRecord::bytesInHeaderAndPayload()
    {
-   return sizeof(TR_RelocationRecordBinaryTemplate);
+   return sizeof(TR::RelocationRecordBinaryTemplate);
    }
 
-TR_RelocationRecordBinaryTemplate *
+TR::RelocationRecordBinaryTemplate *
 TR_RelocationRecord::nextBinaryRecord(TR::RelocationTarget *reloTarget)
    {
-   return (TR_RelocationRecordBinaryTemplate*) (((uint8_t*)this->_record) + size(reloTarget));
+   return (TR::RelocationRecordBinaryTemplate*) (((uint8_t*)this->_record) + size(reloTarget));
    }
 
 void
@@ -466,15 +466,15 @@ TR_RelocationRecord::size(TR::RelocationTarget *reloTarget)
 
 
 void
-TR_RelocationRecord::setType(TR::RelocationTarget *reloTarget, TR_RelocationRecordType type)
+TR_RelocationRecord::setType(TR::RelocationTarget *reloTarget, TR::RelocationRecordType type)
    {
    reloTarget->storeUnsigned8b(type, (uint8_t *) &_record->_type);
    }
 
-TR_RelocationRecordType
+TR::RelocationRecordType
 TR_RelocationRecord::type(TR::RelocationTarget *reloTarget)
    {
-   return (TR_RelocationRecordType)_record->type(reloTarget);
+   return (TR::RelocationRecordType)_record->type(reloTarget);
    }
 
 
@@ -4471,7 +4471,7 @@ uint32_t TR_RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRel
    sizeof(TR_RelocationRecordConstantPoolBinaryTemplate),                            // TR_ConstantPool                                 = 0
    sizeof(TR_RelocationRecordHelperAddressBinaryTemplate),                           // TR_HelperAddress                                = 1
    24,                                                                               // TR_RelativeMethodAddress                        = 2
-   sizeof(TR_RelocationRecordBinaryTemplate),                                        // TR_AbsoluteMethodAddress                        = 3
+   sizeof(TR::RelocationRecordBinaryTemplate),                                        // TR_AbsoluteMethodAddress                        = 3
    sizeof(TR_RelocationRecordDataAddressBinaryTemplate),                             // TR_DataAddress                                  = 4
    24,                                                                               // TR_ClassObject                                  = 5
    sizeof(TR_RelocationRecordConstantPoolBinaryTemplate),                            // TR_MethodObject                                 = 6
@@ -4483,18 +4483,18 @@ uint32_t TR_RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRel
    sizeof(TR_RelocationRecordConstantPoolWithIndexBinaryTemplate),                   // TR_JNIStaticTargetAddress                       = 12
    4,                                                                                // Dummy for TR_ArrayCopyHelper                    = 13
    4,                                                                                // Dummy for TR_ArrayCopyToc                       = 14
-   sizeof(TR_RelocationRecordBinaryTemplate),                                        // TR_BodyInfoAddress                              = 15
+   sizeof(TR::RelocationRecordBinaryTemplate),                                        // TR_BodyInfoAddress                              = 15
    sizeof(TR_RelocationRecordConstantPoolBinaryTemplate),                            // TR_Thunks                                       = 16
    sizeof(TR_RelocationRecordConstantPoolWithIndexBinaryTemplate),                   // TR_StaticRamMethodConst                         = 17
    sizeof(TR_RelocationRecordConstantPoolBinaryTemplate),                            // TR_Trampolines                                  = 18
    sizeof(TR_RelocationRecordPicTrampolineBinaryTemplate),                           // TR_PicTrampolines                               = 19
    sizeof(TR_RelocationRecordMethodTracingCheckBinaryTemplate),                      // TR_CheckMethodEnter                             = 20
-   sizeof(TR_RelocationRecordBinaryTemplate),                                        // TR_RamMethod                                    = 21
+   sizeof(TR::RelocationRecordBinaryTemplate),                                        // TR_RamMethod                                    = 21
    sizeof(TR_RelocationRecordWithOffsetBinaryTemplate),                              // TR_RamMethodSequence                            = 22
    sizeof(TR_RelocationRecordWithOffsetBinaryTemplate),                              // TR_RamMethodSequenceReg                         = 23
    sizeof(TR_RelocationRecordVerifyClassObjectForAllocBinaryTemplate),               // TR_VerifyClassObjectForAlloc                    = 24
    sizeof(TR_RelocationRecordConstantPoolBinaryTemplate),                            // TR_ConstantPoolOrderedPair                      = 25
-   sizeof(TR_RelocationRecordBinaryTemplate),                                        // TR_AbsoluteMethodAddressOrderedPair             = 26
+   sizeof(TR::RelocationRecordBinaryTemplate),                                        // TR_AbsoluteMethodAddressOrderedPair             = 26
    sizeof(TR_RelocationRecordInlinedAllocationBinaryTemplate),                       // TR_VerifyRefArrayForAlloc                       = 27
    24,                                                                               // TR_J2IThunks                                    = 28
    sizeof(TR_RelocationRecordWithOffsetBinaryTemplate),                              // TR_GlobalValue                                  = 29

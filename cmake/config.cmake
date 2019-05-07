@@ -42,10 +42,10 @@ set(OMR_OMRSIG ON CACHE BOOL "Enable the OMR signal compatibility library")
 set(OMR_THREAD ON CACHE BOOL "Enable thread library")
 set(OMR_SHARED_CACHE OFF CACHE BOOL "Disable the shared cache")
 set(OMR_SHARED_CACHE_MODS ON CACHE BOOL "Enable the refactored shared cache")
-set(WASM_SHARED_CACHE ON CACHE BOOL "Enable the WASM shared cache")
+set(WASM_SHARED_CACHE OFF CACHE BOOL "Enable the WASM shared cache")
 
-set(OMR_COMPILER OFF CACHE BOOL "Enable the Compiler")
-set(OMR_JITBUILDER OFF CACHE BOOL "Enable building JitBuilder")
+set(OMR_COMPILER ON CACHE BOOL "Enable the Compiler")
+set(OMR_JITBUILDER ON CACHE BOOL "Enable building JitBuilder")
 set(OMR_TEST_COMPILER OFF CACHE BOOL "Enable building the test compiler")
 
 set(OMR_GC ON CACHE BOOL "Enable the GC")

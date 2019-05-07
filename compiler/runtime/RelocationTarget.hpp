@@ -135,7 +135,7 @@ class RelocationTarget
       virtual uint32_t loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 
       virtual void performThunkRelocation(uint8_t *thunkAddress, uintptr_t vmHelper);
-      virtual uint8_t *arrayCopyHelperAddress(J9JavaVM *javaVM);
+     // virtual uint8_t *arrayCopyHelperAddress(J9JavaVM *javaVM);
 
      // virtual void patchNonVolatileFieldMemoryFence(J9ROMFieldShape* resolvedField, UDATA cpAddr, U_8 descriptorByte, U_8 *instructionAddress, U_8 *snippetStartAddress, J9JavaVM *javaVM);
 
