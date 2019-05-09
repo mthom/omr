@@ -269,18 +269,19 @@ OMR::CodeGenerator::CodeGenerator() :
      randomizer(self()->comp()),
      _outOfLineColdPathNestedDepth(0),
      _codeGenPhase(self()),
+          _aheadOfTimeCompile(NULL),
      _symbolDataTypeMap(self()->comp()->allocator()),
-     _lmmdFailed(false),
-     _aheadOfTimeCompile(NULL)
+     _lmmdFailed(false)
+
    {
    _machine = new (self()->trHeapMemory()) TR::Machine(self());
    _disableInternalPointers = self()->comp()->getOption(TR_MimicInterpreterFrameShape) ||
                                self()->comp()->getOptions()->realTimeGC() ||
                                self()->comp()->getOption(TR_DisableInternalPointers);
-   // if (1){
-   //    _aheadOfTimeCompile= TR::AheadOfTimeCompile(NULL,comp);
-   //    std::cout<<"Succeded to initialize the AOT"<<std::endl;
-   // }
+   if (1){
+       _aheadOfTimeCompile=new (self()->trHeapMemory()) TR::AheadOfTimeCompile(NULL,self()->comp());
+       std::cout<<"Succeded to initialize the AOT"<<std::endl;
+    }
    uintptrj_t maxSize = TR::Compiler->vm.getOverflowSafeAllocSize(self()->comp());
    int32_t i;
 

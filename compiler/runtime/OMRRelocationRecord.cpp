@@ -21,40 +21,24 @@
  *******************************************************************************/
 
 #include <stdint.h>
-#include "jilconsts.h"
-#include "jitprotos.h"
-#include "jvminit.h"
-#include "j9.h"
-#include "j9cfg.h"
-#include "j9consts.h"
-#include "j9cp.h"
-#include "j9protos.h"
-#include "rommeth.h"
+#include "omrcfg.h"
 #include "codegen/CodeGenerator.hpp"
 #include "codegen/FrontEnd.hpp"
-#include "codegen/PicHelpers.hpp"
 #include "codegen/Relocation.hpp"
 #include "compile/ResolvedMethod.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
-#include "env/CHTable.hpp"
-#include "env/ClassLoaderTable.hpp"
-#include "env/PersistentCHTable.hpp"
 #include "env/jittypes.h"
 #include "env/VMAccessCriticalSection.hpp"
-#include "exceptions/AOTFailure.hpp"
 #include "il/symbol/StaticSymbol.hpp"
 #include "infra/SimpleRegex.hpp"
 #include "runtime/CodeCache.hpp"
 #include "runtime/CodeCacheManager.hpp"
-#include "runtime/MethodMetaData.h"
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationRuntimeLogger.hpp"
 #include "runtime/RelocationTarget.hpp"
 #include  "runtime/SymbolValidationManager.hpp"
-#include "env/VMJ9.h"
-#include "control/rossa.h"
 
 // TODO: move this someplace common for RuntimeAssumptions.cpp and here
 #if defined(__IBMCPP__) && !defined(AIXPPC) && !defined(LINUXPPC)
@@ -151,10 +135,10 @@ TR_RelocationRecordGroup::handleRelocation(TR_RelocationRuntime *reloRuntime,
 #define FLAGS_RELOCATION_FLAG_MASK      ((uint8_t) (FLAGS_RELOCATION_WIDE_OFFSETS | FLAGS_RELOCATION_EIP_OFFSET))
 
 
-TR_RelocationRecord *
-TR_RelocationRecord::create(TR_RelocationRecord *storage, TR_RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *record)
+TR::RelocationRecord *
+TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *record)
    {
-   TR_RelocationRecord *reloRecord = NULL;
+   TR::RelocationRecord *reloRecord = NULL;
    // based on the type of the relocation record, create an object of a particular variety of TR_RelocationRecord object
    uint8_t reloType = record->type(reloTarget);
    switch (reloType)
@@ -172,243 +156,7 @@ TR_RelocationRecord::create(TR_RelocationRecord *storage, TR_RelocationRuntime *
       case TR_VerifyRefArrayForAlloc:
          reloRecord = new (storage) TR_RelocationRecordVerifyRefArrayForAlloc(reloRuntime, record);
          break;
-      case TR_VerifyClassObjectForAlloc:
-         reloRecord = new (storage) TR_RelocationRecordVerifyClassObjectForAlloc(reloRuntime, record);
-         break;
-      case TR_InlinedStaticMethodWithNopGuard:
-         reloRecord = new (storage) TR_RelocationRecordInlinedStaticMethodWithNopGuard(reloRuntime, record);
-         break;
-      case TR_InlinedSpecialMethodWithNopGuard:
-         reloRecord = new (storage) TR_RelocationRecordInlinedSpecialMethodWithNopGuard(reloRuntime, record);
-         break;
-      case TR_InlinedVirtualMethodWithNopGuard:
-         reloRecord = new (storage) TR_RelocationRecordInlinedVirtualMethodWithNopGuard(reloRuntime, record);
-         break;
-      case TR_InlinedVirtualMethod:
-         reloRecord = new (storage) TR_RelocationRecordInlinedVirtualMethod(reloRuntime, record);
-         break;
-      case TR_InlinedInterfaceMethodWithNopGuard:
-         reloRecord = new (storage) TR_RelocationRecordInlinedInterfaceMethodWithNopGuard(reloRuntime, record);
-         break;
-      case TR_InlinedInterfaceMethod:
-         reloRecord = new (storage) TR_RelocationRecordInlinedInterfaceMethod(reloRuntime, record);
-         break;
-      case TR_InlinedAbstractMethodWithNopGuard:
-         reloRecord = new (storage) TR_RelocationRecordInlinedAbstractMethodWithNopGuard(reloRuntime, record);
-         break;
-      case TR_InlinedHCRMethod:
-         reloRecord = new (storage) TR_RelocationRecordInlinedMethod(reloRuntime, record);
-         break;
-      case TR_ProfiledInlinedMethodRelocation:
-         reloRecord = new (storage) TR_RelocationRecordProfiledInlinedMethod(reloRuntime, record);
-         break;
-      case TR_ProfiledClassGuardRelocation:
-         reloRecord = new (storage) TR_RelocationRecordProfiledClassGuard(reloRuntime, record);
-         break;
-      case TR_ProfiledMethodGuardRelocation:
-         reloRecord = new (storage) TR_RelocationRecordProfiledMethodGuard(reloRuntime, record);
-         break;
-      case TR_ValidateClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateClass(reloRuntime, record);
-         break;
-      case TR_ValidateInstanceField:
-         reloRecord = new (storage) TR_RelocationRecordValidateInstanceField(reloRuntime, record);
-         break;
-      case TR_ValidateStaticField:
-         reloRecord = new (storage) TR_RelocationRecordValidateStaticField(reloRuntime, record);
-         break;
-      case TR_ValidateArbitraryClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateArbitraryClass(reloRuntime, record);
-         break;
-      case TR_RamMethod:
-         reloRecord = new (storage) TR_RelocationRecordRamMethod(reloRuntime, record);
-         break;
-      case TR_CheckMethodEnter:
-         reloRecord = new (storage) TR_RelocationRecordMethodEnterCheck(reloRuntime, record);
-         break;
-      case TR_CheckMethodExit:
-         reloRecord = new (storage) TR_RelocationRecordMethodExitCheck(reloRuntime, record);
-         break;
-      case TR_AbsoluteHelperAddress:
-         reloRecord = new (storage) TR_RelocationRecordAbsoluteHelperAddress(reloRuntime, record);
-         break;
-      case TR_RelativeMethodAddress:
-      case TR_AbsoluteMethodAddress:
-      case TR_AbsoluteMethodAddressOrderedPair:
-         reloRecord = new (storage) TR_RelocationRecordMethodAddress(reloRuntime, record);
-         break;
-      case TR_DataAddress:
-         reloRecord = new (storage) TR_RelocationRecordDataAddress(reloRuntime, record);
-         break;
-      case TR_StaticRamMethodConst:
-         reloRecord = new (storage) TR_RelocationRecordStaticRamMethodConst(reloRuntime, record);
-         break;
-      case TR_VirtualRamMethodConst:
-         reloRecord = new (storage) TR_RelocationRecordVirtualRamMethodConst(reloRuntime, record);
-         break;
-      case TR_SpecialRamMethodConst:
-         reloRecord = new (storage) TR_RelocationRecordSpecialRamMethodConst(reloRuntime, record);
-         break;
-      case TR_JNIStaticTargetAddress:
-         reloRecord = new (storage) TR_RelocationRecordDirectJNIStaticMethodCall(reloRuntime, record);
-         break;
-      case TR_JNIVirtualTargetAddress:
-         reloRecord = new (storage) TR_RelocationRecordDirectJNIVirtualMethodCall(reloRuntime, record);
-         break;
-      case TR_JNISpecialTargetAddress:
-         reloRecord = new (storage) TR_RelocationRecordDirectJNISpecialMethodCall(reloRuntime, record);
-         break;
-      case TR_ClassAddress:
-         reloRecord = new (storage) TR_RelocationRecordClassObject(reloRuntime, record);
-         break;
-      case TR_MethodObject:
-         reloRecord = new (storage) TR_RelocationRecordMethodObject(reloRuntime, record);
-         break;
-      case TR_PicTrampolines:
-         reloRecord = new (storage) TR_RelocationRecordPicTrampolines(reloRuntime, record);
-         break;
-      case TR_Trampolines:
-         reloRecord = new (storage) TR_RelocationRecordTrampolines(reloRuntime, record);
-         break;
-      case TR_Thunks:
-         reloRecord = new (storage) TR_RelocationRecordThunks(reloRuntime, record);
-         break;
-      case TR_J2IVirtualThunkPointer:
-         reloRecord = new (storage) TR_RelocationRecordJ2IVirtualThunkPointer(reloRuntime, record);
-         break;
-      case TR_GlobalValue:
-         reloRecord = new (storage) TR_RelocationRecordGlobalValue(reloRuntime, record);
-         break;
-      case TR_BodyInfoAddressLoad:
-         reloRecord = new (storage) TR_RelocationRecordBodyInfoLoad(reloRuntime, record);
-         break;
-      case TR_ArrayCopyHelper:
-         reloRecord = new (storage) TR_RelocationRecordArrayCopyHelper(reloRuntime, record);
-         break;
-      case TR_ArrayCopyToc:
-         reloRecord = new (storage) TR_RelocationRecordArrayCopyToc(reloRuntime, record);
-         break;
-      case TR_RamMethodSequence:
-      case TR_RamMethodSequenceReg:
-         reloRecord = new (storage) TR_RelocationRecordRamSequence(reloRuntime, record);
-         break;
-      case TR_FixedSequenceAddress:
-      case TR_FixedSequenceAddress2:
-         reloRecord = new (storage) TR_RelocationRecordWithOffset(reloRuntime, record);
-         break;
-      case TR_HCR:
-         reloRecord = new (storage) TR_RelocationRecordHCR(reloRuntime, record);
-         break;
-      case TR_ClassPointer:
-         reloRecord = new (storage) TR_RelocationRecordClassPointer(reloRuntime, record);
-         break;
-      case TR_ArbitraryClassAddress:
-         reloRecord = new (storage) TR_RelocationRecordArbitraryClassAddress(reloRuntime, record);
-         break;
-      case TR_MethodPointer:
-         reloRecord = new (storage) TR_RelocationRecordMethodPointer(reloRuntime, record);
-         break;
-      case TR_EmitClass:
-         reloRecord = new (storage) TR_RelocationRecordEmitClass(reloRuntime, record);
-         break;
-      case TR_DebugCounter:
-         reloRecord = new (storage) TR_RelocationRecordDebugCounter(reloRuntime, record);
-         break;
-      case TR_ClassUnloadAssumption:
-         reloRecord = new (storage) TR_RelocationRecordClassUnloadAssumption(reloRuntime, record);
-      case TR_ValidateClassByName:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassByName(reloRuntime, record);
-         break;
-      case TR_ValidateProfiledClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateProfiledClass(reloRuntime, record);
-         break;
-      case TR_ValidateClassFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateDefiningClassFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateDefiningClassFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateStaticClassFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateStaticClassFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateClassFromMethod:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassFromMethod(reloRuntime, record);
-         break;
-      case TR_ValidateComponentClassFromArrayClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateComponentClassFromArrayClass(reloRuntime, record);
-         break;
-      case TR_ValidateArrayClassFromComponentClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateArrayClassFromComponentClass(reloRuntime, record);
-         break;
-      case TR_ValidateSuperClassFromClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateSuperClassFromClass(reloRuntime, record);
-         break;
-      case TR_ValidateClassInstanceOfClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassInstanceOfClass(reloRuntime, record);
-         break;
-      case TR_ValidateSystemClassByName:
-         reloRecord = new (storage) TR_RelocationRecordValidateSystemClassByName(reloRuntime, record);
-         break;
-      case TR_ValidateClassFromITableIndexCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassFromITableIndexCP(reloRuntime, record);
-         break;
-      case TR_ValidateDeclaringClassFromFieldOrStatic:
-         reloRecord = new (storage) TR_RelocationRecordValidateDeclaringClassFromFieldOrStatic(reloRuntime, record);
-         break;
-      case TR_ValidateClassClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassClass(reloRuntime, record);
-         break;
-      case TR_ValidateConcreteSubClassFromClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateConcreteSubClassFromClass(reloRuntime, record);
-         break;
-      case TR_ValidateClassChain:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassChain(reloRuntime, record);
-         break;
-      case TR_ValidateMethodByName:
-         reloRecord = new (storage) TR_RelocationRecordValidateMethodByName(reloRuntime, record);
-         break;
-      case TR_ValidateMethodFromClass:
-         reloRecord = new (storage) TR_RelocationRecordValidateMethodFromClass(reloRuntime, record);
-         break;
-      case TR_ValidateStaticMethodFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateStaticMethodFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateSpecialMethodFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateSpecialMethodFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateVirtualMethodFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateVirtualMethodFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateVirtualMethodFromOffset:
-         reloRecord = new (storage) TR_RelocationRecordValidateVirtualMethodFromOffset(reloRuntime, record);
-         break;
-      case TR_ValidateInterfaceMethodFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateInterfaceMethodFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateImproperInterfaceMethodFromCP:
-         reloRecord = new (storage) TR_RelocationRecordValidateImproperInterfaceMethodFromCP(reloRuntime, record);
-         break;
-      case TR_ValidateMethodFromClassAndSig:
-         reloRecord = new (storage) TR_RelocationRecordValidateMethodFromClassAndSig(reloRuntime, record);
-         break;
-      case TR_ValidateStackWalkerMaySkipFramesRecord:
-         reloRecord = new (storage) TR_RelocationRecordValidateStackWalkerMaySkipFrames(reloRuntime, record);
-         break;
-      case TR_ValidateClassInfoIsInitialized:
-         reloRecord = new (storage) TR_RelocationRecordValidateClassInfoIsInitialized(reloRuntime, record);
-         break;
-      case TR_ValidateMethodFromSingleImplementer:
-         reloRecord = new (storage) TR_RelocationRecordValidateMethodFromSingleImpl(reloRuntime, record);
-         break;
-      case TR_ValidateMethodFromSingleInterfaceImplementer:
-         reloRecord = new (storage) TR_RelocationRecordValidateMethodFromSingleInterfaceImpl(reloRuntime, record);
-         break;
-      case TR_ValidateMethodFromSingleAbstractImplementer:
-         reloRecord = new (storage) TR_RelocationRecordValidateMethodFromSingleAbstractImpl(reloRuntime, record);
-         break;
-      case TR_SymbolFromManager:
-         reloRecord = new (storage) TR_RelocationRecordSymbolFromManager(reloRuntime, record);
-         break;
+
       default:
          // TODO: error condition
          printf("Unexpected relo record: %d\n", reloType);fflush(stdout);
