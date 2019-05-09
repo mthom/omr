@@ -61,11 +61,31 @@ namespace OMR { typedef OMR::RelocationRecordBinaryTemplate RelocationRecordBina
 #include "runtime/RelocationTarget.hpp"
 #include "runtime/Runtime.hpp"
 
-namespace TR {class RelocationRuntime;}
-namespace TR {class RelocationTarget;}
+namespace TR {
+class RelocationRuntime;
+class RelocationTarget;
+union RelocationRecordPrivateData;
+   union RelocationRecordPrivateData
+   {
+//       TR::RelocationRecordHelperAddressPrivateData helperAddress;
+//       TR::RelocationRecordInlinedAllocationPrivateData inlinedAllocation;
+//       TR::RelocationRecordInlinedMethodPrivateData inlinedMethod;
+//       TR::RelocationRecordProfiledInlinedMethodPrivateData profiledInlinedMethod;
+//       TR::RelocationRecordMethodTracingCheckPrivateData methodTracingCheck;
+//       TR::RelocationRecordWithOffsetPrivateData offset;
+//       TR::RelocationRecordArrayCopyPrivateData arraycopy;
+//       TR::RelocationRecordPointerPrivateData pointer;
+//       TR::RelocationRecordMethodCallPrivateData methodCall;
+//       TR::RelocationRecordEmitClassPrivateData emitClass;
+//       TR::RelocationRecordDebugCounterPrivateData debugCounter;
+//       TR::RelocationSymbolFromManagerPrivateData symbolFromManager;
+    int yetToImplement;
+   };
 
-namespace TR {typedef ::TR_ExternalRelocationTargetKind RelocationRecordType;}
+}
 
+namespace OMR {typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
+namespace TR {typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
 // These *BinaryTemplate structs describe the shape of the binary relocation records.
 extern char* AOTcgDiagOn;
 
@@ -91,27 +111,7 @@ struct RelocationRecordBinaryTemplate
    uint32_t _extra;
    #endif
    };
-} //namespace OMR
-
-namespace TR
-{
-   union RelocationRecordPrivateData
-   {
-//   //    TR::RelocationRecordHelperAddressPrivateData helperAddress;
-//   //    TR::RelocationRecordInlinedAllocationPrivateData inlinedAllocation;
-//       TR::RelocationRecordInlinedMethodPrivateData inlinedMethod;
-//       TR::RelocationRecordProfiledInlinedMethodPrivateData profiledInlinedMethod;
-//       TR::RelocationRecordMethodTracingCheckPrivateData methodTracingCheck;
-//       TR::RelocationRecordWithOffsetPrivateData offset;
-//       TR::RelocationRecordArrayCopyPrivateData arraycopy;
-//       TR::RelocationRecordPointerPrivateData pointer;
-//       TR::RelocationRecordMethodCallPrivateData methodCall;
-//       TR::RelocationRecordEmitClassPrivateData emitClass;
-//       TR::RelocationRecordDebugCounterPrivateData debugCounter;
-//       TR::RelocationSymbolFromManagerPrivateData symbolFromManager;
-    int yetToImplement;
-   };
-class RelocationRecord
+   class RelocationRecord
    {
    
    public:
@@ -184,11 +184,14 @@ class RelocationRecord
 
       OMR::RelocationRecordBinaryTemplate *_record;
 
-      RelocationRecordPrivateData _privateData;
+      TR::RelocationRecordPrivateData _privateData;
 
       static uint32_t _relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds];
    };
+} //namespace OMR
 
+namespace TR
+{
 
 
 class RelocationRecordGroup

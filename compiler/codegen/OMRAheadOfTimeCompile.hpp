@@ -82,7 +82,9 @@ class OMR_EXTENSIBLE AheadOfTimeCompile
       }
 
    virtual void     processRelocations() = 0;
+
    virtual uint8_t *initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation,TR::RelocationRecord* );
+   virtual uint8_t *initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);
 
 
    // virtual void dumpRelocationData() = 0;
