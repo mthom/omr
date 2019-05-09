@@ -29,9 +29,8 @@
 #define OMR_CODEGENERATOR_CONNECTOR
 namespace OMR { namespace X86 { class CodeGenerator; } }
 namespace OMR { typedef OMR::X86::CodeGenerator CodeGeneratorConnector; }
-#else
-#error OMR::X86::CodeGenerator expected to be a primary connector, but a OMR connector is already defined
 #endif
+
 
 #include "compiler/codegen/OMRCodeGenerator.hpp"
 
