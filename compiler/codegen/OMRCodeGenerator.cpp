@@ -1976,6 +1976,17 @@ OMR::CodeGenerator::processRelocations()
       ++iterator;
       }
    //TR_ASSERTC(missedSite == -1, comp(), "Site %d is missing relocation\n", missedSite);
+   if (0){
+         //This is to process aot relocations
+      // Call the platform specific processing of relocations
+      auto theAOT = self()->getAheadOfTimeCompile();
+      theAOT->processRelocations();
+         for (auto aotIterator = self()->getExternalRelocationList().begin(); aotIterator != self()->getExternalRelocationList().end(); ++aotIterator)
+      {
+      // Traverse the AOT/external labels
+	  (*aotIterator)->apply(self());
+      }
+   }
    }
 
 #if defined(TR_HOST_ARM)

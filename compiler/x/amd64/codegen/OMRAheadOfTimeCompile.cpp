@@ -90,17 +90,17 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
       // set up the size for the region
       *(uintptrj_t *)relocationDataCursor = reloBufferSize;
       relocationDataCursor += SIZEPOINTER;
-/*
-      if (useSVM)
-         {
-         TR::SymbolValidationManager *svm =
-            self()->comp()->getSymbolValidationManager();
-         void *offsets = const_cast<void*>(svm->wellKnownClassChainOffsets());
-         *(uintptrj_t *)relocationDataCursor = reinterpret_cast<uintptrj_t>(
-            fej9->sharedCache()->offsetInSharedCacheFromPointer(offsets));
-         relocationDataCursor += SIZEPOINTER;
-         }
-*/
+
+      // if (useSVM)
+      //    {
+      //    TR::SymbolValidationManager *svm =
+      //       self()->comp()->getSymbolValidationManager();
+      //    void *offsets = const_cast<void*>(svm->wellKnownClassChainOffsets());
+      //    *(uintptrj_t *)relocationDataCursor = reinterpret_cast<uintptrj_t>(
+      //       fej9->sharedCache()->offsetInSharedCacheFromPointer(offsets));
+      //    relocationDataCursor += SIZEPOINTER;
+      //    }
+
       // set up pointers for each iterated relocation and initialize header
  if (self()->getSizeOfAOTRelocations() != 0)
       {
@@ -121,6 +121,7 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
          relocationDataCursor += s->getSizeOfRelocationData();
          }
       }
+      
    }
    uint8_t OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation)
    {

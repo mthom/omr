@@ -68,7 +68,7 @@ namespace OMR { typedef OMR::CodeGenerator CodeGeneratorConnector; }
 #include "ras/DebugCounter.hpp"
 #include "runtime/Runtime.hpp"
 #include "codegen/StaticRelocation.hpp"
-#include "AheadOfTimeCompile.hpp"
+//#include "AheadOfTimeCompile.hpp"
 #define OPT_DETAILS_CA "O^O COMPLETE ALIASING: "
 
 #define NEED_CC(n) (n->nodeRequiresConditionCodes())
@@ -89,7 +89,7 @@ class TR_ResolvedMethod;
 class TR_ScratchRegisterManager;
 namespace TR { class GCStackAtlas; }
 namespace OMR { class RegisterUsage; }
-//namespace TR { class AheadOfTimeCompile; }
+namespace TR { class AheadOfTimeCompile; }
 namespace TR { class AutomaticSymbol; }
 namespace TR { class Block; }
 namespace TR { class CodeCache; }
