@@ -162,8 +162,8 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    uint32_t *wordAfterHeader = (uint32_t*)cursor;
    // This has to be created after the kind has been written into the header
    TR::RelocationRecord storage;
-   OMR::RelocationRecord *reloRecord = OMR::RelocationRecord::create(&storage, reloRuntime, reloTarget, reinterpret_cast<TR_RelocationRecordBinaryTemplate *>(relocation->getRelocationData()));
-
+   TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(&storage, reloRuntime, reloTarget, reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocation->getRelocationData()));
+   
    switch (targetKind)
       {
       default:
@@ -177,7 +177,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    return cursor;
    }
 uint8_t *
-OMR::X86::AMD64::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation, TR_RelocationRecord *reloRecord)
+OMR::X86::AMD64::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation, TR::RelocationRecord *reloRecord)
    {
    uint8_t *cursor = relocation->getRelocationData();
 

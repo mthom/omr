@@ -36,7 +36,7 @@ namespace OMR { typedef OMR::AheadOfTimeCompile AheadOfTimeCompileConnector; }
 #include "infra/Link.hpp"
 #include "infra/Annotations.hpp"
 #include "runtime/Runtime.hpp"
-#include "runtime/RelocationRecord.hpp"
+#include "runtime/OMRRelocationRecord.hpp"
 class TR_Debug;
 namespace TR { class ExternalRelocation; }
 namespace TR { class IteratedExternalRelocation; }
@@ -82,10 +82,10 @@ class OMR_EXTENSIBLE AheadOfTimeCompile
       return (_aotRelocationKindToHeaderSizeMap = p);
       }
 
-   //virtual void     processRelocations();
+   virtual void     processRelocations();
 
- //  virtual uint8_t *initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation,TR::RelocationRecord* );
-// virtual uint8_t* initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);
+  virtual uint8_t *initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation,TR::RelocationRecord* );
+ virtual uint8_t* initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);
 
 
    // virtual void dumpRelocationData() = 0;

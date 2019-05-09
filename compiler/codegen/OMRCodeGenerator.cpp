@@ -110,6 +110,7 @@
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/Runtime.hpp"
 #include "stdarg.h"
+#include "AheadOfTimeCompile.hpp"
 
 namespace TR { class Optimizer; }
 namespace TR { class RegisterDependencyConditions; }

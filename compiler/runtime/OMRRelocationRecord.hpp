@@ -97,7 +97,7 @@ extern char* AOTcgDiagOn;
 // *BinaryTemplate classes and must access the binary structs via the _record field in the TR::RelocationRecord
 // class.  Most consumers should directly manipulate the TR::RelocationRecord* classes since they offer
 // the most flexibility.
-namespace OMR
+namespace TR
 {
 struct RelocationRecordBinaryTemplate
    {
