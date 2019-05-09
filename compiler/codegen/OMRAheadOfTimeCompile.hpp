@@ -28,6 +28,7 @@ namespace OMR { class AheadOfTimeCompile; }
 namespace OMR { typedef OMR::AheadOfTimeCompile AheadOfTimeCompileConnector; }
 #endif // OMR_AHEADOFTIMECOMPILE_CONNECTOR
 
+#include "codegen/AheadOfTimeCompile.hpp"
 #include <stddef.h>
 #include <stdint.h>
 #include "compile/Compilation.hpp"
@@ -81,10 +82,10 @@ class OMR_EXTENSIBLE AheadOfTimeCompile
       return (_aotRelocationKindToHeaderSizeMap = p);
       }
 
-   virtual void     processRelocations() = 0;
+   //virtual void     processRelocations();
 
-   virtual uint8_t *initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation,TR::RelocationRecord* );
-   virtual uint8_t *initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);
+ //  virtual uint8_t *initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation,TR::RelocationRecord* );
+// virtual uint8_t* initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);
 
 
    // virtual void dumpRelocationData() = 0;

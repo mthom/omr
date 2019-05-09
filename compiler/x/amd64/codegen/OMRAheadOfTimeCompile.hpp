@@ -55,6 +55,7 @@ class OMR_EXTENSIBLE AheadOfTimeCompile  : public OMR::X86::AheadOfTimeCompile
       }
 
    virtual void     processRelocations();
+   virtual uint8_t *initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);
 
    private:
     static uint32_t _relocationKindToHeaderSizeMap[TR_NumExternalRelocationKinds];
