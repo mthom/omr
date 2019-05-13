@@ -20,8 +20,8 @@
  *******************************************************************************/
 
 #include "compiler/runtime/RelocationRuntime.hpp"
-#include "RelocationTarget.hpp"
-#include "x/runtime/X86RelocationTarget.hpp"
+#include "compiler/runtime/RelocationTarget.hpp"
+#include "runtime/OMRRelocationTarget.hpp"
 
 TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationRuntimeConnector(jitCfg)
    {
@@ -33,7 +33,7 @@ TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationR
 
    #if defined(TR_HOST_X86)
       #if defined(TR_HOST_64BIT)
-      _reloTarget =  reinterpret_cast<TR::RelocationTarget  *> (new (PERSISTENT_NEW) TR::AMD64RelocationTarget(this));
+      _reloTarget =  reinterpret_cast<TR::RelocationTarget  *> (new (PERSISTENT_NEW) TR::RelocationTarget(this));
       #else
       _reloTarget = new (PERSISTENT_NEW) TR_X86RelocationTarget(this);
       #endif

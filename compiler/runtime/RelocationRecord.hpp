@@ -19,29 +19,26 @@
 //  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 //  *******************************************************************************/
 
-// #ifndef TR_RELOCATION_RECORD_INCL
-// #define TR_RELOCATION_RECORD_INCL
+#ifndef TR_RELOCATION_RECORD_INCL
+#define TR_RELOCATION_RECORD_INCL
 
 
 
-// #include "runtime/OMRRelocationRecord.hpp"
+#include "runtime/OMRRelocationRecord.hpp"
 
 
-// namespace TR
-// {
+namespace TR
+{
 
-// class OMR_EXTENSIBLE RelocationRecord: public OMR::RelocationRecordConnector
-//    {
-//    public:
+class OMR_EXTENSIBLE RelocationRecord: public OMR::RelocationRecordConnector
+   {
+   public:
+   RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) 
+   :  OMR::RelocationRecordConnector(reloRuntime,record)
+         {}
+    
+   };
 
-//    };
+}
 
-// class OMR_EXTENSIBLE RelocationRecordBinaryTemplate: public OMR::RelocationRecordBinaryTemplateConnector
-//    {
-//    public:
-
-//    };
-
-// }
-
-// #endif /* RELOCATION_RECORD_INCL */
+#endif /* RELOCATION_RECORD_INCL */

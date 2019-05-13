@@ -35,7 +35,6 @@ namespace OMR { class RelocationRecord; }
 namespace OMR { typedef OMR::RelocationRecord RelocationRecordConnector; }
 #else
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
-
 #endif
 
 
@@ -45,7 +44,6 @@ namespace OMR { struct RelocationRecordBinaryTemplate; }
 namespace OMR { typedef OMR::RelocationRecordBinaryTemplate RelocationRecordBinaryTemplateConnector; }
 #else
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
-
 #endif
 
 
@@ -58,7 +56,6 @@ namespace OMR { typedef OMR::RelocationRecordBinaryTemplate RelocationRecordBina
 #include "infra/Link.hpp"
 #include "infra/Flags.hpp"
 #include "runtime/RelocationRuntime.hpp"
-#include "runtime/RelocationTarget.hpp"
 #include "runtime/Runtime.hpp"
 
 namespace TR {
@@ -84,8 +81,8 @@ union RelocationRecordPrivateData;
 
 }
 
-namespace OMR {typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
-namespace TR {typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
+namespace OMR { typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
+namespace TR { typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
 // These *BinaryTemplate structs describe the shape of the binary relocation records.
 extern char* AOTcgDiagOn;
 
@@ -97,7 +94,7 @@ extern char* AOTcgDiagOn;
 // *BinaryTemplate classes and must access the binary structs via the _record field in the TR::RelocationRecord
 // class.  Most consumers should directly manipulate the TR::RelocationRecord* classes since they offer
 // the most flexibility.
-namespace TR
+namespace OMR
 {
 struct RelocationRecordBinaryTemplate
    {
@@ -111,14 +108,16 @@ struct RelocationRecordBinaryTemplate
    uint32_t _extra;
    #endif
    };
+   
    class RelocationRecord
    {
    
    public:
-      RelocationRecord() {}
-      RelocationRecord(TR::RelocationRuntime *reloRuntime, OMR::RelocationRecordBinaryTemplate *record)
-         : _reloRuntime(reloRuntime), _record(record)
-         {}
+      RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record)
+         {
+            _reloRuntime= reloRuntime;
+             _record =record;
+         }
 
       void * operator new (size_t s, RelocationRecord *p)   { return p; }
 
@@ -182,7 +181,7 @@ struct RelocationRecordBinaryTemplate
          return &_privateData;
          }
 
-      OMR::RelocationRecordBinaryTemplate *_record;
+      TR::RelocationRecordBinaryTemplate *_record;
 
       TR::RelocationRecordPrivateData _privateData;
 
@@ -217,7 +216,7 @@ class RelocationRecordGroup
 
 
 
-} //namespace TR
+} //namespace OMR
 // No class that derives from TR::RelocationRecord should define any state: all state variables should be declared
 //  in TR::RelocationRecord or the constructor/decode() mechanisms will not work properly
 

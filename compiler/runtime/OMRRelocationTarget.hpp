@@ -42,12 +42,12 @@ namespace OMR { typedef OMR::RelocationTarget RelocationTargetConnector; }
 //    relocation records.
 // This is intended to be a base class that should not be itself instantiated
 namespace OMR{
-class RelocationTarget
+class  OMR_EXTENSIBLE RelocationTarget
    {
    public:
       TR_ALLOC(TR_Memory::Relocation)
       void * operator new(size_t, TR::JitConfig *);
-      RelocationTarget(OMR::RelocationRuntime *reloRuntime)
+      RelocationTarget(TR::RelocationRuntime *reloRuntime)
          {
          _reloRuntime = reloRuntime;
          }
@@ -58,7 +58,6 @@ class RelocationTarget
 
       virtual void preRelocationsAppliedEvent()                             {} // default impl is empty
 
-      virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
 
       virtual uintptrj_t loadRelocationRecordValue(uintptrj_t *address)     { return *address; }
       virtual void storeRelocationRecordValue(uintptrj_t value, uintptrj_t *address) { *address = value; }
@@ -118,7 +117,6 @@ class RelocationTarget
       virtual void storeClassAddressForHeader(uint8_t *address, uint8_t *reloLocation);
 
       virtual uint32_t loadCPIndex(uint8_t *reloLocation);
-      virtual uintptr_t loadThunkCPIndex(uint8_t *reloLocation);
 
 
       virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);

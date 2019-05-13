@@ -20,38 +20,14 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "runtime/OMRRelocationTarget.hpp"
+#include "compiler/runtime/RelocationTarget.hpp"
 
 #include "codegen/FrontEnd.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "env/jittypes.h"
-#include "runtime/RelocationRecord.hpp"
+#include "runtime/OMRRelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
-bool
-RelocationTarget::isOrderedPairRelocation(RelocationRecord *reloRecord, RelocationTarget *reloTarget)
-   {
-   switch (reloRecord->type(reloTarget))
-      {
-      case TR_AbsoluteMethodAddressOrderedPair :
-      case TR_ConstantPoolOrderedPair :
-         return true;
-      default:
-      	return false;
-      }
-
-   return false;
-   }
-// These functions must be implemented by subclasses for specific targets
-
-uint8_t *
-OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
-   {
-   TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
-   return NULL;
-   }
-
-
 uint8_t *
 OMR::RelocationTarget::loadCallTarget(uint8_t *reloLocation)
    {
@@ -59,60 +35,60 @@ OMR::RelocationTarget::loadCallTarget(uint8_t *reloLocation)
    }
 
 void
-RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
+OMR::RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
    {
    TR_ASSERT(0, "Error: storeCallTarget not implemented in relocation target base class");
    }
 
 void
-TR::RelocationTarget:: storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation)
+OMR::RelocationTarget:: storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation)
    {
    TR_ASSERT(0, "Error: storeRelativeTarget not implemented in relocation target base class");
    }
 
 uint8_t *
-TR::RelocationTarget::loadBranchOffset(uint8_t *reloLocation)
+OMR::RelocationTarget::loadBranchOffset(uint8_t *reloLocation)
    {
    // reloLocation points at the start of the branch offset, so just need to dereference as uint8_t *
    return loadPointer(reloLocation);
    }
 
 void
-TR::RelocationTarget::storeBranchOffset(uint8_t *branchOffset, uint8_t *reloLocation)
+OMR::RelocationTarget::storeBranchOffset(uint8_t *branchOffset, uint8_t *reloLocation)
    {
    storePointer(branchOffset, reloLocation);
    }
 
 
 uint8_t *
-TR::RelocationTarget::loadAddress(uint8_t *reloLocation)
+OMR::RelocationTarget::loadAddress(uint8_t *reloLocation)
    {
    return loadPointer(reloLocation);
    }
 
 void
-TR::RelocationTarget::storeAddress(uint8_t *address, uint8_t *reloLocation)
+OMR::RelocationTarget::storeAddress(uint8_t *address, uint8_t *reloLocation)
    {
    // reloLocation points at the start of the address, so just store the uint8_t * at reloLocation
    storePointer(address, reloLocation);
    }
 
 uint8_t *
-TR::RelocationTarget::loadAddressSequence(uint8_t *reloLocation)
+OMR::RelocationTarget::loadAddressSequence(uint8_t *reloLocation)
    {
    TR_ASSERT(0, "Error: loadAddressSequence not implemented in relocation target base class");
    return NULL;
    }
 
 void
-TR::RelocationTarget::storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber)
+OMR::RelocationTarget::storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber)
    {
    TR_ASSERT(0, "Error: storeAddressSequence not implemented in relocation target base class");
    }
 
 
 uint8_t *
-TR::RelocationTarget::loadClassAddressForHeader(uint8_t *reloLocation)
+OMR::RelocationTarget::loadClassAddressForHeader(uint8_t *reloLocation)
    {
    // reloLocation points at the start of the address, so just need to dereference as uint8_t *
 #ifdef J9VM_INTERP_COMPRESSED_OBJECT_HEADER
@@ -123,7 +99,7 @@ TR::RelocationTarget::loadClassAddressForHeader(uint8_t *reloLocation)
    }
 
 void
-TR::RelocationTarget::storeClassAddressForHeader(uint8_t *clazz, uint8_t *reloLocation)
+OMR::RelocationTarget::storeClassAddressForHeader(uint8_t *clazz, uint8_t *reloLocation)
    {
    // reloLocation points at the start of the address, so just store the uint8_t * at reloLocation
 #ifdef J9VM_INTERP_COMPRESSED_OBJECT_HEADER
@@ -135,21 +111,16 @@ TR::RelocationTarget::storeClassAddressForHeader(uint8_t *clazz, uint8_t *reloLo
    }
 
 uint32_t
-TR::RelocationTarget::loadCPIndex(uint8_t *reloLocation)
+OMR::RelocationTarget::loadCPIndex(uint8_t *reloLocation)
    {
    TR_ASSERT(0, "Error: loadCPIndex not implemented in relocation target base class");
    return 0;
    }
 
-uintptrj_t
-TR::RelocationTarget::loadThunkCPIndex(uint8_t *reloLocation)
-   {
-   TR_ASSERT(0, "Error: loadThunkCPIndex not implemented in relocation target base class");
-   return 0;
-   }
+
 
 uint8_t *
-TR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
    return NULL;
@@ -157,101 +128,70 @@ TR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *r
 
 
 uint8_t *
-TR::RelocationTarget::loadCallTarget(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::loadCallTarget(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: loadCallTarget not implemented in relocation target base class");
    return NULL;
    }
 
 void
-TR::RelocationTarget::storeCallTarget(uint8_t *callTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::storeCallTarget(uint8_t *callTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: storeCallTarget not implemented in relocation target base class");
    }
 
 
 uint8_t *
-TR::RelocationTarget::loadBranchOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::loadBranchOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: loadBranchOffset not implemented in relocation target base class");
    return NULL;
    }
 
 void
-TR::RelocationTarget::storeBranchOffset(uint8_t *branchOffset, uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::storeBranchOffset(uint8_t *branchOffset, uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: storeBranchOffset not implemented in relocation target base class");
    }
 
 
 uint8_t *
-TR::RelocationTarget::loadAddress(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::loadAddress(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: loadAddress not implemented in relocation target base class");
    return NULL;
    }
 
 void
-TR::RelocationTarget::storeAddress(uint8_t *address, uint8_t *reloLocationHigh, uint8_t *reloLocationLow, uint32_t seqNumber)
+OMR::RelocationTarget::storeAddress(uint8_t *address, uint8_t *reloLocationHigh, uint8_t *reloLocationLow, uint32_t seqNumber)
    {
    TR_ASSERT(0, "Error: storeAddress not implemented in relocation target base class");
    }
 
 
 uint8_t *
-TR::RelocationTarget::loadClassAddressForHeader(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::loadClassAddressForHeader(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: loadClassAddressForHeader not implemented in relocation target base class");
    return NULL;
    }
 
 void
-TR::RelocationTarget::storeClassAddressForHeader(uint8_t *address, uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::storeClassAddressForHeader(uint8_t *address, uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: storeClassAddressForHeader not implemented in relocation target base class");
    }
 
 uint32_t
-TR::RelocationTarget::loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+OMR::RelocationTarget::loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
    {
    TR_ASSERT(0, "Error: loadCPIndex not implemented in relocation target base class");
    return 0;
    }
 
 void
-TR::RelocationTarget::performThunkRelocation(uint8_t *thunkAddress, uintptr_t vmHelper)
+OMR::RelocationTarget::performThunkRelocation(uint8_t *thunkAddress, uintptr_t vmHelper)
    {
    TR_ASSERT(0, "Error: performThunkRelocation not implemented in relocation target base class");
    }
 
-uint8_t *
-TR::RelocationTarget::arrayCopyHelperAddress(J9JavaVM *javaVM)
-   {
-   TR_ASSERT(0, "Error: arrayCopyHelperAddress not implemented in relocation target base class");
-   return 0;
-   }
-
-void
-TR::RelocationTarget::patchNonVolatileFieldMemoryFence(J9ROMFieldShape* resolvedField, UDATA cpAddr, U_8 descriptorByte, U_8 *instructionAddress, U_8 *snippetStartAddress, J9JavaVM *javaVM)
-   {
-   TR_ASSERT(0, "Error: patchNonVolatileFieldMemoryFence not implemented in relocation target base class");
-   }
-
-void
-TR::RelocationTarget::patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation)
-   {
-   TR_ASSERT(0, "Error: patchMTIsolatedOffset not implemented in relocation target base class");
-   }
-
-void
-TR::RelocationTarget::addPICtoPatchPtrOnClassUnload(TR_OpaqueClassBlock *classKey, void *ptr)
-   {
-   platformAddPICtoPatchPtrOnClassUnload(classKey, ptr);
-   _reloRuntime->comp()->setHasClassUnloadAssumptions();
-   }
-
-void
-TR::RelocationTarget::platformAddPICtoPatchPtrOnClassUnload(TR_OpaqueClassBlock *classKey, void *ptr)
-   {
-   createClassUnloadPicSite(classKey, ptr, sizeof(uintptr_t), _reloRuntime->comp()->getMetadataAssumptionList());
-   }

@@ -20,7 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "x/runtime/X86RelocationTarget.hpp"
+#include "runtime/OMRRelocationTarget.hpp"
 
 #include <stdint.h>
 #include "omrcfg.h"
@@ -32,35 +32,29 @@
 
 
 void
-TR::X86RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
+OMR::RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
    {
    // reloLocation points at the start of the call offset, so just store the uint8_t * at reloLocation
    storeUnsigned32b((uint32_t)callTarget, reloLocation);
    }
 
 void
-TR::X86RelocationTarget::storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation)
+OMR::RelocationTarget::storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation)
    {
    storeCallTarget(callTarget, reloLocation);
    }
 
 uint8_t *
-TR::X86RelocationTarget::loadAddressSequence(uint8_t *reloLocation)
+OMR::RelocationTarget::loadAddressSequence(uint8_t *reloLocation)
    {
    // reloLocation points at the start of the address, so just need to dereference as uint8_t *
    return loadPointer(reloLocation);
    }
 
 void
-TR::X86RelocationTarget::storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber)
+OMR::RelocationTarget::storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber)
    {
    // reloLocation points at the start of the address, so just store the uint8_t * at reloLocation
    storePointer(address, reloLocation);
    }
 
-
-void
-TR::X86RelocationTarget::patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation)
-   {
-   storeUnsigned32b(offset, reloLocation);
-   }

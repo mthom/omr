@@ -35,7 +35,7 @@ namespace OMR { typedef OMR::X86::AMD64::AheadOfTimeCompile AheadOfTimeCompileCo
 //#include "codegen/CodeGenerator.hpp"
 #include "codegen/Relocation.hpp"
 #include "runtime/RelocationRecord.hpp"
-namespace TR { class AheadOfTimeCompile; }
+
 namespace OMR
 {
 

@@ -45,7 +45,6 @@
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationTarget.hpp"
-#include "x/runtime/X86RelocationTarget.hpp"
 
 #include "control/Recompilation.hpp"
 
@@ -55,36 +54,15 @@
 // Function called for AOT method from both JXE and Shared Classes to perform relocations
 //
 void
-TR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
+OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
                                              U_8 *oldDataStart,
                                              U_8 *codeStart,
                                              U_8 *oldCodeStart)
-   {
+{
    J9JITDataCacheHeader *cacheEntry = (J9JITDataCacheHeader*)(tempDataStart);
    UDATA startPC = 0;
-
-   RELO_LOG(_reloLogger,
-            7,
-            "relocateAOTCodeAndData jitConfig=%p aotDataCache=%p aotMccCodeCache=%p method=%p tempDataStart=%p exceptionTable=%p oldDataStart=%p codeStart=%p oldCodeStart=%p classReloAmount=%p cacheEntry=%p\n",
-            jitConfig(),
-            dataCache(),
-            codeCache(),
-            _method,
-            tempDataStart,
-            _exceptionTable,
-            oldDataStart,
-            codeStart,
-            oldCodeStart,
-            classReloAmount(),
-            cacheEntry
-            );
-
    initializeCacheDeltas();
-
    _newMethodCodeStart = codeStart;
-
-   reloLogger()->relocationDump();
-
    if (_exceptionTableCacheEntry->type == J9_JIT_DCE_EXCEPTION_INFO)
       {
       /* Adjust exception table entires */
@@ -101,9 +79,7 @@ TR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
 
       /* Now it is safe to perform the JITExceptionTable structure relocations */
       relocateMethodMetaData((UDATA)codeStart - (UDATA)oldCodeStart, (UDATA)_exceptionTable - (UDATA)((U_8 *)oldDataStart + _aotMethodHeaderEntry->offsetToExceptionTable + sizeof(J9JITDataCacheHeader)));
-
       reloTarget()->preRelocationsAppliedEvent();
-
       /* Perform code relocations */
       if (_aotMethodHeaderEntry->offsetToRelocationDataItems != 0)
          {
@@ -118,28 +94,6 @@ TR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
 
          RELO_LOG(reloLogger(), 6, "relocateAOTCodeAndData: return code %d\n", _returnCode);
 
-#if defined(DEBUG) || defined(PROD_WITH_ASSUMES)
-         // Detect some potential incorrectness that could otherwise be missed
-         if ((getNumValidations() > 10) && (getNumFailedValidations() > getNumValidations() / 2))
-            {
-            if (aotStats())
-               aotStats()->failedPerfAssumptionCode = tooManyFailedValidations;
-            //TR_ASSERT(0, "AOT failed too many validations");
-            }
-         if ((getNumInlinedMethodRelos() > 10) && (getNumFailedInlinedMethodRelos() > getNumInlinedMethodRelos() / 2))
-            {
-            if (aotStats())
-               aotStats()->failedPerfAssumptionCode = tooManyFailedInlinedMethodRelos;
-            //TR_ASSERT(0, "AOT failed too many inlined method relos");
-            }
-         if ((getNumInlinedAllocRelos() > 10) && (getNumFailedAllocInlinedRelos() > getNumInlinedAllocRelos() / 2))
-            {
-            if (aotStats())
-               aotStats()->failedPerfAssumptionCode = tooManyFailedInlinedAllocRelos;
-            //TR_ASSERT(0, "AOT failed too many inlined alloc relos");
-            }
-#endif
-
          if (_returnCode != 0)
             {
             //clean up code cache
@@ -147,33 +101,12 @@ TR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
             return;
             }
          }
-
-#if 0
-      // add this in later...
-      /* Perform meta-data relocations */
-      if (_aotMethodHeaderEntry->offsetToMetaDataRelocations != 0)
-         {
-         TR::RelocationRecordBinaryTemplate * binaryReloRecords = (TR::RelocationRecordBinaryTemplate * )((U_8 *)_aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + _aotMethodHeaderEntry->offsetToMetaDataRelocationItems);
-         TR_RelocationRecordGroup reloGroup(binaryReloRecords);
-         int rc = reloGroup.applyRelocations(this, reloTarget, _exceptionTable);
-         if (rc != 0)
-            {
-            _relocationStatus = RelocationFailure;
-            return;
-            }
-         }
-#endif
-
       reloTarget()->flushCache(codeStart, _aotMethodHeaderEntry->compileMethodCodeSize);
-
-#if 1
       // replace this with meta-data relocations above when we implement it
-
       /* Fix up inlined exception table ram method entries if wide */
       if (((UDATA)_exceptionTable->numExcptionRanges) & J9_JIT_METADATA_WIDE_EXCEPTIONS)
          {
          UDATA numExcptionRanges = ((UDATA)_exceptionTable->numExcptionRanges) & 0x7fff;
-
          /* 4 byte exception range entries */
          J9JIT32BitExceptionTableEntry *excptEntry32 = (J9JIT32BitExceptionTableEntry *)(_exceptionTable + 1);
          while (numExcptionRanges > 0)
@@ -186,18 +119,14 @@ TR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
                actualMethod = (J9Method *) inlinedCallSite->_methodInfo;
                }
             excptEntry32->ramMethod = actualMethod;
-
-
             //excptEntry32->ramMethod = _method;
             excptEntry32++;
             numExcptionRanges--;
             }
          }
-#endif
-
       // Fix RAM method and send target AFTER all relocations are complete.
       startPC = _exceptionTable->startPC;
-      } //end if J9_JIT_DCE_EXCEPTION_INFO
+   } //end if J9_JIT_DCE_EXCEPTION_INFO
 
    if (startPC)
       {
@@ -238,7 +167,7 @@ TR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
 
       reloLogger()->relocationTime();
       }
-   }
+}
 
 // This whole function can be dealt with more easily by meta-data relocations rather than this specialized function
 //   but leave it here for now

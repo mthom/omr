@@ -1472,8 +1472,6 @@ TR_RelocationRecordThunks::applyRelocation(TR_RelocationRuntime *reloRuntime, TR
 
    uintptrj_t newConstantPool = computeNewConstantPool(reloRuntime, reloTarget, constantPool(reloTarget));
    reloTarget->storeAddress((uint8_t *)newConstantPool, reloLocation);
-   uintptrj_t cpIndex = reloTarget->loadThunkCPIndex(reloLocation);
-   RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tapplyRelocation: loadThunkCPIndex is %d\n", cpIndex);
    return relocateAndRegisterThunk(reloRuntime, reloTarget, newConstantPool, cpIndex, reloLocation);
    }
 

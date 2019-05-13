@@ -20,10 +20,16 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifndef X86RELOCATION_TARGET_INCL
-#define X86RELOCATION_TARGET_INCL
+#ifndef OMR_X86_RELOCATION_TARGET_INCL
+#define OMR_X86_RELOCATION_TARGET_INCL
 
-#include "runtime/OMRRelocationTarget.hpp"
+#ifndef OMR_RELOCATION_TARGET_CONNECTOR
+#define OMR_RELOCATION_TARGET_CONNECTOR
+namespace OMR { namespace X86 { class RelocationTarget; }}
+namespace OMR { typedef OMR::X86::RelocationTarget RelocationTargetConnector; }
+#endif
+
+#include "compiler/runtime/OMRRelocationTarget.hpp"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -31,11 +37,7 @@
 #include "runtime/RelocationRecord.hpp"
 
 
-#ifndef OMR_RELOCATION_TARGET_CONNECTOR
-#define OMR_RELOCATION_TARGET_CONNECTOR
-namespace OMR { namespace X86 { class RelocationTarget; }}
-namespace OMR { typedef OMR::X86::RelocationTarget RelocationTargetConnector; }
-#endif
+
 
 /* Mfence patching constants */
 
@@ -55,12 +57,14 @@ namespace OMR { typedef OMR::X86::RelocationTarget RelocationTargetConnector; }
 // This is intended to be a base class that should not be itself instantiated
 namespace OMR
 {
-class X86RelocationTarget : public OMR::RelocationTarget
+namespace X86
+{
+class OMR_EXTENSIBLE RelocationTarget  : public OMR::RelocationTarget
    {
    public:
       TR_ALLOC(TR_Memory::Relocation)
       void * operator new(size_t, TR::JitConfig *);
-      X86RelocationTarget(RelocationRuntime *reloRuntime) : RelocationTarget(reloRuntime) {}
+      RelocationTarget(TR::RelocationRuntime *reloRuntime) : OMR::RelocationTarget(reloRuntime) {}
 
       
       virtual void storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation);
@@ -74,10 +78,13 @@ class X86RelocationTarget : public OMR::RelocationTarget
          storeAddressSequence(address, reloLocation, seqNumber);
          }
       
-      
+      virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
+
+  
       virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
    };
 
 
+}
 }
 #endif   // OMR_X86RELOCATION_TARGET_INCL
