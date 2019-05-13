@@ -49,7 +49,6 @@ namespace OMR { typedef OMR::RelocationRuntime RelocationRuntimeConnector; }
 namespace TR { 
    class CompilationInfo; 
    class RelocationRecord;
-   class RelocationRuntimeLogger;
    class RelocationTarget;
    class RelocationRecordBinaryTemplate;
 // class Resolved method will probably need to be returned back
@@ -147,7 +146,6 @@ class RelocationRuntime {
       RelocationRuntime(TR::JitConfig *jitCfg);
 
       TR::RelocationTarget *reloTarget()                           { return _reloTarget; }
-      TR::RelocationRuntimeLogger *reloLogger()                    { return _reloLogger; }
       TR::AOTStats *aotStats()                                     { return _aotStats; }
       TR::JitConfig *jitConfig()                                    { return _jitConfig; }
       TR_FrontEnd *fe()                                           { return _fe; }
@@ -185,8 +183,6 @@ class RelocationRuntime {
       TR::Options *options()                                       { return _options; }
       TR::Compilation *comp()                                    { return _comp; }
       TR_ResolvedMethod *currentResolvedMethod()                  { return _currentResolvedMethod; }
-
-      TR::PersistentInfo *getPersistentInfo()                      { return comp()->getPersistentInfo(); }
 
       // current main entry point
       OMRJITExceptionTable *prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
@@ -294,14 +290,14 @@ class RelocationRuntime {
       TR_AotRelocationCleanUp _relocationStatus;
       void relocationFailureCleanup();
 
-      static bool       _globalValuesInitialized;
+
       static uintptr_t  _globalValueList[TR_NumGlobalValueItems];
       static uint8_t    _globalValueSizeList[TR_NumGlobalValueItems];
       static char      *_globalValueNames[TR_NumGlobalValueItems];
 
 
    protected:
-
+      static bool       _globalValuesInitialized;
       TR::JitConfig *_jitConfig;
       OMR_VM *_omrVM;
       TR_FrontEnd *_fe;
@@ -309,7 +305,6 @@ class RelocationRuntime {
       TR::CompilationInfo * _compInfo;
 
       TR::RelocationTarget *_reloTarget;
-      TR::RelocationRuntimeLogger *_reloLogger;
       TR::AOTStats *_aotStats;
       OMRJITExceptionTable *_exceptionTable;
       uint8_t *_newExceptionTableStart;
@@ -362,7 +357,7 @@ class RelocationRuntime {
 #endif
 };
 }
-namespace TR
+namespace OMR
 {
 class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
 public:

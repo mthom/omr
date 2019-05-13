@@ -28,7 +28,8 @@ compiler_library(runtime
 	${CMAKE_CURRENT_LIST_DIR}/OMRCodeCacheManager.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRRelocationRecord.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRRelocationRuntime.cpp
-	
+	${CMAKE_CURRENT_LIST_DIR}/OMRRelocationTarget.cpp
+
 	${CMAKE_CURRENT_LIST_DIR}/OMRCodeCacheMemorySegment.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRCodeCacheConfig.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRSymbolValidationManager.cpp

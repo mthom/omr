@@ -32,24 +32,22 @@
 namespace TR {
    class OpaqueClassBlock;
    class RelocationRecord;
-   class RelocationRuntimeLogger;
 }
 // TR_RelocationTarget defines how a platform target implements the individual steps of processing
 //    relocation records.
 // This is intended to be a base class that should not be itself instantiated
-namespace TR {
+namespace OMR{
 class RelocationTarget
    {
    public:
       TR_ALLOC(TR_Memory::Relocation)
       void * operator new(size_t, TR::JitConfig *);
-      RelocationTarget(RelocationRuntime *reloRuntime)
+      RelocationTarget(OMR::RelocationRuntime *reloRuntime)
          {
          _reloRuntime = reloRuntime;
          }
 
       RelocationRuntime *reloRuntime()                                   { return _reloRuntime; }
-      RelocationRuntimeLogger *reloLogger()                              { return _reloRuntime->reloLogger(); }
 
       virtual void flushCache(uint8_t *codeStart, unsigned long size)       {} // default impl is empty
 

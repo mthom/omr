@@ -22,26 +22,12 @@
 
 #include "runtime/RelocationTarget.hpp"
 
-#include "jilconsts.h"
-#include "jitprotos.h"
-#include "jvminit.h"
-#include "j9.h"
-#include "j9cfg.h"
-#include "j9consts.h"
-#include "j9cp.h"
-#include "j9protos.h"
-#include "rommeth.h"
 #include "codegen/FrontEnd.hpp"
-#include "codegen/PicHelpers.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "env/jittypes.h"
-#include "runtime/J9CodeCache.hpp"
-#include "runtime/J9Runtime.hpp"
-#include "runtime/MethodMetaData.h"
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
-#include "runtime/RelocationRuntimeLogger.hpp"
 namespace TR{
 bool
 RelocationTarget::isOrderedPairRelocation(RelocationRecord *reloRecord, RelocationTarget *reloTarget)

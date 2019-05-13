@@ -36,7 +36,6 @@
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
-#include "runtime/RelocationRuntimeLogger.hpp"
 #include "runtime/RelocationTarget.hpp"
 #include  "runtime/SymbolValidationManager.hpp"
 
