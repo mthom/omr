@@ -1,3 +1,4 @@
+#include <sys/mman.h>
 #include "WASMCompositeCache.hpp"
 #include "WASMOSCacheConfig.hpp"
 
@@ -82,4 +83,22 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   _codeEntries[methodName] = entryLocation;
 
   return true;
+}
+
+//TO DO: should copy to the code cache (not scc) when code cache becomes available
+void *WASMCompositeCache::loadCodeEntry(const char *methodName) {
+  if(!_loadedMethods[methodName]){
+    WASMCacheEntry *entry = _codeEntries[methodName];
+    U_32 codeLength = entry->codeLength;
+    entry++;
+    void * methodArea =  mmap(NULL,
+              codeLength,
+              PROT_READ | PROT_WRITE | PROT_EXEC,
+              MAP_ANONYMOUS | MAP_PRIVATE,
+              0,
+              0);
+    _loadedMethods[methodName] = methodArea;
+    memcpy(methodArea,entry,codeLength);
+  }
+  return _loadedMethods[methodName];
 }

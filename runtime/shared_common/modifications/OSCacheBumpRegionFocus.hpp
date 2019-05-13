@@ -55,7 +55,7 @@ public:
       return *this;
     }
 
-    this->_focus = (T*) ((U_8*) this->_focus + bump);
+    this->_focus = (T*) ((U_8*) (this->_focus) + bump);
     return *this;
   }
 
@@ -66,7 +66,7 @@ public:
     }
 
     T* focus = this->_focus;
-    this->_focus = (T*) ((UDATA*) this->_focus + sizeof(T));
+    this->_focus++;
     return focus;
   }
 
