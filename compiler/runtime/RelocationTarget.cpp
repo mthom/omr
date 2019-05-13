@@ -20,7 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "runtime/RelocationTarget.hpp"
+#include "runtime/OMRRelocationTarget.hpp"
 
 #include "codegen/FrontEnd.hpp"
 #include "control/Options.hpp"
@@ -28,7 +28,6 @@
 #include "env/jittypes.h"
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
-namespace TR{
 bool
 RelocationTarget::isOrderedPairRelocation(RelocationRecord *reloRecord, RelocationTarget *reloTarget)
    {
@@ -43,11 +42,10 @@ RelocationTarget::isOrderedPairRelocation(RelocationRecord *reloRecord, Relocati
 
    return false;
    }
-}
 // These functions must be implemented by subclasses for specific targets
 
 uint8_t *
-TR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
+OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
    {
    TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
    return NULL;
@@ -55,13 +53,13 @@ TR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
 
 
 uint8_t *
-TR::RelocationTarget::loadCallTarget(uint8_t *reloLocation)
+OMR::RelocationTarget::loadCallTarget(uint8_t *reloLocation)
    {
    return loadPointer(reloLocation);
    }
 
 void
-TR::RelocationTarget:: storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
+RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
    {
    TR_ASSERT(0, "Error: storeCallTarget not implemented in relocation target base class");
    }

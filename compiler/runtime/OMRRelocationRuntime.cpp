@@ -52,96 +52,10 @@
 #include "codegen/CodeGenerator.hpp"
 #include "compile/ResolvedMethod.hpp"
 
-OMR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg)
-   {
-   _method = NULL;
-   _jitConfig = jitCfg;
-   _trMemory = NULL;
-   _options = TR::Options::getAOTCmdLineOptions();
-
-
-   #if defined(TR_HOST_X86)
-      #if defined(TR_HOST_64BIT)
-      _reloTarget = new (PERSISTENT_NEW) TR::AMD64RelocationTarget(this);
-      #else
-      _reloTarget = new (PERSISTENT_NEW) TR_X86RelocationTarget(this);
-      #endif
-   #elif defined(TR_HOST_POWER)
-      #if defined(TR_HOST_64BIT)
-      _reloTarget = new (PERSISTENT_NEW) TR_PPC64RelocationTarget(this);
-      #else
-      _reloTarget = new (PERSISTENT_NEW) TR_PPC32RelocationTarget(this);
-      #endif
-   #elif defined(TR_HOST_S390)
-      _reloTarget = new (PERSISTENT_NEW) TR_S390RelocationTarget(this);
-   #elif defined(TR_HOST_ARM)
-      _reloTarget = new (PERSISTENT_NEW) TR_ARMRelocationTarget(this);
-   #else
-      TR_ASSERT(0, "Unsupported relocation target");
-   #endif
-
-   if (_reloTarget == NULL)
-      {
-      // TODO: need error condition here
-      return;
-      }
-
-
-      _isLoading = false;
-
-#if defined(DEBUG) || defined(PROD_WITH_ASSUMES)
-      _numValidations = 0;
-      _numFailedValidations = 0;
-      _numInlinedMethodRelos = 0;
-      _numFailedInlinedMethodRelos = 0;
-      _numInlinedAllocRelos = 0;
-      _numFailedInlinedAllocRelos = 0;
-#endif
-   }
-
-
-//clean up the allocations we made during the relocation, depending on point of failure
-void TR_RelocationRuntime::relocationFailureCleanup()
-   {
-   if (_relocationStatus == RelocationNoError)
-      return;
-   switch (_relocationStatus)
-      {
-      case (RelocationFailure):
-         {
-         //remove our code cache entry
-         _codeCache->addFreeBlock(_exceptionTable);
-         }
-      case RelocationCodeCreateError:
-         {
-         //since we don't use this field for compiled copy, don't free it.
-         if (!useCompiledCopy() && _exceptionTable->bodyInfo)
-            {
-            TR_DataCacheManager::getManager()->freeDataCacheRecord(_newPersistentInfo+sizeof(J9JITDataCacheHeader));
-            }
-         }
-      case RelocationPersistentCreateError:
-         {
-         // I don't have to reclaim the assumptions here
-         // When we detect failure, we will do this cleanup anyway
-         // getPersistentInfo()->getRuntimeAssumptionTable()->reclaimAssumptions(_exceptionTable);
-         }
-      case RelocationAssumptionCreateError:
-         {
-         TR_DataCacheManager::getManager()->freeDataCacheRecord(_exceptionTable);
-         }
-      case RelocationTableCreateError: // Nothing to do. Fall through
-      default:
-         {
-         _exceptionTable = NULL;
-         }
-      }
-   }
-
 // Function called for AOT method from both JXE and Shared Classes to perform relocations
 //
 void
-TR_RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
+TR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
                                              U_8 *oldDataStart,
                                              U_8 *codeStart,
                                              U_8 *oldCodeStart)
@@ -194,7 +108,7 @@ TR_RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
       if (_aotMethodHeaderEntry->offsetToRelocationDataItems != 0)
          {
          TR::RelocationRecordBinaryTemplate * binaryReloRecords = (TR::RelocationRecordBinaryTemplate * )((U_8 *)_aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + _aotMethodHeaderEntry->offsetToRelocationDataItems);
-         TR_RelocationRecordGroup reloGroup(binaryReloRecords);
+         TR::RelocationRecordGroup reloGroup(binaryReloRecords);
 
          RELO_LOG(reloLogger(), 6, "relocateAOTCodeAndData: jitConfig=%x aotDataCache=%x aotMccCodeCache=%x method=%x tempDataStart=%x exceptionTable=%x\n", jitConfig(), dataCache(), codeCache(), _method, tempDataStart, _exceptionTable);
          RELO_LOG(reloLogger(), 6, "                        oldDataStart=%x codeStart=%x oldCodeStart=%x classReloAmount=%x cacheEntry=%x\n", oldDataStart, codeStart, oldCodeStart, classReloAmount(), cacheEntry);

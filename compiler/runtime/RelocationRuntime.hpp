@@ -32,7 +32,7 @@ namespace TR
 class OMR_EXTENSIBLE RelocationRuntime : public ::OMR::RelocationRuntimeConnector
    {
    public:
-   RelocationRuntime(JitConfig* jitConfig): OMR::RelocationRuntimeConnector(jitConfig){};
+   RelocationRuntime(JitConfig* jitConfig);
 };
 }
 

@@ -23,12 +23,19 @@
 #ifndef X86RELOCATION_TARGET_INCL
 #define X86RELOCATION_TARGET_INCL
 
-#include "runtime/RelocationTarget.hpp"
+#include "runtime/OMRRelocationTarget.hpp"
 
 #include <stddef.h>
 #include <stdint.h>
 #include "env/jittypes.h"
 #include "runtime/RelocationRecord.hpp"
+
+
+#ifndef OMR_RELOCATION_TARGET_CONNECTOR
+#define OMR_RELOCATION_TARGET_CONNECTOR
+namespace OMR { namespace X86 { class RelocationTarget; }}
+namespace OMR { typedef OMR::X86::RelocationTarget RelocationTargetConnector; }
+#endif
 
 /* Mfence patching constants */
 
@@ -46,9 +53,9 @@
 // TR_RelocationTarget defines how a platform target implements the individual steps of processing
 //    relocation records.
 // This is intended to be a base class that should not be itself instantiated
-namespace TR
+namespace OMR
 {
-class X86RelocationTarget : public TR::RelocationTarget
+class X86RelocationTarget : public OMR::RelocationTarget
    {
    public:
       TR_ALLOC(TR_Memory::Relocation)
@@ -71,19 +78,6 @@ class X86RelocationTarget : public TR::RelocationTarget
       virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
    };
 
-class AMD64RelocationTarget : public TR::X86RelocationTarget
-   {
-   public:
-      TR_ALLOC(TR_Memory::Relocation)
-      void * operator new(size_t, TR::JitConfig *);
-      AMD64RelocationTarget(RelocationRuntime *reloRuntime) : TR::X86RelocationTarget(reloRuntime) {}
-      
-      virtual void storeRelativeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber) 
-         {
-         storeAddressSequence(address, reloLocation, seqNumber);
-         }
 
-      virtual bool useTrampoline(uint8_t * helperAddress, uint8_t *baseLocation);
-   };
 }
-#endif   // X86RELOCATION_TARGET_INCL
+#endif   // OMR_X86RELOCATION_TARGET_INCL
