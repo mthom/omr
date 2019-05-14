@@ -143,7 +143,7 @@ WASMCompositeCache* initializeSharedCache()
 
 static WASMCompositeCache* cache;
 
-bool storeCodeEntry(const char *methodName, void *codeLocation){
+bool storeCodeEntry(const char *methodName, void *codeLocation) {
   return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
 }
 
