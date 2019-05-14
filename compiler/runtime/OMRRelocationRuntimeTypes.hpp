@@ -43,7 +43,21 @@ typedef struct OMRJITExceptionTable {
 	I_32 hotness;
 	UDATA codeCacheAlloc;
 }  OMRJITExceptionTable;
-
+typedef struct OMRMemorySegment {
+	uintptr_t type;
+	uintptr_t size;
+	uint8_t *baseAddress;
+	uint8_t *heapBase;
+	uint8_t *heapTop;
+	uint8_t *heapAlloc;
+	struct OMRMemorySegment *nextSegment;
+	struct OMRMemorySegment *previousSegment;
+	struct OMRMemorySegmentList *memorySegmentList;
+	uintptr_t unused1;
+	struct OMRClassLoader *classLoader;
+	void *memorySpace;
+	struct OMRMemorySegment *nextSegmentInClassLoader;
+} OMRMemorySegment;
 
 typedef struct OMRMethod {
 	U_8* bytecodes;

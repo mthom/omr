@@ -54,6 +54,7 @@ namespace TR {
    class CompilationInfo; 
    class RelocationRecord;
    class RelocationTarget;
+   class RelocationRuntimeLogger;
    class RelocationRecordBinaryTemplate;
 // class Resolved method will probably need to be returned back
 // when the generic object model is here, since resolved method is one of 
@@ -131,8 +132,8 @@ typedef struct AOTHeader {
 
 typedef struct AOTRuntimeInfo {
     struct AOTHeader* aotHeader;
-    struct J9MemorySegment* codeCache;
-    struct J9MemorySegment* dataCache;
+    struct OMRMemorySegment* codeCache;
+    struct OMRMemorySegment* dataCache;
     void* baseJxeAddress;
     uintptr_t compileFirstClassLocation;
     uintptr_t *fe;
@@ -159,10 +160,10 @@ class RelocationRuntime {
       OMR_VMThread *currentThread()                                 { return _currentThread; }
       OMRMethod *method()                                          { return _method; }
       TR::CodeCache *codeCache()                                  { return _codeCache; }
-      J9MemorySegment *dataCache()                                { return _dataCache; }
+      OMRMemorySegment *dataCache()                                { return _dataCache; }
       bool useCompiledCopy()                                      { return _useCompiledCopy; }
       bool haveReservedCodeCache()                                { return _haveReservedCodeCache; }
-
+      TR::RelocationRuntimeLogger* reloLogger()                    { return _reloLogger;}
       OMRJITExceptionTable * exceptionTable()                      { return _exceptionTable; }
       uint8_t * methodCodeStart()                                 { return _newMethodCodeStart; }
       UDATA metaDataAllocSize()                                   { return _metaDataAllocSize; }
@@ -307,7 +308,7 @@ class RelocationRuntime {
       TR_FrontEnd *_fe;
       TR_Memory *_trMemory;
       TR::CompilationInfo * _compInfo;
-
+      TR::RelocationRuntimeLogger *_reloLogger;
       TR::RelocationTarget *_reloTarget;
       TR::AOTStats *_aotStats;
       OMRJITExceptionTable *_exceptionTable;
@@ -326,7 +327,7 @@ class RelocationRuntime {
       UDATA _classReloAmount;
 
       TR::CodeCache *_codeCache;
-      struct J9MemorySegment* _dataCache;
+      struct OMRMemorySegment* _dataCache;
 
       bool _useCompiledCopy;
       UDATA _metaDataAllocSize;
@@ -334,7 +335,6 @@ class RelocationRuntime {
        OMRSharedCacheHeader *_exceptionTableCacheEntry;
       OMR_VMThread *_currentThread;
       OMRMethod *_method;
-//OMRPORT      J9ConstantPool *_ramCP;
       uint8_t * _newMethodCodeStart;
 
       bool _haveReservedCodeCache;

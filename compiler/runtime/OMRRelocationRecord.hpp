@@ -40,13 +40,20 @@ namespace OMR { typedef OMR::RelocationRecord RelocationRecordConnector; }
 
 #ifndef OMR_RELOCATION_RECORD_BINARY_TEMPLATE_CONNECTOR
 #define OMR_RELOCATION_RECORD_BINARY_TEMPLATE_CONNECTOR
-namespace OMR { struct RelocationRecordBinaryTemplate; }
+namespace OMR { class RelocationRecordBinaryTemplate; }
 namespace OMR { typedef OMR::RelocationRecordBinaryTemplate RelocationRecordBinaryTemplateConnector; }
 #else
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
 
 
+#ifndef OMR_RELOCATION_RECORD_GROUP_CONNECTOR
+#define OMR_RELOCATION_RECORD_GROUP_CONNECTOR
+namespace OMR { class RelocationRecordGroup; }
+namespace OMR { typedef OMR::RelocationRecordGroup RelocationRecordGroupConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
 
 
 
@@ -61,6 +68,7 @@ namespace OMR { typedef OMR::RelocationRecordBinaryTemplate RelocationRecordBina
 namespace TR {
 class RelocationRuntime;
 class RelocationTarget;
+class RelocationRuntimeLogger;
 union RelocationRecordPrivateData;
    union RelocationRecordPrivateData
    {
@@ -110,10 +118,11 @@ namespace OMR
          #endif
    };
    
-   class RelocationRecord
+   class  OMR_EXTENSIBLE  RelocationRecord
    {
    
    public:
+      RelocationRecord() {}
       RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record)
          {
             _reloRuntime= reloRuntime;
@@ -121,7 +130,7 @@ namespace OMR
          }
 
       void * operator new (size_t s, RelocationRecord *p)   { return p; }
-
+      TR::RelocationRecord* self();
       virtual void print(TR::RelocationRuntime *reloRuntime);
       virtual char *name() { return "RelocationRecord"; }
 
@@ -188,10 +197,6 @@ namespace OMR
 
       static uint32_t _relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds];
    };
-} //namespace OMR
-
-namespace TR
-{
 
 
 class RelocationRecordGroup
