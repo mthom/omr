@@ -36,12 +36,12 @@ namespace OMR { typedef OMR::AheadOfTimeCompile AheadOfTimeCompileConnector; }
 #include "infra/Link.hpp"
 #include "infra/Annotations.hpp"
 #include "runtime/Runtime.hpp"
-#include "runtime/OMRRelocationRecord.hpp"
+#include "runtime/RelocationRecord.hpp"
 class TR_Debug;
 namespace TR { class ExternalRelocation; }
 namespace TR { class IteratedExternalRelocation; }
 namespace TR { class AheadOfTimeCompile; }
-
+namespace TR { class RelocationRecord; }
 namespace OMR
 {
 

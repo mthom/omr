@@ -39,6 +39,12 @@ class OMR_EXTENSIBLE RelocationRecord: public OMR::RelocationRecordConnector
     
    };
 
+class OMR_EXTENSIBLE RelocationRecordBinaryTemplate: public OMR::RelocationRecordBinaryTemplateConnector
+   {
+      public:
+      RelocationRecordBinaryTemplate():OMR::RelocationRecordBinaryTemplateConnector(){};
+   };
+
 }
 
 #endif /* RELOCATION_RECORD_INCL */

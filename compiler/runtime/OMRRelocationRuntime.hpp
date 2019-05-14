@@ -45,6 +45,11 @@
 namespace OMR { class RelocationRuntime; }
 namespace OMR { typedef OMR::RelocationRuntime RelocationRuntimeConnector; }
 #endif
+#ifndef OMR_SHARED_RELOCATION_RUNTIME_CONNECTOR
+#define OMR_SHARED_RELOCATION_RUNTIME_CONNECTOR
+namespace OMR { class SharedCacheRelocationRuntime; }
+namespace OMR { typedef OMR::SharedCacheRelocationRuntime SharedCacheRelocationRuntimeConnector; }
+#endif
 
 namespace TR { 
    class CompilationInfo; 
@@ -363,8 +368,9 @@ class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
 public:
       TR_ALLOC(TR_Memory::Relocation);
       void * operator new(size_t, TR::JitConfig *);
-      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg) :
-         _sharedCacheIsFull(false), OMR::RelocationRuntime(jitCfg) {}
+      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg) : OMR::RelocationRuntime(jitCfg) {
+         _sharedCacheIsFull=false;
+         }
 
       virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
       virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);

@@ -44,7 +44,6 @@
 
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationRecord.hpp"
-#include "runtime/RelocationTarget.hpp"
 
 #include "control/Recompilation.hpp"
 
@@ -59,127 +58,18 @@ OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
                                              U_8 *codeStart,
                                              U_8 *oldCodeStart)
 {
-   J9JITDataCacheHeader *cacheEntry = (J9JITDataCacheHeader*)(tempDataStart);
    UDATA startPC = 0;
    initializeCacheDeltas();
    _newMethodCodeStart = codeStart;
-   if (_exceptionTableCacheEntry->type == J9_JIT_DCE_EXCEPTION_INFO)
-      {
-      /* Adjust exception table entires */
-      _exceptionTable->ramMethod = _method;
-      _exceptionTable->constantPool = ramCP();
-      getClassNameSignatureFromMethod(_method, _exceptionTable->className, _exceptionTable->methodName, _exceptionTable->methodSignature);
-      RELO_LOG(reloLogger(), 1, "relocateAOTCodeAndData: method %.*s.%.*s%.*s\n",
-                                    _exceptionTable->className->length,
-                                    _exceptionTable->className->data,
-                                    _exceptionTable->methodName->length,
-                                    _exceptionTable->methodName->data,
-                                    _exceptionTable->methodSignature->length,
-                                    _exceptionTable->methodSignature->data);
-
-      /* Now it is safe to perform the JITExceptionTable structure relocations */
-      relocateMethodMetaData((UDATA)codeStart - (UDATA)oldCodeStart, (UDATA)_exceptionTable - (UDATA)((U_8 *)oldDataStart + _aotMethodHeaderEntry->offsetToExceptionTable + sizeof(J9JITDataCacheHeader)));
-      reloTarget()->preRelocationsAppliedEvent();
-      /* Perform code relocations */
-      if (_aotMethodHeaderEntry->offsetToRelocationDataItems != 0)
-         {
-         TR::RelocationRecordBinaryTemplate * binaryReloRecords = (TR::RelocationRecordBinaryTemplate * )((U_8 *)_aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + _aotMethodHeaderEntry->offsetToRelocationDataItems);
-         TR::RelocationRecordGroup reloGroup(binaryReloRecords);
-
-         RELO_LOG(reloLogger(), 6, "relocateAOTCodeAndData: jitConfig=%x aotDataCache=%x aotMccCodeCache=%x method=%x tempDataStart=%x exceptionTable=%x\n", jitConfig(), dataCache(), codeCache(), _method, tempDataStart, _exceptionTable);
-         RELO_LOG(reloLogger(), 6, "                        oldDataStart=%x codeStart=%x oldCodeStart=%x classReloAmount=%x cacheEntry=%x\n", oldDataStart, codeStart, oldCodeStart, classReloAmount(), cacheEntry);
-         RELO_LOG(reloLogger(), 6, "                        tempDataStart: %p, _aotMethodHeaderEntry: %p, header offset: %x, binaryReloRecords: %p\n", tempDataStart, _aotMethodHeaderEntry, (UDATA)_aotMethodHeaderEntry-(UDATA)tempDataStart, binaryReloRecords);
-
-         _returnCode = reloGroup.applyRelocations(this, reloTarget(), newMethodCodeStart() + codeCacheDelta());
-
-         RELO_LOG(reloLogger(), 6, "relocateAOTCodeAndData: return code %d\n", _returnCode);
-
-         if (_returnCode != 0)
-            {
-            //clean up code cache
-            _relocationStatus = RelocationFailure;
-            return;
-            }
-         }
-      reloTarget()->flushCache(codeStart, _aotMethodHeaderEntry->compileMethodCodeSize);
-      // replace this with meta-data relocations above when we implement it
-      /* Fix up inlined exception table ram method entries if wide */
-      if (((UDATA)_exceptionTable->numExcptionRanges) & J9_JIT_METADATA_WIDE_EXCEPTIONS)
-         {
-         UDATA numExcptionRanges = ((UDATA)_exceptionTable->numExcptionRanges) & 0x7fff;
-         /* 4 byte exception range entries */
-         J9JIT32BitExceptionTableEntry *excptEntry32 = (J9JIT32BitExceptionTableEntry *)(_exceptionTable + 1);
-         while (numExcptionRanges > 0)
-            {
-            J9Method *actualMethod = _method;
-            UDATA inlinedSiteIndex = (UDATA)excptEntry32->ramMethod;
-            if (inlinedSiteIndex != (UDATA)-1)
-               {
-               TR_InlinedCallSite *inlinedCallSite = (TR_InlinedCallSite *)getInlinedCallSiteArrayElement(_exceptionTable, (int)inlinedSiteIndex);
-               actualMethod = (J9Method *) inlinedCallSite->_methodInfo;
-               }
-            excptEntry32->ramMethod = actualMethod;
-            //excptEntry32->ramMethod = _method;
-            excptEntry32++;
-            numExcptionRanges--;
-            }
-         }
-      // Fix RAM method and send target AFTER all relocations are complete.
-      startPC = _exceptionTable->startPC;
-   } //end if J9_JIT_DCE_EXCEPTION_INFO
-
-   if (startPC)
-      {
-      // insert exceptionTable into JIT artifacts avl tree under mutex
-         {
-         TR_TranslationArtifactManager::CriticalSection updateMetaData;
-
-         jit_artifact_insert(javaVM()->portLibrary, jitConfig()->translationArtifacts, _exceptionTable);
-
-         // Fix up RAM method
-         TR::CompilationInfo::setJ9MethodExtra(_method, startPC);
-
-         // Return the send target
-         _method->methodRunAddress = jitConfig()->i2jTransition;
-
-         // Test for anonymous classes
-         J9Class *j9clazz = ramCP()->ramClass;
-         if (fej9()->isAnonymousClass((TR_OpaqueClassBlock*)j9clazz))
-            {
-            J9CLASS_EXTENDED_FLAGS_SET(j9clazz, J9ClassContainsJittedMethods);
-            _exceptionTable->prevMethod = NULL;
-            _exceptionTable->nextMethod = j9clazz->jitMetaDataList;
-            if (j9clazz->jitMetaDataList)
-               j9clazz->jitMetaDataList->prevMethod = _exceptionTable;
-            j9clazz->jitMetaDataList = _exceptionTable;
-            }
-         else
-            {
-            J9ClassLoader * classLoader = j9clazz->classLoader;
-            classLoader->flags |= J9CLASSLOADER_CONTAINS_JITTED_METHODS;
-            _exceptionTable->prevMethod = NULL;
-            _exceptionTable->nextMethod = classLoader->jitMetaDataList;
-            if (classLoader->jitMetaDataList)
-               classLoader->jitMetaDataList->prevMethod = _exceptionTable;
-            classLoader->jitMetaDataList = _exceptionTable;
-            }
-         }
-
-      reloLogger()->relocationTime();
-      }
+   //TODO implement relocate here
 }
 
 // This whole function can be dealt with more easily by meta-data relocations rather than this specialized function
 //   but leave it here for now
 void
-TR_RelocationRuntime::relocateMethodMetaData(UDATA codeRelocationAmount, UDATA dataRelocationAmount)
+OMR::RelocationRuntime::relocateMethodMetaData(UDATA codeRelocationAmount, UDATA dataRelocationAmount)
    {
-   #if 0
-      J9UTF8 * name;
-      fprintf(stdout, "relocating ROM method %p ", _exceptionTable->ramMethod);
-   #endif
 
-   reloLogger()->metaData();
 
    _exceptionTable->startPC = (UDATA) ( ((U_8 *)_exceptionTable->startPC) + codeRelocationAmount);
    _exceptionTable->endPC = (UDATA) ( ((U_8 *)_exceptionTable->endPC) + codeRelocationAmount);
@@ -189,143 +79,13 @@ TR_RelocationRuntime::relocateMethodMetaData(UDATA codeRelocationAmount, UDATA d
 
    _exceptionTable->codeCacheAlloc = (UDATA) ( ((U_8 *)_exceptionTable->codeCacheAlloc) + codeRelocationAmount);
 
-   if (_exceptionTable->gcStackAtlas)
-      {
-      bool relocateStackAtlasFirst = classReloAmount() != 0;
-
-      if (relocateStackAtlasFirst)
-         _exceptionTable->gcStackAtlas = (void *)( ((U_8 *)_exceptionTable->gcStackAtlas) + dataRelocationAmount);
-
-      J9JITStackAtlas *vmAtlas = (J9JITStackAtlas*)_exceptionTable->gcStackAtlas;
-      if (vmAtlas->internalPointerMap)
-         {
-         vmAtlas->internalPointerMap = (U_8 *)( ((U_8 *)vmAtlas->internalPointerMap) + dataRelocationAmount);
-         }
-
-      if (vmAtlas->stackAllocMap)
-         {
-         vmAtlas->stackAllocMap = (U_8 *)( ((U_8 *)vmAtlas->stackAllocMap) + dataRelocationAmount);
-         }
-
-      if (!relocateStackAtlasFirst)
-         _exceptionTable->gcStackAtlas = (void *)( ((U_8 *)_exceptionTable->gcStackAtlas) + dataRelocationAmount);
-      }
-
-   // Believe this will eventually be handled via relocations
-   if (_exceptionTable->inlinedCalls)
-      {
-      U_32 numInlinedCallSites;
-      _exceptionTable->inlinedCalls = (void *) (((U_8 *)_exceptionTable->inlinedCalls) + dataRelocationAmount);
-      numInlinedCallSites = getNumInlinedCallSites(_exceptionTable);
-      /* FIXME: methodInfo is not correctly fixed up.
-      if (classReloAmount() && numInlinedCallSites)
-         {
-         U_8 * callSiteCursor = _exceptionTable->inlinedCalls;
-         for (i = 0; i < numInlinedCallSites; ++i)
-            {
-            TR_InlinedCallSite * inlinedCallSite = (TR_InlinedCallSite *)callSiteCursor;
-            inlinedCallSite->_methodInfo = (void *)((U_8 *)inlinedCallSite->_methodInfo + classReloAmount());
-            callSiteCursor += sizeOfInlinedCallSiteArrayElement(_exceptionTable);
-            }
-         }
-      */
-      }
-
-   if (_exceptionTable->bodyInfo && !useCompiledCopy())
-      {
-      TR_PersistentJittedBodyInfo *persistentBodyInfo = reinterpret_cast<TR_PersistentJittedBodyInfo *>( (_newPersistentInfo + sizeof(J9JITDataCacheHeader) ) );
-      TR_PersistentMethodInfo *persistentMethodInfo = reinterpret_cast<TR_PersistentMethodInfo *>( (_newPersistentInfo + sizeof(J9JITDataCacheHeader) ) + sizeof(TR_PersistentJittedBodyInfo) );
-      persistentBodyInfo->setMethodInfo(persistentMethodInfo);
-      _exceptionTable->bodyInfo = (void *)(persistentBodyInfo);
-      }
-
-   if (getPersistentInfo()->isRuntimeInstrumentationEnabled() &&
-       TR::Options::getCmdLineOptions()->getOption(TR_EnableHardwareProfileIndirectDispatch) &&
-       TR::Options::getCmdLineOptions()->getOption(TR_EnableMetadataBytecodePCToIAMap) &&
-       _exceptionTable->riData)
-      {
-      _exceptionTable->riData = (void *) (((U_8 *)_exceptionTable->riData) + dataRelocationAmount);
-      }
-
-   #if 0
-      fprintf(stdout, "-> %p", _exceptionTable->ramMethod);
-      if (classReloAmount())
-         {
-         name = J9ROMMETHOD_GET_NAME(J9_CLASS_FROM_METHOD(((J9ROMMethod *)_exceptionTable->ramMethod))->romClass, J9_ROM_METHOD_FROM_RAM_METHOD(((J9ROMMethod *)_exceptionTable->ramMethod)));
-         fprintf(stdout, " (%.*s)", name->length, name->data);
-         }
-      fprintf(stdout, "\n");
-      fflush(stdout);
-   #endif
    }
 
 
 
-bool
-TR_RelocationRuntime::aotMethodHeaderVersionsMatch()
-   {
-   if ((_aotMethodHeaderEntry->majorVersion != TR_AOTMethodHeader_MajorVersion) ||
-       (_aotMethodHeaderEntry->minorVersion != TR_AOTMethodHeader_MinorVersion))
-      {
-      reloLogger()->versionMismatchWarning();
-      return false;
-      }
-   return true;
-   }
+bool OMR::RelocationRuntime::_globalValuesInitialized=false;
 
-
-bool
-TR_RelocationRuntime::storeAOTHeader(J9JavaVM *pjavaVM, TR_FrontEnd *fe, J9VMThread *curThread)
-   {
-   TR_ASSERT(0, "Error: storeAOTHeader not supported in this relocation runtime");
-   return false;
-   }
-
-TR_AOTHeader *
-TR_RelocationRuntime::createAOTHeader(J9JavaVM *pjavaVM, TR_FrontEnd *fe)
-   {
-   TR_ASSERT(0, "Error: createAOTHeader not supported in this relocation runtime");
-   return NULL;
-   }
-
-bool
-TR_RelocationRuntime::validateAOTHeader(J9JavaVM *pjavaVM, TR_FrontEnd *fe, J9VMThread *curThread)
-   {
-   TR_ASSERT(0, "Error: validateAOTHeader not supported in this relocation runtime");
-   return false;
-   }
-
-void *
-TR_RelocationRuntime::isROMClassInSharedCaches(UDATA romClassValue, J9JavaVM *pjavaVM)
-   {
-   TR_ASSERT(0, "Error: isROMClassInSharedCaches not supported in this relocation runtime");
-   return NULL;
-   }
-
-bool
-TR_RelocationRuntime::isRomClassForMethodInSharedCache(J9Method *method, J9JavaVM *pjavaVM)
-   {
-   TR_ASSERT(0, "Error: isRomClassForMethodInSharedCache not supported in this relocation runtime");
-   return false;
-   }
-
-TR_YesNoMaybe
-TR_RelocationRuntime::isMethodInSharedCache(J9Method *method, J9JavaVM *pjavaVM)
-   {
-   TR_ASSERT(0, "Error: isMethodInSharedCache not supported in this relocation runtime");
-   return TR_no;
-   }
-
-TR_OpaqueClassBlock *
-TR_RelocationRuntime::getClassFromCP(J9VMThread *vmThread, J9JavaVM *pjavaVM, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic)
-   {
-   TR_ASSERT(0, "Error: getClassFromCP not supported in this relocation runtime");
-   return NULL;
-   }
-
-bool TR_RelocationRuntime::_globalValuesInitialized=false;
-
-uintptr_t TR_RelocationRuntime::_globalValueList[TR_NumGlobalValueItems] =
+uintptr_t OMR::RelocationRuntime::_globalValueList[TR_NumGlobalValueItems] =
    {
    0,          // not used
    0,          // TR_CountForRecompile
@@ -336,7 +96,7 @@ uintptr_t TR_RelocationRuntime::_globalValueList[TR_NumGlobalValueItems] =
    0          // TR_HeapSizeForBarrierRange0
    };
 
-char *TR_RelocationRuntime::_globalValueNames[TR_NumGlobalValueItems] =
+char *OMR::RelocationRuntime::_globalValueNames[TR_NumGlobalValueItems] =
    {
    "not used (0)",
    "TR_CountForRecompile (1)",
@@ -349,527 +109,247 @@ char *TR_RelocationRuntime::_globalValueNames[TR_NumGlobalValueItems] =
 
 
 
-#if defined(J9VM_OPT_SHARED_CLASSES)
 
 //
 // TR_SharedCacheRelocationRuntime
 //
 
-const char TR_SharedCacheRelocationRuntime::aotHeaderKey[] = "J9AOTHeader";
+const char OMR::SharedCacheRelocationRuntime::aotHeaderKey[] = "J9AOTHeader";
 // When we write out the header, we don't seem to include the \0 character at the end of the string.
-const UDATA TR_SharedCacheRelocationRuntime::aotHeaderKeyLength = sizeof(TR_SharedCacheRelocationRuntime::aotHeaderKey) - 1;
+const UDATA OMR::SharedCacheRelocationRuntime::aotHeaderKeyLength = sizeof(OMR::SharedCacheRelocationRuntime::aotHeaderKey) - 1;
 
 U_8 *
-TR_SharedCacheRelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize)
+OMR::SharedCacheRelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize)
    {
-   TR_J9VMBase *fej9 = (TR_J9VMBase *)_fe;
-   TR::CodeCacheManager *manager = TR::CodeCacheManager::instance();
+   // TR_FrontEnd *fej9 = _fe;
+   // //TR::CodeCacheManager *manager = TR::CodeCacheManager::instance();
 
-   int32_t compThreadID = fej9->getCompThreadIDForVMThread(_currentThread);
-   if (!codeCache())
-      {
-      int32_t numReserved;
+   // int32_t compThreadID = fej9->getCompThreadIDForVMThread(_currentThread);
+   // if (!codeCache())
+   //    {
+   //    int32_t numReserved;
 
-      _codeCache = manager->reserveCodeCache(false, codeSize, compThreadID, &numReserved);  // Acquire a cold/warm code cache.
-      if (!codeCache())
-         {
-         // TODO: how do we pass back error codes to trigger retrial?
-         //if (numReserved >= 1) // We could still get some code space in caches that are currently reserved
-         //    *returnCode = compilationCodeReservationFailure; // this will promp a retrial
-         return NULL;
-         }
-       // The GC may unload classes if code caches have been switched
+   //    _codeCache = manager->reserveCodeCache(false, codeSize, compThreadID, &numReserved);  // Acquire a cold/warm code cache.
+   //    if (!codeCache())
+   //       {
+   //       // TODO: how do we pass back error codes to trigger retrial?
+   //       //if (numReserved >= 1) // We could still get some code space in caches that are currently reserved
+   //       //    *returnCode = compilationCodeReservationFailure; // this will promp a retrial
+   //       return NULL;
+   //       }
+   //     // The GC may unload classes if code caches have been switched
 
-      if (compThreadID >= 0 && fej9->getCompilationShouldBeInterruptedFlag())
-         {
-         codeCache()->unreserve(); // cancel the reservation
-         //*returnCode = compilationInterrupted; // allow retrial //FIXME: how do we pass error codes?
-         return NULL; // fail this AOT load
-         }
-      _haveReservedCodeCache = true;
-      }
+   //    if (compThreadID >= 0 && fej9->getCompilationShouldBeInterruptedFlag())
+   //       {
+   //       codeCache()->unreserve(); // cancel the reservation
+   //       //*returnCode = compilationInterrupted; // allow retrial //FIXME: how do we pass error codes?
+   //       return NULL; // fail this AOT load
+   //       }
+   //    _haveReservedCodeCache = true;
+   //    }
 
-   uint8_t *coldCode;
-   U_8 *codeStart = manager->allocateCodeMemory(codeSize, 0, &_codeCache, &coldCode, false);
-   // FIXME: the GC may unload classes if code caches have been switched
-   if (compThreadID >= 0 && fej9->getCompilationShouldBeInterruptedFlag())
-      {
-      codeCache()->unreserve(); // cancel the reservation
-      _haveReservedCodeCache = false;
-      //*returnCode = compilationInterrupted; // allow retrial
-      return NULL; // fail this AOT load
-      }
-   return codeStart;
+   // uint8_t *coldCode;
+   // U_8 *codeStart = manager->allocateCodeMemory(codeSize, 0, &_codeCache, &coldCode, false);
+   // // FIXME: the GC may unload classes if code caches have been switched
+   // if (compThreadID >= 0 && fej9->getCompilationShouldBeInterruptedFlag())
+   //    {
+   //    codeCache()->unreserve(); // cancel the reservation
+   //    _haveReservedCodeCache = false;
+   //    //*returnCode = compilationInterrupted; // allow retrial
+   //    return NULL; // fail this AOT load
+   //    }
+   // return codeStart;
    }
 
 
 // TODO: why do shared cache and JXE paths manage alignment differently?
 //       main reason why there are two implementations here
 uint8_t *
-TR_SharedCacheRelocationRuntime::allocateSpaceInDataCache(uintptr_t metaDataSize,
+OMR::SharedCacheRelocationRuntime::allocateSpaceInDataCache(uintptr_t metaDataSize,
                                                           uintptr_t type)
    {
    // Ensure data cache is aligned
-   _metaDataAllocSize = TR_DataCacheManager::alignToMachineWord(metaDataSize);
-   U_8 *newDataStart = TR_DataCacheManager::getManager()->allocateDataCacheRecord(_metaDataAllocSize, type, 0);
-   if (newDataStart)
-      newDataStart -= sizeof(J9JITDataCacheHeader);
-   return newDataStart;
+   // _metaDataAllocSize = TR::DataCacheManager::alignToMachineWord(metaDataSize);
+   // U_8 *newDataStart = TR::DataCacheManager::getManager()->allocateDataCacheRecord(_metaDataAllocSize, type, 0);
+   // if (newDataStart)
+   //    newDataStart -= sizeof(J9JITDataCacheHeader);
+   return NULL;
    }
 
 
 void
-TR_SharedCacheRelocationRuntime::initializeAotRuntimeInfo()
+OMR::SharedCacheRelocationRuntime::initializeAotRuntimeInfo()
    {
-   _baseAddress = (U_8 *) javaVM()->sharedClassConfig->cacheDescriptorList->romclassStartAddress;
-   _compileFirstClassLocation = _aotMethodHeaderEntry->compileFirstClassLocation;
-   if (!useCompiledCopy())
-      _classReloAmount = 1;
+      //TODO implement me
+      return;
    }
 
 
 void
-TR_SharedCacheRelocationRuntime::initializeCacheDeltas()
+OMR::SharedCacheRelocationRuntime::initializeCacheDeltas()
    {
    _dataCacheDelta = 0;
    _codeCacheDelta = 0;
    }
 
 
-bool
-TR_SharedCacheRelocationRuntime::useDFPHardware(TR_FrontEnd *fe)
-   {
-   TR::Options  *options = TR::Options::getCmdLineOptions();
-   bool dfpbd = options->getOption(TR_DisableHysteresis);
-   bool nodfpbd =  options->getOption(TR_DisableDFP);
-   bool isPOWERDFP = TR::Compiler->target.cpu.isPower() && TR::Compiler->target.cpu.supportsDecimalFloatingPoint();
-   bool is390DFP =
-#ifdef TR_TARGET_S390
-      TR::Compiler->target.cpu.isZ() && TR::Compiler->target.cpu.getS390SupportsDFP();
-#else
-      false;
-#endif
-   if ((isPOWERDFP || is390DFP) && ((!dfpbd && !nodfpbd) || dfpbd))
-      {
-      return true;
-      }
-   return false;
-   }
 
 
 void
-TR_SharedCacheRelocationRuntime::incompatibleCache(U_32 module_name, U_32 reason, char *assumeMessage)
+OMR::SharedCacheRelocationRuntime::incompatibleCache(U_32 module_name, U_32 reason, char *assumeMessage)
    {
-   TR_ASSERT(false, assumeMessage);
-   if (javaVM()->sharedClassConfig->verboseFlags & J9SHR_VERBOSEFLAG_ENABLE_VERBOSE)
-      {
-      PORT_ACCESS_FROM_JAVAVM(javaVM());
-      j9nls_printf(PORTLIB, (UDATA) J9NLS_WARNING, module_name, reason);
-      }
+      //TODO fill me
    }
 
-bool
-TR_SharedCacheRelocationRuntime::generateError(char *assumeMessage)
-   {
-   TR_ASSERT(false, assumeMessage);
-   incompatibleCache(J9NLS_RELOCATABLE_CODE_WRONG_HARDWARE, assumeMessage);
-   return false;
-   }
+
 
 void
-TR_SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR_AOTHeader *hdrInCache, intptr_t featureFlags)
+OMR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHeader *hdrInCache, intptr_t featureFlags)
    {
-   TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
-   bool defaultMessage = true;
-
-   if (!TR::Compiler->target.cpu.isCompatible((TR_Processor)hdrInCache->processorSignature, hdrInCache->processorFeatureFlags))
-      defaultMessage = generateError("AOT header validation failed: Processor incompatible.");
-   if ((featureFlags & TR_FeatureFlag_sanityCheckBegin) != (hdrInCache->featureFlags & TR_FeatureFlag_sanityCheckBegin))
-      defaultMessage = generateError("AOT header validation failed: Processor feature sanity bit mangled.");
-   if ((featureFlags & TR_FeatureFlag_IsSMP) != (hdrInCache->featureFlags & TR_FeatureFlag_IsSMP))
-      defaultMessage = generateError("AOT header validation failed: SMP feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_UsesCompressedPointers) != (hdrInCache->featureFlags & TR_FeatureFlag_UsesCompressedPointers))
-      defaultMessage = generateError("AOT header validation failed: Compressed references feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_UseDFPHardware) != (hdrInCache->featureFlags & TR_FeatureFlag_UseDFPHardware))
-      defaultMessage = generateError("AOT header validation failed: DFP hardware feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_DisableTraps) != (hdrInCache->featureFlags & TR_FeatureFlag_DisableTraps))
-      defaultMessage = generateError("AOT header validation failed: Use of trap instruction feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_TLHPrefetch) != (hdrInCache->featureFlags & TR_FeatureFlag_TLHPrefetch))
-      defaultMessage = generateError("AOT header validation failed: TLH prefetch feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_MethodTrampolines) != (hdrInCache->featureFlags & TR_FeatureFlag_MethodTrampolines))
-      defaultMessage = generateError("AOT header validation failed: MethodTrampolines feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_MultiTenancy) != (hdrInCache->featureFlags & TR_FeatureFlag_MultiTenancy))
-      defaultMessage = generateError("AOT header validation failed: MultiTenancy feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_HCREnabled) != (hdrInCache->featureFlags & TR_FeatureFlag_HCREnabled))
-      defaultMessage = generateError("AOT header validation failed: HCR feature mismatch.");
-   if (((featureFlags & TR_FeatureFlag_SIMDEnabled) == 0) && ((hdrInCache->featureFlags & TR_FeatureFlag_SIMDEnabled) != 0))
-      defaultMessage = generateError("AOT header validation failed: SIMD feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_AsyncCompilation) != (hdrInCache->featureFlags & TR_FeatureFlag_AsyncCompilation))
-      defaultMessage = generateError("AOT header validation failed: AsyncCompilation feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_ConcurrentScavenge) != (hdrInCache->featureFlags & TR_FeatureFlag_ConcurrentScavenge))
-      defaultMessage = generateError("AOT header validation failed: Concurrent Scavenge feature mismatch.");
-   if ((featureFlags & TR_FeatureFlag_SoftwareReadBarrier) != (hdrInCache->featureFlags & TR_FeatureFlag_SoftwareReadBarrier))
-      defaultMessage = generateError("AOT header validation failed: Software Read Barrier feature mismatch.");
-
-   if ((featureFlags & TR_FeatureFlag_SanityCheckEnd) != (hdrInCache->featureFlags & TR_FeatureFlag_SanityCheckEnd))
-      defaultMessage = generateError("AOT header validation failed: Trailing sanity bit mismatch.");
-
-   if (defaultMessage)
-      generateError("AOT header validation failed: Unkown problem with processor features.");
+      //Checks may follow here
    }
 
-// The method CS::Hash_FNV is being used to compute the hash value
-// Notice that currently CS2::Hash_FNV is a hash function that never returns 0
-uint32_t
-TR_SharedCacheRelocationRuntime::getCurrentLockwordOptionHashValue(J9JavaVM *vm) const
+
+
+TR::AOTHeader *
+OMR::SharedCacheRelocationRuntime::createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fee)
    {
-   IDATA currentLockwordArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, "-Xlockword", NULL);
-   uint32_t currentLockwordOptionHashValue = 0;
-   if (currentLockwordArgIndex >= 0)
-      {
-      char * currentLockwordOption = NULL;
-      GET_OPTION_VALUE(currentLockwordArgIndex, ':', &currentLockwordOption);
-      currentLockwordOptionHashValue = CS2::Hash_FNV((unsigned char*)currentLockwordOption, strlen(currentLockwordOption));
-      }
-   return currentLockwordOptionHashValue;
-   }
+//    PORT_ACCESS_FROM_JAVAVM(javaVM());
 
-// This function currently does not rely on the object beyond the v-table override (compiled as static without any problems).
-// If this changes, we will need to look further into whether its users risk concurrent access.
-bool
-TR_SharedCacheRelocationRuntime::validateAOTHeader(J9JavaVM *pjavaVM, TR_FrontEnd *fe, J9VMThread *curThread)
-   {
-   TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
+//    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
+//    TR_AOTHeader * aotHeader = (TR_AOTHeader *)j9mem_allocate_memory(sizeof(TR_AOTHeader), J9MEM_CATEGORY_JIT);
 
-   /* Look for an AOT header in the cache and see if this JVM is compatible */
+//    if (aotHeader)
+//       {
+//       aotHeader->eyeCatcher = TR_AOTHeaderEyeCatcher;
 
-   J9SharedDataDescriptor firstDescriptor;
-   firstDescriptor.address = NULL;
-   javaVM()->sharedClassConfig->findSharedData(curThread,
-                                             aotHeaderKey,
-                                             aotHeaderKeyLength,
-                                             J9SHR_DATA_TYPE_AOTHEADER,
-                                             FALSE,
-                                             &firstDescriptor,
-                                             NULL);
+//       TR_Version *aotHeaderVersion = &aotHeader->version;
+//       memset(aotHeaderVersion, 0, sizeof(TR_Version));
+//       aotHeaderVersion->structSize = sizeof(TR_Version);
+//       aotHeaderVersion->majorVersion = TR_AOTHeaderMajorVersion;
+//       aotHeaderVersion->minorVersion = TR_AOTHeaderMinorVersion;
+//       strncpy(aotHeaderVersion->vmBuildVersion, EsBuildVersionString, sizeof(EsBuildVersionString));
+//       strncpy(aotHeaderVersion->jitBuildVersion, TR_BUILD_NAME, std::min(strlen(TR_BUILD_NAME), sizeof(aotHeaderVersion->jitBuildVersion)));
 
-   const void* result = firstDescriptor.address;
-   if (result)
-      {
-      /* check compatibility */
-      TR_AOTHeader * hdrInCache = (TR_AOTHeader * )result;
+//       aotHeader->processorSignature = TR::Compiler->target.cpu.id();
+//       aotHeader->gcPolicyFlag = javaVM()->memoryManagerFunctions->j9gc_modron_getWriteBarrierType(javaVM());
+//       aotHeader->lockwordOptionHashValue = getCurrentLockwordOptionHashValue(pjavaVM);
+// #if defined(J9VM_GC_COMPRESSED_POINTERS)
+//       aotHeader->compressedPointerShift = javaVM()->memoryManagerFunctions->j9gc_objaccess_compressedPointersShift(javaVM()->internalVMFunctions->currentVMThread(javaVM()));
+// #else
+//       aotHeader->compressedPointerShift = 0;
+// #endif
 
-      intptr_t featureFlags = generateFeatureFlags(fe);
+//       aotHeader->processorFeatureFlags = TR::Compiler->target.cpu.getProcessorFeatureFlags();
 
-      TR_Version currentVersion;
-      memset(&currentVersion, 0, sizeof(TR_Version));
-      currentVersion.structSize = sizeof(TR_Version);
-      currentVersion.majorVersion = TR_AOTHeaderMajorVersion;
-      currentVersion.minorVersion = TR_AOTHeaderMinorVersion;
-      strncpy(currentVersion.vmBuildVersion, EsBuildVersionString, std::min(strlen(EsBuildVersionString), sizeof(currentVersion.vmBuildVersion) - 1));
-      strncpy(currentVersion.jitBuildVersion, TR_BUILD_NAME, std::min(strlen(TR_BUILD_NAME), sizeof(currentVersion.jitBuildVersion) - 1));
+//       // Set up other feature flags
+//       aotHeader->featureFlags = generateFeatureFlags(fe);
 
-      if (hdrInCache->eyeCatcher != TR_AOTHeaderEyeCatcher ||
-          currentVersion.structSize != hdrInCache->version.structSize ||
-          memcmp(&currentVersion, &hdrInCache->version, sizeof(TR_Version)))
-         {
-         incompatibleCache(J9NLS_RELOCATABLE_CODE_WRONG_JVM_VERSION,
-                           "AOT header validation failed: bad header version or version string");
-         }
-      else if
-         (hdrInCache->featureFlags != featureFlags ||
-          !TR::Compiler->target.cpu.isCompatible((TR_Processor)hdrInCache->processorSignature, hdrInCache->processorFeatureFlags)
-         )
-         {
-         checkAOTHeaderFlags(fe, hdrInCache, featureFlags);
-         }
-      else if ( hdrInCache->gcPolicyFlag != javaVM()->memoryManagerFunctions->j9gc_modron_getWriteBarrierType(javaVM()) )
-         {
-         incompatibleCache(J9NLS_RELOCATABLE_CODE_WRONG_GC_POLICY,
-                           "AOT header validation failed: incompatible gc write barrier type");
-         }
-      else if (hdrInCache->lockwordOptionHashValue != getCurrentLockwordOptionHashValue(pjavaVM))
-         {
-         incompatibleCache(J9NLS_RELOCATABLE_CODE_PROCESSING_COMPATIBILITY_FAILURE,
-                           "AOT header validation failed: incompatible lockword options");
-         }
-      else if (hdrInCache->arrayLetLeafSize != TR::Compiler->om.arrayletLeafSize())
-         {
-         incompatibleCache(J9NLS_RELOCATABLE_CODE_PROCESSING_COMPATIBILITY_FAILURE,
-                           "AOT header validation failed: incompatible arraylet size");
-         }
-#if defined(J9VM_GC_COMPRESSED_POINTERS)
-      else if ( hdrInCache->compressedPointerShift != TR::Compiler->om.compressedReferenceShift())
-         {
-         incompatibleCache(J9NLS_RELOCATABLE_CODE_PROCESSING_COMPATIBILITY_FAILURE,
-                           "AOT header validation failed: incompatible compressed pointer shift");
-         }
-#endif // J9VM_GC_COMPRESSED_POINTERS
-      else
-         {
-         static_cast<TR_JitPrivateConfig *>(jitConfig()->privateConfig)->aotValidHeader = TR_yes;
-         return true;
-         }
+//       // Set ArrayLet Size if supported
+//       aotHeader->arrayLetLeafSize = TR::Compiler->om.arrayletLeafSize();
+//       }
 
-      // not compatible, so stop looking and don't compile anything for cache
-      TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
-      TR::Options::getAOTCmdLineOptions()->setOption(TR_NoLoadAOT);
-      static_cast<TR_JitPrivateConfig *>(jitConfig()->privateConfig)->aotValidHeader = TR_no;
-      TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_HEADER_INVALID);
-
-      // Generate a trace point
-      Trc_JIT_IncompatibleAOTHeader(curThread);
-
-      return false;
-      }
-   else // cannot find AOT header
-      {
-      // Leaving TR_maybe will allow the store of a header later on
-      // static_cast<TR_JitPrivateConfig *>(jitConfig()->privateConfig)->aotValidHeader = TR_maybe;
-      return false;
-      }
-   }
-
-TR_AOTHeader *
-TR_SharedCacheRelocationRuntime::createAOTHeader(J9JavaVM *pjavaVM, TR_FrontEnd *fe)
-   {
-   PORT_ACCESS_FROM_JAVAVM(javaVM());
-
-   TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
-   TR_AOTHeader * aotHeader = (TR_AOTHeader *)j9mem_allocate_memory(sizeof(TR_AOTHeader), J9MEM_CATEGORY_JIT);
-
-   if (aotHeader)
-      {
-      aotHeader->eyeCatcher = TR_AOTHeaderEyeCatcher;
-
-      TR_Version *aotHeaderVersion = &aotHeader->version;
-      memset(aotHeaderVersion, 0, sizeof(TR_Version));
-      aotHeaderVersion->structSize = sizeof(TR_Version);
-      aotHeaderVersion->majorVersion = TR_AOTHeaderMajorVersion;
-      aotHeaderVersion->minorVersion = TR_AOTHeaderMinorVersion;
-      strncpy(aotHeaderVersion->vmBuildVersion, EsBuildVersionString, sizeof(EsBuildVersionString));
-      strncpy(aotHeaderVersion->jitBuildVersion, TR_BUILD_NAME, std::min(strlen(TR_BUILD_NAME), sizeof(aotHeaderVersion->jitBuildVersion)));
-
-      aotHeader->processorSignature = TR::Compiler->target.cpu.id();
-      aotHeader->gcPolicyFlag = javaVM()->memoryManagerFunctions->j9gc_modron_getWriteBarrierType(javaVM());
-      aotHeader->lockwordOptionHashValue = getCurrentLockwordOptionHashValue(pjavaVM);
-#if defined(J9VM_GC_COMPRESSED_POINTERS)
-      aotHeader->compressedPointerShift = javaVM()->memoryManagerFunctions->j9gc_objaccess_compressedPointersShift(javaVM()->internalVMFunctions->currentVMThread(javaVM()));
-#else
-      aotHeader->compressedPointerShift = 0;
-#endif
-
-      aotHeader->processorFeatureFlags = TR::Compiler->target.cpu.getProcessorFeatureFlags();
-
-      // Set up other feature flags
-      aotHeader->featureFlags = generateFeatureFlags(fe);
-
-      // Set ArrayLet Size if supported
-      aotHeader->arrayLetLeafSize = TR::Compiler->om.arrayletLeafSize();
-      }
-
-   return aotHeader;
+   return NULL;
    }
 
 bool
-TR_SharedCacheRelocationRuntime::storeAOTHeader(J9JavaVM *pjavaVM, TR_FrontEnd *fe, J9VMThread *curThread)
+OMR::SharedCacheRelocationRuntime::storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread)
    {
 
-   TR_AOTHeader *aotHeader = createAOTHeader(javaVM(), fe);
+   TR::AOTHeader *aotHeader = createAOTHeader(omrVM,fe);
    if (!aotHeader)
       {
-      PORT_ACCESS_FROM_JAVAVM(javaVM());
-      if (javaVM()->sharedClassConfig->verboseFlags & J9SHR_VERBOSEFLAG_ENABLE_VERBOSE)
-         j9nls_printf( PORTLIB, J9NLS_WARNING,  J9NLS_RELOCATABLE_CODE_PROCESSING_COMPATIBILITY_FAILURE );
-      TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_HEADER_FAILED_TO_ALLOCATE);
-      return false;
+        return false;
       }
 
-   J9SharedDataDescriptor dataDescriptor;
-   UDATA aotHeaderLen = sizeof(TR_AOTHeader);
+   // J9SharedDataDescriptor dataDescriptor;
+   // UDATA aotHeaderLen = sizeof(TR_AOTHeader);
 
-   dataDescriptor.address = (U_8*)aotHeader;
-   dataDescriptor.length = aotHeaderLen;
-   dataDescriptor.type =  J9SHR_DATA_TYPE_AOTHEADER;
-   dataDescriptor.flags = J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE;
-
-   const void* store = javaVM()->sharedClassConfig->storeSharedData(curThread,
-                                                                  aotHeaderKey,
-                                                                  aotHeaderKeyLength,
-                                                                  &dataDescriptor);
+   // dataDescriptor.address = (U_8*)aotHeader;
+   // dataDescriptor.length = aotHeaderLen;
+   // dataDescriptor.type =  J9SHR_DATA_TYPE_AOTHEADER;
+   // dataDescriptor.flags = J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE;
+   bool store = false;
+   // const void* store = javaVM()->sharedClassConfig->storeSharedData(curThread,
+   //                                                                aotHeaderKey,
+   //                                                                aotHeaderKeyLength,
+   //                                                                &dataDescriptor);
    if (store)
       {
       // If a header already exists, the old one is returned
       // Thus, we must check the validity of the header
-      return validateAOTHeader(javaVM(), fe, curThread);
+      // return validateAOTHeader();
+      return true;
       }
    else
       {
       // The store failed for some odd reason; maybe the cache is full
       // Let's prevent any further store operations to avoid overhead
-      TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
+      // TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
 
-      TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_HEADER_STORE_FAILED);
-      TR_J9SharedCache::setStoreSharedDataFailedLength(aotHeaderLen);
+      // TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_HEADER_STORE_FAILED);
+      // TR_J9SharedCache::setStoreSharedDataFailedLength(aotHeaderLen);
       return false;
       }
    }
 
 
-void *
-TR_SharedCacheRelocationRuntime::isROMClassInSharedCaches(UDATA romClassValue, J9JavaVM *pjavaVM)
-   {
-   j9thread_monitor_enter(javaVM()->sharedClassConfig->configMonitor);
-   J9SharedClassCacheDescriptor *currentCacheDescriptor = javaVM()->sharedClassConfig->cacheDescriptorList;
-   bool matchFound = false;
 
-   while (!matchFound && currentCacheDescriptor)
-      {
-      //printf("currentCacheDescriptor: %p, currentCacheDescriptor->cacheStartAddress: %p, cacheSizeBytes: %x, romClassStartAddress: %p, romClassValue :%p, descriptor->next: %p\n", currentCacheDescriptor, currentCacheDescriptor->cacheStartAddress, currentCacheDescriptor->cacheSizeBytes, currentCacheDescriptor->romclassStartAddress, romClassValue, currentCacheDescriptor->next);
-      //if (((romClassValue < (UDATA)currentCacheDescriptor->romclassStartAddress + currentCacheDescriptor->cacheSizeBytes)&& (romClassValue >= (UDATA)currentCacheDescriptor->romclassStartAddress))) // Temporarily use romclassStartAddress because cachStartAddress is NULL for new cache
-      if (((romClassValue < (UDATA)currentCacheDescriptor->metadataStartAddress)&& (romClassValue >= (UDATA)currentCacheDescriptor->romclassStartAddress)))
-         {
-         matchFound = true;
-         break;
-         }
-      if (currentCacheDescriptor->next == javaVM()->sharedClassConfig->cacheDescriptorList)
-         break; // Since list is circular, break if we are about to loop back
-      currentCacheDescriptor = currentCacheDescriptor->next;
-      }
-   j9thread_monitor_exit(javaVM()->sharedClassConfig->configMonitor);
-   if (matchFound)
-      {
-      return (void *)currentCacheDescriptor;
-      }
-   else
-      {
-      return NULL;
-      }
-   }
 
-bool
-TR_SharedCacheRelocationRuntime::isRomClassForMethodInSharedCache(J9Method *method, J9JavaVM *pjavaVM)
-   {
-#if 1
-   J9ROMClass *romClass = J9_CLASS_FROM_METHOD(method)->romClass;
-#if 0
-   j9thread_monitor_enter(javaVM()->sharedClassConfig->configMonitor);
-   UDATA cacheEnd = (UDATA)javaVM()->sharedClassConfig->cacheDescriptorList->cacheStartAddress + javaVM()->sharedClassConfig->cacheDescriptorList->cacheSizeBytes;
-   bool isRomClassForMethodInSharedCache = (((UDATA)romClass >= (UDATA)javaVM()->sharedClassConfig->cacheDescriptorList->cacheStartAddress) && ((UDATA)romClass <= cacheEnd));
-   j9thread_monitor_exit(javaVM()->sharedClassConfig->configMonitor);
-   return isRomClassForMethodInSharedCache;
-#else
-   bool isRomClassForMethodInSharedCache = isROMClassInSharedCaches((UDATA)romClass, javaVM()) ? true : false;
-   return isRomClassForMethodInSharedCache;
-#endif
-#endif
-   }
-
-TR_YesNoMaybe
-TR_SharedCacheRelocationRuntime::isMethodInSharedCache(J9Method *method, J9JavaVM *pjavaVM)
-   {
-   if (isRomClassForMethodInSharedCache(method, javaVM()))
-      return TR_maybe;
-   else
-      return TR_no;
-   }
-
-TR_OpaqueClassBlock *
-TR_SharedCacheRelocationRuntime::getClassFromCP(J9VMThread *vmThread, J9JavaVM *pjavaVM, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic)
-   {
-   TR::JITConfig *jitConfig = vmThread->omrVM->jitConfig;
-   TR_J9VMBase *fe = TR_J9VMBase::get(jitConfig, vmThread);
-   TR::VMAccessCriticalSection getClassFromCP(fe);
-   /* Get the class.  Stop immediately if an exception occurs. */
-   J9ROMFieldRef *romFieldRef = (J9ROMFieldRef *)&constantPool->romConstantPool[cpIndex];
-
-   J9Class *resolvedClass = javaVM()->internalVMFunctions->resolveClassRef(vmThread, constantPool, romFieldRef->classRefCPIndex, J9_RESOLVE_FLAG_AOT_LOAD_TIME);
-
-   if (resolvedClass == NULL)
-      return NULL;
-
-   J9Class *classFromCP = J9_CLASS_FROM_CP(constantPool);
-   J9ROMFieldShape *field;
-   J9Class *definingClass;
-   J9ROMNameAndSignature *nameAndSig;
-   J9UTF8 *name;
-   J9UTF8 *signature;
-
-   nameAndSig = J9ROMFIELDREF_NAMEANDSIGNATURE(romFieldRef);
-   name = J9ROMNAMEANDSIGNATURE_NAME(nameAndSig);
-   signature = J9ROMNAMEANDSIGNATURE_SIGNATURE(nameAndSig);
-   if (isStatic)
-      {
-      void *staticAddress = javaVM()->internalVMFunctions->staticFieldAddress(vmThread, resolvedClass, J9UTF8_DATA(name), J9UTF8_LENGTH(name), J9UTF8_DATA(signature), J9UTF8_LENGTH(signature), &definingClass, (UDATA *)&field, J9_LOOK_NO_JAVA, classFromCP);
-      }
-   else
-      {
-      IDATA fieldOffset = javaVM()->internalVMFunctions->instanceFieldOffset(vmThread, resolvedClass, J9UTF8_DATA(name), J9UTF8_LENGTH(name), J9UTF8_DATA(signature), J9UTF8_LENGTH(signature), &definingClass, (UDATA *)&field, J9_LOOK_NO_JAVA);
-      }
-   return (TR_OpaqueClassBlock *)definingClass;
-   }
+// TR_YesNoMaybe
+// OMR::SharedCacheRelocationRuntime::isMethodInSharedCache(J9Method *method, J9JavaVM *pjavaVM)
+//    {
+//    if (isRomClassForMethodInSharedCache(method, javaVM()))
+//       return TR_maybe;
+//    else
+//       return TR_no;
+//    }
 
 uintptr_t
-TR_SharedCacheRelocationRuntime::generateFeatureFlags(TR_FrontEnd *fe)
+OMR::SharedCacheRelocationRuntime::generateFeatureFlags(TR_FrontEnd *fe)
    {
-   uintptr_t featureFlags = 0;
-   TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
+//    uintptr_t featureFlags = 0;
+//    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
 
-   featureFlags |= TR_FeatureFlag_sanityCheckBegin;
+//    featureFlags |= TR_FeatureFlag_sanityCheckBegin;
 
-   if (TR::Compiler->target.isSMP())
-      featureFlags |= TR_FeatureFlag_IsSMP;
+//    if (TR::Compiler->target.isSMP())
+//       featureFlags |= TR_FeatureFlag_IsSMP;
 
-   if (TR::Options::useCompressedPointers())
-      featureFlags |= TR_FeatureFlag_UsesCompressedPointers;
+//    if (TR::Options::useCompressedPointers())
+//       featureFlags |= TR_FeatureFlag_UsesCompressedPointers;
 
-   if (useDFPHardware(fe))
-      featureFlags |= TR_FeatureFlag_UseDFPHardware;
+//    if (useDFPHardware(fe))
+//       featureFlags |= TR_FeatureFlag_UseDFPHardware;
 
-   if (TR::Options::getCmdLineOptions()->getOption(TR_DisableTraps))
-      featureFlags |= TR_FeatureFlag_DisableTraps;
+//    if (TR::Options::getCmdLineOptions()->getOption(TR_DisableTraps))
+//       featureFlags |= TR_FeatureFlag_DisableTraps;
 
-   if (TR::Options::getCmdLineOptions()->getOption(TR_TLHPrefetch))
-      featureFlags |= TR_FeatureFlag_TLHPrefetch;
+//    if (TR::Options::getCmdLineOptions()->getOption(TR_TLHPrefetch))
+//       featureFlags |= TR_FeatureFlag_TLHPrefetch;
 
-   if (TR::CodeCacheManager::instance()->codeCacheConfig().needsMethodTrampolines())
-      featureFlags |= TR_FeatureFlag_MethodTrampolines;
+//    if (TR::CodeCacheManager::instance()->codeCacheConfig().needsMethodTrampolines())
+//       featureFlags |= TR_FeatureFlag_MethodTrampolines;
 
-   if (TR::Options::getCmdLineOptions()->getOption(TR_EnableHCR))
-      featureFlags |= TR_FeatureFlag_HCREnabled;
+//    if (TR::Options::getCmdLineOptions()->getOption(TR_EnableHCR))
+//       featureFlags |= TR_FeatureFlag_HCREnabled;
 
-#ifdef TR_TARGET_S390
-   if (TR::Compiler->target.cpu.getS390SupportsVectorFacility())
-      featureFlags |= TR_FeatureFlag_SIMDEnabled;
-#endif
+// #ifdef TR_TARGET_S390
+//    if (TR::Compiler->target.cpu.getS390SupportsVectorFacility())
+//       featureFlags |= TR_FeatureFlag_SIMDEnabled;
+// #endif
 
-   if (TR::Compiler->om.shouldGenerateReadBarriersForFieldLoads())
-      featureFlags |= TR_FeatureFlag_ConcurrentScavenge;
+//    if (TR::Compiler->om.shouldGenerateReadBarriersForFieldLoads())
+//       featureFlags |= TR_FeatureFlag_ConcurrentScavenge;
 
-   if (TR::Compiler->om.shouldReplaceGuardedLoadWithSoftwareReadBarrier())
-      featureFlags |= TR_FeatureFlag_SoftwareReadBarrier;
+//    if (TR::Compiler->om.shouldReplaceGuardedLoadWithSoftwareReadBarrier())
+//       featureFlags |= TR_FeatureFlag_SoftwareReadBarrier;
 
-   if (fej9->isAsyncCompilation())
-      featureFlags |= TR_FeatureFlag_AsyncCompilation;
+//    if (fej9->isAsyncCompilation())
+//       featureFlags |= TR_FeatureFlag_AsyncCompilation;
 
-   return featureFlags;
+//    return featureFlags;
    }
 
-void TR_RelocationRuntime::initializeHWProfilerRecords(TR::Compilation *comp)
-   {
-   assert(comp != NULL);
-   comp->getHWPBCMap()->clear();
-   }
 
-void TR_RelocationRuntime::addClazzRecord(uint8_t *ia, uint32_t bcIndex, TR_OpaqueMethodBlock *method)
-   {
-   if (getPersistentInfo()->isRuntimeInstrumentationEnabled() && _isLoading)
-      {
-      comp()->addHWPBCMap(_compInfo->getHWProfiler()->createBCMap(ia,
-                                                                  bcIndex,
-                                                                  method,
-                                                                  comp()));
-      }
-   }
 
-#endif

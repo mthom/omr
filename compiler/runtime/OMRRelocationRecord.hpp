@@ -83,6 +83,7 @@ union RelocationRecordPrivateData;
 
 namespace OMR { typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
 namespace TR { typedef TR_ExternalRelocationTargetKind RelocationRecordType;}
+namespace TR { class RelocationRecordBinaryTemplate;}
 // These *BinaryTemplate structs describe the shape of the binary relocation records.
 extern char* AOTcgDiagOn;
 
@@ -96,17 +97,17 @@ extern char* AOTcgDiagOn;
 // the most flexibility.
 namespace OMR
 {
-struct RelocationRecordBinaryTemplate
+   class OMR_EXTENSIBLE RelocationRecordBinaryTemplate
    {
-   uint8_t type(TR::RelocationTarget *reloTarget);
-
-   uint16_t _size;
-   uint8_t _type;
-   uint8_t _flags;
-
-   #if defined(TR_HOST_64BIT)
-   uint32_t _extra;
-   #endif
+      public:
+         RelocationRecordBinaryTemplate(){};
+         uint8_t type(TR::RelocationTarget *reloTarget);
+         uint16_t _size;
+         uint8_t _type;
+         uint8_t _flags;
+         #if defined(TR_HOST_64BIT)
+         uint32_t _extra;
+         #endif
    };
    
    class RelocationRecord

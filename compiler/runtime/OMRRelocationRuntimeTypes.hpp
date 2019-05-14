@@ -44,6 +44,7 @@ typedef struct OMRJITExceptionTable {
 	UDATA codeCacheAlloc;
 }  OMRJITExceptionTable;
 
+
 typedef struct OMRMethod {
 	U_8* bytecodes;
 //	struct J9ConstantPool* constantPool;

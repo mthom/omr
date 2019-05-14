@@ -21,7 +21,6 @@
 
 #include "compiler/runtime/RelocationRuntime.hpp"
 #include "compiler/runtime/RelocationTarget.hpp"
-#include "runtime/OMRRelocationTarget.hpp"
 
 TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationRuntimeConnector(jitCfg)
    {
@@ -71,3 +70,5 @@ TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationR
    }
 
 
+TR::SharedCacheRelocationRuntime::SharedCacheRelocationRuntime(TR::JitConfig *jitCfg)
+   :OMR::SharedCacheRelocationRuntimeConnector(jitCfg){}
