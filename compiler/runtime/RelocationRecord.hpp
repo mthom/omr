@@ -33,9 +33,11 @@ namespace TR
 class OMR_EXTENSIBLE RelocationRecord: public OMR::RelocationRecordConnector
    {
    public:
-   RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) 
-   :  OMR::RelocationRecordConnector(reloRuntime,record)
-         {}
+      RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) 
+      :  OMR::RelocationRecordConnector(reloRuntime,record)
+            {}
+      static RelocationRecord *create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *recordPointer);
+
     
    };
 

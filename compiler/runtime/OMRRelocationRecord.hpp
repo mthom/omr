@@ -128,7 +128,7 @@ namespace OMR
       virtual bool isValidationRecord() { return false; }
 
 
-      static RelocationRecord *create(RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *recordPointer);
+      static RelocationRecord *create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *recordPointer);
 
       virtual void clean(TR::RelocationTarget *reloTarget);
       virtual int32_t bytesInHeaderAndPayload();

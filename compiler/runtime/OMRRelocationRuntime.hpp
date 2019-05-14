@@ -38,8 +38,7 @@
 #include "env/OMREnvironment.hpp"
 #include "env/OMRCPU.hpp" // for TR_ProcessorFeatureFlags
 #include "env/JitConfig.hpp" // for JitConfig, it got moved
-#include "runtime/OMRRelocationRuntimeTypes.hpp" // for JitConfig, it got moved
-
+#include "runtime/OMRRelocationRuntimeTypes.hpp" 
 #ifndef OMR_RELOCATION_RUNTIME_CONNECTOR
 #define OMR_RELOCATION_RUNTIME_CONNECTOR
 namespace OMR { class RelocationRuntime; }

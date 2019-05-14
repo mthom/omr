@@ -20,6 +20,7 @@
 #############################################################################
 
 compiler_library(runtime
+	${CMAKE_CURRENT_LIST_DIR}/RelocationRuntimeLogger.cpp
 	${CMAKE_CURRENT_LIST_DIR}/Runtime.cpp
 	${CMAKE_CURRENT_LIST_DIR}/RelocationRuntime.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRRelocationTarget.cpp

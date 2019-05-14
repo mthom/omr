@@ -23,7 +23,7 @@
 #ifndef OMR_RELOCATION_RUNTIME_TYPES
 #define OMR_RELOCATION_RUNTIME_TYPES
 #include "omrcomp.h"
-
+#include "env/JitConfig.hpp" // for JitConfig, it got moved
 typedef struct OMRJITExceptionTable {
 //	struct J9ConstantPool* constantPool;
 //	struct J9Method* ramMethod;

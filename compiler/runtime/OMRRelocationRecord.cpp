@@ -36,6 +36,7 @@
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
+#include "runtime/RelocationTarget.hpp"
 #include  "runtime/SymbolValidationManager.hpp"
 
 // TODO: move this someplace common for RuntimeAssumptions.cpp and here
@@ -64,17 +65,17 @@ TR::RelocationRecordGroup::setSize(TR::RelocationTarget *reloTarget,uintptr_t si
    reloTarget->storePointer((uint8_t *)size, (uint8_t *) &_group);
    }
 
-uintpTR::t
+uintptr_t
 TR::RelocationRecordGroup::size(TR::RelocationTarget *reloTarget)
    {
-   return (uintpTR::t)reloTarget->loadPointer((uint8_t *) _group);
+   return (uintptr_t)reloTarget->loadPointer((uint8_t *) _group);
    }
 
 TR::RelocationRecordBinaryTemplate *
 TR::RelocationRecordGroup::firstRecord(TR::RelocationTarget *reloTarget)
    {
    // first word of the group is a pointer size field for the entire group
-   return (TR::RelocationRecordBinaryTemplate *) (((uintpTR::t *)_group)+1);
+   return (TR::RelocationRecordBinaryTemplate *) (((uintptr_t *)_group)+1);
    }
 
 TR::RelocationRecordBinaryTemplate *
@@ -114,12 +115,9 @@ TR::RelocationRecordGroup::handleRelocation(TR::RelocationRuntime *reloRuntime,
                                            TR::RelocationRecord *reloRecord,
                                            uint8_t *reloOrigin)
    {
-   if (reloRuntime->reloLogger()->logEnabled())
-      reloRecord->print(reloRuntime);
 
    if (reloRecord->ignore(reloRuntime))
       {
-      RELO_LOG(reloRuntime->reloLogger(), 6, "\tignore!\n");
       return 0;
       }
 
@@ -158,24 +156,15 @@ TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntim
       default:
          // TODO: error condition
          printf("Unexpected relo record: %d\n", reloType);fflush(stdout);
-         TR::ASSERT(0, "Unexpected relocation record type found");
          exit(0);
       }
       return reloRecord;
    }
 
 void
-TR::RelocationRecord::print(TR::RelocationRuntime *reloRuntime)
+OMR::RelocationRecord::print(TR::RelocationRuntime *reloRuntime)
    {
    TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
-   TR::RelocationRuntimeLogger *reloLogger = reloRuntime->reloLogger();
-
-   reloLogger->printf("%s %p\n", name(), _record);
-   RELO_LOG(reloLogger, 7, "\tsize %x type %d flags %x reloFlags %x\n", size(reloTarget), type(reloTarget), flags(reloTarget), reloFlags(reloTarget));
-   if (wideOffsets(reloTarget))
-      RELO_LOG(reloLogger, 7, "\tFlag: Wide offsets\n");
-   if (eipRelative(reloTarget))
-      RELO_LOG(reloLogger, 7, "\tFlag: EIP relative\n");
    }
 
 void
@@ -555,7 +544,7 @@ TR::RelocationRecordArrayCopyToc::preparePrivateData(TR::RelocationRuntime *relo
    J9JITConfig *jitConfig = reloRuntime->jitConfig();
    TR::ASSERT(jitConfig != NULL, "Relocation runtime doesn't have a jitConfig!");
    J9JavaVM *javaVM = jitConfig->javaVM;
-  uintptr_t *funcdescrptr = (uintpTR::t *)javaVM->memoryManagerFunctions->referenceArrayCopy;
+  uintptr_t *funcdescrptr = (uintptr_t *)javaVM->memoryManagerFunctions->referenceArrayCopy;
    reloPrivateData->_addressToPatch = (uint8_t *)funcdescrptr[1];
    RELO_LOG(reloRuntime->reloLogger(), 6, "\tpreparePrivateData: arraycopy toc %p\n", reloPrivateData->_addressToPatch);
    }
@@ -1045,7 +1034,7 @@ TR::RelocationRecordHelperAddress::applyRelocation(TR::RelocationRuntime *reloRu
    RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tapplyRelocation: baseLocation %p helperAddress %p helperOffset %x\n", baseLocation, helperAddress, helperOffset);
 
    if (eipRelative(reloTarget))
-      reloTarget->storeRelativeTarget((uintpTR::t )helperOffset, reloLocation);
+      reloTarget->storeRelativeTarget((uintptr_t )helperOffset, reloLocation);
    else
       reloTarget->storeAddress(helperOffset, reloLocation);
 
@@ -1058,7 +1047,7 @@ TR::RelocationRecordHelperAddress::applyRelocation(TR::RelocationRuntime *reloRu
    TR::ASSERT(0, "TR::RelocationRecordHelperAddress::applyRelocation for ordered pair, we should never call this");
    uint8_t *baseLocation = 0;
 
-   uint8_t *helperOffset = (uint8_t *) ((uintpTR::t)computeHelperAddress(reloRuntime, reloTarget, baseLocation) - (uintpTR::t)baseLocation);
+   uint8_t *helperOffset = (uint8_t *) ((uintptr_t)computeHelperAddress(reloRuntime, reloTarget, baseLocation) - (uintptr_t)baseLocation);
 
    reloTarget->storeAddress(helperOffset, reloLocationHigh, reloLocationLow, reloFlags(reloTarget));
 
@@ -1102,7 +1091,7 @@ uint8_t *
 TR::RelocationRecordMethodAddress::currentMethodAddress(TR::RelocationRuntime *reloRuntime, uint8_t *oldMethodAddress)
    {
    TR::AOTMethodHeader *methodHdr = reloRuntime->aotMethodHeaderEntry();
-   return oldMethodAddress - methodHdr->compileMethodCodeStartPC + (uintpTR::t) reloRuntime->newMethodCodeStart();
+   return oldMethodAddress - methodHdr->compileMethodCodeStartPC + (uintptr_t) reloRuntime->newMethodCodeStart();
    }
 
 int32_t
@@ -1121,7 +1110,7 @@ TR::RelocationRecordMethodAddress::applyRelocation(TR::RelocationRuntime *reloRu
    RELO_LOG(reloRuntime->reloLogger(), 5, "\t\tapplyRelocation: new method address %p\n", newAddress);
 
    if (eipRel)
-      reloTarget->storeCallTarget((uintpTR::t)newAddress, reloLocation);
+      reloTarget->storeCallTarget((uintptr_t)newAddress, reloLocation);
    else
       reloTarget->storeAddress(newAddress, reloLocation);
 

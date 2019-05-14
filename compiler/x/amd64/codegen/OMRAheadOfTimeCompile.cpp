@@ -20,11 +20,12 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "compiler/x/amd64/codegen/OMRAheadOfTimeCompile.hpp"
+#include "compiler/codegen/AheadOfTimeCompile.hpp"
 #include "codegen/FrontEnd.hpp"
 #include "codegen/Instruction.hpp"
 #include "compile/Compilation.hpp"
 #include "compile/ResolvedMethod.hpp"
+#include "runtime/RelocationRecord.hpp"
 #include "compile/VirtualGuard.hpp"
 #include "env/CompilerEnv.hpp"
 #include "env/jittypes.h"
@@ -161,8 +162,8 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    *flagsCursor = modifier;
    uint32_t *wordAfterHeader = (uint32_t*)cursor;
    // This has to be created after the kind has been written into the header
-   TR::RelocationRecord storage;
-   TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(&storage, reloRuntime, reloTarget, reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocation->getRelocationData()));
+   //TR::RelocationRecord storage;
+   TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(NULL, reloRuntime, reloTarget, reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocation->getRelocationData()));
    
    switch (targetKind)
       {
