@@ -36,6 +36,7 @@ class OMR_EXTENSIBLE RelocationRecord: public OMR::RelocationRecordConnector
       RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) 
       :  OMR::RelocationRecordConnector(reloRuntime,record)
             {}
+            RelocationRecord(): OMR::RelocationRecordConnector() {}
       static RelocationRecord *create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *recordPointer);
 
     
@@ -45,6 +46,12 @@ class OMR_EXTENSIBLE RelocationRecordBinaryTemplate: public OMR::RelocationRecor
    {
       public:
       RelocationRecordBinaryTemplate():OMR::RelocationRecordBinaryTemplateConnector(){};
+   };
+class OMR_EXTENSIBLE RelocationRecordGroup: public OMR::RelocationRecordGroupConnector
+   {
+      public:
+      RelocationRecordGroup(TR::RelocationRecordBinaryTemplate *groupData)
+      :OMR::RelocationRecordGroupConnector(groupData){};
    };
 
 }

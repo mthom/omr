@@ -32,9 +32,9 @@ namespace TR { class Options; }
 namespace TR 
 {
 #define	RELO_LOG(r, n, ...) \
-   if (((TR_RelocationRuntimeLogger *)r)->logDetailEnabled((int32_t)n)) \
+   if (((TR::RelocationRuntimeLogger *)r)->logDetailEnabled((int32_t)n)) \
       {\
-      ((TR_RelocationRuntimeLogger *)r)->debug_printf(__VA_ARGS__);\
+      ((TR::RelocationRuntimeLogger *)r)->debug_printf(__VA_ARGS__);\
       }\
 
 class RelocationRuntimeLogger {

@@ -25,12 +25,16 @@ public:
   WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache, UDATA osPageSize);
 
   virtual ~WASMCompositeCache() {
+    //delete pointers
     _osCache->cleanup();
   }
   
   bool startup(const char* cacheName, const char* ctrlDirName);
 
   bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
+
+  void *loadCodeEntry(const char *methodName);
+
 
 private:
   virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);
@@ -47,7 +51,8 @@ private:
   CacheCRCChecker _crcChecker;
   OSCacheBumpRegionFocus<WASMCacheEntry> _codeUpdatePtr;
 
-  std::map<std::string, WASMCacheEntry*> _codeEntries;  
+  std::map<std::string, WASMCacheEntry*> _codeEntries;
+  std::map<std::string, void *> _loadedMethods;
 };
 
 #endif
