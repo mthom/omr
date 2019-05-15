@@ -38,6 +38,10 @@
 #include "runtime/CodeCacheManager.hpp"
 #define NON_HELPER   0x00
 
+TR::AheadOfTimeCompile*
+OMR::X86::AMD64::AheadOfTimeCompile::self(){
+   return static_cast<TR::AheadOfTimeCompile *> (this);
+}
 void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
    {
    std::cout<<"hello"<<std::endl;
