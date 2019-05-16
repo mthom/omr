@@ -61,9 +61,110 @@ OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
    UDATA startPC = 0;
    initializeCacheDeltas();
    _newMethodCodeStart = codeStart;
-   //TODO implement relocate here
+   //TODO implement relocate here apply relocations of binaryrelocationGroup should be called here
 }
 
+OMRJITExceptionTable *
+OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
+                                                         TR_FrontEnd *theFE,
+                                                         TR::CodeCache *aotMCCRuntimeCodeCache,
+                                                         const  OMRSharedCacheHeader *cacheEntry,
+                                                         OMRMethod *theMethod,
+                                                         bool shouldUseCompiledCopy,
+                                                         TR::Options *options,
+                                                         TR::Compilation *compilation,
+                                                         TR_ResolvedMethod *resolvedMethod)
+   {
+   _currentThread = vmThread;
+   _fe = theFE;
+   _codeCache = aotMCCRuntimeCodeCache;
+   _method = theMethod;
+   _useCompiledCopy = shouldUseCompiledCopy;
+   _classReloAmount = 0;
+   _exceptionTable = NULL;
+   _newExceptionTableStart = NULL;
+   _relocationStatus = RelocationNoError;
+   _haveReservedCodeCache = false; // MCT
+   _returnCode = 0;
+
+   _trMemory = comp()->trMemory();
+   _currentResolvedMethod = resolvedMethod;
+
+
+   _options = options;
+   TR_ASSERT(_options, "Options were not correctly initialized.");
+
+   uint8_t *tempCodeStart, *tempDataStart;
+   uint8_t *oldDataStart, *oldCodeStart, *newCodeStart;
+   tempDataStart = (uint8_t *)cacheEntry;
+
+   //Check method header is valid
+   _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry + 1); // skip the header J9JITDataCacheHeader
+   if (!aotMethodHeaderVersionsMatch())
+      return NULL;
+
+
+ 
+
+      oldDataStart = (U_8 *)_aotMethodHeaderEntry->compileMethodDataStartPC;
+      oldCodeStart = (U_8 *)_aotMethodHeaderEntry->compileMethodCodeStartPC;
+
+      UDATA dataSize = _aotMethodHeaderEntry->compileMethodDataSize;
+      UDATA codeSize = _aotMethodHeaderEntry->compileMethodCodeSize;
+
+      TR_ASSERT(codeSize > sizeof(OMR::CodeCacheMethodHeader), "codeSize for AOT loads should include the CodeCacheHeader");
+
+     
+
+         _newExceptionTableStart = allocateSpaceInDataCache(10,10);//_exceptionTableCacheEntry->size, _exceptionTableCacheEntry->type);
+         tempCodeStart = tempDataStart + dataSize;
+         if (_newExceptionTableStart)
+            {
+           // _exceptionTable = reinterpret_cast<J9JITExceptionTable *>(_newExceptionTableStart + sizeof(J9JITDataCacheHeader)); // Get new exceptionTable location
+
+            // This must be an AOT load because for AOT compilations we relocate in place
+
+            // We must prepare the list of assumptions linked to the metadata
+            // We could set just a NULL pointer and let the code update that should an
+            // assumption be created.
+            // Another alternative is to create a sentinel entry right away to avoid
+            // having to allocate one at runtime and possibly running out of memory
+           // OMR::RuntimeAssumption * raList = new (PERSISTENT_NEW) TR::SentinelRuntimeAssumption();
+           // comp->setMetadataAssumptionList(raList); // copy this list to the compilation object as well (same view as for a JIT compilation)
+           // _exceptionTable->runtimeAssumptionList = raList;
+            // If we cannot allocate the memory, fail the compilation
+          //
+
+        
+            // newCodeStart points after a OMR::CodeCacheMethodHeader, but tempCodeStart points at a OMR::CodeCacheMethodHeader
+            // to keep alignment consistent, back newCodeStart over the OMR::CodeCacheMethodHeader
+            //we can still do the code start without the bodyInfo! need check in cleanup!
+            newCodeStart = allocateSpaceInCodeCache(codeSize-sizeof(OMR::CodeCacheMethodHeader));
+            if (newCodeStart)
+               {
+               TR_ASSERT(_codeCache->isReserved(), "codeCache must be reserved"); // MCT
+               newCodeStart = ((U_8*)newCodeStart) - sizeof(OMR::CodeCacheMethodHeader);
+               // Before copying, memorize the real size of the block returned by the code cache manager
+               // and fix it later
+               U_32 blockSize = ((OMR::CodeCacheMethodHeader*)newCodeStart)->_size;
+               memcpy(newCodeStart, tempCodeStart, codeSize);  // the real size may have been overwritten
+               ((OMR::CodeCacheMethodHeader*)newCodeStart)->_size = blockSize; // fix it
+               // Must fix the pointer to the metadata which is stored in the OMR::CodeCacheMethodHeader
+               //((OMR::CodeCacheMethodHeader*)newCodeStart)->_metaData = NULL;
+               }
+     
+   if (_relocationStatus == RelocationNoError)
+      {
+      initializeAotRuntimeInfo();
+      relocateAOTCodeAndData(tempDataStart, oldDataStart, newCodeStart, oldCodeStart);
+      }
+
+
+   if (haveReservedCodeCache())
+      codeCache()->unreserve();
+   return _exceptionTable;
+   }
+}
 // This whole function can be dealt with more easily by meta-data relocations rather than this specialized function
 //   but leave it here for now
 void

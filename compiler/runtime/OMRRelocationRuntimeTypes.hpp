@@ -43,6 +43,12 @@ typedef struct OMRJITExceptionTable {
 	I_32 hotness;
 	UDATA codeCacheAlloc;
 }  OMRJITExceptionTable;
+
+typedef struct OMRJITDataCacheHeader {
+	U_32 size;
+	U_32 type;
+} OMRJITDataCacheHeader;
+
 typedef struct OMRMemorySegment {
 	uintptr_t type;
 	uintptr_t size;
@@ -65,4 +71,24 @@ typedef struct OMRMethod {
 	void* methodRunAddress;
 	void* extra;
 } OMRMethod;
+
+#define OMR_JIT_QUEUED_FOR_COMPILATION -5
+#define OMR_JIT_NEVER_TRANSLATE -3
+#define OMR_JIT_RESOLVE_FAIL_COMPILE -2
+#define OMR_JIT_DCE_EXCEPTION_INFO 0x1
+#define OMR_JIT_TRANSITION_METHOD_ENTER 0x1
+#define OMR_JIT_TOGGLE_RI_ON_TRANSITION 0x1
+#define OMR_JIT_DCE_STACK_ATLAS 0x2
+#define OMR_JIT_TRANSITION_METHOD_EXIT 0x2
+#define OMR_JIT_TOGGLE_RI_IN_COMPILED_CODE 0x2
+#define OMR_JIT_DCE_RELOCATION_DATA 0x4
+#define OMR_JIT_DCE_THUNK_MAPPING_LIST 0x8
+#define OMR_JIT_DCE_THUNK_MAPPING 0x10
+#define OMR_JIT_DCE_HASH_TABLE 0x20
+#define OMR_JIT_DCE_MCC_HT_ENTRY 0x40
+#define OMR_JIT_DCE_AOT_METHOD_HEADER 0x80
+#define OMR_JIT_DCE_UNALLOCATED 0x100
+#define OMR_JIT_DCE_IN_USE 0x200
+#define OMR_JIT_DCE_AOT_PERSISTENT_INFO 0x400
+
 #endif
