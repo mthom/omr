@@ -36,6 +36,10 @@ namespace OMR { typedef OMR::X86::AMD64::AheadOfTimeCompile AheadOfTimeCompileCo
 #include "codegen/Relocation.hpp"
 #include "runtime/RelocationRecord.hpp"
 
+namespace TR {
+class RelocationRecord;
+class AheadOfTimeCompile;
+}
 namespace OMR
 {
 
@@ -44,6 +48,7 @@ namespace X86
    
 namespace AMD64 
 {
+   
 
 class OMR_EXTENSIBLE AheadOfTimeCompile  : public OMR::X86::AheadOfTimeCompile
    {
@@ -53,7 +58,7 @@ class OMR_EXTENSIBLE AheadOfTimeCompile  : public OMR::X86::AheadOfTimeCompile
       : OMR::X86::AheadOfTimeCompile(_relocationKindToHeaderSizeMap,c)
       {
       }
-
+TR::AheadOfTimeCompile* self();
    virtual void     processRelocations();
     virtual uint8_t *initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation,TR::RelocationRecord* );
  virtual uint8_t* initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);

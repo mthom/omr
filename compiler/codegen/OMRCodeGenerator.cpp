@@ -39,6 +39,7 @@
 #include "codegen/FrontEnd.hpp"
 #include "codegen/Instruction.hpp"
 #include "codegen/Linkage.hpp"
+#include <iostream>
 #include "codegen/LinkageConventionsEnum.hpp"
 #include "codegen/LiveRegister.hpp"
 #include "codegen/Machine.hpp"
@@ -1978,13 +1979,15 @@ OMR::CodeGenerator::processRelocations()
       ++iterator;
       }
    //TR_ASSERTC(missedSite == -1, comp(), "Site %d is missing relocation\n", missedSite);
-   if (0){
+   if (1){
          //This is to process aot relocations
       // Call the platform specific processing of relocations
       auto theAOT = self()->getAheadOfTimeCompile();
       theAOT->processRelocations();
+      int i = 0 ;
          for (auto aotIterator = self()->getExternalRelocationList().begin(); aotIterator != self()->getExternalRelocationList().end(); ++aotIterator)
       {
+     std::cout<<i <<"th external relocation is accessed"<<std::endl;
       // Traverse the AOT/external labels
 	  (*aotIterator)->apply(self());
       }

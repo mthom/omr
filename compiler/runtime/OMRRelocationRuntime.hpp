@@ -186,7 +186,7 @@ class RelocationRuntime {
       void setReturnCode(int32_t rc)                              { _returnCode = rc; }
 
       TR::Options *options()                                       { return _options; }
-      TR::Compilation *comp()                                    { return _comp; }
+      TR::Compilation* comp()                                    { return _comp; }
       TR_ResolvedMethod *currentResolvedMethod()                  { return _currentResolvedMethod; }
 
       // current main entry point

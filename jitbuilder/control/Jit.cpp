@@ -148,7 +148,23 @@ bool storeCodeEntry(const char *methodName, void *codeLocation) {
 }
 
 void *getCodeEntry(const char *methodName){
-  return cache->loadCodeEntry(methodName);
+  TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
+  U_32 codeLength = 0;
+  void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength);
+  int32_t numReserved;
+  TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
+  if(!codeCache){
+    return nullptr;
+  }
+  uint8_t * coldCode = nullptr;
+  void * warmCode =  manager->allocateCodeMemory(codeLength, 0, &codeCache, &coldCode, false);
+  if(!warmCode){
+    codeCache->unreserve();
+    return nullptr;
+  }
+  memcpy(warmCode,sharedCacheMethod,codeLength);
+  return warmCode;
+//return cache->loadCodeEntry(methodName);
 }
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"

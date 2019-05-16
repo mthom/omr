@@ -24,6 +24,7 @@ compiler_library(runtime
 	${CMAKE_CURRENT_LIST_DIR}/Runtime.cpp
 	${CMAKE_CURRENT_LIST_DIR}/RelocationRuntime.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRRelocationTarget.cpp
+	${CMAKE_CURRENT_LIST_DIR}/DataCache.cpp
 	${CMAKE_CURRENT_LIST_DIR}/Trampoline.cpp
 	${CMAKE_CURRENT_LIST_DIR}/Alignment.cpp
 	${CMAKE_CURRENT_LIST_DIR}/CodeCacheTypes.cpp
