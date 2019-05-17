@@ -375,11 +375,69 @@ OMR::RelocationRecord::applyRelocationAtAllOffsets(TR::RelocationRuntime *reloRu
       return 0;
    }
 
+
+
 // Handlers for individual relocation record types
 
 // Relocations with address sequences
 //
 
+uint8_t *
+OMR::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation)
+   {
+   uint8_t *callTargetAddress = address(reloTarget);
+
+// if (reloRuntime->options()->getOption(TR_StressTrampolines) || reloTarget->useTrampoline(callTargetAddress, baseLocation))
+//    {
+//    RELO_LOG(reloRuntime->reloLogger(), 6, "\tredirecting call to " POINTER_PRINTF_FORMAT " through trampoline\n", callTargetAddress);
+//    auto metadata = jitGetExceptionTableFromPC(reloRuntime->currentThread(), (UDATA)callTargetAddress);
+//    auto j9method = metadata->ramMethod;
+//    TR::VMAccessCriticalSection computeTargetMethodAddress(reloRuntime->fej9());
+      // getResolvedTrampoline will create the trampoline if it doesn't exist, but we pass inBinaryEncoding=true because we want the compilation to fail
+      // if the trampoline can't be allocated in the current code cache rather than switching to a new code cache, which can't be done during relocation.
+//    auto codeCache = reloRuntime->fej9()->getResolvedTrampoline(reloRuntime->comp(), reloRuntime->codeCache(), j9method, /* inBinaryEncoding */ true);
+//    callTargetAddress = reinterpret_cast<uint8_t *>(codeCache->findTrampoline((TR_OpaqueMethodBlock *)j9method));
+//    }
+
+   return callTargetAddress;
+   }
+
+uint8_t*
+OMR::RelocationRecordMethodCallAddress::address(TR::RelocationTarget *reloTarget)
+   {
+   RelocationRecordMethodCallAddressBinaryTemplate *reloData = (RelocationRecordMethodCallAddressBinaryTemplate *)_record;
+   return reloTarget->loadAddress(reinterpret_cast<uint8_t *>(&reloData->_methodAddress));
+   }
+
+void
+OMR::RelocationRecordMethodCallAddress::setAddress(TR::RelocationTarget *reloTarget, uint8_t *callTargetAddress)
+   {
+   RelocationRecordMethodCallAddressBinaryTemplate *reloData = (RelocationRecordMethodCallAddressBinaryTemplate *)_record;
+   reloTarget->storeAddress(callTargetAddress, reinterpret_cast<uint8_t *>(&reloData->_methodAddress));
+   }
+
+int32_t OMR::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+   {
+   uint8_t *baseLocation = 0;
+   if (eipRelative(reloTarget))
+      {
+      baseLocation = reloTarget->eipBaseForCallOffset(reloLocation);
+      RELO_LOG(reloRuntime->reloLogger(), 6, "\teip-relative, adjusted location to " POINTER_PRINTF_FORMAT "\n", baseLocation);
+      }
+
+   uint8_t *callTargetAddress = computeTargetMethodAddress(reloRuntime, reloTarget, baseLocation);
+   uint8_t *callTargetOffset = reinterpret_cast<uint8_t *>(callTargetAddress - baseLocation);
+   RELO_LOG(reloRuntime->reloLogger(), 6,
+            "\t\tapplyRelocation: reloLocation " POINTER_PRINTF_FORMAT " baseLocation " POINTER_PRINTF_FORMAT " callTargetAddress " POINTER_PRINTF_FORMAT " callTargetOffset %x\n",
+            reloLocation, baseLocation, callTargetAddress, callTargetOffset);
+
+   if (eipRelative(reloTarget))
+      reloTarget->storeRelativeTarget(reinterpret_cast<uintptr_t>(callTargetOffset), reloLocation);
+   else
+      reloTarget->storeAddress(callTargetOffset, reloLocation);
+
+   return 0;
+   }
 
 uint32_t OMR::RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds] =
    {
