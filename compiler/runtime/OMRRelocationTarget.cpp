@@ -204,12 +204,6 @@ OMR::RelocationTarget::storeClassAddressForHeader(uint8_t *address, uint8_t *rel
    TR_ASSERT(0, "Error: storeClassAddressForHeader not implemented in relocation target base class");
    }
 
-uint32_t
-OMR::RelocationTarget::loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
-   {
-   TR_ASSERT(0, "Error: loadCPIndex not implemented in relocation target base class");
-   return 0;
-   }
 
 void
 OMR::RelocationTarget::performThunkRelocation(uint8_t *thunkAddress, uintptr_t vmHelper)

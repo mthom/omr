@@ -67,7 +67,6 @@ if(TR_TARGET_BITS STREQUAL 64)
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRTreeEvaluator.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRMemoryReference.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRAheadOfTimeCompile.cpp		
-		${CMAKE_CURRENT_LIST_DIR}/amd64/runtime/OMRRelocationTarget.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRRealRegister.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/AMD64SystemLinkage.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRELFRelocationResolver.cpp
