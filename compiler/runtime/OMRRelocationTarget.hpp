@@ -23,21 +23,28 @@
 #ifndef OMR_RELOCATION_TARGET_INCL
 #define OMR_RELOCATION_TARGET_INCL
 
-#include <stddef.h>
-#include <stdint.h>
-#include "env/TRMemory.hpp"
-#include "env/jittypes.h"
-#include "runtime/RelocationRuntime.hpp"
-
-namespace TR {
-   class OpaqueClassBlock;
-   class RelocationRecord;
-}
 #ifndef OMR_RELOCATION_TARGET_CONNECTOR
 #define OMR_RELOCATION_TARGET_CONNECTOR
 namespace OMR { class RelocationTarget; }
 namespace OMR { typedef OMR::RelocationTarget RelocationTargetConnector; }
 #endif
+
+
+#include <stddef.h>
+#include <stdint.h>
+#include "env/TRMemory.hpp"
+#include "env/jittypes.h"
+#include "env/JitConfig.hpp"
+
+namespace TR {
+   class OpaqueClassBlock;
+   class RelocationRecord;
+}
+
+namespace TR{ 
+   class RelocationRuntime;
+   class RelocationTarget;
+}
 // TR_RelocationTarget defines how a platform target implements the individual steps of processing
 //    relocation records.
 // This is intended to be a base class that should not be itself instantiated
@@ -52,7 +59,7 @@ class  OMR_EXTENSIBLE RelocationTarget
          _reloRuntime = reloRuntime;
          }
 
-      RelocationRuntime *reloRuntime()                                   { return _reloRuntime; }
+      TR::RelocationRuntime *reloRuntime()                                   { return _reloRuntime; }
    virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
       virtual void flushCache(uint8_t *codeStart, unsigned long size)       {} // default impl is empty
 
@@ -86,7 +93,7 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual bool useTrampoline(uint8_t * helperAddress, uint8_t *baseLocation) { return false; }
 
       // The following functions should be overridden by subclasses for specific targets
-      // virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocation);
+      virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocation);
 
       virtual uint8_t *loadCallTarget(uint8_t *reloLocation);
       virtual void storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation);
@@ -119,7 +126,6 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual uint32_t loadCPIndex(uint8_t *reloLocation);
 
 
-      virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocation);
 
       virtual uint8_t *loadCallTarget(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
       virtual void storeCallTarget(uint8_t *callTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
@@ -133,17 +139,18 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual uint8_t *loadClassAddressForHeader(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
       virtual void storeClassAddressForHeader(uint8_t *address, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 
-      virtual uint32_t loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
+      // virtual uint32_t loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 
       virtual void performThunkRelocation(uint8_t *thunkAddress, uintptr_t vmHelper);
      // virtual uint8_t *arrayCopyHelperAddress(J9JavaVM *javaVM);
 
-     // virtual void patchNonVolatileFieldMemoryFence(J9ROMFieldShape* resolvedField, UDATA cpAddr, U_8 descriptorByte, U_8 *instructionAddress, U_8 *snippetStartAddress, J9JavaVM *javaVM);
+     // virtual 
+   //   void patchNonVolatileFieldMemoryFence(J9ROMFieldShape* resolvedField, UDATA cpAddr, U_8 descriptorByte, U_8 *instructionAddress, U_8 *snippetStartAddress, J9JavaVM *javaVM);
 
      // virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
 
    private:
-      RelocationRuntime *_reloRuntime;
+      TR::RelocationRuntime *_reloRuntime;
    };
 }
 #endif   // OMR_RELOCATION_TARGET_INCL

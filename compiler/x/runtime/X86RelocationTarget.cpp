@@ -28,7 +28,12 @@
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "runtime/RelocationRuntime.hpp"
-
+uint8_t *
+OMR::X86::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
+   {
+   // reloLocation points at the start of the call offset, return address is 4
+   return (uint8_t *) (reloLocation+4);
+   }
 
 
 void

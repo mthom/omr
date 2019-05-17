@@ -32,7 +32,7 @@ TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationR
 
    #if defined(TR_HOST_X86)
       #if defined(TR_HOST_64BIT)
-      _reloTarget =  reinterpret_cast<TR::RelocationTarget  *> (new (PERSISTENT_NEW) TR::RelocationTarget(this));
+      _reloTarget =  (new (PERSISTENT_NEW) TR::RelocationTarget(this));
       #else
       _reloTarget = new (PERSISTENT_NEW) TR_X86RelocationTarget(this);
       #endif
