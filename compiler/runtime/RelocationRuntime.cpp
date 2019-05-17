@@ -19,8 +19,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "compiler/runtime/RelocationRuntime.hpp"
-#include "compiler/runtime/RelocationTarget.hpp"
+#include "runtime/RelocationRuntime.hpp"
+#include "runtime/RelocationTarget.hpp"
 
 TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationRuntimeConnector(jitCfg)
    {

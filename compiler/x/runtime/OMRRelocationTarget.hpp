@@ -63,26 +63,26 @@ class OMR_EXTENSIBLE RelocationTarget  : public OMR::RelocationTarget
    {
    public:
       TR_ALLOC(TR_Memory::Relocation)
-      void * operator new(size_t, TR::JitConfig *);
+	void * operator new(size_t, TR::JitConfig *);
       RelocationTarget(TR::RelocationRuntime *reloRuntime) : OMR::RelocationTarget(reloRuntime) {}
 
       
-      virtual void storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation);
-      virtual void storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation);
-      virtual uint8_t *loadAddressSequence(uint8_t *reloLocation);
-      virtual void storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber);
-      virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocationHigh);
+       virtual void storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation);
+       virtual void storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation);
+       virtual uint8_t *loadAddressSequence(uint8_t *reloLocation);
+       virtual void storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber);
+       virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocationHigh);
 
-      virtual void storeRelativeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber) 
+       virtual void storeRelativeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber) 
          {
          address = (uint8_t *)((intptrj_t)address - (intptrj_t)(reloLocation + 4));
          storeAddressSequence(address, reloLocation, seqNumber);
          }
       
-      virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
+       virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
 
   
-      virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
+       virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
    };
 
 

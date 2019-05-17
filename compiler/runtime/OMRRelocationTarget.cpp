@@ -134,13 +134,6 @@ OMR::RelocationTarget::loadCPIndex(uint8_t *reloLocation)
    return 0;
    }
 
-uint8_t*
-OMR::RelocationTarget::eipBaseForCallOffset(uint8_t* reloLocation)
-{
-  TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
-  return NULL;
-}
-
 // uint8_t *
 // OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
 //    {
@@ -203,7 +196,6 @@ OMR::RelocationTarget::storeClassAddressForHeader(uint8_t *address, uint8_t *rel
    {
    TR_ASSERT(0, "Error: storeClassAddressForHeader not implemented in relocation target base class");
    }
-
 
 void
 OMR::RelocationTarget::performThunkRelocation(uint8_t *thunkAddress, uintptr_t vmHelper)

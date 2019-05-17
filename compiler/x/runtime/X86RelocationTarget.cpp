@@ -20,7 +20,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "runtime/RelocationTarget.hpp"
+// #include "runtime/RelocationTarget.hpp"
+#include "x/runtime/OMRRelocationTarget.hpp"
 
 #include <stdint.h>
 #include "omrcfg.h"
@@ -28,13 +29,6 @@
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "runtime/RelocationRuntime.hpp"
-
-uint8_t *
-OMR::X86::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
-   {
-   // reloLocation points at the start of the call offset, return address is 4
-   return (uint8_t *) (reloLocation+4);
-   }
 
 void
 OMR::X86::RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)

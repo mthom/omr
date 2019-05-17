@@ -125,8 +125,6 @@ class  OMR_EXTENSIBLE RelocationTarget
 
       virtual uint32_t loadCPIndex(uint8_t *reloLocation);
 
-      virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocation);
-
       virtual uint8_t *loadCallTarget(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
       virtual void storeCallTarget(uint8_t *callTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 
@@ -139,15 +137,15 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual uint8_t *loadClassAddressForHeader(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
       virtual void storeClassAddressForHeader(uint8_t *address, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 
-      // virtual uint32_t loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
+      // uint32_t loadCPIndex(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 
       virtual void performThunkRelocation(uint8_t *thunkAddress, uintptr_t vmHelper);
-     // virtual uint8_t *arrayCopyHelperAddress(J9JavaVM *javaVM);
+     // uint8_t *arrayCopyHelperAddress(J9JavaVM *javaVM);
 
-     // virtual 
+     // 
    //   void patchNonVolatileFieldMemoryFence(J9ROMFieldShape* resolvedField, UDATA cpAddr, U_8 descriptorByte, U_8 *instructionAddress, U_8 *snippetStartAddress, J9JavaVM *javaVM);
 
-     // virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
+     // void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
 
    private:
       TR::RelocationRuntime *_reloRuntime;
