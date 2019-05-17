@@ -117,6 +117,11 @@ namespace OMR
          uint32_t _extra;
          #endif
    };
+
+  struct RelocationRecordMethodCallAddressBinaryTemplate : public RelocationRecordBinaryTemplate
+   {
+   UDATA _methodAddress;
+   };
    
    class  OMR_EXTENSIBLE  RelocationRecord
    {
@@ -219,7 +224,22 @@ class RelocationRecordGroup
       TR::RelocationRecordBinaryTemplate *_group;
    };
 
+class RelocationRecordMethodCallAddress : public RelocationRecord
+   {
+   public:
+      RelocationRecordMethodCallAddress() {}
+      RelocationRecordMethodCallAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecord(reloRuntime, record) {}
 
+      virtual char *name() { return "MethodCallAddress"; }
+      virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordMethodCallAddressBinaryTemplate); }
+      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+
+      uint8_t* address(TR::RelocationTarget *reloTarget);
+      void setAddress(TR::RelocationTarget *reloTarget, uint8_t* callTargetAddress);
+
+   private:
+      uint8_t *computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation);
+   };
 
 
 } //namespace OMR
