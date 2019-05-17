@@ -20,7 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "runtime/OMRRelocationTarget.hpp"
+#include "runtime/RelocationTarget.hpp"
 
 #include <stdint.h>
 #include "omrcfg.h"
@@ -28,7 +28,7 @@
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "runtime/RelocationRuntime.hpp"
-#include "runtime/RelocationTarget.hpp"
+
 
 
 void

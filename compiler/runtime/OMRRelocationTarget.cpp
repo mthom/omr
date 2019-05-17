@@ -28,6 +28,7 @@
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationTarget.hpp"
+
 bool OMR::RelocationTarget::isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget)
    {
    switch (reloRecord->type(reloTarget))

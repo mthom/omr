@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corp. and others
+ * Copyright (c) 2000, 2016 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,18 +19,10 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#ifndef TR_RELOCATION_TARGET_HPP
-#define TR_RELOCATION_TARGET_HPP
-#include "compiler/runtime/OMRRelocationTarget.hpp"
+#include "compiler/x/amd64/runtime/OMRRelocationTarget.hpp"
 
-namespace TR
-{
-
-class OMR_EXTENSIBLE RelocationTarget : public OMR::RelocationTargetConnector
+uint8_t * OMR::X86::AMD64::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
    {
-   public:
-   RelocationTarget(TR::RelocationRuntime *reloRuntime): OMR::RelocationTargetConnector(reloRuntime){};
- 
-};
-}
-#endif //TR_RELOCATION_TARGET_HPP
+   // reloLocation points at the start of the call offset, return address is 4
+   return (uint8_t *) (reloLocation+4);
+   }

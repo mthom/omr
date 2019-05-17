@@ -119,7 +119,7 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual uint32_t loadCPIndex(uint8_t *reloLocation);
 
 
-      // virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
+      virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocation);
 
       virtual uint8_t *loadCallTarget(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
       virtual void storeCallTarget(uint8_t *callTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);

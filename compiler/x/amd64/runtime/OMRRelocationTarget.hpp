@@ -27,14 +27,15 @@
 #define OMR_RELOCATION_TARGET_CONNECTOR
 namespace OMR { namespace X86 {  namespace AMD64 { class RelocationTarget; }}}
 namespace OMR { typedef OMR::X86::AMD64::RelocationTarget RelocationTargetConnector; }
+#else
+#error OMR::X86::AMD64::RelocationTarget expected to be a primary connector, but a OMR connector is already defined
 #endif
 
 
 #include <stddef.h>
 #include <stdint.h>
 #include "env/jittypes.h"
-#include "runtime/RelocationRecord.hpp"
-
+namespace TR {class RelocationRecord;}
 
 
 #include "compiler/x/runtime/OMRRelocationTarget.hpp"
@@ -57,6 +58,7 @@ class OMR_EXTENSIBLE RelocationTarget : public OMR::X86::RelocationTarget
          {
          storeAddressSequence(address, reloLocation, seqNumber);
          }
+        virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocationHigh);
 
       virtual bool useTrampoline(uint8_t * helperAddress, uint8_t *baseLocation);
    };
