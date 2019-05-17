@@ -29,7 +29,6 @@ class OMR_EXTENSIBLE RelocationTarget : public OMR::RelocationTargetConnector
    {
    public:
    RelocationTarget(TR::RelocationRuntime *reloRuntime): OMR::RelocationTargetConnector(reloRuntime){};
- virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
  
 };
 }

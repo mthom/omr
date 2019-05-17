@@ -200,13 +200,13 @@ class RelocationRuntime {
                                                          TR::Compilation *compilation,
                                                          TR_ResolvedMethod *resolvedMethod);
 
-      virtual bool storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
-      virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
-      virtual bool validateAOTHeader(OMR_VM *jomrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
+      // virtual bool storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
+      // virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
+      // virtual bool validateAOTHeader(OMR_VM *jomrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
 
     //  virtual void *isROMClassInSharedCaches(UDATA romClassValue, OMR_VM *omrVm);
      // virtual bool isRomClassForMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
-      virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVM);
+   //virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVM);
      // virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVM, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
 
       static uintptr_t    getGlobalValue(uint32_t g)
@@ -371,13 +371,13 @@ public:
          _sharedCacheIsFull=false;
          }
 
-      virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
-      virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
-      virtual bool validateAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
+   //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
+   //    virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
+   //   virtual bool validateAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
 
-      virtual void *isROMClassInSharedCaches(UDATA romClassValue, OMR_VM *omrVm);
-      virtual bool isRomClassForMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
-      virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
+//      virtual void *isROMClassInSharedCaches(UDATA romClassValue, OMR_VM *omrVm);
+ //     virtual bool isRomClassForMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
+  //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
 
       //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
 

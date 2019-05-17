@@ -28,7 +28,7 @@
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationTarget.hpp"
-bool TR::RelocationTarget::isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget)
+bool OMR::RelocationTarget::isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget)
    {
    switch (reloRecord->type(reloTarget))
       {
@@ -135,12 +135,12 @@ OMR::RelocationTarget::loadCPIndex(uint8_t *reloLocation)
 
 
 
-uint8_t *
-OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
-   {
-   TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
-   return NULL;
-   }
+// uint8_t *
+// OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)
+//    {
+//    TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
+//    return NULL;
+//    }
 
 
 uint8_t *

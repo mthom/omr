@@ -103,8 +103,8 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
 
    //Check method header is valid
    _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry + 1); // skip the header J9JITDataCacheHeader
-   if (!aotMethodHeaderVersionsMatch())
-      return NULL; 
+   // if (!aotMethodHeaderVersionsMatch())
+   //    return NULL; 
 
    oldDataStart = (U_8 *)_aotMethodHeaderEntry->compileMethodDataStartPC;
    oldCodeStart = (U_8 *)_aotMethodHeaderEntry->compileMethodCodeStartPC;
@@ -312,87 +312,87 @@ OMR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTH
 
 
 
-TR::AOTHeader *
-OMR::SharedCacheRelocationRuntime::createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fee)
-   {
-//    PORT_ACCESS_FROM_JAVAVM(javaVM());
+// TR::AOTHeader *
+// OMR::SharedCacheRelocationRuntime::createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fee)
+//    {
+// //    PORT_ACCESS_FROM_JAVAVM(javaVM());
 
-//    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
-//    TR_AOTHeader * aotHeader = (TR_AOTHeader *)j9mem_allocate_memory(sizeof(TR_AOTHeader), J9MEM_CATEGORY_JIT);
+// //    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
+// //    TR_AOTHeader * aotHeader = (TR_AOTHeader *)j9mem_allocate_memory(sizeof(TR_AOTHeader), J9MEM_CATEGORY_JIT);
 
-//    if (aotHeader)
+// //    if (aotHeader)
+// //       {
+// //       aotHeader->eyeCatcher = TR_AOTHeaderEyeCatcher;
+
+// //       TR_Version *aotHeaderVersion = &aotHeader->version;
+// //       memset(aotHeaderVersion, 0, sizeof(TR_Version));
+// //       aotHeaderVersion->structSize = sizeof(TR_Version);
+// //       aotHeaderVersion->majorVersion = TR_AOTHeaderMajorVersion;
+// //       aotHeaderVersion->minorVersion = TR_AOTHeaderMinorVersion;
+// //       strncpy(aotHeaderVersion->vmBuildVersion, EsBuildVersionString, sizeof(EsBuildVersionString));
+// //       strncpy(aotHeaderVersion->jitBuildVersion, TR_BUILD_NAME, std::min(strlen(TR_BUILD_NAME), sizeof(aotHeaderVersion->jitBuildVersion)));
+
+// //       aotHeader->processorSignature = TR::Compiler->target.cpu.id();
+// //       aotHeader->gcPolicyFlag = javaVM()->memoryManagerFunctions->j9gc_modron_getWriteBarrierType(javaVM());
+// //       aotHeader->lockwordOptionHashValue = getCurrentLockwordOptionHashValue(pjavaVM);
+// // #if defined(J9VM_GC_COMPRESSED_POINTERS)
+// //       aotHeader->compressedPointerShift = javaVM()->memoryManagerFunctions->j9gc_objaccess_compressedPointersShift(javaVM()->internalVMFunctions->currentVMThread(javaVM()));
+// // #else
+// //       aotHeader->compressedPointerShift = 0;
+// // #endif
+
+// //       aotHeader->processorFeatureFlags = TR::Compiler->target.cpu.getProcessorFeatureFlags();
+
+// //       // Set up other feature flags
+// //       aotHeader->featureFlags = generateFeatureFlags(fe);
+
+// //       // Set ArrayLet Size if supported
+// //       aotHeader->arrayLetLeafSize = TR::Compiler->om.arrayletLeafSize();
+// //       }
+
+//    return NULL;
+//    }
+
+// bool
+// OMR::SharedCacheRelocationRuntime::storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread)
+//    {
+
+//    TR::AOTHeader *aotHeader = createAOTHeader(omrVM,fe);
+//    if (!aotHeader)
 //       {
-//       aotHeader->eyeCatcher = TR_AOTHeaderEyeCatcher;
-
-//       TR_Version *aotHeaderVersion = &aotHeader->version;
-//       memset(aotHeaderVersion, 0, sizeof(TR_Version));
-//       aotHeaderVersion->structSize = sizeof(TR_Version);
-//       aotHeaderVersion->majorVersion = TR_AOTHeaderMajorVersion;
-//       aotHeaderVersion->minorVersion = TR_AOTHeaderMinorVersion;
-//       strncpy(aotHeaderVersion->vmBuildVersion, EsBuildVersionString, sizeof(EsBuildVersionString));
-//       strncpy(aotHeaderVersion->jitBuildVersion, TR_BUILD_NAME, std::min(strlen(TR_BUILD_NAME), sizeof(aotHeaderVersion->jitBuildVersion)));
-
-//       aotHeader->processorSignature = TR::Compiler->target.cpu.id();
-//       aotHeader->gcPolicyFlag = javaVM()->memoryManagerFunctions->j9gc_modron_getWriteBarrierType(javaVM());
-//       aotHeader->lockwordOptionHashValue = getCurrentLockwordOptionHashValue(pjavaVM);
-// #if defined(J9VM_GC_COMPRESSED_POINTERS)
-//       aotHeader->compressedPointerShift = javaVM()->memoryManagerFunctions->j9gc_objaccess_compressedPointersShift(javaVM()->internalVMFunctions->currentVMThread(javaVM()));
-// #else
-//       aotHeader->compressedPointerShift = 0;
-// #endif
-
-//       aotHeader->processorFeatureFlags = TR::Compiler->target.cpu.getProcessorFeatureFlags();
-
-//       // Set up other feature flags
-//       aotHeader->featureFlags = generateFeatureFlags(fe);
-
-//       // Set ArrayLet Size if supported
-//       aotHeader->arrayLetLeafSize = TR::Compiler->om.arrayletLeafSize();
+//         return false;
 //       }
 
-   return NULL;
-   }
+//    // J9SharedDataDescriptor dataDescriptor;
+//    // UDATA aotHeaderLen = sizeof(TR_AOTHeader);
 
-bool
-OMR::SharedCacheRelocationRuntime::storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread)
-   {
+//    // dataDescriptor.address = (U_8*)aotHeader;
+//    // dataDescriptor.length = aotHeaderLen;
+//    // dataDescriptor.type =  J9SHR_DATA_TYPE_AOTHEADER;
+//    // dataDescriptor.flags = J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE;
+//    bool store = false;
+//    // const void* store = javaVM()->sharedClassConfig->storeSharedData(curThread,
+//    //                                                                aotHeaderKey,
+//    //                                                                aotHeaderKeyLength,
+//    //                                                                &dataDescriptor);
+//    if (store)
+//       {
+//       // If a header already exists, the old one is returned
+//       // Thus, we must check the validity of the header
+//       // return validateAOTHeader();
+//       return true;
+//       }
+//    else
+//       {
+//       // The store failed for some odd reason; maybe the cache is full
+//       // Let's prevent any further store operations to avoid overhead
+//       // TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
 
-   TR::AOTHeader *aotHeader = createAOTHeader(omrVM,fe);
-   if (!aotHeader)
-      {
-        return false;
-      }
-
-   // J9SharedDataDescriptor dataDescriptor;
-   // UDATA aotHeaderLen = sizeof(TR_AOTHeader);
-
-   // dataDescriptor.address = (U_8*)aotHeader;
-   // dataDescriptor.length = aotHeaderLen;
-   // dataDescriptor.type =  J9SHR_DATA_TYPE_AOTHEADER;
-   // dataDescriptor.flags = J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE;
-   bool store = false;
-   // const void* store = javaVM()->sharedClassConfig->storeSharedData(curThread,
-   //                                                                aotHeaderKey,
-   //                                                                aotHeaderKeyLength,
-   //                                                                &dataDescriptor);
-   if (store)
-      {
-      // If a header already exists, the old one is returned
-      // Thus, we must check the validity of the header
-      // return validateAOTHeader();
-      return true;
-      }
-   else
-      {
-      // The store failed for some odd reason; maybe the cache is full
-      // Let's prevent any further store operations to avoid overhead
-      // TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
-
-      // TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_HEADER_STORE_FAILED);
-      // TR_J9SharedCache::setStoreSharedDataFailedLength(aotHeaderLen);
-      return false;
-      }
-   }
+//       // TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_HEADER_STORE_FAILED);
+//       // TR_J9SharedCache::setStoreSharedDataFailedLength(aotHeaderLen);
+//       return false;
+//       }
+//    }
 
 
 

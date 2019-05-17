@@ -86,7 +86,7 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual bool useTrampoline(uint8_t * helperAddress, uint8_t *baseLocation) { return false; }
 
       // The following functions should be overridden by subclasses for specific targets
-      virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocation);
+      // virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocation);
 
       virtual uint8_t *loadCallTarget(uint8_t *reloLocation);
       virtual void storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation);
@@ -119,7 +119,7 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual uint32_t loadCPIndex(uint8_t *reloLocation);
 
 
-      virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
+      // virtual uint8_t *eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 
       virtual uint8_t *loadCallTarget(uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
       virtual void storeCallTarget(uint8_t *callTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
