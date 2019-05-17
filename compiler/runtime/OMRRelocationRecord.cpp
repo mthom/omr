@@ -421,7 +421,7 @@ int32_t OMR::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRu
    uint8_t *baseLocation = 0;
    if (eipRelative(reloTarget))
       {
-      baseLocation = reloTarget->eipBaseForCallOffset(reloLocation);
+     // baseLocation = reloTarget->eipBaseForCallOffset(reloLocation);
       RELO_LOG(reloRuntime->reloLogger(), 6, "\teip-relative, adjusted location to " POINTER_PRINTF_FORMAT "\n", baseLocation);
       }
 
