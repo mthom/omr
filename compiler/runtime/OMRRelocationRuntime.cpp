@@ -50,8 +50,11 @@
 #include "codegen/CodeGenerator.hpp"
 #include "compile/ResolvedMethod.hpp"
 
-// Function called for AOT method from both JXE and Shared Classes to perform relocations
-//
+OMR::RelocationRuntime::RelocationRuntime(TR::JitConfig*)
+{
+  
+}
+
 void
 OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
 					       U_8 *oldDataStart,

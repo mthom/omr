@@ -20,14 +20,30 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "compiler/runtime/RelocationTarget.hpp"
 
 #include "codegen/FrontEnd.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "env/jittypes.h"
-#include "runtime/OMRRelocationRecord.hpp"
+#include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
+#include "runtime/RelocationTarget.hpp"
+bool TR::RelocationTarget::isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget)
+   {
+   switch (reloRecord->type(reloTarget))
+      {
+      case TR_AbsoluteMethodAddressOrderedPair :
+      case TR_ConstantPoolOrderedPair :
+         return true;
+      default:
+      	return false;
+      }
+
+   return false;
+   }
+
+
+
 uint8_t *
 OMR::RelocationTarget::loadCallTarget(uint8_t *reloLocation)
    {
