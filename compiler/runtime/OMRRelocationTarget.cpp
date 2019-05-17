@@ -134,7 +134,12 @@ OMR::RelocationTarget::loadCPIndex(uint8_t *reloLocation)
    return 0;
    }
 
-
+uint8_t*
+OMR::RelocationTarget::eipBaseForCallOffset(uint8_t* reloLocation)
+{
+  TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
+  return NULL;
+}
 
 // uint8_t *
 // OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocationHigh, uint8_t *reloLocationLow)

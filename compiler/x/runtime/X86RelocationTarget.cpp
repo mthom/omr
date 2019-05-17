@@ -28,33 +28,38 @@
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "runtime/RelocationRuntime.hpp"
-
+#include "x/runtime/X86RelocationTarget.hpp"
 
 
 void
-OMR::RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
+OMR::X86::RelocationTarget::storeCallTarget(uintptr_t callTarget, uint8_t *reloLocation)
    {
    // reloLocation points at the start of the call offset, so just store the uint8_t * at reloLocation
    storeUnsigned32b((uint32_t)callTarget, reloLocation);
    }
 
 void
-OMR::RelocationTarget::storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation)
+OMR::X86::RelocationTarget::storeRelativeTarget(uintptr_t callTarget, uint8_t *reloLocation)
    {
    storeCallTarget(callTarget, reloLocation);
    }
 
 uint8_t *
-OMR::RelocationTarget::loadAddressSequence(uint8_t *reloLocation)
+OMR::X86::RelocationTarget::loadAddressSequence(uint8_t *reloLocation)
    {
    // reloLocation points at the start of the address, so just need to dereference as uint8_t *
    return loadPointer(reloLocation);
    }
 
 void
-OMR::RelocationTarget::storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber)
+OMR::X86::RelocationTarget::storeAddressSequence(uint8_t *address, uint8_t *reloLocation, uint32_t seqNumber)
    {
    // reloLocation points at the start of the address, so just store the uint8_t * at reloLocation
    storePointer(address, reloLocation);
    }
 
+uint8_t*
+OMR::X86::RelocationTarget::eipBaseForCallOffset(uint8_t* reloLocationHigh)
+{
+  return (uint8_t*) (reloLocationHigh+4);
+}
