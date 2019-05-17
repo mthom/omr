@@ -54,7 +54,7 @@ class OMR_EXTENSIBLE AheadOfTimeCompile  : public OMR::X86::AheadOfTimeCompile
    {
    public:
    //ORiginally, codegen was here as a parameter
-   AheadOfTimeCompile(uint32_t *_relocationKindToHeaderSizeMap,TR::Compilation* c)
+   AheadOfTimeCompile(uint32_t *,TR::Compilation* c)
       : OMR::X86::AheadOfTimeCompile(_relocationKindToHeaderSizeMap,c)
       {
       }
@@ -63,7 +63,7 @@ TR::AheadOfTimeCompile* self();
     virtual uint8_t *initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation,TR::RelocationRecord* );
  virtual uint8_t* initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation);
 
-   private:
+   protected:
     static uint32_t _relocationKindToHeaderSizeMap[TR_NumExternalRelocationKinds];
    };
 
