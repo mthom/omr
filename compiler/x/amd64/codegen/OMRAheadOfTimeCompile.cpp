@@ -133,17 +133,17 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
 uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation)
    {
    TR::Compilation* comp = TR::comp();
+   TR::CodeGenerator* cg = comp->cg();
   // TR_J9VMBase *fej9 = (TR_J9VMBase *)(_cg->fe());
    //TR::SharedCache *sharedCache = fej9->sharedCache();
    //TR::SymbolValidationManager *symValManager = comp->getSymbolValidationManager();
 
    TR_VirtualGuard *guard;
+     uint8_t *cursor = relocation->getRelocationData();
    uint8_t flags = 0;
    TR_ResolvedMethod *resolvedMethod;
 
-   uint8_t *cursor = relocation->getRelocationData();
-
-   TR::RelocationRuntime *reloRuntime = NULL;
+   TR::RelocationRuntime *reloRuntime =new (cg->trHeapMemory()) TR::RelocationRuntime(NULL);
    TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
 
    uint8_t * aotMethodCodeStart = (uint8_t *) comp->getRelocatableMethodCodeStart();
