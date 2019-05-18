@@ -21,7 +21,7 @@
  *******************************************************************************/
 #ifndef TR_RELOCATION_TARGET_HPP
 #define TR_RELOCATION_TARGET_HPP
-#include "compiler/runtime/OMRRelocationTarget.hpp"
+#include "runtime/OMRRelocationTarget.hpp"
 
 namespace TR
 {

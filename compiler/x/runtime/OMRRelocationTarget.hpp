@@ -79,10 +79,10 @@ class OMR_EXTENSIBLE RelocationTarget  : public OMR::RelocationTarget
          storeAddressSequence(address, reloLocation, seqNumber);
          }
       
-       virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
+//     virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
 
   
-       virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
+//     virtual void patchMTIsolatedOffset(uint32_t offset, uint8_t *reloLocation);
    };
 
 

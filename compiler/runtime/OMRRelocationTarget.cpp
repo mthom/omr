@@ -203,3 +203,9 @@ OMR::RelocationTarget::performThunkRelocation(uint8_t *thunkAddress, uintptr_t v
    TR_ASSERT(0, "Error: performThunkRelocation not implemented in relocation target base class");
    }
 
+uint8_t *
+OMR::RelocationTarget::eipBaseForCallOffset(uint8_t *reloLocation)
+   {
+   TR_ASSERT(0, "Error: eipBaseForCallOffset not implemented in relocation target base class");
+   return NULL;
+}
