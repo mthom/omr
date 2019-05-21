@@ -14,7 +14,9 @@ WASMOSCache<SuperOSCache>::WASMOSCache(OMRPortLibrary* library,
   : SuperOSCache(library, cacheName, ctrlDirName, numLocks,
 		 (_config = new (PERSISTENT_NEW) WASMOSCacheConfig<typename SuperOSCache::config_type>(numLocks, configOptions, osPageSize)),
 		 configOptions)
-{}
+{
+  startup(cacheName, ctrlDirName);
+}
 
 template <class SuperOSCache>
 OSCacheIterator*

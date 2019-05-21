@@ -30,7 +30,7 @@ namespace TR
   {
   public:
 
-  SharedCache() : OMR::SharedCacheConnector() {}
+  SharedCache(const char* cacheName, const char* cachePath) : OMR::SharedCacheConnector(cacheName, cachePath) {}
 
   };
 }

@@ -39,7 +39,8 @@
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationTarget.hpp"
-#include  "runtime/SymbolValidationManager.hpp"
+#include "runtime/SymbolValidationManager.hpp"
+#include "runtime/OMRRelocationRecord.hpp"
 
 // TODO: move this someplace common for RuntimeAssumptions.cpp and here
 #if defined(__IBMCPP__) && !defined(AIXPPC) && !defined(LINUXPPC)
@@ -141,17 +142,21 @@ OMR::RelocationRecordGroup::handleRelocation(TR::RelocationRuntime *reloRuntime,
 TR::RelocationRecord *
 TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *record)
    {
-   TR::RelocationRecord *reloRecord = NULL;
+   OMR::RelocationRecord *reloRecord = NULL;
    // based on the type of the relocation record, create an object of a particular variety of OMR::RelocationRecord object
    uint8_t reloType = record->type(reloTarget);
    switch (reloType)
       {
+      case TR_MethodCallAddress:
+	reloRecord = new (storage) OMR::RelocationRecordMethodCallAddress(reloRuntime, record);
+	break;
       default:
          // TODO: error condition
          printf("Unexpected relo record: %d\n", reloType);fflush(stdout);
          exit(0);
       }
-      return reloRecord;
+   
+   return static_cast<TR::RelocationRecord*>(reloRecord);
    }
 
 void

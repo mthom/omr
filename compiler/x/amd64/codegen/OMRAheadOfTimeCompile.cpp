@@ -28,6 +28,7 @@
 #include "runtime/RelocationRecord.hpp"
 #include "compile/VirtualGuard.hpp"
 #include "env/CompilerEnv.hpp"
+#include "env/SharedCache.hpp"
 #include "env/jittypes.h"
 #include <iostream>
 #include "il/Node.hpp"
@@ -130,12 +131,12 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
          }
       }
 }
+
 uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::IteratedExternalRelocation *relocation)
    {
    TR::Compilation* comp = TR::comp();
    TR::CodeGenerator* cg = comp->cg();
-  // TR_J9VMBase *fej9 = (TR_J9VMBase *)(_cg->fe());
-   //TR::SharedCache *sharedCache = fej9->sharedCache();
+   TR::SharedCache* sharedCache = TR::Compiler->cache;
    //TR::SymbolValidationManager *symValManager = comp->getSymbolValidationManager();
 
    TR_VirtualGuard *guard;
@@ -165,12 +166,25 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    uint8_t *flagsCursor = cursor++;
    *flagsCursor = modifier;
    uint32_t *wordAfterHeader = (uint32_t*)cursor;
+   
    // This has to be created after the kind has been written into the header
-   //TR::RelocationRecord storage;
-   TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(NULL, reloRuntime, reloTarget, reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocation->getRelocationData()));
+   TR::RelocationRecord storage;
+   TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(&storage, reloRuntime, reloTarget, reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocation->getRelocationData()));
    
    switch (targetKind)
       {
+      case TR_MethodCallAddress:
+         {
+	   OMR::RelocationRecordMethodCallAddress *mcaRecord = reinterpret_cast<OMR::RelocationRecordMethodCallAddress *>(reloRecord);
+
+	   mcaRecord->setEipRelative(reloTarget);
+	   mcaRecord->setAddress(reloTarget, relocation->getTargetAddress());
+         }
+
+	 sharedCache->setRelocationData(relocation->getRelocationData());
+	 
+         break;
+
       default:
          // initializeCommonAOTRelocationHeader is currently in the process
          // of becoming the canonical place to initialize the platform agnostic

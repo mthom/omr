@@ -77,7 +77,7 @@ initializeAllHelpers(JitBuilder::JitConfig *jitConfig, TR_RuntimeHelper *helperI
       #if defined(LINUXPPC64) && !defined(__LITTLE_ENDIAN__)
          jitConfig->setInterpreterTOC(((size_t *)helperAddresses[0])[1]);
       #endif
-      }
+      }   
    }
 
 static void
@@ -116,41 +116,23 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    TR::CodeCache *firstCodeCache = codeCacheManager.initialize(true, 1);
 }
 
-static OMRPortLibrary library;
-
-WASMCompositeCache* initializeSharedCache()
-{
-  omrthread_init_library();
-  omrthread_t self;
-  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
-
-//  omrport_allocate_library(&library);
-//  omrport_startup_library(library);
-
-  omrport_init_library(&library, sizeof(OMRPortLibrary));
-  omrthread_detach(self);
-
-  static WASMOSCacheConfigOptions configOptions;
-  static WASMOSCache<OSMemoryMappedCache> osCache(&library, "wasm_shared_cache", "/tmp",
-						  5, &configOptions);
-
-  osCache.startup("wasm_shared_cache", "/tmp");
-
-  static WASMCompositeCache cache(&osCache, 0);
-  
-  return &cache;
+bool storeCodeEntry(const char *methodName, void *codeLocation) {
+  TR::SharedCache* cache = TR::Compiler->cache;
+  return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
 }
 
-static WASMCompositeCache* cache;
-
-bool storeCodeEntry(const char *methodName, void *codeLocation) {
-  return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+bool initializeSharedCache() {  
+  TR::Compiler->cache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
+  return TR::Compiler->cache;
 }
 
 void *getCodeEntry(const char *methodName){
   TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
   U_32 codeLength = 0;
+  
+  TR::SharedCache* cache = TR::Compiler->cache;
   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength);
+  
   int32_t numReserved;
   TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
   if(!codeCache){
@@ -210,8 +192,7 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
-   if((cache = initializeSharedCache()) == NULL)
-     return false;   
+   initializeSharedCache();
    
    if (commonJitInit(fe, options) < 0)
      return false;

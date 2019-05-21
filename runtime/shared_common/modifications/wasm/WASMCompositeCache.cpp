@@ -2,8 +2,26 @@
 #include "WASMCompositeCache.hpp"
 #include "WASMOSCacheConfig.hpp"
 
-WASMCompositeCache::WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache, UDATA osPageSize)
-  : _osCache(osCache)
+static OMRPortLibrary* initializePortLibrary()
+{
+  static OMRPortLibrary library;
+  
+  omrthread_init_library();
+  omrthread_t self;
+  omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+
+  omrport_init_library(&library, sizeof(OMRPortLibrary));
+  omrthread_detach(self);
+
+  return &library;
+}
+
+WASMCompositeCache::WASMCompositeCache(const char* cacheName, const char* cachePath)
+  : _osCache(new (PERSISTENT_NEW) WASMOSCache<OSMemoryMappedCache>(initializePortLibrary(),
+								   cacheName,
+								   cachePath,
+								   5,
+								   new (PERSISTENT_NEW) WASMOSCacheConfigOptions()))
   , _readerCount(SynchronizedCacheCounter(_osCache->headerRegion(),
 					  _osCache->readerCountFocus()))
   , _crcChecker(CacheCRCChecker(_osCache->headerRegion(),
@@ -11,6 +29,7 @@ WASMCompositeCache::WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache
 				MAX_CRC_SAMPLES))
   , _codeUpdatePtr(OSCacheBumpRegionFocus<WASMCacheEntry>(_osCache->dataSectionRegion(),
 							  (WASMCacheEntry*) _osCache->dataSectionRegion()->regionStartAddress()))
+  , _relocationData(NULL)
 {
   populateTables();
 }
@@ -25,6 +44,9 @@ void WASMCompositeCache::populateTables()
 
     if(descriptor) {
       _codeEntries[descriptor.entry->methodName] = descriptor.entry;
+      
+      _codeUpdatePtr += descriptor.entry->codeLength;
+      _codeUpdatePtr += sizeof(WASMCacheEntry);
     } else {
       break;
     }
@@ -82,10 +104,15 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
 
   _codeEntries[methodName] = entryLocation;
 
+  // now write the relocation record to the cache.
+  size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
+  
+  memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize + sizeof(size_t));
+  
   return true;
 }
 
-//TO DO: should copy to the code cache (not scc) when code cache becomes available
+//TODO: should copy to the code cache (not scc) when code cache becomes available
 void *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[methodName];

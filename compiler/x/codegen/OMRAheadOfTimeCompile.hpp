@@ -40,7 +40,7 @@ namespace X86
 class OMR_EXTENSIBLE AheadOfTimeCompile  : public OMR::AheadOfTimeCompile
    {
    public:
-   //ORiginally, codegen was here as a parameter
+   //Originally, codegen was here as a parameter
    AheadOfTimeCompile(uint32_t *_relocationKindToHeaderSizeMap,TR::Compilation* c)
       : OMR::AheadOfTimeCompile(_relocationKindToHeaderSizeMap,c)
       {

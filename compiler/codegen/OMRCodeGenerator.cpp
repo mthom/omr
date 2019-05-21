@@ -1761,6 +1761,8 @@ OMR::CodeGenerator::allocateCodeMemoryInner(
          {
          comp->failCompilation<TR::RecoverableCodeCacheError>("Failed to allocate code memory");
          }
+      } else {
+         self()->comp()->setRelocatableMethodCodeStart(warmCode);
       }
 
    TR_ASSERT( !((warmCodeSizeInBytes && !warmCode) || (coldCodeSizeInBytes && !coldCode)), "Allocation failed but didn't throw an exception");

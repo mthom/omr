@@ -22,11 +22,15 @@ class WASMCompositeCache {
 public:
   TR_ALLOC(TR_Memory::SharedCache)
   
-  WASMCompositeCache(WASMOSCache<OSMemoryMappedCache>* osCache, UDATA osPageSize);
+  WASMCompositeCache(const char* cacheName, const char* cachePath);
 
   virtual ~WASMCompositeCache() {
     //delete pointers
     _osCache->cleanup();
+  }
+
+  void setRelocationData(uint8_t* relocationData) {
+    _relocationData = relocationData;
   }
   
   bool startup(const char* cacheName, const char* ctrlDirName);
@@ -34,7 +38,6 @@ public:
   bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
 
   void *loadCodeEntry(const char *methodName, U_32 &codeLength);
-
 
 private:
   virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);
@@ -53,6 +56,8 @@ private:
 
   std::map<std::string, WASMCacheEntry*> _codeEntries;
   std::map<std::string, void *> _loadedMethods;
+
+  uint8_t* _relocationData;
 };
 
 #endif
