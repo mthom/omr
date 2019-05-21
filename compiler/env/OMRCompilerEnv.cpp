@@ -51,8 +51,6 @@ OMR::CompilerEnv::initialize()
    self()->initializeTargetEnvironment();
 
    om.initialize();
-
-   cache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
    
    _initialized = true;
    }
