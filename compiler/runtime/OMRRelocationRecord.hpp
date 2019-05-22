@@ -55,7 +55,22 @@ namespace OMR { typedef OMR::RelocationRecordGroup RelocationRecordGroupConnecto
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
 
+#ifndef OMR_RELOCATION_RECORD_METHOD_CALL_ADDRESS_CONNECTOR
+#define OMR_RELOCATION_RECORD_METHOD_CALL_ADDRESS_CONNECTOR
+namespace OMR { class RelocationRecordMethodCallAddress; }
+namespace OMR { typedef OMR::RelocationRecordMethodCallAddress RelocationRecordMethodCallAddressConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
 
+
+#ifndef OMR_RELOCATION_RECORD_METHOD_CALL_ADDRESS_BINARY_TEMPLATE_CONNECTOR
+#define OMR_RELOCATION_RECORD_METHOD_CALL_ADDRESS_BINARY_TEMPLATE_CONNECTOR
+namespace OMR { class RelocationRecordMethodCallAddressBinaryTemplate; }
+namespace OMR { typedef OMR::RelocationRecordMethodCallAddressBinaryTemplate RelocationRecordMethodCallAddressBinaryTemplateConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
 
 #include <stdint.h>
 #include "compile/Compilation.hpp"

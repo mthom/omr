@@ -427,14 +427,14 @@ int32_t OMR::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRu
    if (eipRelative(reloTarget))
       {
       baseLocation = reloTarget->eipBaseForCallOffset(reloLocation);
-      RELO_LOG(reloRuntime->reloLogger(), 6, "\teip-relative, adjusted location to " POINTER_PRINTF_FORMAT "\n", baseLocation);
+//    RELO_LOG(reloRuntime->reloLogger(), 6, "\teip-relative, adjusted location to " POINTER_PRINTF_FORMAT "\n", baseLocation);
       }
 
    uint8_t *callTargetAddress = computeTargetMethodAddress(reloRuntime, reloTarget, baseLocation);
    uint8_t *callTargetOffset = reinterpret_cast<uint8_t *>(callTargetAddress - baseLocation);
-   RELO_LOG(reloRuntime->reloLogger(), 6,
-            "\t\tapplyRelocation: reloLocation " POINTER_PRINTF_FORMAT " baseLocation " POINTER_PRINTF_FORMAT " callTargetAddress " POINTER_PRINTF_FORMAT " callTargetOffset %x\n",
-            reloLocation, baseLocation, callTargetAddress, callTargetOffset);
+// RELO_LOG(reloRuntime->reloLogger(), 6,
+//          "\t\tapplyRelocation: reloLocation " POINTER_PRINTF_FORMAT " baseLocation " POINTER_PRINTF_FORMAT " callTargetAddress " POINTER_PRINTF_FORMAT " callTargetOffset %x\n",
+//          reloLocation, baseLocation, callTargetAddress, callTargetOffset);
 
    if (eipRelative(reloTarget))
       reloTarget->storeRelativeTarget(reinterpret_cast<uintptr_t>(callTargetOffset), reloLocation);

@@ -40,6 +40,7 @@
 #include "runtime/CodeCache.hpp"
 #include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
+#include "runtime/RelocationRecord.hpp"
 
 #include "WASMCompositeCache.hpp"
 
@@ -127,12 +128,16 @@ bool initializeSharedCache() {
 }
 
 void *getCodeEntry(const char *methodName){
+//TR::Compilation* comp = TR::comp();
+//TR::CodeGenerator* cg = comp->cg();
   TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
   U_32 codeLength = 0;
-  
   TR::SharedCache* cache = TR::Compiler->cache;
-  void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength);
-  
+  void *relocationHeader = 0;
+  void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader+sizeof(size_t));
+  TR::RelocationRuntime reloRuntime (NULL);
+  TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
   int32_t numReserved;
   TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
   if(!codeCache){
@@ -145,6 +150,7 @@ void *getCodeEntry(const char *methodName){
     return nullptr;
   }
   memcpy(warmCode,sharedCacheMethod,codeLength);
+  reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
   return warmCode;
 //return cache->loadCodeEntry(methodName);
 }

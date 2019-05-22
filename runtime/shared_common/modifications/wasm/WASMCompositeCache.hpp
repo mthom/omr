@@ -37,7 +37,7 @@ public:
 
   bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
 
-  void *loadCodeEntry(const char *methodName, U_32 &codeLength);
+  void *loadCodeEntry(const char *methodName, U_32 &codeLength,void *&);
 
 private:
   virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);
