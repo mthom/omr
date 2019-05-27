@@ -150,13 +150,27 @@ void *getCodeEntry(const char *methodName){
     return nullptr;
   }
   memcpy(warmCode,sharedCacheMethod,codeLength);
-  size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
-  if(relocationSize){
-     reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
-  }
+//size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
+//if(relocationSize){
+//   reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
+//}
   cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
   return warmCode;
 //return cache->loadCodeEntry(methodName);
+}
+
+void relocateCodeEntry(const char *methodName,void *warmCode) {
+  void *relocationHeader = 0;
+  TR::SharedCache* cache = TR::Compiler->cache;
+  U_32 codeLength;
+  cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+  TR::RelocationRuntime reloRuntime (NULL);
+  TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
+  size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
+  if(relocationSize){
+     reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode+rrbintemp->_extra-4);
+  }
 }
 
 void registerCallRelocation(const char *caller,const char *callee) {
@@ -300,4 +314,9 @@ internal_getCodeEntry(char *methodName)
 void internal_registerCallRelocation(char *caller,char *callee)
    {
     registerCallRelocation(caller,callee);
+   }
+
+void internal_relocateCodeEntry(char *methodName,void *warmCode)
+   {
+     relocateCodeEntry(const_cast<const char*>(methodName),warmCode);
    }

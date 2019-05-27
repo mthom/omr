@@ -148,7 +148,8 @@ void WASMCompositeCache::storeCallAddressToHeaders(void *calleeMethod,size_t met
       if(*methodName){
 	methodName = methodName+methodNameTemplateOffset;
 	if(*reinterpret_cast<UDATA *>(methodName)==relativeCalleeNameOffset){
-	  *methodName = reinterpret_cast<UDATA>(calleeCodeCacheAddress);
+//	  *methodName = reinterpret_cast<UDATA>(calleeCodeCacheAddress);
+	  memcpy(methodName,&calleeCodeCacheAddress,sizeof(UDATA));
 	}
       }
     }

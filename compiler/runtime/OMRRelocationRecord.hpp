@@ -129,7 +129,7 @@ namespace OMR
          uint8_t _type;
          uint8_t _flags;
          #if defined(TR_HOST_64BIT)
-         uint32_t _extra;
+         uint32_t _extra; //holds the offset to the instruction from the beginning of code
          #endif
    };
 
