@@ -68,6 +68,10 @@ WASMCompositeCache::constructEntryIterator(WASMCacheEntry* delimiter)
   return WASMDataSectionEntryIterator(focus, limit);
 }
 
+UDATA WASMCompositeCache::baseSharedCacheAddress(){
+  return reinterpret_cast<UDATA>(_osCache->headerRegion()->regionStartAddress());
+}
+
 bool WASMCompositeCache::startup(const char* cacheName, const char* ctrlDirName)
 {
   if(!_osCache->startup(cacheName, ctrlDirName))
@@ -107,7 +111,8 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   // now write the relocation record to the cache.
   size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
   
-  memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize + sizeof(size_t));
+  memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
+  _codeUpdatePtr+=relocationRecordSize;
   
   return true;
 }
@@ -116,7 +121,8 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
 void *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, void *&relocationHeader) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[methodName];
-    relocationHeader = entry+entry->codeLength;
+    char *bytePointer = reinterpret_cast<char *>(entry);
+    relocationHeader = bytePointer+sizeof(WASMCacheEntry)+entry->codeLength;
     codeLength = entry->codeLength;
     entry++;
     return entry;
@@ -130,4 +136,20 @@ void *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength
 //  memcpy(methodArea,entry,codeLength);
 //}
 //return _loadedMethods[methodName];
+}
+
+void WASMCompositeCache::storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress){
+    WASMCacheEntry *callee = reinterpret_cast<WASMCacheEntry *>(calleeMethod);
+    callee--;
+    UDATA relativeCalleeNameOffset = reinterpret_cast<UDATA>(&callee->methodName) - this->baseSharedCacheAddress();
+    for(auto entry:_codeEntries){
+      U_32 codeLength = entry.second->codeLength;
+      char *methodName = reinterpret_cast<char *>(entry.second)+sizeof(WASMCacheEntry)+codeLength;
+      if(*methodName){
+	methodName = methodName+methodNameTemplateOffset;
+	if(*reinterpret_cast<UDATA *>(methodName)==relativeCalleeNameOffset){
+	  *methodName = reinterpret_cast<UDATA>(calleeCodeCacheAddress);
+	}
+      }
+    }
 }

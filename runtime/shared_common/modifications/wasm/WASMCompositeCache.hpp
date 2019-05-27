@@ -37,7 +37,11 @@ public:
 
   bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
 
-  void *loadCodeEntry(const char *methodName, U_32 &codeLength,void *&);
+  UDATA baseSharedCacheAddress();
+
+  void *loadCodeEntry(const char *methodName, U_32 &codeLength,void *&relocationHeader);
+
+  void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 
 private:
   virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);

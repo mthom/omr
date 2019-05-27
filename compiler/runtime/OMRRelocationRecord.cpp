@@ -391,7 +391,7 @@ uint8_t *
 OMR::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation)
    {
    uint8_t *callTargetAddress = address(reloTarget);
-
+   
 // if (reloRuntime->options()->getOption(TR_StressTrampolines) || reloTarget->useTrampoline(callTargetAddress, baseLocation))
 //    {
 //    RELO_LOG(reloRuntime->reloLogger(), 6, "\tredirecting call to " POINTER_PRINTF_FORMAT " through trampoline\n", callTargetAddress);

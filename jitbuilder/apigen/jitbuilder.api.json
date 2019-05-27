@@ -52,6 +52,15 @@
         , "parms": [
             {"name":"methodName","type":"string"}
             ]
+        },
+	{ "name": "registerCallRelocation"
+        , "overloadsuffix": ""
+        , "flags": []
+        , "return": "none"
+        , "parms": [
+            {"name":"caller","type":"string"},
+	    {"name":"callee","type":"string"}
+            ]
         }
         ],
     "classes": [

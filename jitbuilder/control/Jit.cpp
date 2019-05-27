@@ -135,7 +135,7 @@ void *getCodeEntry(const char *methodName){
   TR::SharedCache* cache = TR::Compiler->cache;
   void *relocationHeader = 0;
   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader+sizeof(size_t));
+  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
   TR::RelocationRuntime reloRuntime (NULL);
   TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
   int32_t numReserved;
@@ -150,9 +150,25 @@ void *getCodeEntry(const char *methodName){
     return nullptr;
   }
   memcpy(warmCode,sharedCacheMethod,codeLength);
-  reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
+  size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
+  if(relocationSize){
+     reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
+  }
+  cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
   return warmCode;
 //return cache->loadCodeEntry(methodName);
+}
+
+void registerCallRelocation(const char *caller,const char *callee) {
+  static std::map<const char *,U_32> callCount;
+  TR::SharedCache* cache = TR::Compiler->cache;
+  U_32 codeLength = 0;
+  void *relocationHeader = 0;
+  void *sharedCacheMethod = cache->loadCodeEntry(caller,codeLength,relocationHeader);
+  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+  WASMCacheEntry *calleeEntry = static_cast<WASMCacheEntry *>(cache->loadCodeEntry(callee,codeLength,relocationHeader));
+  --calleeEntry;
+  rrbintemp->_methodAddress = reinterpret_cast<UDATA>(&(calleeEntry->methodName))-cache->baseSharedCacheAddress();
 }
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
@@ -279,4 +295,9 @@ void *
 internal_getCodeEntry(char *methodName)
    {
     return getCodeEntry((const char*)methodName);
+   }
+
+void internal_registerCallRelocation(char *caller,char *callee)
+   {
+    registerCallRelocation(caller,callee);
    }
