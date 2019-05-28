@@ -195,6 +195,9 @@ typedef struct OMRSharedInvariantInternTable {
 #define J9SHAREDCACHEHEADER_SHAREDSTRINGTAIL(base) SRP_GET((base)->sharedStringTail, struct OMRSharedInternSRPHashTableEntry*)
 #define J9SHAREDCACHEHEADER_UNUSED01(base) SRP_GET((base)->unused01, void*)
 
+#define J9_SHARED_CLASS_CACHE_DEFAULT_SIZE_64BIT_PLATFORM (300 * 1024 * 1024)
+#define J9_SHARED_CLASS_CACHE_DEFAULT_SIZE (16 * 1024 * 1024)  
+
 typedef struct J9ShrCompositeCacheCommonInfo {
 	omrthread_tls_key_t writeMutexEntryCount;
 	struct OMR_VMThread* hasWriteMutexThread;
