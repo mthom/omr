@@ -1,5 +1,5 @@
-###############################################################################
-# Copyright (c) 2015, 2015 IBM Corp. and others
+################################################################################
+# Copyright (c) 2017, 2018 IBM Corp. and others
 #
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -18,14 +18,20 @@
 # [2] http://openjdk.java.net/legal/assembly-exception.html
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
-###############################################################################
+################################################################################
 
-top_srcdir := ../..
-include $(top_srcdir)/tools/toolconfigure.mk
+add_tracegen(simplepool.tdf)
 
-MODULE_NAME := tracegen
-ARTIFACT_TYPE := cxx_executable
-USE_NATIVE_ENCODING := 1
-OBJECTS := $(patsubst %.cpp,%$(OBJEXT), $(wildcard *.cpp))
-
-include $(top_srcdir)/omrmakefiles/rules.mk
+add_library(j9simplepool STATIC
+	simplepool.c
+	${CMAKE_CURRENT_BINARY_DIR}/ut_simplepool.c
+)
+target_include_directories(j9simplepool
+	PRIVATE
+		../omr/include_core
+		${CMAKE_CURRENT_BINARY_DIR}
+)
+target_link_libraries(j9simplepool
+	PRIVATE
+		j9vm_interface
+)

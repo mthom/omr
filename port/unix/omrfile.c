@@ -1030,7 +1030,7 @@ omrfile_set_length(struct OMRPortLibrary *portLibrary, intptr_t inFD, int64_t ne
  * @args                                               OMRPORT_FILE_WRITE_LOCK
  * @args                                               OMRPORT_FILE_WAIT_FOR_LOCK
  * @args                                               OMRPORT_FILE_NOWAIT_FOR_LOCK
- * @param [in]   offest                       Offset from start of file to start of locked region
+ * @param [in]   offset                       Offset from start of file to start of locked region
  * @param [in]   length                      Number of bytes to be locked
  *
  * @return                                              0 on success, -1 on failure
@@ -1147,7 +1147,8 @@ omrfile_fstat(struct OMRPortLibrary *portLibrary, intptr_t fd, struct J9FileStat
 
 	Trc_PRT_file_fstat_Entry(fd);
 
-	portLibrary->error_set_last_error(portLibrary, 0, 0);
+//	portLibrary->error_set_last_error(portLibrary, 0, 0);
+
 
 	memset(buf, 0, sizeof(J9FileStat));
 

@@ -51,7 +51,7 @@ OMR::CompilerEnv::initialize()
    self()->initializeTargetEnvironment();
 
    om.initialize();
-
+   
    _initialized = true;
    }
 

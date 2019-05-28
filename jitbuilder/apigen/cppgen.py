@@ -432,6 +432,11 @@ class CppGenerator:
         writer.write("{cname}::{name}(void * impl){inherit} {{\n".format(cname=full_name, name=name, inherit=inherit))
         writer.indent()
         writer.write("if (impl != NULL) {\n")
+       
+        if "OperandStack" in self.get_impl_class_name(class_desc):
+            writer.write("auto imple = new {aa}(static_cast<{aa}*>(impl));\n".format(aa=self.get_impl_class_name(class_desc)));
+            writer.write("impl = static_cast<void*>(imple);\n");
+
         writer.indent()
         writer.write("{impl_cast}->setClient(this);\n".format(impl_cast=self.to_impl_cast(class_desc,"impl")));
 

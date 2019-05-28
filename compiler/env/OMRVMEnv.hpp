@@ -134,6 +134,7 @@ public:
     * @brief Returns offset from the current thread to the filed with the read barrier handler address
     */
    uintptrj_t thisThreadGetGSHandlerAddressOffset(TR::Compilation *comp) { return 0; }
+   OMR_VMThread *_vmThread;
 
    };
 

@@ -68,7 +68,6 @@ namespace OMR { typedef OMR::CodeGenerator CodeGeneratorConnector; }
 #include "ras/DebugCounter.hpp"
 #include "runtime/Runtime.hpp"
 #include "codegen/StaticRelocation.hpp"
-
 #define OPT_DETAILS_CA "O^O COMPLETE ALIASING: "
 
 #define NEED_CC(n) (n->nodeRequiresConditionCodes())

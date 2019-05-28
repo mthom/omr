@@ -264,6 +264,8 @@ typedef double 					SYS_FLOAT;
 #define OS_ENCODING_MB_FLAGS 0
 #define OS_ENCODING_WC_FLAGS 0
 
+#define OMRSH_MAXPATH EsMaxPath
+
 #define J9_PRIORITY_MAP {	\
 	THREAD_PRIORITY_IDLE,							/* 0 */\
 	THREAD_PRIORITY_LOWEST,					/* 1 */\

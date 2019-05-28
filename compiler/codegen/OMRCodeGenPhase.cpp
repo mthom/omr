@@ -239,6 +239,7 @@ OMR::CodeGenPhase::performProcessRelocationsPhase(TR::CodeGenerator * cg, TR::Co
          ++iterator;
          }
       }
+
    }
 
 

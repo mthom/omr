@@ -31,9 +31,7 @@
 #if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
 #define LLVM36
 #endif
-#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 8
 #define LLVM38
-#endif
 
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceLocation.h"

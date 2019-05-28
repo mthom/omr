@@ -338,7 +338,7 @@ public:
    // Is this compilation producing relocatable code?  This should generally
    // return true, for example, for ahead-of-time compilations.
    //
-   bool compileRelocatableCode() { return false; }
+   bool compileRelocatableCode() { return true; }
 
    // Maximum number of internal pointers that can be managed.
    //
