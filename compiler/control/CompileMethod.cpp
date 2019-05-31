@@ -27,6 +27,7 @@
 #include <unistd.h>
 #endif
 #include <exception>
+#include <map>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -58,6 +59,12 @@
 #include "env/DebugSegmentProvider.hpp"
 #include "omrformatconsts.h"
 #include "runtime/CodeCacheManager.hpp"
+#include "runtime/SymbolValidationManager.hpp"
+
+#include "omrsrp.h"
+//extern "C" {
+// #include "shrinit.h"
+//}
 
 #if defined (_MSC_VER) && _MSC_VER < 1900
 #define snprintf _snprintf
@@ -267,6 +274,8 @@ compileMethod(
    return compileMethodFromDetails(omrVMThread, details, hotness, rc);
    }
 
+static std::map<uint8_t *,uint32_t> codeLengthMap;
+
 uint8_t *
 compileMethodFromDetails(
       OMR_VMThread *omrVMThread,
@@ -288,6 +297,7 @@ compileMethodFromDetails(
    TR_Memory trMemory(*fe.persistentMemory(), dispatchRegion);
    TR_ResolvedMethod & compilee = *((TR_ResolvedMethod *)details.getMethod());
 
+   //MethodNameAndSignature methodNameAndSignature{};
    TR::CompileIlGenRequest request(details);
 
    // initialize return code before compilation starts
@@ -336,7 +346,7 @@ compileMethodFromDetails(
    // FIXME: perhaps use stack memory instead
 
    TR_ASSERT(TR::comp() == NULL, "there seems to be a current TLS TR::Compilation object %p for this thread. At this point there should be no current TR::Compilation object", TR::comp());
-   TR::Compilation compiler(0, omrVMThread, &fe, &compilee, request, options, dispatchRegion, &trMemory, plan);
+   TR::Compilation compiler(0, TR::Compiler->vm._vmThread, &fe, &compilee, request, options, dispatchRegion, &trMemory, plan);
    TR_ASSERT(TR::comp() == &compiler, "the TLS TR::Compilation object %p for this thread does not match the one %p just created.", TR::comp(), &compiler);
 
    try
@@ -404,7 +414,11 @@ compileMethodFromDetails(
             TR_VerboseLog::vlogRelease();
             trfflush(jitConfig->options.vLogFile);
             }
-
+	 codeLengthMap[startPC] = compiler.cg()->getCodeLength();
+//	 TR::SymbolValidationManager svm(dispatchRegion,&compilee);
+//	 NNSRP_SET(methodNameAndSignature.name,compilee.nameChars());
+//	 NNSRP_SET(methodNameAndSignature.signature,compilee.signatureChars());
+	 // omrshr_storeCompiledMethod(nullptr,&methodNameAndSignature,nullptr,0,compiler.cg()->getCodeStart(),compiler.cg()->getCodeLength(),false);
          if (
                compiler.getOption(TR_PerfTool)
             || compiler.getOption(TR_EmitExecutableELFFile)
@@ -480,4 +494,9 @@ compileMethodFromDetails(
 
 
    return startPC;
+   }
+
+uint32_t getMethodCodeLength(uint8_t *methodLocation)
+   {
+   return codeLengthMap[methodLocation];
    }

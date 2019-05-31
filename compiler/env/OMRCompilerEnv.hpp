@@ -42,6 +42,7 @@ namespace OMR { typedef OMR::CompilerEnv CompilerEnvConnector; }
 #include "env/ArithEnv.hpp"
 #include "env/VMEnv.hpp"
 #include "env/VMMethodEnv.hpp"
+#include "env/SharedCache.hpp"
 
 namespace TR { class CompilerEnv; }
 
@@ -94,6 +95,11 @@ public:
    //
    TR::DebugEnv debug;
 
+   // Shared cache class. Should be thread safe.
+   //
+
+   TR::SharedCache* cache;
+   
    bool isInitialized() { return _initialized; }
 
    // --------------------------------------------------------------------------

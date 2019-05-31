@@ -24,7 +24,7 @@
 #pragma csect(TEST,"TRCGBase#T")
 
 #include "codegen/OMRCodeGenerator.hpp"
-
+#include <iostream>
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -40,6 +40,7 @@
 #include "codegen/Instruction.hpp"
 #include "codegen/Linkage.hpp"
 #include "codegen/Linkage_inlines.hpp"
+#include <iostream>
 #include "codegen/LinkageConventionsEnum.hpp"
 #include "codegen/LiveRegister.hpp"
 #include "codegen/Machine.hpp"
@@ -111,6 +112,7 @@
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/Runtime.hpp"
 #include "stdarg.h"
+#include "AheadOfTimeCompile.hpp"
 
 namespace TR { class Optimizer; }
 namespace TR { class RegisterDependencyConditions; }
@@ -174,7 +176,6 @@ OMR::CodeGenerator::CodeGenerator() :
      _extendedToInt64GlobalRegisters(self()->comp()->allocator()),
      _liveButMaybeUnreferencedLocals(NULL),
      _assignedGlobalRegisters(NULL),
-     _aheadOfTimeCompile(NULL),
      _globalRegisterTable(NULL),
      _currentGRABlockLiveOutSet(NULL),
      _localsIG(NULL),
@@ -237,14 +238,19 @@ OMR::CodeGenerator::CodeGenerator() :
      randomizer(self()->comp()),
      _outOfLineColdPathNestedDepth(0),
      _codeGenPhase(self()),
+          _aheadOfTimeCompile(NULL),
      _symbolDataTypeMap(self()->comp()->allocator()),
      _lmmdFailed(false)
+
    {
    _machine = new (self()->trHeapMemory()) TR::Machine(self());
    _disableInternalPointers = self()->comp()->getOption(TR_MimicInterpreterFrameShape) ||
                                self()->comp()->getOptions()->realTimeGC() ||
                                self()->comp()->getOption(TR_DisableInternalPointers);
-
+   if (1){
+       _aheadOfTimeCompile=new (self()->trHeapMemory()) TR::AheadOfTimeCompile(NULL,self()->comp());
+       std::cout<<"Succeded to initialize the AOT"<<std::endl;
+    }
    uintptrj_t maxSize = TR::Compiler->vm.getOverflowSafeAllocSize(self()->comp());
    int32_t i;
 
@@ -1688,6 +1694,8 @@ OMR::CodeGenerator::allocateCodeMemoryInner(
          {
          comp->failCompilation<TR::RecoverableCodeCacheError>("Failed to allocate code memory");
          }
+      } else {
+         self()->comp()->setRelocatableMethodCodeStart(warmCode);
       }
 
    TR_ASSERT( !((warmCodeSizeInBytes && !warmCode) || (coldCodeSizeInBytes && !coldCode)), "Allocation failed but didn't throw an exception");
@@ -1906,6 +1914,19 @@ OMR::CodeGenerator::processRelocations()
       ++iterator;
       }
    //TR_ASSERTC(missedSite == -1, comp(), "Site %d is missing relocation\n", missedSite);
+   if (1){
+         //This is to process aot relocations
+      // Call the platform specific processing of relocations
+      auto theAOT = self()->getAheadOfTimeCompile();
+      theAOT->processRelocations();
+      int i = 0 ;
+         for (auto aotIterator = self()->getExternalRelocationList().begin(); aotIterator != self()->getExternalRelocationList().end(); ++aotIterator)
+      {
+     std::cout<<i <<"th external relocation is accessed"<<std::endl;
+      // Traverse the AOT/external labels
+	  (*aotIterator)->apply(self());
+      }
+   }
    }
 
 #if defined(TR_HOST_ARM)

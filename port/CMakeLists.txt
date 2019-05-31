@@ -151,6 +151,8 @@ list(APPEND OBJECTS
 	omrmemcategories.c
 	omrport.c
 	omrmmap.c
+	omrargscan.c
+	omrshchelp.c
 	j9nls.c
 	j9nlshelpers.c
 	omrosbacktrace.c
@@ -231,9 +233,6 @@ endif()
 if(OMR_OPT_CUDA)
 	list(APPEND OBJECTS omrcuda.cpp)
 endif()
-
-
-
 
 #Setup paths and include directories
 
@@ -330,15 +329,24 @@ else()
 	target_include_directories(omrport_obj PRIVATE unix unix_include)
 endif()
 
-list(APPEND VPATH common include)
-target_include_directories(omrport_obj PRIVATE common include)
+list(APPEND VPATH common include sysvipc)
+target_include_directories(omrport_obj PRIVATE common include include_core
+  sysvipc)
 
 #TODO need to set some flags and etc see line 300
+
+list(APPEND OBJECTS
+  omrSysvIPCWrappers.c
+  omrsharedhelper.c
+  omrshsem.c
+  omrshmem.c
+  omrshsem_deprecated.c)
 
 omr_find_files(resolvedPaths
 	PATHS ${VPATH}
 	FILES ${OBJECTS}
 )
+
 
 if(OMR_HOST_OS STREQUAL "win")
 	list(APPEND resolvedPaths win32/omrsyslogmessages.rc)
@@ -396,6 +404,7 @@ target_link_libraries(omrport
 if(OMR_HOST_OS STREQUAL "linux")
     target_link_libraries(omrport PRIVATE rt)
 endif()
+
 
 #TODO hack to get to compile. Need platform checks
 if(NOT OMR_HOST_OS STREQUAL "win")

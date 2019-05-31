@@ -49,6 +49,7 @@ compiler_library(x
 	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRMachine.cpp
 	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRLinkage.cpp
 	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRRegister.cpp
+	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRAheadOfTimeCompile.cpp
 	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRRealRegister.cpp
 	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRRegisterDependency.cpp
 	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRSnippet.cpp
@@ -56,6 +57,7 @@ compiler_library(x
 	${CMAKE_CURRENT_LIST_DIR}/codegen/OMRCodeGenerator.cpp
 	${CMAKE_CURRENT_LIST_DIR}/env/OMRCPU.cpp
 	${CMAKE_CURRENT_LIST_DIR}/env/OMRDebugEnv.cpp
+	${CMAKE_CURRENT_LIST_DIR}/runtime/X86RelocationTarget.cpp
 )
 
 if(TR_TARGET_BITS STREQUAL 64)
@@ -64,6 +66,7 @@ if(TR_TARGET_BITS STREQUAL 64)
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRMachine.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRTreeEvaluator.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRMemoryReference.cpp
+		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRAheadOfTimeCompile.cpp		
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRRealRegister.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/AMD64SystemLinkage.cpp
 		${CMAKE_CURRENT_LIST_DIR}/amd64/codegen/OMRELFRelocationResolver.cpp

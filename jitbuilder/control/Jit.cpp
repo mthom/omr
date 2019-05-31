@@ -21,6 +21,11 @@
  *******************************************************************************/
 
 #include <stdio.h>
+#include "omrvm.h"
+#include "OMR_VMThread.hpp"
+//extern "C"{
+//  #include "shrinit.h"
+//}
 #include "codegen/CodeGenerator.hpp"
 #include "compile/CompilationTypes.hpp"
 #include "compile/Method.hpp"
@@ -35,6 +40,9 @@
 #include "runtime/CodeCache.hpp"
 #include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
+#include "runtime/RelocationRecord.hpp"
+
+#include "WASMCompositeCache.hpp"
 
 extern TR_RuntimeHelperTable runtimeHelpers;
 extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *callBacks, int32_t *numHelpers, int32_t *CCPreLoadedCodeSize);
@@ -66,12 +74,12 @@ initializeAllHelpers(JitBuilder::JitConfig *jitConfig, TR_RuntimeHelper *helperI
       #if defined(LINUXPPC64) && !defined(__LITTLE_ENDIAN__)
          jitConfig->setInterpreterTOC(((size_t *)helperAddresses[0])[1]);
       #endif
-      }
+      }   
    }
 
 static void
 initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
-   {
+{
    TR::CodeCacheConfig &codeCacheConfig = codeCacheManager.codeCacheConfig();
    codeCacheConfig._codeCacheKB = 128;
 
@@ -98,12 +106,80 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    codeCacheConfig._largeCodePageFlags = 0;
    codeCacheConfig._maxNumberOfCodeCaches = 96;
    codeCacheConfig._canChangeNumCodeCaches = true;
-   codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool) 
+   codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool)
                                     ||  TR::Options::getCmdLineOptions()->getOption(TR_EmitExecutableELFFile);
    codeCacheConfig._emitRelocatableELF = TR::Options::getCmdLineOptions()->getOption(TR_EmitRelocatableELFFile);
 
    TR::CodeCache *firstCodeCache = codeCacheManager.initialize(true, 1);
-   }
+}
+
+bool storeCodeEntry(const char *methodName, void *codeLocation) {
+  TR::SharedCache* cache = TR::Compiler->cache;
+  return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+}
+
+bool initializeSharedCache() {  
+  TR::Compiler->cache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
+  return TR::Compiler->cache;
+}
+
+void *getCodeEntry(const char *methodName){
+//TR::Compilation* comp = TR::comp();
+//TR::CodeGenerator* cg = comp->cg();
+  TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
+  U_32 codeLength = 0;
+  TR::SharedCache* cache = TR::Compiler->cache;
+  void *relocationHeader = 0;
+  void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+  TR::RelocationRuntime reloRuntime (NULL);
+  TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
+  int32_t numReserved;
+  TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
+  if(!codeCache){
+    return nullptr;
+  }
+  uint8_t * coldCode = nullptr;
+  void * warmCode =  manager->allocateCodeMemory(codeLength, 0, &codeCache, &coldCode, false);
+  if(!warmCode){
+    codeCache->unreserve();
+    return nullptr;
+  }
+  memcpy(warmCode,sharedCacheMethod,codeLength);
+//size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
+//if(relocationSize){
+//   reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
+//}
+  cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
+  return warmCode;
+//return cache->loadCodeEntry(methodName);
+}
+
+void relocateCodeEntry(const char *methodName,void *warmCode) {
+  void *relocationHeader = 0;
+  TR::SharedCache* cache = TR::Compiler->cache;
+  U_32 codeLength;
+  cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+  TR::RelocationRuntime reloRuntime (NULL);
+  TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
+  size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
+  if(relocationSize){
+     reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode+rrbintemp->_extra-4);
+  }
+}
+
+void registerCallRelocation(const char *caller,const char *callee) {
+  static std::map<const char *,U_32> callCount;
+  TR::SharedCache* cache = TR::Compiler->cache;
+  U_32 codeLength = 0;
+  void *relocationHeader = 0;
+  void *sharedCacheMethod = cache->loadCodeEntry(caller,codeLength,relocationHeader);
+  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+  WASMCacheEntry *calleeEntry = static_cast<WASMCacheEntry *>(cache->loadCodeEntry(callee,codeLength,relocationHeader));
+  --calleeEntry;
+  rrbintemp->_methodAddress = reinterpret_cast<UDATA>(&(calleeEntry->methodName))-cache->baseSharedCacheAddress();
+}
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
@@ -128,16 +204,30 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
       return false;
       }
 
+   OMR_VM *omrvm;
+   OMR_VMThread *vmThread;
+   OMR_Initialize(NULL,&omrvm);
+   //omr_attach_vm_to_runtime(omrvm);
+   omr_vmthread_alloc(omrvm,&vmThread);
+//   omr_vmthread_init(vmThread);
+   vmThread->_vm = omrvm;
+//   omr_vmthread_getCurrent(omrvm);
+//   omr_vmthread_firstAttach(omrvm,&vmThread);
+// omrshr_init(omrvm,0,nullptr);
+   //omrshr_storeCompiledMethod(vmThread, 
    TR::Compiler->initialize();
-
+   TR::Compiler->vm._vmThread = vmThread;
    // --------------------------------------------------------------------------
    static JitBuilder::FrontEnd fe;
    auto jitConfig = fe.jitConfig();
+//   fe.omrvm((void*)omrvm);
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
+   initializeSharedCache();
+   
    if (commonJitInit(fe, options) < 0)
-      return false;
+     return false;
 
    initializeCodeCache(fe.codeCacheManager());
 
@@ -209,4 +299,31 @@ internal_shutdownJit()
 
    TR::CodeCacheManager &codeCacheManager = fe->codeCacheManager();
    codeCacheManager.destroy();
+
+// if(cache != NULL) {
+//   delete cache;
+// }
+   }
+
+bool
+internal_storeCodeEntry(char* methodName, void* codeLocation)
+   {
+    return storeCodeEntry((const char*)methodName, codeLocation);
+
+   }
+
+void *
+internal_getCodeEntry(char *methodName)
+   {
+    return getCodeEntry((const char*)methodName);
+   }
+
+void internal_registerCallRelocation(char *caller,char *callee)
+   {
+    registerCallRelocation(caller,callee);
+   }
+
+void internal_relocateCodeEntry(char *methodName,void *warmCode)
+   {
+     relocateCodeEntry(const_cast<const char*>(methodName),warmCode);
    }

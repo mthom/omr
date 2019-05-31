@@ -69,7 +69,7 @@ TRBuildName.cpp
 J9TraceFormat.dat
 OMRTestTraceFormat.dat
 OMRTraceFormat.dat
-
+*.DS_Store
 /omralgotest
 /omrgcexample
 /omrgctest
@@ -106,7 +106,7 @@ ut_*.inc
 
 install_manifest.txt
 Testing/
-
+*.vscode
 # Compiled Object files
 *.slo
 *.lo
@@ -196,4 +196,7 @@ VerboseGC_*.xml*
 # common development artifacts
 *.swp
 tags
+
+# emacs backup files
 *~
+\#*

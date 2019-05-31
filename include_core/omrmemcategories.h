@@ -121,4 +121,10 @@ typedef struct OMRMemCategorySet {
 
 #define CATEGORY_TABLE_ENTRY(name) &_omrmem_category_##name
 
+/* From OpenJ9's j9memcategories.h. I don't why *_CLASSES is used to
+ * initialize the sharedCacheAPI attribute.
+ */
+#define OMRMEM_CATEGORY_CLASSES 2
+#define OMRMEM_CATEGORY_CLASSES_SHC_CACHE 3
+
 #endif /* OMRMEMCATEGORIES_H */

@@ -40,6 +40,9 @@ set(OMR_FVTEST OFF CACHE BOOL "Enable the FV Testing.")
 set(OMR_PORT ON CACHE BOOL "Enable portability library")
 set(OMR_OMRSIG ON CACHE BOOL "Enable the OMR signal compatibility library")
 set(OMR_THREAD ON CACHE BOOL "Enable thread library")
+set(OMR_SHARED_CACHE OFF CACHE BOOL "Disable the shared cache")
+set(OMR_SHARED_CACHE_MODS ON CACHE BOOL "Enable the refactored shared cache")
+set(WASM_SHARED_CACHE OFF CACHE BOOL "Enable the WASM shared cache")
 
 set(OMR_COMPILER ON CACHE BOOL "Enable the Compiler")
 set(OMR_JITBUILDER ON CACHE BOOL "Enable building JitBuilder")
@@ -61,6 +64,7 @@ endif()
 ## Enable OMR_JITBUILDER_TEST if OMR_JITBUILDER is enabled.
 ## Do NOT force it since it is explicitly disabled on Windows for now.
 if(OMR_JITBUILDER)
+
 	set(OMR_JITBUILDER_TEST ON CACHE BOOL "")
 
 	## Enable additional JitBuilder tests if running on a supported platform

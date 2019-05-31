@@ -31,6 +31,7 @@ namespace OMR { namespace X86 { class CodeGenerator; } }
 namespace OMR { typedef OMR::X86::CodeGenerator CodeGeneratorConnector; }
 #endif
 
+
 #include "compiler/codegen/OMRCodeGenerator.hpp"
 
 #include "codegen/Machine.hpp"

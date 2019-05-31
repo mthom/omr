@@ -286,6 +286,7 @@ public:
    TR::IlValue *ConvertTo(TR::IlType *t, TR::IlValue *v);
    TR::IlValue *UnsignedConvertTo(TR::IlType *t, TR::IlValue *v);
    TR::IlValue *Negate(TR::IlValue *v);
+   TR::IlValue *BitcastTo(TR::IlType *t, TR::IlValue *v);
 
    /**
     * @brief Convert the bit representation of an IlValue to a given type
@@ -750,6 +751,8 @@ protected:
    TR::IlValue *shiftOpFromOpMap(OpCodeMapper mapOp, TR::IlValue *left, TR::IlValue *right);
    TR::IlValue *compareOp(TR_ComparisonTypes ct, bool needUnsigned, TR::IlValue *left, TR::IlValue *right);
    TR::IlValue *convertTo(TR::DataType typeTo, TR::IlValue *v, bool needUnsigned);
+   TR::IlValue *bitcastTo(TR::DataType typeTo, TR::IlValue *v);
+   TR::IlValue *issueOp(TR::ILOpCodes op, TR::DataType typeTo, TR::IlValue* v);
 
    void ifCmpCondition(TR_ComparisonTypes ct, bool isUnsignedCmp, TR::IlValue *left, TR::IlValue *right, TR::Block *target);
    void ifCmpNotEqualZero(TR::IlValue *condition, TR::Block *target);

@@ -73,6 +73,7 @@ class FEBase : public FECommon
    private:
    JitConfig            _config;
    TR::CodeCacheManager _codeCacheManager;
+   void *_omrvm;
 
    // these two are deprecated in favour of TR::GlobalAllocator and TR::Allocator
    TR_PersistentMemory       _persistentMemory; // global memory
@@ -91,6 +92,8 @@ class FEBase : public FECommon
 
    JitConfig *jitConfig() { return &_config; }
    TR::CodeCacheManager &codeCacheManager() { return _codeCacheManager; }
+//   void *omrvm(){ return _omrvm;}
+//   void omrvm(void *omrvm) { _omrvm = omrvm;}
 
    virtual uint8_t * allocateRelocationData(TR::Compilation* comp, uint32_t size);
 

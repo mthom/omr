@@ -21,6 +21,8 @@
 
 #include <algorithm>
 #include <stddef.h>
+#include <stdio.h>
+#include <iostream>
 #include <stdint.h>
 #include "codegen/BackingStore.hpp"
 #include "codegen/CodeGenerator.hpp"
@@ -2806,7 +2808,7 @@ void
 TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
    {
    TR::Compilation *comp = cg()->comp();
-
+   std::cout<<"Entered AMD64RegImm64SymInstruction instruction,yay!"<<std::endl;
    if (getSymbolReference()->getSymbol()->isLabel())
       {
       // Assumes a 64-bit absolute relocation (i.e., not relative).
@@ -2859,6 +2861,7 @@ TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
             if (cg()->comp()->getOption(TR_EmitRelocatableELFFile))
                {
                TR_ResolvedMethod *target = getSymbolReference()->getSymbol()->castToResolvedMethodSymbol()->getResolvedMethod();
+	       cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, NULL, TR_MethodCallAddress, cg()), __FILE__, __LINE__, getNode());
                cg()->addStaticRelocation(TR::StaticRelocation(cursor, target->externalName(cg()->trMemory()), TR::StaticRelocationSize::word64, TR::StaticRelocationType::Absolute));
                }
             break;
