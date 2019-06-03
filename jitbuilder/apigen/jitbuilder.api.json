@@ -35,41 +35,6 @@
         , "flags": []
         , "return": "none"
         , "parms": []
-        },
-	{ "name": "storeCodeEntry"
-        , "overloadsuffix": ""
-        , "flags": []
-        , "return": "boolean"
-        , "parms": [
-            {"name":"methodName","type":"string"},
-            {"name":"codeLocation","type":"pointer"}
-            ]
-        },
-	{ "name": "getCodeEntry"
-        , "overloadsuffix": ""
-        , "flags": []
-        , "return": "pointer"
-        , "parms": [
-            {"name":"methodName","type":"string"}
-            ]
-        },
-	{ "name": "registerCallRelocation"
-        , "overloadsuffix": ""
-        , "flags": []
-        , "return": "none"
-        , "parms": [
-            {"name":"caller","type":"string"},
-	    {"name":"callee","type":"string"}
-            ]
-        },
-	{ "name": "relocateCodeEntry"
-        , "overloadsuffix": ""
-        , "flags": []
-        , "return": "none"
-        , "parms": [
-            {"name":"methodName","type":"string"},
-	    {"name":"warmCode","type":"pointer"}
-            ]
         }
         ],
     "classes": [

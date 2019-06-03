@@ -127,11 +127,10 @@ target_include_directories(jitbuilder
 )
 
 target_link_libraries(jitbuilder
-
   	PUBLIC
 	omrvmstartup
         shared_cache_modifications
-	wasm_shared_cache
+#	wasm_shared_cache
 	${OMR_PORT_LIB}
 )
 

@@ -40,6 +40,10 @@ target_sources(omr_example_gc_glue INTERFACE
 	${CMAKE_CURRENT_SOURCE_DIR}/VerboseManagerImpl.cpp
 )
 
+# SOMpp specific.
+target_include_directories(omr_example_gc_glue INTERFACE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../../src/")
+
 if(OMR_GC_MODRON_SCAVENGER)
 	target_sources(omr_example_gc_glue
 		INTERFACE

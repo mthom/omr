@@ -28,7 +28,7 @@
 #include "runtime/RelocationRecord.hpp"
 #include "compile/VirtualGuard.hpp"
 #include "env/CompilerEnv.hpp"
-#include "env/SharedCache.hpp"
+//#include "env/SharedCache.hpp"
 #include "env/jittypes.h"
 #include <iostream>
 #include "il/Node.hpp"
@@ -137,7 +137,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    {
    TR::Compilation* comp = TR::comp();
    TR::CodeGenerator* cg = comp->cg();
-   TR::SharedCache* sharedCache = TR::Compiler->cache;
+   //   TR::SharedCache* sharedCache = TR::Compiler->cache;
    //TR::SymbolValidationManager *symValManager = comp->getSymbolValidationManager();
 
    TR_VirtualGuard *guard;
@@ -182,7 +182,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	   mcaRecord->setAddress(reloTarget, relocation->getTargetAddress());
          }
 
-	 sharedCache->setRelocationData(relocation->getRelocationData());
+	 //	 sharedCache->setRelocationData(relocation->getRelocationData());
 	 
          break;
 
