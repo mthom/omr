@@ -19,42 +19,38 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 ###############################################################################
 
-set(OMR_GC_GLUE_TARGET "omr_example_gc_glue" CACHE STRING "The gc glue target, must be interface library" FORCE)
+#set(OMR_GC_GLUE_TARGET "omr_example_gc_glue" CACHE STRING "The gc glue target, must be interface library" FORCE)
 set(OMR_UTIL_GLUE_TARGET "omr_example_util_glue" CACHE STRING "The util glue target, must be interface library" FORCE)
 set(OMR_RAS_GLUE_TARGET "omr_example_ras_glue" CACHE STRING "The ras glue target, must be interface library" FORCE)
 set(OMR_CORE_GLUE_TARGET "omr_example_core_glue" CACHE STRING "The core glue target, must be and interface library" FORCE)
 
-add_library(omr_example_gc_glue INTERFACE)
-
-target_sources(omr_example_gc_glue INTERFACE
-	${CMAKE_CURRENT_SOURCE_DIR}/CollectorLanguageInterfaceImpl.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/CompactSchemeFixupObject.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/ConcurrentMarkingDelegate.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/EnvironmentDelegate.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/FrequentObjectsStats.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/GlobalCollectorDelegate.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/MarkingDelegate.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/ObjectIterator.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/ObjectModelDelegate.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/StartupManagerImpl.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/VerboseManagerImpl.cpp
-)
-
-# SOMpp specific.
-target_include_directories(omr_example_gc_glue INTERFACE
-  "${CMAKE_CURRENT_SOURCE_DIR}/../../../src/")
-
-if(OMR_GC_MODRON_SCAVENGER)
-	target_sources(omr_example_gc_glue
-		INTERFACE
-			${CMAKE_CURRENT_SOURCE_DIR}/ScavengerDelegate.cpp
-	)
-endif(OMR_GC_MODRON_SCAVENGER)
-
-target_link_libraries(omr_example_gc_glue
-	INTERFACE
-		omr_example_base
-)
+#add_library(omr_example_gc_glue INTERFACE)
+#
+#target_sources(omr_example_gc_glue INTERFACE
+#	${CMAKE_CURRENT_SOURCE_DIR}/CollectorLanguageInterfaceImpl.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/CompactSchemeFixupObject.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/ConcurrentMarkingDelegate.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/EnvironmentDelegate.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/FrequentObjectsStats.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/GlobalCollectorDelegate.cpp
+##	${CMAKE_CURRENT_SOURCE_DIR}/MarkingDelegate.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/ObjectIterator.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/ObjectModelDelegate.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/StartupManagerImpl.cpp
+#	${CMAKE_CURRENT_SOURCE_DIR}/VerboseManagerImpl.cpp
+#)
+#
+#if(OMR_GC_MODRON_SCAVENGER)
+#	target_sources(omr_example_gc_glue
+#		INTERFACE
+#			${CMAKE_CURRENT_SOURCE_DIR}/ScavengerDelegate.cpp
+#	)
+#endif(OMR_GC_MODRON_SCAVENGER)
+#
+#target_link_libraries(omr_example_gc_glue
+#	INTERFACE
+#		omr_example_base
+#)
 
 add_library(omr_example_util_glue INTERFACE)
 

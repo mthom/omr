@@ -24,6 +24,7 @@
 #define OBJECT_HPP_
 
 #include "omrcfg.h"
+#include "objectdescription.h"
 
 #include <cstdlib>
 #include <stdint.h>
@@ -45,7 +46,6 @@ typedef uintptr_t ObjectSize;
 class ObjectHeader
 {
 public:
-
 	ObjectHeader() {}
 
 	explicit ObjectHeader(RawObjectHeader value) : _value(value) {}

@@ -36,6 +36,7 @@
 #include "GCExtensionsBase.hpp"
 #include "Heap.hpp"
 #include "ObjectAllocationInterface.hpp"
+#include "ObjectModelBase.hpp"
 #include "ObjectModel.hpp"
 
 #if defined(OMR_VALGRIND_MEMCHECK)

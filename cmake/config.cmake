@@ -19,7 +19,7 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 #############################################################################
 
-set(OMR_WARNINGS_AS_ERRORS ON CACHE BOOL "Treat compile warnings as errors")
+set(OMR_WARNINGS_AS_ERRORS OFF CACHE BOOL "Treat compile warnings as errors")
 set(OMR_ENHANCED_WARNINGS ON CACHE BOOL "Enable enhanced compiler warnings")
 
 ###
@@ -100,7 +100,7 @@ set(OMR_TRACE_LIB "omrtrace" CACHE STRING "Name of the trace library to link aga
 ### Glue library names
 ###
 
-set(OMR_GC_GLUE_TARGET "NOTFOUND" CACHE STRING "The gc glue target, must be interface library")
+set(OMR_GC_GLUE_TARGET "omr_som_gc_glue" CACHE STRING "The gc glue target, must be interface library")
 set(OMR_UTIL_GLUE_TARGET "NOTFOUND" CACHE STRING "The util glue target, must be interface library")
 set(OMR_RAS_GLUE_TARGET "NOTFOUND" CACHE STRING "The ras glue target, must be interface library")
 set(OMR_CORE_GLUE_TARGET "NOTFOUND" CACHE STRING "The core glue target, must be and interface library")

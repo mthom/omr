@@ -33,6 +33,7 @@
 #endif /* defined(OMR_GC_MODRON_CONCURRENT_MARK) */
 #include "Configuration.hpp"
 #include "EnvironmentBase.hpp"
+#include "ForwardedHeader.hpp"
 #include "GCExtensionsBase.hpp"
 #include "Heap.hpp"
 #include "MarkMap.hpp"
