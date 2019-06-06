@@ -42,7 +42,7 @@ public:
   void *loadCodeEntry(const char *methodName, U_32 &codeLength,void *&relocationHeader);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
-
+  
 private:
   virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);
   

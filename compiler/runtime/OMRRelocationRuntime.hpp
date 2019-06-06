@@ -380,6 +380,8 @@ public:
   //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
 
       //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
+      virtual void *methodAddress(char *&methodName);
+      virtual void registerLoadedMethod(const char *&methodName,void *&methodAddress);
 
 private:
       uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
@@ -400,6 +402,7 @@ private:
 
       static const char aotHeaderKey[];
       static const UDATA aotHeaderKeyLength;
+      std::map<std::string,void *> _symbolLocation;
 };
 } // end namespaceTR
 #endif   // RELOCATION_RUNTIME_INCL

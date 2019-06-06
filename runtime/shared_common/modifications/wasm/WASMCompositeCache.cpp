@@ -109,9 +109,16 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   _codeEntries[methodName] = entryLocation;
 
   // now write the relocation record to the cache.
-  size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
+  size_t relocationRecordSize = sizeof(size_t);
+  size_t tempNull = 0;
+  if(_relocationData) {
+    relocationRecordSize = static_cast<size_t>(*_relocationData);
+  } else {
+    _relocationData = reinterpret_cast<uint8_t*>(&tempNull);
+  }
   
   memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
+  _relocationData = nullptr;
   _codeUpdatePtr+=relocationRecordSize;
   
   return true;

@@ -451,6 +451,20 @@ OMR::SharedCacheRelocationRuntime::generateFeatureFlags(TR_FrontEnd *fe)
 
 //    return featureFlags;
    }
+void *
+OMR::SharedCacheRelocationRuntime::methodAddress(char *&methodName)
+   {
+   std::string method(const_cast<const char *>(methodName));
+   return _symbolLocation[method];
+   }
+
+void
+OMR::SharedCacheRelocationRuntime::registerLoadedMethod(const char *&methodName, void *&methodAddress)
+   {
+   std::string method(methodName);
+   _symbolLocation[methodName] = methodAddress;
+   }
+  
 
 
 

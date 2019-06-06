@@ -47,6 +47,10 @@
 extern TR_RuntimeHelperTable runtimeHelpers;
 extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *callBacks, int32_t *numHelpers, int32_t *CCPreLoadedCodeSize);
 
+//Shared cache relocation runtime. It is not thread safe.
+//
+static TR::SharedCacheRelocationRuntime *reloRuntime;
+
 static void
 initHelper(void *helper, TR_RuntimeHelper id)
    {
@@ -118,8 +122,9 @@ bool storeCodeEntry(const char *methodName, void *codeLocation) {
   return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
 }
 
-bool initializeSharedCache() {  
+bool initializeSharedCache(TR::RawAllocator raw) {  
   TR::Compiler->cache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
+  reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL);
   return TR::Compiler->cache;
 }
 
@@ -131,11 +136,11 @@ void *getCodeEntry(const char *methodName){
   TR::SharedCache* cache = TR::Compiler->cache;
   void *relocationHeader = 0;
   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
-  TR::RelocationRuntime reloRuntime (NULL);
-  TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
+//TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+//TR::RelocationRuntime reloRuntime (NULL);
+//TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
   int32_t numReserved;
-  TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
+  static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
   if(!codeCache){
     return nullptr;
   }
@@ -150,7 +155,8 @@ void *getCodeEntry(const char *methodName){
 //if(relocationSize){
 //   reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
 //}
-  cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
+//cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
+  reloRuntime->registerLoadedMethod(methodName,warmCode);
   return warmCode;
 //return cache->loadCodeEntry(methodName);
 }
@@ -161,11 +167,11 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
   U_32 codeLength;
   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
   TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
-  TR::RelocationRuntime reloRuntime (NULL);
-  TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
+//  TR::SharedCacheRelocationRuntime *reloRuntime = TR::Compiler->reloRuntime;
+  TR::RelocationRecordMethodCallAddress reloRecord (reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
   size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
   if(relocationSize){
-     reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode+rrbintemp->_extra-4);
+     reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+rrbintemp->_extra-4);
   }
 }
 
@@ -224,7 +230,7 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
-   initializeSharedCache();
+   initializeSharedCache(rawAllocator);
    
    if (commonJitInit(fe, options) < 0)
      return false;
@@ -326,4 +332,10 @@ void internal_registerCallRelocation(char *caller,char *callee)
 void internal_relocateCodeEntry(char *methodName,void *warmCode)
    {
      relocateCodeEntry(const_cast<const char*>(methodName),warmCode);
+   }
+
+void internal_setCodeEntry(char *methodName, void *codeLocation)
+   {
+     const char *methodN = const_cast<const char *>(methodName);
+     reloRuntime->registerLoadedMethod(methodN,codeLocation);
    }

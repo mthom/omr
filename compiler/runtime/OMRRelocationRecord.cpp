@@ -390,8 +390,11 @@ OMR::RelocationRecord::applyRelocationAtAllOffsets(TR::RelocationRuntime *reloRu
 uint8_t *
 OMR::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation)
    {
+   //SCC relocation header holds function name in _methodAddress field
    uint8_t *callTargetAddress = address(reloTarget);
-   
+   char methodName[8]{};
+   memcpy(methodName,&callTargetAddress,8);
+   callTargetAddress = reinterpret_cast<uint8_t*>(dynamic_cast<TR::SharedCacheRelocationRuntime *>(reloRuntime)->methodAddress(methodName));
 // if (reloRuntime->options()->getOption(TR_StressTrampolines) || reloTarget->useTrampoline(callTargetAddress, baseLocation))
 //    {
 //    RELO_LOG(reloRuntime->reloLogger(), 6, "\tredirecting call to " POINTER_PRINTF_FORMAT " through trampoline\n", callTargetAddress);

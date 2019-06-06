@@ -62,6 +62,15 @@
 	    {"name":"callee","type":"string"}
             ]
         },
+	{ "name": "setCodeEntry"
+        , "overloadsuffix": ""
+        , "flags": []
+        , "return": "none"
+        , "parms": [
+            {"name":"methodName","type":"string"},
+            {"name":"codeLocation","type":"pointer"}
+            ]
+        },
 	{ "name": "relocateCodeEntry"
         , "overloadsuffix": ""
         , "flags": []
