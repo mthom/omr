@@ -189,6 +189,11 @@ class VirtualMachineOperandStack : public TR::VirtualMachineState
     */
    virtual void *client();
 
+   // these two functions are needed by SOMppMethod_with_vm_state.
+   int32_t GetStackTop() {return _stackTop;}
+
+   void SetStackTop(int32_t stackTop) {_stackTop = stackTop;}
+     
    /**
     * @brief Set the Client Allocator function
     */

@@ -2003,7 +2003,7 @@
                     {"name":"vmState","type":"VirtualMachineState"},
                     {"name":"b","type":"IlBuilder"}
                     ]
-                }
+                }	
                 ],
             "services": [
                 { "name": "Get"
@@ -2167,6 +2167,21 @@
                 , "parms": [
                     {"name":"b","type":"IlBuilder"},
                     {"name":"array","type":"IlValue"}
+                    ]
+                },
+		{ "name": "GetStackTop"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "int32"
+                , "parms": [                    
+                    ]
+                },
+                { "name": "SetStackTop"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "none"
+                , "parms": [
+		    {"name":"stackTop","type":"int32"}
                     ]
                 }
                 ]
