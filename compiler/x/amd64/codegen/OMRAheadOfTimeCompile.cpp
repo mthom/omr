@@ -187,7 +187,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	   mcaRecord->setAddress(reloTarget,reinterpret_cast<uint8_t *>(methodName));
          }
 
-	 sharedCache->setRelocationData(relocation->getRelocationData());
+	 sharedCache->setRelocationData(relocation->getRelocationData()-4);
 	 
          break;
 

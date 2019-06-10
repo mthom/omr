@@ -30,7 +30,8 @@ public:
   }
 
   void setRelocationData(uint8_t* relocationData) {
-    _relocationData = relocationData;
+    if(_relocationData == nullptr)
+      _relocationData = relocationData;
   }
   
   bool startup(const char* cacheName, const char* ctrlDirName);
@@ -39,7 +40,7 @@ public:
 
   UDATA baseSharedCacheAddress();
 
-  void *loadCodeEntry(const char *methodName, U_32 &codeLength,void *&relocationHeader);
+  void *loadCodeEntry(const char *methodName, U_32 &codeLength,char *&relocationHeader);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
   

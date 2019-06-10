@@ -134,7 +134,7 @@ void *getCodeEntry(const char *methodName){
   TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
   U_32 codeLength = 0;
   TR::SharedCache* cache = TR::Compiler->cache;
-  void *relocationHeader = 0;
+  char *relocationHeader = 0;
   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
 //TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
 //TR::RelocationRuntime reloRuntime (NULL);
@@ -162,20 +162,27 @@ void *getCodeEntry(const char *methodName){
 }
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
-  void *relocationHeader = 0;
+  char *relocationHeader = 0;
   TR::SharedCache* cache = TR::Compiler->cache;
   U_32 codeLength;
   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+  uint32_t sizeOfRelocations = *reinterpret_cast<uint32_t*>(relocationHeader);
+  char *endOfRelocations = relocationHeader+sizeOfRelocations;
+  relocationHeader+=sizeof(uint32_t);
+  while(relocationHeader<endOfRelocations){
+    TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
 //  TR::SharedCacheRelocationRuntime *reloRuntime = TR::Compiler->reloRuntime;
-  TR::RelocationRecordMethodCallAddress reloRecord (reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
-  size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
-  if(relocationSize){
-     reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+rrbintemp->_extra-4);
+    TR::RelocationRecordMethodCallAddress reloRecord (reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
+    uint16_t relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
+    if(relocationSize){
+      reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+rrbintemp->_extra-4);
+    }
+    relocationHeader+=relocationSize;
   }
+  
 }
 
-void registerCallRelocation(const char *caller,const char *callee) {
+/*void registerCallRelocation(const char *caller,const char *callee) {
   static std::map<const char *,U_32> callCount;
   TR::SharedCache* cache = TR::Compiler->cache;
   U_32 codeLength = 0;
@@ -186,7 +193,7 @@ void registerCallRelocation(const char *caller,const char *callee) {
   --calleeEntry;
   rrbintemp->_methodAddress = reinterpret_cast<UDATA>(&(calleeEntry->methodName))-cache->baseSharedCacheAddress();
 }
-
+*/
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
 //   currently this argument isn't needed by anything so this function can stay internal
@@ -323,12 +330,12 @@ internal_getCodeEntry(char *methodName)
    {
     return getCodeEntry((const char*)methodName);
    }
-
+/*
 void internal_registerCallRelocation(char *caller,char *callee)
    {
     registerCallRelocation(caller,callee);
    }
-
+*/
 void internal_relocateCodeEntry(char *methodName,void *warmCode)
    {
      relocateCodeEntry(const_cast<const char*>(methodName),warmCode);
