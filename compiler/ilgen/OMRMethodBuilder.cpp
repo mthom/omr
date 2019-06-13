@@ -436,6 +436,7 @@ OMR::MethodBuilder::lookupSymbol(const char *name)
       }
    else
       {
+      
       symRef = symRefTab()->createTemporary(_methodSymbol, primitiveType);
       const char *adjustedName = adjustNameForInlinedSite(name); 
       symRef->getSymbol()->getAutoSymbol()->setName(adjustedName);

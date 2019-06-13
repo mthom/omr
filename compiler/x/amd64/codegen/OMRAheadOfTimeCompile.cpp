@@ -166,6 +166,8 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    *cursor++ = targetKind;
    uint8_t *flagsCursor = cursor++;
    *flagsCursor = modifier;
+   *(uint32_t*)cursor = cg->getPrePrologueSize();
+   cursor+=4;
    uint32_t *wordAfterHeader = (uint32_t*)cursor;
    
    // This has to be created after the kind has been written into the header
@@ -188,7 +190,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
          }
 
 	 sharedCache->setRelocationData(relocation->getRelocationData()-4);
-	 
+	 cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
          break;
 
       default:

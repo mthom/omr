@@ -134,7 +134,7 @@ void *getCodeEntry(const char *methodName){
   TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
   U_32 codeLength = 0;
   TR::SharedCache* cache = TR::Compiler->cache;
-  char *relocationHeader = 0;
+  uint8_t *relocationHeader = 0;
   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
 //TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
 //TR::RelocationRuntime reloRuntime (NULL);
@@ -162,20 +162,24 @@ void *getCodeEntry(const char *methodName){
 }
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
-  char *relocationHeader = 0;
+  uint8_t *relocationHeader = 0;
   TR::SharedCache* cache = TR::Compiler->cache;
   U_32 codeLength;
   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
   uint32_t sizeOfRelocations = *reinterpret_cast<uint32_t*>(relocationHeader);
-  char *endOfRelocations = relocationHeader+sizeOfRelocations;
+  uint8_t *endOfRelocations = relocationHeader+sizeOfRelocations;
   relocationHeader+=sizeof(uint32_t);
   while(relocationHeader<endOfRelocations){
     TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
 //  TR::SharedCacheRelocationRuntime *reloRuntime = TR::Compiler->reloRuntime;
     TR::RelocationRecordMethodCallAddress reloRecord (reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
     uint16_t relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
+    uint8_t *cursor = relocationHeader+sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate);
     if(relocationSize){
-      reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+rrbintemp->_extra-4);
+      while(cursor!=relocationHeader+relocationSize){
+	reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+*reinterpret_cast<uint16_t*>(cursor)-rrbintemp->_extra);
+	cursor+=2;
+      }
     }
     relocationHeader+=relocationSize;
   }

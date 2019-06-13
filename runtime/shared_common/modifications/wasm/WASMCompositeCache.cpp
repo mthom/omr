@@ -125,10 +125,10 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
-void *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, char *&relocationHeader) {
+void *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, uint8_t *&relocationHeader) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[methodName];
-    char *bytePointer = reinterpret_cast<char *>(entry);
+    uint8_t *bytePointer = reinterpret_cast<uint8_t *>(entry);
     relocationHeader = bytePointer+sizeof(WASMCacheEntry)+entry->codeLength;
     codeLength = entry->codeLength;
     entry++;

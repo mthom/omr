@@ -129,13 +129,18 @@ namespace OMR
          uint8_t _type;
          uint8_t _flags;
          #if defined(TR_HOST_64BIT)
-         uint32_t _extra; //holds the offset to the instruction from the beginning of code
+      uint32_t _extra; //holds prePrologue offset
          #endif
    };
 
   struct RelocationRecordMethodCallAddressBinaryTemplate : public RelocationRecordBinaryTemplate
    {
    UDATA _methodAddress;
+   };
+
+  struct RelocationRecordWithOffsetBinaryTemplate : public RelocationRecordBinaryTemplate
+   {
+   UDATA _offset;
    };
    
    class  OMR_EXTENSIBLE  RelocationRecord
