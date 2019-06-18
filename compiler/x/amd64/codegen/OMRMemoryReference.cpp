@@ -651,7 +651,7 @@ OMR::X86::AMD64::MemoryReference::generateBinaryEncoding(
       {
       uint8_t *cursor = modRM+1;
       if (IS_32BIT_SIGNED(displacement) && !_preferRIPRelative)
-         {
+         {//currently I'm here !!!
          // Addresses in the low 2GB (or high 2GB) can be accessed using a SIB byte
          //
          self()->ModRM(modRM)->setBase()->setHasSIB();
@@ -660,7 +660,7 @@ OMR::X86::AMD64::MemoryReference::generateBinaryEncoding(
          }
       else
          {
-         TR_ASSERT(IS_32BIT_RIP(displacement, rip), "assertion failure");
+         TR_ASSERT(IS_32BIT_RIP(displacement, rip), "assertion failure");//I want to get here!!
          TR_ASSERT(!(comp->getOption(TR_EnableHCR) && sr.getSymbol() && sr.getSymbol()->isClassObject()),
             "HCR runtime assumptions currently can't patch RIP-relative offsets");
          self()->ModRM(modRM)->setIndexOnlyDisp32();

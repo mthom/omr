@@ -1141,7 +1141,7 @@ class OMR_EXTENSIBLE CodeGenerator
 
 
    bool needClassAndMethodPointerRelocations() { return false; }
-   bool needRelocationsForStatics() { return false; }
+   bool needRelocationsForStatics() { return true; }
    bool needRelocationsForBodyInfoData() { return false; }
    bool needRelocationsForPersistentInfoData() { return false; }
 

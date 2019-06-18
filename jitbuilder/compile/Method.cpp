@@ -196,6 +196,15 @@ JitBuilder::ResolvedMethod::localName(uint32_t slot,
    return name;
    }
 
+/*char *
+JitBuilder::ResolvedMethod::staticName(int32_t cpIndex,TR_Memory *trMemory)
+   {
+   char *name = nullptr;
+   name = (char *) trMemory->allocateHeapMemory(8 * sizeof(char));
+   sprintf(name, "Parm %2d", cpIndex);
+   return name;
+   }*/
+
 TR::IlInjector *
 JitBuilder::ResolvedMethod::getInjector (TR::IlGeneratorMethodDetails * details,
    TR::ResolvedMethodSymbol *methodSymbol,

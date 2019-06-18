@@ -168,19 +168,42 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
   uint32_t sizeOfRelocations = *reinterpret_cast<uint32_t*>(relocationHeader);
   uint8_t *endOfRelocations = relocationHeader+sizeOfRelocations;
+  uint16_t relocationSize = 0;
   relocationHeader+=sizeof(uint32_t);
   while(relocationHeader<endOfRelocations){
-    TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
+    TR::RelocationRecordBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocationHeader);
 //  TR::SharedCacheRelocationRuntime *reloRuntime = TR::Compiler->reloRuntime;
-    TR::RelocationRecordMethodCallAddress reloRecord (reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
-    uint16_t relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
-    uint8_t *cursor = relocationHeader+sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate);
-    if(relocationSize){
-      while(cursor!=relocationHeader+relocationSize){
-	reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+*reinterpret_cast<uint16_t*>(cursor)-rrbintemp->_extra);
-	cursor+=2;
-      }
+    switch(rrbintemp->_type){
+      case TR_DataAddress:
+	{
+	TR::RelocationRecordDataAddress reloRecord (reloRuntime,rrbintemp);
+	relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
+	uint8_t *cursor = relocationHeader+sizeof(TR::RelocationRecordDataAddressBinaryTemplate);
+	if(relocationSize){
+	  while(cursor!=relocationHeader+relocationSize){
+	    reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+*reinterpret_cast<uint16_t*>(cursor)-rrbintemp->_extra);
+	    cursor+=2;
+	  }
+	}
+	}
+	break;
+      case TR_MethodCallAddress:
+	{
+	  TR::RelocationRecordMethodCallAddress reloRecord (reloRuntime,rrbintemp);
+	  relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
+	  uint8_t *cursor = relocationHeader+sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate);
+	  if(relocationSize){
+	    while(cursor!=relocationHeader+relocationSize){
+	      reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+*reinterpret_cast<uint16_t*>(cursor)-rrbintemp->_extra);
+	      cursor+=2;
+	    }
+	  }
+	}
+	break;
+      default:
+	return;
     }
+    
     relocationHeader+=relocationSize;
   }
   

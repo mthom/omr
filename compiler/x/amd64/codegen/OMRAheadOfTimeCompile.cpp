@@ -192,7 +192,17 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	 sharedCache->setRelocationData(relocation->getRelocationData()-4);
 	 cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
          break;
-
+      case TR_DataAddress:
+	{
+	OMR::RelocationRecordDataAddress *daRecord = reinterpret_cast<OMR::RelocationRecordDataAddress*>(reloRecord);
+	TR::SymbolReference * symRef = reinterpret_cast<TR::SymbolReference*>(relocation->getTargetAddress());
+	TR::StaticSymbol * symbol = dynamic_cast<TR::StaticSymbol*>(symRef->getSymbol());
+	uint64_t index = symbol->getTOCIndex();
+	daRecord->setOffset(reloTarget,index);
+	}
+	sharedCache->setRelocationData(relocation->getRelocationData()-4);
+	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
+	break;
       default:
          // initializeCommonAOTRelocationHeader is currently in the process
          // of becoming the canonical place to initialize the platform agnostic
@@ -250,7 +260,7 @@ uint32_t OMR::X86::AMD64::AheadOfTimeCompile::_relocationKindToHeaderSizeMap[TR_
    8,                                               // TR_HelperAddress                       = 1
    24,                                              // TR_RelativeMethodAddress               = 2
    8,                                               // TR_AbsoluteMethodAddress               = 3
-   40,                                              // TR_DataAddress                         = 4
+   sizeof(TR::RelocationRecordDataAddressBinaryTemplate),                                              // TR_DataAddress                         = 4
    24,                                              // TR_ClassObject                         = 5
    24,                                              // TR_MethodObject                        = 6
    24,                                              // TR_InterfaceObject                     = 7

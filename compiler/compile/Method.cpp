@@ -440,10 +440,10 @@ int32_t      TR_ResolvedMethod::classCPIndexOfFieldOrStatic(int32_t)       { TR_
 const char * TR_ResolvedMethod::signature(TR_Memory *, TR_AllocationKind)  { TR_UNIMPLEMENTED(); return 0; }
 const char * TR_ResolvedMethod::externalName(TR_Memory *, TR_AllocationKind)  { TR_UNIMPLEMENTED(); return 0; }
 char *       TR_ResolvedMethod::fieldName (int32_t, TR_Memory *, TR_AllocationKind kind)           { TR_UNIMPLEMENTED(); return 0; }
-char *       TR_ResolvedMethod::staticName(int32_t, TR_Memory *, TR_AllocationKind kind)           { TR_UNIMPLEMENTED(); return 0; }
+char *       TR_ResolvedMethod::staticName(int32_t, TR_Memory *, TR_AllocationKind kind)           { /*TR_UNIMPLEMENTED();*/ return 0; }
 char *       TR_ResolvedMethod::localName (uint32_t, uint32_t, TR_Memory *){ /*TR_UNIMPLEMENTED();*/ return 0; }
 char *       TR_ResolvedMethod::fieldName (int32_t, int32_t &, TR_Memory *, TR_AllocationKind kind) { TR_UNIMPLEMENTED(); return 0; }
-char *       TR_ResolvedMethod::staticName(int32_t, int32_t &, TR_Memory *, TR_AllocationKind kind) { TR_UNIMPLEMENTED(); return 0; }
+char *       TR_ResolvedMethod::staticName(int32_t, int32_t &, TR_Memory *, TR_AllocationKind kind) { /*TR_UNIMPLEMENTED();*/ return 0; }
 char *       TR_ResolvedMethod::localName (uint32_t, uint32_t, int32_t&, TR_Memory *){ /*TR_UNIMPLEMENTED();*/ return 0; }
 char *       TR_ResolvedMethod::fieldNameChars(int32_t, int32_t &)         { TR_UNIMPLEMENTED(); return 0; }
 char *       TR_ResolvedMethod::fieldSignatureChars(int32_t, int32_t &)    { TR_UNIMPLEMENTED(); return 0; }

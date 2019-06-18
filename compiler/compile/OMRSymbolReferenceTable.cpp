@@ -2042,3 +2042,10 @@ OMR::SymbolReferenceTable::findOrCreateOSRFearPointHelperSymbolRef()
       }
    return element(osrFearPointHelperSymbol);
    }
+
+TR::SymbolReference *
+OMR::SymbolReferenceTable::createStatic(TR::ResolvedMethodSymbol * owningMethodSymbol, TR::DataType type) 
+   {
+   TR::StaticSymbol * sym = TR::StaticSymbol::create(trHeapMemory(),type);
+   return new (trHeapMemory()) TR::SymbolReference(self(),sym,owningMethodSymbol->getResolvedMethodIndex(),owningMethodSymbol->incTempIndex(fe()));
+   }

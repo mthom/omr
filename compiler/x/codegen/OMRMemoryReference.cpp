@@ -1407,6 +1407,11 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
         self()->getSymbolReference().getOffset() != 0    ||
         self()->isForceWideDisplacement()) ? 4 : 0);
 
+//   if(*self()->getSymbolReference().getSymbol()->getName()=='g')
+//     {
+     //cg->addExternalRelocation(new new (cg()->trHeapMemory()) TR::ExternalRelocation(modRM, reinterpret_cast<uint8_t*>(const_cast<char *>(self()->getSymbolReference().getSymbol()->getName())), TR_MethodCallAddress, cg), __FILE__, __LINE__, getNode());
+//     }
+
    intptrj_t displacement;
 
    uint8_t *cursor = modRM;

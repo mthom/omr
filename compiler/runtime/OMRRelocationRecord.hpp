@@ -72,6 +72,22 @@ namespace OMR { typedef OMR::RelocationRecordMethodCallAddressBinaryTemplate Rel
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
 
+#ifndef OMR_RELOCATION_RECORD_DATA_ADDRESS_CONNECTOR
+#define OMR_RELOCATION_RECORD_DATA_ADDRESS_CONNECTOR
+namespace OMR { class RelocationRecordDataAddress; }
+namespace OMR { typedef OMR::RelocationRecordDataAddress RelocationRecordDataAddressConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
+
+#ifndef OMR_RELOCATION_RECORD_DATA_ADDRESS_BINARY_TEMPLATE_CONNECTOR
+#define OMR_RELOCATION_RECORD_DATA_ADDRESS_BINARY_TEMPLATE_CONNECTOR
+namespace OMR { class RelocationRecordDataAddressBinaryTemplate; }
+namespace OMR { typedef OMR::RelocationRecordDataAddressBinaryTemplate RelocationRecordDataAddressBinaryTemplateConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
+
 #include <stdint.h>
 #include "compile/Compilation.hpp"
 #include "env/jittypes.h"
@@ -142,6 +158,7 @@ namespace OMR
    {
    UDATA _offset;
    };
+  struct RelocationRecordDataAddressBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate {};
    
    class  OMR_EXTENSIBLE  RelocationRecord
    {
@@ -259,6 +276,20 @@ class RelocationRecordMethodCallAddress : public RelocationRecord
 
    private:
       uint8_t *computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation);
+   };
+
+class RelocationRecordDataAddress : public RelocationRecord
+   {
+   public:
+     RelocationRecordDataAddress() {}
+     RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecord(reloRuntime, record) {}
+     virtual char *name() { return "DataAddress"; }
+     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordDataAddressBinaryTemplate); }
+     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     uintptr_t offset(TR::RelocationTarget *reloTarget);
+
+//     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
    };
 
 

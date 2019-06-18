@@ -68,10 +68,28 @@ class OMR_EXTENSIBLE RelocationRecordMethodCallAddress: public OMR::RelocationRe
 
     
    };
+class OMR_EXTENSIBLE RelocationRecordDataAddress: public OMR::RelocationRecordDataAddressConnector
+   {
+   public:
+      RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) 
+      : OMR::RelocationRecordDataAddressConnector(reloRuntime,record)
+        {}
+      
+      RelocationRecordDataAddress(): OMR::RelocationRecordDataAddressConnector() {}
+      static RelocationRecord *create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget,
+				      TR::RelocationRecordBinaryTemplate *recordPointer);
+
+    
+   };
 class OMR_EXTENSIBLE RelocationRecordMethodCallAddressBinaryTemplate: public OMR::RelocationRecordMethodCallAddressBinaryTemplateConnector
    {
       public:
       RelocationRecordMethodCallAddressBinaryTemplate():OMR::RelocationRecordMethodCallAddressBinaryTemplateConnector(){};
+   };
+class OMR_EXTENSIBLE RelocationRecordDataAddressBinaryTemplate: public OMR::RelocationRecordDataAddressBinaryTemplateConnector
+   {
+      public:
+      RelocationRecordDataAddressBinaryTemplate():OMR::RelocationRecordDataAddressBinaryTemplateConnector(){};
    };
 
 }

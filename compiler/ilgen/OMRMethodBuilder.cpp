@@ -436,10 +436,18 @@ OMR::MethodBuilder::lookupSymbol(const char *name)
       }
    else
       {
-      
-      symRef = symRefTab()->createTemporary(_methodSymbol, primitiveType);
-      const char *adjustedName = adjustNameForInlinedSite(name); 
-      symRef->getSymbol()->getAutoSymbol()->setName(adjustedName);
+      if(*(name+2) == 'b')
+	 {
+	 symRef = symRefTab()->createStatic(_methodSymbol, primitiveType);
+         const char *adjustedName = adjustNameForInlinedSite(name); 
+         symRef->getSymbol()->getStaticSymbol()->setName(adjustedName);
+         }
+      else
+	 {
+	 symRef = symRefTab()->createTemporary(_methodSymbol, primitiveType);
+	 const char *adjustedName = adjustNameForInlinedSite(name); 
+	 symRef->getSymbol()->getAutoSymbol()->setName(adjustedName);
+         }
       _symbolNameFromSlot.insert(std::make_pair(symRef->getCPIndex(), name));
 
       // also do the symbol name mapping in caller so references to parameters can be shown in logs

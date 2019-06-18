@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include <stdint.h>
+#include <string>
 #include "omrcfg.h"
 #include "codegen/CodeGenerator.hpp"
 #include "codegen/FrontEnd.hpp"
@@ -149,6 +150,9 @@ TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntim
       {
       case TR_MethodCallAddress:
 	reloRecord = new (storage) OMR::RelocationRecordMethodCallAddress(reloRuntime, record);
+	break;
+      case TR_DataAddress:
+	reloRecord = new (storage) OMR::RelocationRecordDataAddress(reloRuntime,record);
 	break;
       default:
          // TODO: error condition
@@ -445,6 +449,27 @@ int32_t OMR::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRu
       reloTarget->storeAddress(callTargetOffset, reloLocation);
 
    return 0;
+   }
+
+void 
+OMR::RelocationRecordDataAddress::setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset)
+   {
+   RelocationRecordDataAddressBinaryTemplate *reloRecord = reinterpret_cast<RelocationRecordDataAddressBinaryTemplate*>(_record);
+   reloTarget->storeRelocationRecordValue(offset, (uintptrj_t *) &(reloRecord)->_offset);
+   }
+
+uintptrj_t
+OMR::RelocationRecordDataAddress::offset(TR::RelocationTarget *reloTarget)
+   {
+   return reloTarget->loadRelocationRecordValue((uintptrj_t *) &((RelocationRecordDataAddressBinaryTemplate *)_record)->_offset);
+   }
+
+int32_t 
+OMR::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+   {
+   TR::SharedCacheRelocationRuntime *rr = static_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
+   std::string name = "gl_"+std::to_string(reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset);
+   reloTarget->storeAddress((uint8_t*)rr->methodAddress(const_cast<char*>(name.c_str())), reloLocation);
    }
 
 uint32_t OMR::RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds] =
