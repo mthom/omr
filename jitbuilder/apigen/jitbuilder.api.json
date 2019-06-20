@@ -1701,6 +1701,16 @@
                     {"name":"location","type":"pointer"}
                     ]
                 },
+		{ "name": "DefineGlobal"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "none"
+                , "parms": [
+                    {"name":"name","type":"constString"},
+                    {"name":"type","type":"IlType"},
+                    {"name":"index","type":"int32"}
+                    ]
+                },
                 { "name": "DefineFunction"
                 , "overloadsuffix": ""
                 , "flags": []

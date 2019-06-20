@@ -108,6 +108,7 @@ OMR::MethodBuilder::MethodBuilder(TR::TypeDictionary *types, TR::VirtualMachineS
    _symbolNameFromSlot(std::less<int32_t>(), trMemory()->heapMemoryRegion()),
    _symbolIsArray(str_comparator, trMemory()->heapMemoryRegion()),
    _memoryLocations(str_comparator, trMemory()->heapMemoryRegion()),
+   _globals(str_comparator,trMemory()->heapMemoryRegion()),
    _functions(str_comparator, trMemory()->heapMemoryRegion()),
    _cachedParameterTypes(0),
    _definingFile(""),
@@ -140,6 +141,7 @@ OMR::MethodBuilder::MethodBuilder(TR::MethodBuilder *callerMB, TR::VirtualMachin
    _symbolNameFromSlot(std::less<int32_t>(), trMemory()->heapMemoryRegion()),
    _symbolIsArray(str_comparator, trMemory()->heapMemoryRegion()),
    _memoryLocations(str_comparator, trMemory()->heapMemoryRegion()),
+   _globals(str_comparator,trMemory()->heapMemoryRegion()),
    _functions(str_comparator, trMemory()->heapMemoryRegion()),
    _cachedParameterTypes(0),
    _definingFile(""),
@@ -436,11 +438,13 @@ OMR::MethodBuilder::lookupSymbol(const char *name)
       }
    else
       {
-      if(*(name+2) == 'b')
+      GlobalMap::iterator globalsIterator = _globals.find(name);
+      if(globalsIterator != _globals.end())
 	 {
 	 symRef = symRefTab()->createStatic(_methodSymbol, primitiveType);
          const char *adjustedName = adjustNameForInlinedSite(name); 
          symRef->getSymbol()->getStaticSymbol()->setName(adjustedName);
+	 symRef->getSymbol()->getStaticSymbol()->setTOCIndex((*globalsIterator).second);
          }
       else
 	 {
@@ -507,6 +511,14 @@ void
 OMR::MethodBuilder::DefineLocal(const char *name, TR::IlType *dt)
    {
    TR_ASSERT_FATAL(_symbolTypes.find(name) == _symbolTypes.end(), "Symbol '%s' already defined", name);
+   _symbolTypes.insert(std::make_pair(name, dt));
+   }
+
+void 
+OMR::MethodBuilder::DefineGlobal(const char *name, TR::IlType *dt, int32_t index)
+   {
+   TR_ASSERT_FATAL(_globals.find(name) == _globals.end(), "Global '%s' already defined", name);
+   _globals.insert(std::make_pair(name, index));
    _symbolTypes.insert(std::make_pair(name, dt));
    }
 

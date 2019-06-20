@@ -120,6 +120,7 @@ class MethodBuilder : public TR::IlBuilder
    void DefineArrayParameter(const char *name, TR::IlType *dt);
    void DefineReturnType(TR::IlType *dt);
    void DefineLocal(const char *name, TR::IlType *dt);
+   void DefineGlobal(const char *name, TR::IlType *dt, int32_t index);
    void DefineMemory(const char *name, TR::IlType *dt, void *location);
    void DefineFunction(const char* const name,
                        const char* const fileName,
@@ -343,6 +344,10 @@ class MethodBuilder : public TR::IlBuilder
    typedef TR::typed_allocator<std::pair<const char * const, void *>, TR::Region &> MemoryLocationMapAllocator;
    typedef std::map<const char *, void *, StrComparator, MemoryLocationMapAllocator> MemoryLocationMap;
    MemoryLocationMap           _memoryLocations;
+
+   typedef TR::typed_allocator<std::pair<const char * const, int32_t>, TR::Region &> GlobalMapAllocator;
+   typedef std::map<const char * const, int32_t, StrComparator, GlobalMapAllocator> GlobalMap;
+   GlobalMap           _globals;
 
    typedef TR::typed_allocator<std::pair<const char * const, TR::ResolvedMethod *>, TR::Region &> FunctionMapAllocator;
    typedef std::map<const char *, TR::ResolvedMethod *, StrComparator, FunctionMapAllocator> FunctionMap;
