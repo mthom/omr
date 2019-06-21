@@ -445,6 +445,7 @@ OMR::MethodBuilder::lookupSymbol(const char *name)
          const char *adjustedName = adjustNameForInlinedSite(name); 
          symRef->getSymbol()->getStaticSymbol()->setName(adjustedName);
 	 symRef->getSymbol()->getStaticSymbol()->setTOCIndex((*globalsIterator).second);
+	 symRef->getSymbol()->setVolatile();
          }
       else
 	 {
