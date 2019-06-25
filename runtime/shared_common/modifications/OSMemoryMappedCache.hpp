@@ -51,6 +51,7 @@ public:
 
   bool startup(const char* cacheName, const char* ctrlDirName);
   IDATA destroy(bool suppressVerbose, bool isReset);
+  bool checkTime(U_64 moduleTime);
 
   virtual void* attach();
   virtual void detach();

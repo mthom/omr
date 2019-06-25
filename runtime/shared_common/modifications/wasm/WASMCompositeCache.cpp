@@ -128,10 +128,12 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
 void *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, uint8_t *&relocationHeader) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[methodName];
-    uint8_t *bytePointer = reinterpret_cast<uint8_t *>(entry);
-    relocationHeader = bytePointer+sizeof(WASMCacheEntry)+entry->codeLength;
-    codeLength = entry->codeLength;
-    entry++;
+    if(entry) {
+      uint8_t *bytePointer = reinterpret_cast<uint8_t *>(entry);
+      relocationHeader = bytePointer+sizeof(WASMCacheEntry)+entry->codeLength;
+      codeLength = entry->codeLength;
+      entry++;
+    }
     return entry;
 //  void * methodArea =  mmap(NULL,
 //            codeLength,
@@ -160,4 +162,8 @@ void WASMCompositeCache::storeCallAddressToHeaders(void *calleeMethod,size_t met
 	}
       }
     }
+}
+
+bool WASMCompositeCache::checkTime(uint64_t moduleTime) {
+    return _osCache->checkTime(moduleTime);
 }

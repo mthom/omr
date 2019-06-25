@@ -46,6 +46,9 @@ public:
 
     WASMCacheEntryDescriptor descriptor(_focus++);
     _focus += entry->codeLength;
+    uint32_t relocationRecordSize = 0;
+    memcpy(&relocationRecordSize,&(*_focus),4);
+    _focus += relocationRecordSize;
 
     return descriptor;
   }
