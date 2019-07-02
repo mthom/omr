@@ -149,7 +149,7 @@ public:
 	/**
 	 * Returns number of non-empty packets 
 	 */
-	MMINLINE uintptr_t getNonEmptyPacketCount()
+	uintptr_t getNonEmptyPacketCount()
 	{
 		return(_activePackets - _emptyPacketList.getCount());
 	};

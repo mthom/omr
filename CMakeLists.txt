@@ -33,6 +33,8 @@ project(omr VERSION ${OMR_VERSION} LANGUAGES CXX C)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH})
 
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fstack-protector-all")
+
 set_property(GLOBAL PROPERTY USE_FOLDERS TRUE)
 
 include(OmrAssert)
