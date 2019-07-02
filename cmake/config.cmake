@@ -70,7 +70,7 @@ if(OMR_JITBUILDER)
 	## Enable additional JitBuilder tests if running on a supported platform
         #  (which currently means 64-bit x86 platforms except for Windows)
 	if((OMR_HOST_ARCH STREQUAL "x86" AND NOT OMR_OS_WINDOWS) AND OMR_TEMP_DATA_SIZE STREQUAL "64")
-    		set(OMR_JITBUILDER_TEST_EXTENDED ON)
+    		set(OMR_JITBUILDER_TEST_EXTENDED OFF)
 	endif()
 
 else()
