@@ -1019,3 +1019,10 @@ OSMemoryMappedCache::constructInitializer()
 {
   return new OSMemoryMappedCacheInitializer(_portLibrary);
 }
+
+bool 
+OSMemoryMappedCache::checkTime(U_64 moduleTime)
+{
+  I_64* cacheTime = _config->getLastAttachTimeLocation();
+  return moduleTime<*cacheTime;
+}

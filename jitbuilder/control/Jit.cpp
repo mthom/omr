@@ -136,6 +136,9 @@ void *getCodeEntry(const char *methodName){
   TR::SharedCache* cache = TR::Compiler->cache;
   uint8_t *relocationHeader = 0;
   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+  if(!sharedCacheMethod) {
+    return nullptr;
+  }
 //TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
 //TR::RelocationRuntime reloRuntime (NULL);
 //TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);

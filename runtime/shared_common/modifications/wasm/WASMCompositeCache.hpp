@@ -43,6 +43,8 @@ public:
   void *loadCodeEntry(const char *methodName, U_32 &codeLength,uint8_t *&relocationHeader);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
+
+  bool checkTime(uint64_t moduleTime);
   
 private:
   virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);
