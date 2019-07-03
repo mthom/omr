@@ -199,3 +199,4 @@ tags
 # emacs backup files
 *~
 \#*
+compiler/.DS_Store

@@ -37,16 +37,15 @@ namespace TR { class Instruction; }
 namespace TR { class LabelSymbol; }
 namespace TR { class Node; }
 
-extern char* AOTcgDiagOn;
 
-#if 0 //defined(ENABLE_AOT_S390)
-#define AOTcgDiag0(comp,s)                   if (AOTcgDiagOn) dumpOptDetails(comp,s)
-#define AOTcgDiag1(comp,s,p1)                if (AOTcgDiagOn) dumpOptDetails(comp,s,p1)
-#define AOTcgDiag2(comp,s,p1,p2)             if (AOTcgDiagOn) dumpOptDetails(comp,s,p1,p2)
-#define AOTcgDiag3(comp,s,p1,p2,p3)          if (AOTcgDiagOn) dumpOptDetails(comp,s,p1,p2,p3)
-#define AOTcgDiag4(comp,s,p1,p2,p3,p4)       if (AOTcgDiagOn) dumpOptDetails(comp,s,p1,p2,p3,p4)
-#define AOTcgDiag5(comp,s,p1,p2,p3,p4,p5)    if (AOTcgDiagOn) dumpOptDetails(comp,s,p1,p2,p3,p4,p5)
-#define AOTcgDiag6(comp,s,p1,p2,p3,p4,p5,p6) if (AOTcgDiagOn) dumpOptDetails(comp,s,p1,p2,p3,p4,p5,p6)
+#if 1 //defined(ENABLE_AOT_S390)
+#define AOTcgDiag0(comp,s)                   if (1) dumpOptDetails(comp,s)
+#define AOTcgDiag1(comp,s,p1)                if (1) dumpOptDetails(comp,s,p1)
+#define AOTcgDiag2(comp,s,p1,p2)             if (1) dumpOptDetails(comp,s,p1,p2)
+#define AOTcgDiag3(comp,s,p1,p2,p3)          if (1) dumpOptDetails(comp,s,p1,p2,p3)
+#define AOTcgDiag4(comp,s,p1,p2,p3,p4)       if (1) dumpOptDetails(comp,s,p1,p2,p3,p4)
+#define AOTcgDiag5(comp,s,p1,p2,p3,p4,p5)    if (1) dumpOptDetails(comp,s,p1,p2,p3,p4,p5)
+#define AOTcgDiag6(comp,s,p1,p2,p3,p4,p5,p6) if (1) dumpOptDetails(comp,s,p1,p2,p3,p4,p5,p6)
 #else
 #define AOTcgDiag0(comp,s)                    AOTcgDummy()
 #define AOTcgDiag1(comp,s,p1)                 AOTcgDummy()

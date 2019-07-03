@@ -1,4 +1,4 @@
-/*******************************************************************************
+   /*******************************************************************************
  * Copyright (c) 2000, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include <stdint.h>
+#include <iostream>
 #include <string>
 #include "omrcfg.h"
 #include "codegen/CodeGenerator.hpp"
@@ -149,11 +150,14 @@ TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntim
    switch (reloType)
       {
       case TR_MethodCallAddress:
-	reloRecord = new (storage) OMR::RelocationRecordMethodCallAddress(reloRuntime, record);
-	break;
+        reloRecord = new (storage) OMR::RelocationRecordMethodCallAddress(reloRuntime, record);
+        break;
       case TR_DataAddress:
-	reloRecord = new (storage) OMR::RelocationRecordDataAddress(reloRuntime,record);
-	break;
+        reloRecord = new (storage) OMR::RelocationRecordDataAddress(reloRuntime,record);
+        break;
+      case TR_ArbitrarySizedHeader:
+        reloRecord = new (storage) OMR::RelocationRecordArbitrarySizedHeader(reloRuntime,record);
+        break;
       default:
          // TODO: error condition
          printf("Unexpected relo record: %d\n", reloType);fflush(stdout);
@@ -387,6 +391,13 @@ OMR::RelocationRecord::applyRelocationAtAllOffsets(TR::RelocationRuntime *reloRu
 
 
 // Handlers for individual relocation record types
+int32_t
+OMR::RelocationRecordArbitrarySizedHeader::applyRelocation(TR::RelocationRuntime 
+         *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+{
+   std::cout<<"HI";
+};
+  
 
 // Relocations with address sequences
 //
