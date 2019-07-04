@@ -2856,13 +2856,18 @@ TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
                }
             break;
             }
+            // no instance of constructor 
+            // "TR::ExternalRelocation::ExternalRelocation" matches the argument 
+            // list -- argument types are: (uint8_t *, uint8_t *, const char *, uintptr_t, TR::Node *)
+            // Quick Fix...
+
          case TR_NativeMethodAbsolute:
             {
             if (cg()->comp()->getOption(TR_EmitRelocatableELFFile))
                {
                TR_ResolvedMethod *target = getSymbolReference()->getSymbol()->castToResolvedMethodSymbol()->getResolvedMethod();
-	            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, reinterpret_cast<uint8_t*>(const_cast<char *>(target->externalName(cg()->trMemory()))), TR_MethodCallAddress, cg()), __FILE__, __LINE__, getNode());
-               cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, reinterpret_cast<uint8_t*>(const_cast<char *>(target->externalName(cg()->trMemory()))), TR_ArbitrarySizedHeader, cg()), __FILE__, __LINE__, getNode());
+	            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, (uint8_t* )"reinterpret_cast<uint8_t*>(const_cast<char *>(target->externalName(cg()->trMemory())))", TR_MethodCallAddress, cg()), __FILE__, __LINE__, getNode());
+               cg()->addASHLExternalRelocation( __FILE__, __LINE__, getNode(),(void*)"WHATTEFEEEECK", 200,cursor);
                cg()->addStaticRelocation(TR::StaticRelocation(cursor, target->externalName(cg()->trMemory()), TR::StaticRelocationSize::word64, TR::StaticRelocationType::Absolute));
                }
             break;

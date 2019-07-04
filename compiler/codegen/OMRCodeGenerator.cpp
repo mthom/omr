@@ -2945,6 +2945,14 @@ void OMR::CodeGenerator::addRelocation(TR::Relocation *r)
       _relocationList.push_front(r);
       }
    }
+void OMR::CodeGenerator::addASHLExternalRelocation( const char *generatingFileName, uintptr_t generatingLineNumber, TR::Node *node, void* container, int32_t size, uint8_t* cursor)
+   {
+   char* data = new char[size];
+   memcpy(data,container,size);
+   TR::Relocation* r =  new (self()->trHeapMemory()) TR::ExternalRelocation(cursor, 
+   reinterpret_cast<uint8_t*>(const_cast<char *>(data)), TR_ArbitrarySizedHeader, self());
+   self()->addExternalRelocation(r,generatingFileName, generatingLineNumber, node);
+   }
 
 void OMR::CodeGenerator::addExternalRelocation(TR::Relocation *r, const char *generatingFileName, uintptr_t generatingLineNumber, TR::Node *node, TR::ExternalRelocationPositionRequest where)
    {

@@ -1103,6 +1103,7 @@ class OMR_EXTENSIBLE CodeGenerator
 
    void addRelocation(TR::Relocation *r);
    void addExternalRelocation(TR::Relocation *r, const char *generatingFileName, uintptr_t generatingLineNumber, TR::Node *node, TR::ExternalRelocationPositionRequest where = TR::ExternalRelocationAtBack);
+   void addASHLExternalRelocation(const char *generatingFileName, uintptr_t generatingLineNumber, TR::Node *node, void* data, int32_t size, uint8_t* cursor);
    void addExternalRelocation(TR::Relocation *r, TR::RelocationDebugInfo *info, TR::ExternalRelocationPositionRequest where = TR::ExternalRelocationAtBack);
    void addStaticRelocation(const TR::StaticRelocation &relocation);
 

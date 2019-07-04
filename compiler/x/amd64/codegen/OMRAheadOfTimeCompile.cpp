@@ -196,8 +196,6 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
          {
             OMR::RelocationRecordMethodCallAddress *mcaRecord = reinterpret_cast<OMR::RelocationRecordMethodCallAddress *>(reloRecord);
             OMR::RelocationRecordArbitrarySizedHeader *ar = reinterpret_cast<OMR::RelocationRecordArbitrarySizedHeader *>(reloRecord);
-            ar->setSizeOfHeader
-            ar->addDataToTheHeader();
             uint64_t methodName = 0;
             // Should work if method name is like func_1
             // strcpy(reinterpret_cast<char *>(&methodName),const_cast<const char *>(reinterpret_cast<char *>(relocation->getTargetAddress())));

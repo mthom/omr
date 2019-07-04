@@ -20,7 +20,7 @@
  *******************************************************************************/
 
 #include "codegen/Relocation.hpp"
-
+#include <iostream>
 #include <stddef.h>
 #include <stdint.h>
 #include "codegen/AheadOfTimeCompile.hpp"
@@ -223,6 +223,7 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
         r != 0;
         r = r->getNext())
       {
+
       if (r->getTargetAddress2())
          AOTcgDiag6(comp, "r=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " target2=" POINTER_PRINTF_FORMAT ", kind=%x modifier=%x\n",
             r, r->full(), r->getTargetAddress(), r->getTargetAddress2(), r->getTargetKind(), r->getModifierValue());
@@ -272,7 +273,9 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
    TR::IteratedExternalRelocation *temp =   _targetAddress2 ?
       new (codeGen->trHeapMemory()) TR::IteratedExternalRelocation(_targetAddress, _targetAddress2, _kind, modifier, codeGen) :
       new (codeGen->trHeapMemory()) TR::IteratedExternalRelocation(_targetAddress, _kind, modifier, codeGen);
-
+   
+   std::cout<<"Target address "<<temp->getTargetAddress()<<std::endl;
+   if (_kind==TR_RelocationReco
    aot.add(temp);
    if (_targetAddress2)
       AOTcgDiag6(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " target2=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
