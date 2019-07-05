@@ -395,7 +395,6 @@ int32_t
 OMR::RelocationRecordArbitrarySizedHeader::applyRelocation(TR::RelocationRuntime 
          *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
 {
-   std::cout<<"HI";
 };
   
 

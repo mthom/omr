@@ -45,7 +45,6 @@ OMR::AheadOfTimeCompile::self()
 
 void OMR::X86::AheadOfTimeCompile::processRelocations()
    {
-   std::cout<<"Hello from processRelocations"<<std::endl;
    TR::Compilation* comp = self()->comp();
    TR_FrontEnd *fej9 = comp->fe();
    TR::CodeGenerator* _cg = comp->cg();

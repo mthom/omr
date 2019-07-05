@@ -20,7 +20,6 @@
  *******************************************************************************/
 
 #include "codegen/Relocation.hpp"
-#include <iostream>
 #include <stddef.h>
 #include <stdint.h>
 #include "codegen/AheadOfTimeCompile.hpp"
@@ -270,31 +269,42 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
          return;
          }
       }
-   TR::IteratedExternalRelocation *temp =   _targetAddress2 ?
-      new (codeGen->trHeapMemory()) TR::IteratedExternalRelocation(_targetAddress, _targetAddress2, _kind, modifier, codeGen) :
-      new (codeGen->trHeapMemory()) TR::IteratedExternalRelocation(_targetAddress, _kind, modifier, codeGen);
-   
-   std::cout<<"Target address "<<temp->getTargetAddress()<<std::endl;
-   if (_kind==TR_RelocationReco
+   TR::IteratedExternalRelocation *temp;
+
+
+   temp =   _targetAddress2 ?
+   new (codeGen->trHeapMemory()) TR::IteratedExternalRelocation(_targetAddress, _targetAddress2, _kind, modifier, codeGen) :
+   new (codeGen->trHeapMemory()) TR::IteratedExternalRelocation(_targetAddress, _kind, modifier, codeGen);
+
+  
+   //TODO for ASHL, introduce comparison of data
+
    aot.add(temp);
-   if (_targetAddress2)
-      AOTcgDiag6(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " target2=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
-         temp, temp->full(), temp->getTargetAddress(), temp->getTargetAddress2(), temp->getTargetKind(), temp->getModifierValue());
-   else
-      AOTcgDiag5(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
-         temp, temp->full(), temp->getTargetAddress(), temp->getTargetKind(), temp->getModifierValue());
-   AOTcgDiag2(comp, "#sites=%x size=%x\n", temp->getNumberOfRelocationSites(), temp->getSizeOfRelocationData());
-   temp->setNumberOfRelocationSites(temp->getNumberOfRelocationSites()+1);
-   temp->setSizeOfRelocationData(temp->getSizeOfRelocationData() +
-                          (temp->needsWideOffsets()?wideSize:narrowSize));
+   if (_kind==TR_ArbitrarySizedHeader){
+      int c = (int)_targetAddress2[0];
+      temp->setSizeOfRelocationData(c);
+   } else {
+      temp->setNumberOfRelocationSites(temp->getNumberOfRelocationSites()+1);
+      temp->setSizeOfRelocationData(temp->getSizeOfRelocationData() +
+                     (temp->needsWideOffsets()?wideSize:narrowSize));
+   }
+
+   // if (_targetAddress2)
+   //    AOTcgDiag6(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " target2=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
+   //       temp, temp->full(), temp->getTargetAddress(), temp->getTargetAddress2(), temp->getTargetKind(), temp->getModifierValue());
+   // else
+   //    AOTcgDiag5(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
+   //       temp, temp->full(), temp->getTargetAddress(), temp->getTargetKind(), temp->getModifierValue());
+   // AOTcgDiag2(comp, "#sites=%x size=%x\n", temp->getNumberOfRelocationSites(), temp->getSizeOfRelocationData());
+
    _relocationRecord = temp;
-   if (_targetAddress2)
-      AOTcgDiag6(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " target2=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
-         temp, temp->full(), temp->getTargetAddress(), temp->getTargetAddress2(), temp->getTargetKind(), temp->getModifierValue());
-   else
-      AOTcgDiag5(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
-         temp, temp->full(), temp->getTargetAddress(), temp->getTargetKind(), temp->getModifierValue());
-   AOTcgDiag2(comp, "#sites=%x size=%x\n", temp->getNumberOfRelocationSites(), temp->getSizeOfRelocationData());
+   // if (_targetAddress2)
+   //    AOTcgDiag6(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " target2=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
+   //       temp, temp->full(), temp->getTargetAddress(), temp->getTargetAddress2(), temp->getTargetKind(), temp->getModifierValue());
+   // else
+   //    AOTcgDiag5(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
+   //       temp, temp->full(), temp->getTargetAddress(), temp->getTargetKind(), temp->getModifierValue());
+   // AOTcgDiag2(comp, "#sites=%x size=%x\n", temp->getNumberOfRelocationSites(), temp->getSizeOfRelocationData());
 
    }
 
