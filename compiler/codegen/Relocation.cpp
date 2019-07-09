@@ -230,12 +230,44 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
          AOTcgDiag5(comp, "r=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
             r, r->full(), r->getTargetAddress(), r->getTargetKind(), r->getModifierValue());
       AOTcgDiag2(comp, "#sites=%x size=%x\n", r->getNumberOfRelocationSites(), r->getSizeOfRelocationData());
+      //size of an arbitrary header is limited to 255 bytes right now,
+      // but can be changed depending how you use second target address
+      // right now simplest solution is to address [0]
+      // this has heavy impact on the performance
+      uint8_t headersMatch = 1;
+      if (r->getTargetKind() == TR_ArbitrarySizedHeader &&
+          r->getTargetKind() == _kind)
+      {
+         int iterator = 0;
+         int sizeOfDataInTheList     = (int) (r->getTargetAddress2()[0]);
+         int sizeOfDataOfTheCurrent  = (int) _targetAddress2[0];
+         uint8_t* headerInTheList    = (uint8_t *) (r->getTargetAddress());
+         uint8_t* headerOfTheCurrent = (uint8_t *) _targetAddress;
+         
+         if (sizeOfDataInTheList == sizeOfDataOfTheCurrent) 
+            {
+               while (iterator<sizeOfDataInTheList)
+               {
+                  if (headerInTheList[iterator]!=headerOfTheCurrent[iterator])
+                     {
+                        headersMatch = 0;
+                        break;
+                     }
+                  iterator++;
+               }
+           } 
+           else 
+            headersMatch = 0;
+      }
+      else
+         headersMatch = 0;
 
-      if (r->full() == false                        &&
-          r->getTargetAddress()  == _targetAddress  &&
-          r->getTargetAddress2() == _targetAddress2 &&
-          r->getTargetKind() == _kind               &&
-          modifier.getValue() == r->getModifierValue())
+      if (r->full() == false                       &&
+         (r->getTargetAddress()  == _targetAddress &&
+         r->getTargetAddress2() == _targetAddress2 ||
+         headersMatch  == 1                      ) &&
+         r->getTargetKind() == _kind               &&
+         modifier.getValue() == r->getModifierValue())
          {
          if (!r->needsWideOffsets())
             {
@@ -284,11 +316,11 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
       int c = (int)_targetAddress2[0];
       temp->setSizeOfRelocationData(c);
    } else {
-      temp->setNumberOfRelocationSites(temp->getNumberOfRelocationSites()+1);
+
       temp->setSizeOfRelocationData(temp->getSizeOfRelocationData() +
                      (temp->needsWideOffsets()?wideSize:narrowSize));
    }
-
+   temp->setNumberOfRelocationSites(temp->getNumberOfRelocationSites()+1);
    // if (_targetAddress2)
    //    AOTcgDiag6(comp, "temp=" POINTER_PRINTF_FORMAT " full=%x target=" POINTER_PRINTF_FORMAT " target2=" POINTER_PRINTF_FORMAT " kind=%x modifier=%x\n",
    //       temp, temp->full(), temp->getTargetAddress(), temp->getTargetAddress2(), temp->getTargetKind(), temp->getModifierValue());

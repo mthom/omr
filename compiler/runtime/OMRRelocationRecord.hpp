@@ -153,6 +153,11 @@ namespace OMR
    {
    UDATA _methodAddress;
    };
+  struct RelocationRecordASHLBinaryTemplate : public RelocationRecordBinaryTemplate
+   {
+   UDATA size;
+   uint8_t _ASHL;
+   };
 
   struct RelocationRecordWithOffsetBinaryTemplate : public RelocationRecordBinaryTemplate
    {
@@ -297,12 +302,14 @@ class RelocationRecordArbitrarySizedHeader : public RelocationRecord
      RelocationRecordArbitrarySizedHeader() {}
      RelocationRecordArbitrarySizedHeader(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecord(reloRuntime, record) {}
      virtual char *name() { return "ArbitrarySizedHeader"; }
-     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordDataAddressBinaryTemplate); }
+     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordASHLBinaryTemplate); }
      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
      void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     void setSizeOfASHLHeader(TR::RelocationTarget* reloTarget, int size);
+     void fillThePayload(TR::RelocationTarget* reloTarget, 
+                         uint8_t* dataAddress);
      uintptr_t offset(TR::RelocationTarget *reloTarget);
-
-//     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
+     //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
    };
 
 } //namespace OMR

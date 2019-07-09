@@ -396,8 +396,29 @@ OMR::RelocationRecordArbitrarySizedHeader::applyRelocation(TR::RelocationRuntime
          *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
 {
 };
-  
 
+
+void
+OMR::RelocationRecordArbitrarySizedHeader::setSizeOfASHLHeader(
+                                                TR::RelocationTarget* reloTarget,
+                                                int size){
+   RelocationRecordASHLBinaryTemplate* pointer = 
+                        reinterpret_cast<RelocationRecordASHLBinaryTemplate*>
+                             (_record);
+//  reloTarget->storeUnsigned8b(size,(uint8_t*) &pointer->size);
+}
+void
+OMR::RelocationRecordArbitrarySizedHeader::fillThePayload(
+                           TR::RelocationTarget* reloTarget, 
+                           uint8_t* dataAddress){
+   RelocationRecordASHLBinaryTemplate* pointer = 
+                        reinterpret_cast<RelocationRecordASHLBinaryTemplate*>
+                             (_record);
+  int i; 
+//   for ( i = 0 ; i < pointer->size; i++){
+//    reloTarget->storeUnsigned8b(dataAddress[i], ((uint8_t*)(&pointer->_ASHL)+i));
+//   }
+}
 // Relocations with address sequences
 //
 
