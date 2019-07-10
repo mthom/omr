@@ -134,7 +134,7 @@ private:
    /// This operator is declared private and not actually defined;
    /// this is a C++ convention to avoid accidental assignment between instances of this class
    /// Once we have universal C++11 support, should be changed to use "= delete"
-   Node & operator=(const TR::Node &);
+    Node & operator=(const TR::Node &);
 
 /**
  * Protected constructors and helpers

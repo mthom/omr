@@ -249,7 +249,6 @@ OMR::CodeGenerator::CodeGenerator() :
                                self()->comp()->getOption(TR_DisableInternalPointers);
    if (1){
        _aheadOfTimeCompile=new (self()->trHeapMemory()) TR::AheadOfTimeCompile(NULL,self()->comp());
-       std::cout<<"Succeded to initialize the AOT"<<std::endl;
     }
    uintptrj_t maxSize = TR::Compiler->vm.getOverflowSafeAllocSize(self()->comp());
    int32_t i;

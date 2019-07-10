@@ -2808,7 +2808,6 @@ void
 TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
    {
    TR::Compilation *comp = cg()->comp();
-   std::cout<<"Entered AMD64RegImm64SymInstruction instruction,yay!"<<std::endl;
    if (getSymbolReference()->getSymbol()->isLabel())
       {
       // Assumes a 64-bit absolute relocation (i.e., not relative).

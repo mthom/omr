@@ -267,7 +267,7 @@ internal_initializeJitWithOptions(char *options)
 bool
 internal_initializeJit()
    {
-   return initializeJitBuilder(0, 0, 0, (char *)"-Xjit:acceptHugeMethods,enableBasicBlockHoisting,omitFramePointer,useILValidator,traceIlGen,traceFull,log=trtrace.log");
+   return initializeJitBuilder(0, 0, 0, (char *)"-Xjit:acceptHugeMethods,enableBasicBlockHoisting,omitFramePointer,useILValidator,traceIlGen,traceFull,log=trtrace.log,paranoidOptCheck");
    }
 
 int32_t
