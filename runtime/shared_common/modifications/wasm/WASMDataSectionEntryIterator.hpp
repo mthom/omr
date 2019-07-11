@@ -9,11 +9,13 @@ struct WASMCacheEntryDescriptor {
   WASMCacheEntryDescriptor()
     : entry(NULL)
     , codeLocation(NULL)
+    , relocationRecordSize(0)
   {}
 
   WASMCacheEntryDescriptor(WASMCacheEntry* entry)
     : entry(entry)
     , codeLocation(entry + sizeof(WASMCacheEntry))
+    , relocationRecordSize(0)
   {}
 
   inline bool operator ==(const WASMCacheEntryDescriptor& rhs) const {
@@ -24,6 +26,7 @@ struct WASMCacheEntryDescriptor {
   
   WASMCacheEntry* entry;
   void* codeLocation;
+  uint32_t relocationRecordSize;
 };
 
 static const WASMCacheEntryDescriptor nullCacheEntryDescriptor;
@@ -48,6 +51,8 @@ public:
     _focus += entry->codeLength;
     uint32_t relocationRecordSize = 0;
     memcpy(&relocationRecordSize,&(*_focus),4);
+    relocationRecordSize+=4;
+    descriptor.relocationRecordSize = relocationRecordSize;
     _focus += relocationRecordSize;
 
     return descriptor;
