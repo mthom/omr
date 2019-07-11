@@ -2867,7 +2867,7 @@ TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
                TR_ResolvedMethod *target = getSymbolReference()->getSymbol()->castToResolvedMethodSymbol()->getResolvedMethod();
 	            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,reinterpret_cast<uint8_t*>(const_cast<char *>(target->externalName(cg()->trMemory()))), TR_MethodCallAddress, cg()), __FILE__, __LINE__, getNode());
                uint8_t* size = new uint8_t[0];
-               size[0]= 13;
+               size[0]= 14;
                cg()->addASHLExternalRelocation( __FILE__, __LINE__, getNode(),(void*)"WHATTEFEEEECK", size, cursor);
                cg()->addStaticRelocation(TR::StaticRelocation(cursor, target->externalName(cg()->trMemory()), TR::StaticRelocationSize::word64, TR::StaticRelocationType::Absolute));
                }

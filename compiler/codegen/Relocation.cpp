@@ -314,7 +314,8 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
    aot.add(temp);
    if (_kind==TR_ArbitrarySizedHeader){
       int c = (int)_targetAddress2[0];
-      temp->setSizeOfRelocationData(c);
+      temp->setSizeOfRelocationData(c+
+                     (temp->needsWideOffsets()?wideSize:narrowSize));
    } else {
 
       temp->setSizeOfRelocationData(temp->getSizeOfRelocationData() +

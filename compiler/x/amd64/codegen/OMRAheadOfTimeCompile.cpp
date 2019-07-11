@@ -141,12 +141,13 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 
    TR_VirtualGuard *guard;
      uint8_t *cursor = relocation->getRelocationData();
+     uint8_t *start = cursor;
    uint8_t flags = 0;
    TR_ResolvedMethod *resolvedMethod;
 
    TR::RelocationRuntime *reloRuntime =new (cg->trHeapMemory()) TR::RelocationRuntime(NULL);
    TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
-
+   
    uint8_t * aotMethodCodeStart = (uint8_t *) comp->getRelocatableMethodCodeStart();
    // size of relocation goes first in all types
    *(uint16_t *) cursor = relocation->getSizeOfRelocationData();
@@ -168,10 +169,14 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    *(uint32_t*)cursor = cg->getPrePrologueSize();
    cursor+=4;
    uint32_t *wordAfterHeader = (uint32_t*)cursor;
-   
+   uint8_t* end = cursor;
+   uint8_t diff = end-start;
    // This has to be created after the kind has been written into the header
    TR::RelocationRecord storage;
-   TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(&storage, reloRuntime, reloTarget, reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocation->getRelocationData()));
+   TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(&storage, 
+                                       reloRuntime, reloTarget,
+                                       reinterpret_cast<TR::RelocationRecordBinaryTemplate *>
+                                       (relocation->getRelocationData()));
    
    switch (targetKind)
       {
@@ -193,17 +198,18 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
          break;
       case TR_ArbitrarySizedHeader:
          {
-            // OMR::RelocationRecordArbitrarySizedHeader *ar = reinterpret_cast<OMR::RelocationRecordArbitrarySizedHeader *>(reloRecord);
-            // uint8_t* theSize = relocation ->getTargetAddress2();
-            // uint8_t* theData = relocation ->getTargetAddress();
-            // ar->setSizeOfASHLHeader(reloTarget, *theSize);
-            // ar->fillThePayload(reloTarget,theData);
-            // uint64_t methodName = 0;
-            // // Should work if method name is like func_1
-            // // strcpy(reinterpret_cast<char *>(&methodName),const_cast<const char *>(reinterpret_cast<char *>(relocation->getTargetAddress())));
-            // // mcaRecord->setAddress(reloTarget, relocation->getTargetAddress());
-            // sharedCache->setRelocationData(relocation->getRelocationData()-4);
-            // cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
+            OMR::RelocationRecordArbitrarySizedHeader *ar = reinterpret_cast<OMR::RelocationRecordArbitrarySizedHeader *>(reloRecord);
+            uint8_t theSize = (uint8_t) *relocation ->getTargetAddress2();
+            uint8_t* theData = relocation ->getTargetAddress();
+            uint8_t offsetsRegion= diff+theSize;
+            ar->setSizeOfASHLHeader(reloTarget, theSize);
+            ar->fillThePayload(cursor, theData);
+            // Should work if method name is like func_1
+            // strcpy(reinterpret_cast<char *>(&methodName),const_cast<const char *>(reinterpret_cast<char *>(relocation->getTargetAddress())));
+            // mcaRecord->setAddress(reloTarget, relocation->getTargetAddress());
+            sharedCache->setRelocationData(relocation->getRelocationData()-4);
+            cursor = relocation->getRelocationData()
+                     +sizeof(RelocationRecordASHLBinaryTemplate)+theSize;
          }
          break;
       case TR_DataAddress:
