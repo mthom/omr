@@ -314,7 +314,8 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
    aot.add(temp);
    if (_kind==TR_ArbitrarySizedHeader){
       int c = (int)_targetAddress2[0];
-      temp->setSizeOfRelocationData(c+
+      //TODO put it into some header"с
+      temp->setSizeOfRelocationData(8 + c+
                      (temp->needsWideOffsets()?wideSize:narrowSize));
    } else {
 
@@ -556,6 +557,7 @@ const char *TR::ExternalRelocation::_externalRelocationTargetKindNames[TR_NumExt
    "TR_MethodCallAddress (99)",
    "TR_DiscontiguousSymbolFromManager (100)",
    "TR_ResolvedTrampolines (101)",
+   "RelocationRecordArbitrarySizedHeader (102)",
    };
 
 uintptr_t TR::ExternalRelocation::_globalValueList[TR_NumGlobalValueItems] =

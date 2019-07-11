@@ -408,14 +408,16 @@ OMR::RelocationRecordArbitrarySizedHeader::setSizeOfASHLHeader(
   reloTarget->storeUnsigned8b(size,(uint8_t*) &pointer->sizeOfDataInTheHeader);
 }
 void
-OMR::RelocationRecordArbitrarySizedHeader::fillThePayload(
-   uint8_t* cursor, uint8_t* source){
+OMR::RelocationRecordArbitrarySizedHeader::fillThePayload(TR::RelocationTarget* reloTarget,
+    uint8_t* source){
    RelocationRecordASHLBinaryTemplate* pointer = 
                         reinterpret_cast<RelocationRecordASHLBinaryTemplate*>
                              (_record);
-
-  memcpy(cursor,source, pointer->sizeOfDataInTheHeader);
-
+  uint8_t* addressWithOffset = (uint8_t*)_record 
+                                 +sizeof(RelocationRecordASHLBinaryTemplate);
+  int i  = 0;
+  for (i = 0 ; i < pointer->sizeOfDataInTheHeader; i++)
+   reloTarget->storeUnsigned8b(source[i], addressWithOffset+i);
 }
 // Relocations with address sequences
 //

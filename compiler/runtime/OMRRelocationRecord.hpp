@@ -305,7 +305,7 @@ class RelocationRecordArbitrarySizedHeader : public RelocationRecord
      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
      void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
      void setSizeOfASHLHeader(TR::RelocationTarget* reloTarget, uint8_t size);
-     void fillThePayload(uint8_t* pointer, uint8_t* data);
+     void fillThePayload(TR::RelocationTarget* reloTarget, uint8_t* data);
      uintptr_t offset(TR::RelocationTarget *reloTarget);
      //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
    };

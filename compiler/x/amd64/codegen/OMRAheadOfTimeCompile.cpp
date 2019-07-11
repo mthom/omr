@@ -203,10 +203,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
             uint8_t* theData = relocation ->getTargetAddress();
             uint8_t offsetsRegion= diff+theSize;
             ar->setSizeOfASHLHeader(reloTarget, theSize);
-            ar->fillThePayload(cursor, theData);
-            // Should work if method name is like func_1
-            // strcpy(reinterpret_cast<char *>(&methodName),const_cast<const char *>(reinterpret_cast<char *>(relocation->getTargetAddress())));
-            // mcaRecord->setAddress(reloTarget, relocation->getTargetAddress());
+            ar->fillThePayload(reloTarget, theData);
             sharedCache->setRelocationData(relocation->getRelocationData()-4);
             cursor = relocation->getRelocationData()
                      +sizeof(RelocationRecordASHLBinaryTemplate)+theSize;
