@@ -60,7 +60,7 @@ U_32* WASMOSCacheConfig<OSCacheConfigImpl>::getDataLengthFieldLocation() {
 template <class OSCacheConfigImpl>
 U_64* WASMOSCacheConfig<OSCacheConfigImpl>::getInitCompleteLocation() {
   UDATA offset = offsetof(WASMOSCacheHeaderMapping<header_type>, _cacheInitComplete);
-  return ((UDATA*) _layout->operator[](HEADER_REGION_ID)->regionStartAddress() + offset);
+ return ((U_64*) _layout->operator[](HEADER_REGION_ID)->regionStartAddress() + offset);
 }
 
 template <class OSCacheConfigImpl>
