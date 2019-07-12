@@ -413,7 +413,7 @@ OMR::RelocationRecordArbitrarySizedHeader::fillThePayload(TR::RelocationTarget* 
    RelocationRecordASHLBinaryTemplate* pointer = 
                         reinterpret_cast<RelocationRecordASHLBinaryTemplate*>
                              (_record);
-  uint8_t* addressWithOffset = (uint8_t*)_record 
+  uint8_t* addressWithOffset = (uint8_t*)_record
                                  +sizeof(RelocationRecordASHLBinaryTemplate);
   int i  = 0;
   for (i = 0 ; i < pointer->sizeOfDataInTheHeader; i++)
