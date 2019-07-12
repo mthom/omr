@@ -155,7 +155,7 @@ namespace OMR
    };
   struct RelocationRecordASHLBinaryTemplate : public RelocationRecordBinaryTemplate
    {
-   UDATA sizeOfDataInTheHeader;
+   uint8_t sizeOfDataInTheHeader;
    };
 
   struct RelocationRecordWithOffsetBinaryTemplate : public RelocationRecordBinaryTemplate

@@ -201,12 +201,11 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
             OMR::RelocationRecordArbitrarySizedHeader *ar = reinterpret_cast<OMR::RelocationRecordArbitrarySizedHeader *>(reloRecord);
             uint8_t theSize = (uint8_t) *relocation ->getTargetAddress2();
             uint8_t* theData = relocation ->getTargetAddress();
-            uint8_t offsetsRegion= diff+theSize;
             ar->setSizeOfASHLHeader(reloTarget, theSize);
             ar->fillThePayload(reloTarget, theData);
             sharedCache->setRelocationData(relocation->getRelocationData()-4);
             cursor = relocation->getRelocationData()
-                     +sizeof(RelocationRecordASHLBinaryTemplate)+theSize;
+                     +_relocationKindToHeaderSizeMap[targetKind]+theSize;
          }
          break;
       case TR_DataAddress:
@@ -372,7 +371,9 @@ uint32_t OMR::X86::AMD64::AheadOfTimeCompile::_relocationKindToHeaderSizeMap[TR_
 0,   // sizeof(TR_RelocationRecordValidateMethodFromSingleAbstractImplBinaryTemplate),//TR_ValidateMethodFromSingleAbstractImplementer= 96,
 0,   // sizeof(TR_RelocationRecordValidateImproperInterfaceMethodFromCPBinaryTemplate),//TR_ValidateImproperInterfaceMethodFromCP= 97,
 0,   // sizeof(TR_RelocationRecordSymbolFromManagerBinaryTemplate),         // TR_SymbolFromManager = 98,
-   sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate),         // TR_MethodCallAddress                   = 99,
+sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate),         // TR_MethodCallAddress                   = 99,
+0, 
+sizeof(OMR::RelocationRecordASHLBinaryTemplate) // 
 #else
 
    12,                                              // TR_ConstantPool                        = 0

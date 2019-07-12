@@ -234,7 +234,6 @@ uint32_t OMR::X86::AheadOfTimeCompile::_relocationKindToHeaderSizeMap[TR_NumExte
    0,// sizeof(TR_RelocationRecordMethodCallAddressBinaryTemplate),         // TR_MethodCallAddress                   = 99,
    0,
    0,
-   sizeof(RelocationRecordASHLBinaryTemplate) // TR_
 #else
 
    12,                                              // TR_ConstantPool                        = 0
