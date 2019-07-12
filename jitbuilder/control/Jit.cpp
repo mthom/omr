@@ -172,6 +172,7 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
   uint32_t sizeOfRelocations = *reinterpret_cast<uint32_t*>(relocationHeader);
   uint8_t *endOfRelocations = relocationHeader+sizeOfRelocations;
   uint16_t relocationSize = 0;
+  uint32_t index;
   relocationHeader+=sizeof(uint32_t);
   while(relocationHeader<endOfRelocations){
     TR::RelocationRecordBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocationHeader);

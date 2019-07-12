@@ -2808,7 +2808,6 @@ void
 TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
    {
    TR::Compilation *comp = cg()->comp();
-   std::cout<<"Entered AMD64RegImm64SymInstruction instruction,yay!"<<std::endl;
    if (getSymbolReference()->getSymbol()->isLabel())
       {
       // Assumes a 64-bit absolute relocation (i.e., not relative).
@@ -2856,12 +2855,20 @@ TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
                }
             break;
             }
+            // no instance of constructor 
+            // "TR::ExternalRelocation::ExternalRelocation" matches the argument 
+            // list -- argument types are: (uint8_t *, uint8_t *, const char *, uintptr_t, TR::Node *)
+            // Quick Fix...
+
          case TR_NativeMethodAbsolute:
             {
             if (cg()->comp()->getOption(TR_EmitRelocatableELFFile))
                {
                TR_ResolvedMethod *target = getSymbolReference()->getSymbol()->castToResolvedMethodSymbol()->getResolvedMethod();
-	       cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor, reinterpret_cast<uint8_t*>(const_cast<char *>(target->externalName(cg()->trMemory()))), TR_MethodCallAddress, cg()), __FILE__, __LINE__, getNode());
+	            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,reinterpret_cast<uint8_t*>(const_cast<char *>(target->externalName(cg()->trMemory()))), TR_MethodCallAddress, cg()), __FILE__, __LINE__, getNode());
+               uint8_t* size = new uint8_t[0];
+               size[0]= 14;
+               cg()->addASHLExternalRelocation( __FILE__, __LINE__, getNode(),(void*)"WHATTEFEEEECK", size, cursor);
                cg()->addStaticRelocation(TR::StaticRelocation(cursor, target->externalName(cg()->trMemory()), TR::StaticRelocationSize::word64, TR::StaticRelocationType::Absolute));
                }
             break;

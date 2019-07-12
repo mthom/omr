@@ -45,8 +45,8 @@ namespace TR{
    class RelocationRuntime;
    class RelocationTarget;
 }
-// TR_RelocationTarget defines how a platform target implements the individual steps of processing
-//    relocation records.
+// TR_RelocationTarget defines how a platform target implements the individual 
+// steps of processing relocation records.
 // This is intended to be a base class that should not be itself instantiated
 namespace OMR{
 class  OMR_EXTENSIBLE RelocationTarget

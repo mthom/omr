@@ -153,6 +153,10 @@ namespace OMR
    {
    UDATA _methodAddress;
    };
+  struct RelocationRecordASHLBinaryTemplate : public RelocationRecordBinaryTemplate
+   {
+   UDATA sizeOfDataInTheHeader;
+   };
 
   struct RelocationRecordWithOffsetBinaryTemplate : public RelocationRecordBinaryTemplate
    {
@@ -291,7 +295,20 @@ class RelocationRecordDataAddress : public RelocationRecord
 
 //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
    };
-
+class RelocationRecordArbitrarySizedHeader : public RelocationRecord
+   {
+   public:
+     RelocationRecordArbitrarySizedHeader() {}
+     RelocationRecordArbitrarySizedHeader(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecord(reloRuntime, record) {}
+     virtual char *name() { return "ArbitrarySizedHeader"; }
+     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordASHLBinaryTemplate); }
+     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     void setSizeOfASHLHeader(TR::RelocationTarget* reloTarget, uint8_t size);
+     void fillThePayload(TR::RelocationTarget* reloTarget, uint8_t* data);
+     uintptr_t offset(TR::RelocationTarget *reloTarget);
+     //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
+   };
 
 } //namespace OMR
 // No class that derives from TR::RelocationRecord should define any state: all state variables should be declared

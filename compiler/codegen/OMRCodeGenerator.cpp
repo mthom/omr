@@ -249,7 +249,6 @@ OMR::CodeGenerator::CodeGenerator() :
                                self()->comp()->getOption(TR_DisableInternalPointers);
    if (1){
        _aheadOfTimeCompile=new (self()->trHeapMemory()) TR::AheadOfTimeCompile(NULL,self()->comp());
-       std::cout<<"Succeded to initialize the AOT"<<std::endl;
     }
    uintptrj_t maxSize = TR::Compiler->vm.getOverflowSafeAllocSize(self()->comp());
    int32_t i;
@@ -1922,7 +1921,6 @@ OMR::CodeGenerator::processRelocations()
       int i = 0 ;
          for (auto aotIterator = self()->getExternalRelocationList().begin(); aotIterator != self()->getExternalRelocationList().end(); ++aotIterator)
       {
-     std::cout<<i <<"th external relocation is accessed"<<std::endl;
       // Traverse the AOT/external labels
 	  (*aotIterator)->apply(self());
       }
@@ -2944,6 +2942,16 @@ void OMR::CodeGenerator::addRelocation(TR::Relocation *r)
       {
       _relocationList.push_front(r);
       }
+   }
+void OMR::CodeGenerator::addASHLExternalRelocation( const char *generatingFileName, uintptr_t generatingLineNumber, TR::Node *node, void* container, uint8_t* size, uint8_t* cursor)
+   {
+   int s = (int)*size;
+   char* data = new char[s+1];
+   data[s] = 0;
+   memcpy(data,container,s);
+   TR::Relocation* r =  new (self()->trHeapMemory()) TR::ExternalRelocation(cursor, 
+   reinterpret_cast<uint8_t*>(const_cast<char *>(data)),size,TR_ArbitrarySizedHeader, self());
+   self()->addExternalRelocation(r,generatingFileName, generatingLineNumber, node);
    }
 
 void OMR::CodeGenerator::addExternalRelocation(TR::Relocation *r, const char *generatingFileName, uintptr_t generatingLineNumber, TR::Node *node, TR::ExternalRelocationPositionRequest where)
