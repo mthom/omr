@@ -373,7 +373,7 @@ uint32_t OMR::X86::AMD64::AheadOfTimeCompile::_relocationKindToHeaderSizeMap[TR_
 0,   // sizeof(TR_RelocationRecordSymbolFromManagerBinaryTemplate),         // TR_SymbolFromManager = 98,
 sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate),         // TR_MethodCallAddress                   = 99,
 0, 
-sizeof(TR::RelocationRecordASHLBinaryTemplate) // 
+sizeof(OMR::RelocationRecordASHLBinaryTemplate) // 
 #else
 
    12,                                              // TR_ConstantPool                        = 0
