@@ -396,8 +396,18 @@ OMR::RelocationRecordArbitrarySizedHeader::applyRelocation(TR::RelocationRuntime
          *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
 {
 };
+OMR::RelocationRecordArbitrarySizedHeader *
+OMR::RelocationRecordArbitrarySizedHeader::self(){
+    return static_cast<RelocationRecordArbitrarySizedHeader *>(this);
+}
 
-
+int32_t
+OMR::RelocationRecordArbitrarySizedHeader::bytesInHeaderAndPayload(){
+   OMR::RelocationRecordASHLBinaryTemplate* theRecord = 
+   reinterpret_cast<OMR::RelocationRecordASHLBinaryTemplate *>( self()->_record);
+   int32_t sizeOfTheHeader = ((uint8_t*) theRecord)[0];
+   return sizeOfTheHeader;
+}
 void
 OMR::RelocationRecordArbitrarySizedHeader::setSizeOfASHLHeader(
                                                 TR::RelocationTarget* reloTarget,

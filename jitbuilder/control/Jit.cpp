@@ -204,8 +204,10 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
 	  }
 	}
 	break;
-      case TR_ArbitrarySizedHeader:
-	relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
+      case TR_ArbitrarySizedHeader:{
+      OMR::RelocationRecordArbitrarySizedHeader reloRecord (reloRuntime,rrbintemp);
+      relocationSize = (uint16_t)(reloRecord.bytesInHeaderAndPayload());
+      }
 	break;
       default:
 	return;
