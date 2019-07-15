@@ -2951,6 +2951,7 @@ void OMR::CodeGenerator::addASHLExternalRelocation( const char *generatingFileNa
    memcpy(data,container,s);
    TR::Relocation* r =  new (self()->trHeapMemory()) TR::ExternalRelocation(cursor, 
    reinterpret_cast<uint8_t*>(const_cast<char *>(data)),size,TR_ArbitrarySizedHeader, self());
+   
    self()->addExternalRelocation(r,generatingFileName, generatingLineNumber, node);
    }
 

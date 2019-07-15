@@ -315,7 +315,11 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
    if (_kind==TR_ArbitrarySizedHeader){
       int c = (int)_targetAddress2[0];
       //TODO put it into some header"с
-      temp->setSizeOfRelocationData(temp->getSizeOfRelocationData() + c +
+      // Should ve like this
+      // temp->setSizeOfRelocationData(temp->getSizeOfRelocationData() + c +
+      //                (temp->needsWideOffsets()?wideSize:narrowSize));
+      temp->setSizeOfRelocationData(
+                     sizeof(OMR::RelocationRecordASHLBinaryTemplate)+ c +
                      (temp->needsWideOffsets()?wideSize:narrowSize));
    } else {
 

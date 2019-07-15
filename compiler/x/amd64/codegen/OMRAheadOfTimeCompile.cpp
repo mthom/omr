@@ -203,6 +203,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
             uint8_t* theData = relocation ->getTargetAddress();
             ar->setSizeOfASHLHeader(reloTarget, theSize);
             ar->fillThePayload(reloTarget, theData);
+            //memcpy(cursor,theData,theSize);
             sharedCache->setRelocationData(relocation->getRelocationData()-4);
             cursor = relocation->getRelocationData()
                      +_relocationKindToHeaderSizeMap[targetKind]+theSize;
@@ -372,8 +373,9 @@ uint32_t OMR::X86::AMD64::AheadOfTimeCompile::_relocationKindToHeaderSizeMap[TR_
 0,   // sizeof(TR_RelocationRecordValidateImproperInterfaceMethodFromCPBinaryTemplate),//TR_ValidateImproperInterfaceMethodFromCP= 97,
 0,   // sizeof(TR_RelocationRecordSymbolFromManagerBinaryTemplate),         // TR_SymbolFromManager = 98,
 sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate),         // TR_MethodCallAddress                   = 99,
-0, 
-sizeof(OMR::RelocationRecordASHLBinaryTemplate) // 
+0, //100
+0, // 101
+sizeof(OMR::RelocationRecordASHLBinaryTemplate) // 102
 #else
 
    12,                                              // TR_ConstantPool                        = 0
