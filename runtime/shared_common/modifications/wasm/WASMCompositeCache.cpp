@@ -47,6 +47,7 @@ void WASMCompositeCache::populateTables()
       
       _codeUpdatePtr += descriptor.entry->codeLength;
       _codeUpdatePtr += sizeof(WASMCacheEntry);
+      _codeUpdatePtr += descriptor.relocationRecordSize;
     } else {
       break;
     }
@@ -112,7 +113,7 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   uint32_t relocationRecordSize = sizeof(uint32_t);
   uint32_t tempNull = 0;
   if(_relocationData) {
-    relocationRecordSize = static_cast<uint32_t>(*_relocationData);
+    relocationRecordSize += static_cast<uint32_t>(*_relocationData);
   } else {
     _relocationData = reinterpret_cast<uint8_t*>(&tempNull);
   }
