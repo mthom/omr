@@ -44,6 +44,7 @@
 
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationRecord.hpp"
+#include "runtime/RelocationRuntimeLogger.hpp"
 
 #include "control/Recompilation.hpp"
 
@@ -62,9 +63,11 @@ OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
 					       U_8 *oldCodeStart)
 {
    UDATA startPC = 0;
-   initializeCacheDeltas();
-   _newMethodCodeStart = codeStart;
+   // initializeCacheDeltas();
+   // _newMethodCodeStart = codeStart;
    //TODO implement relocate here apply relocations of binaryrelocationGroup should be called here
+   reloLogger()->relocationDump();
+
 }
 
 OMRJITExceptionTable *
