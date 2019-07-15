@@ -204,6 +204,9 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
 	  }
 	}
 	break;
+      case TR_ArbitrarySizedHeader:
+	relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
+	break;
       default:
 	return;
     }
