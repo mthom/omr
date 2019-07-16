@@ -72,26 +72,26 @@ OMR::RelocationRecord::self()
 void
 OMR::RelocationRecordGroup::setSize(TR::RelocationTarget *reloTarget,uintptr_t size)
    {
-   reloTarget->storePointer((uint8_t *)size, (uint8_t *) &_group);
+   reloTarget->storePointer((uint8_t *)size, (uint8_t *) _dataBuffer);
    }
 
 uintptr_t
 OMR::RelocationRecordGroup::size(TR::RelocationTarget *reloTarget)
    {
-   return (uintptr_t)reloTarget->loadPointer((uint8_t *) _group);
+   return (uintptr_t)reloTarget->loadPointer((uint8_t *) _dataBuffer);
    }
 
 TR::RelocationRecordBinaryTemplate *
 OMR::RelocationRecordGroup::firstRecord(TR::RelocationTarget *reloTarget)
    {
    // first word of the group is a pointer size field for the entire group
-   return (TR::RelocationRecordBinaryTemplate *) (((uintptr_t *)_group)+1);
+   return (TR::RelocationRecordBinaryTemplate *) (((uintptr_t *)_dataBuffer)+1);
    }
 
 TR::RelocationRecordBinaryTemplate *
 OMR::RelocationRecordGroup::pastLastRecord(TR::RelocationTarget *reloTarget)
    {
-   return (TR::RelocationRecordBinaryTemplate *) ((uint8_t *)_group + size(reloTarget));
+   return (TR::RelocationRecordBinaryTemplate *) ((uint8_t *)_dataBuffer + size(reloTarget));
    }
 
 int32_t

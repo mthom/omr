@@ -174,11 +174,11 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
    reinterpret_cast<TR::RelocationRecordBinaryTemplate *> (relocationHeader);
          TR::RelocationRecordGroup reloGroup(binaryReloRecords);
    //  reloGroup.applyRelocations(reloRuntime,reloRuntime->reloTarget(),relocationHeader);
-  uint32_t sizeOfRelocations = *reinterpret_cast<uint32_t*>(relocationHeader);
+  uintptrj_t sizeOfRelocations = *reinterpret_cast<uintptrj_t *>(relocationHeader);
   uint8_t *endOfRelocations = relocationHeader+sizeOfRelocations;
   uint16_t relocationSize = 0;
   uint32_t index;
-  relocationHeader+=sizeof(uint32_t);
+  relocationHeader+=sizeof(uintptrj_t );
   while(relocationHeader<endOfRelocations){
     TR::RelocationRecordBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocationHeader);
 //  TR::SharedCacheRelocationRuntime *reloRuntime = TR::Compiler->reloRuntime;

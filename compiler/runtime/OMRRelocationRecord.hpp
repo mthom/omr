@@ -248,7 +248,7 @@ namespace OMR
 class RelocationRecordGroup
    {
    public:
-      RelocationRecordGroup(TR::RelocationRecordBinaryTemplate *groupData) : _group(groupData) {};
+      RelocationRecordGroup(TR::RelocationRecordBinaryTemplate *groupData) : _dataBuffer(groupData) {};
 
       void setSize(TR::RelocationTarget *reloTarget, uintptr_t size);
       uintptr_t size(TR::RelocationTarget *reloTarget);
@@ -262,7 +262,7 @@ class RelocationRecordGroup
    private:
       int32_t handleRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecord *reloRecord, uint8_t *reloOrigin);
 
-      TR::RelocationRecordBinaryTemplate *_group;
+      TR::RelocationRecordBinaryTemplate *_dataBuffer;
    };
 
 class RelocationRecordMethodCallAddress : public RelocationRecord
