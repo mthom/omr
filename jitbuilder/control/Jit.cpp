@@ -169,7 +169,7 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
   TR::SharedCache* cache = TR::Compiler->cache;
   U_32 codeLength;
   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-  relocationHeader+=sizeof(uint32_t);
+//   relocationHeader+=sizeof(uint32_t);
    TR::RelocationRecordBinaryTemplate * binaryReloRecords =
    reinterpret_cast<TR::RelocationRecordBinaryTemplate *> (relocationHeader);
          TR::RelocationRecordGroup reloGroup(binaryReloRecords);
