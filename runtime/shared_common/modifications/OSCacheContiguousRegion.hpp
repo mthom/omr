@@ -40,24 +40,24 @@ public:
   OSCacheContiguousRegion(OSCacheLayout* layout, int regionID, bool pageBoundaryAligned);
 
   // the start address of the region.
-  virtual void* regionStartAddress() const;
+  virtual void* regionStartAddress() const override;
   // the end of the region, possibly adjusted to fall on a page boundary.
   virtual void* regionEnd();
   // the size of the region.
-  virtual UDATA regionSize() const;
+  virtual UDATA regionSize() const override;
 
-  virtual bool adjustRegionStartAndSize(void* blockAddress, uintptr_t size);
+  virtual bool adjustRegionStartAndSize(void* blockAddress, uintptr_t size) override;
   
-  virtual bool alignToPageBoundary(UDATA osPageSize);
+  virtual bool alignToPageBoundary(UDATA osPageSize) override;
 
-  virtual UDATA renderToMemoryProtectionFlags();
+  virtual UDATA renderToMemoryProtectionFlags() override;
 
-  virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize);
+  virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize) override;
 
   // add memory protections to the region.
-  virtual IDATA setPermissions(OSCacheMemoryProtector* protector);
+  virtual IDATA setPermissions(OSCacheMemoryProtector* protector) override;
 
-  virtual U_32 computeCRC(U_32 seed, U_32 stepSize);
+  virtual U_32 computeCRC(U_32 seed, U_32 stepSize) override;
 
   virtual void* allocate(CacheAllocator* allocator);
 

@@ -20,41 +20,28 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_SHARED_MEMORY_CACHE_HEADER_HPP_INCLUDED)
-#define OS_SHARED_MEMORY_CACHE_HEADER_HPP_INCLUDED
+#if !defined(SOM_OS_CACHE_ITERATOR_HPP_INCLUDED)
+#define SOM_OS_CACHE_ITERATOR_HPP_INCLUDED
 
-#include "sharedconsts.h"
+#include "OSMemoryMappedCacheIterator.hpp"
 
-#include "CacheHeaderMappingImpl.hpp"
-#include "OSCacheContiguousRegion.hpp"
-#include "OSCacheRegionSerializer.hpp"
-#include "OSSharedMemoryCacheHeaderMapping.hpp"
+#include "omr.h"
 
-class OSSharedMemoryCacheHeader: virtual public OSCacheContiguousRegion
+#include "env/TRMemory.hpp"
+
+template <class OSCacheIterator>
+class SOMOSCacheIterator: public OSCacheIterator
 {
 public:
-  OSSharedMemoryCacheHeader(CacheHeaderMappingImpl<OSSharedMemoryCacheHeader>* mapping = NULL)
-    : OSCacheContiguousRegion(NULL, 0, false)
-    , _mapping(mapping)
+  TR_ALLOC(TR_Memory::SharedCache)
+  
+  SOMOSCacheIterator(char* cacheDir, char* resultBuf)
+    : OSCacheIterator(cacheDir, resultBuf)
   {}
 
-  typedef class OSSharedMemoryCacheConfig config_type;
-  
-  virtual void create(OMRPortLibrary* library, bool inDefaultControlDir);
-  virtual void refresh(OMRPortLibrary* library, bool inDefaultControlDir);
-
-  virtual OSSharedMemoryCacheHeaderMapping* baseMapping() {
-    return _mapping->baseMapping();
+  bool isCacheFileName(OMRPortLibrary *portLibrary, char *cacheName) override {
+    return true;
   }
-
-protected:  
-  virtual void refresh(OMRPortLibrary* library, OSSharedMemoryCacheHeaderMapping* mapping,
-		       bool inDefaultControlDir);
-  
-  virtual void serialize(OSCacheRegionSerializer* serializer);
-  virtual void initialize(OSCacheRegionInitializer* initializer);
-  
-  CacheHeaderMappingImpl<OSSharedMemoryCacheHeader>* _mapping;
 };
 
 #endif

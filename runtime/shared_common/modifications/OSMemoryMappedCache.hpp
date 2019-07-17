@@ -68,6 +68,8 @@ protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;
 
+  virtual IDATA verifyCacheHeader();
+  
   bool setCacheLength(U_32 cacheSize, LastErrorInfo*);
 
   bool openCacheFile(LastErrorInfo*);

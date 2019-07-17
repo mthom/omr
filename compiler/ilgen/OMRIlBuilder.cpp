@@ -2073,6 +2073,19 @@ OMR::IlBuilder::Call(TR::MethodBuilder *calleeMB, int32_t numArgs, ...)
    return Call(calleeMB, numArgs, argValues);
    }
 
+TR::IlValue *
+OMR::IlBuilder::CallVirtual(const char *functionName, int32_t numArgs, TR::IlValue ** argValues)
+   {
+   TraceIL("IlBuilder[ %p ]::Call %s\n", this, functionName);
+   TR::ResolvedMethod *resolvedMethod = _methodBuilder->lookupFunction(functionName);
+   if (resolvedMethod == NULL && _methodBuilder->RequestFunction(functionName))
+      resolvedMethod = _methodBuilder->lookupFunction(functionName);
+   TR_ASSERT(resolvedMethod, "Could not identify function %s\n", functionName);
+
+   TR::SymbolReference *methodSymRef = symRefTab()->findOrCreateStaticMethodSymbol(JITTED_METHOD_INDEX, -1, resolvedMethod);
+   return genCall(methodSymRef, numArgs, argValues);
+   }
+
 /*
  * This service takes a MethodBuilder object as the target and will, for
  * now, inline the code for that MethodBuilder into the current builder

@@ -73,7 +73,7 @@ public:
   U_64 getAttachLockSize() {
     return sizeof(_mapping->_attachLock);
   }
-
+  
   U_64 getHeaderLockSize() {
     return sizeof(_mapping->_headerLock);
   }
@@ -97,18 +97,12 @@ public:
   // these are _headerStart + _dataStart, wherever that ultimately
   // ends up (in the header is the only part of the answer we assume).
 
-  // this should NOT read from the header! Instead, read from the region
+  // this should NOT be read from the header! Instead, read from the region
   // objects contained in the layout.
   virtual void* getDataSectionLocation() = 0;
-
   virtual U_32 getDataSectionSize() = 0;
 
-//  virtual void setCacheSizeInHeader(U_32 size) {
-//    *getCacheSizeFieldLocation() = size;
-//  }
-
   virtual U_32* getCacheSizeFieldLocation() = 0;
-  
   virtual U_32 getCacheSize() = 0;
   
   //  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
@@ -130,9 +124,6 @@ public:
   virtual U_64* getInitCompleteLocation() = 0;
 
   virtual bool setCacheInitComplete() = 0; // a header dependent thing. hence it's a pure virtual function.
-
-  // replaces SH_OSCachemmap::isCacheHeaderValid(..).
-  virtual bool isCacheHeaderValid() = 0;
 
   virtual bool updateLastAttachedTime(OMRPortLibrary* library, UDATA runningReadOnly);
   virtual bool updateLastDetachedTime(OMRPortLibrary* library, UDATA runningReadOnly);

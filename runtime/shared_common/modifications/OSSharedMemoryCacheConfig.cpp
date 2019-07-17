@@ -31,7 +31,44 @@ OSSharedMemoryCacheConfig::OSSharedMemoryCacheConfig(UDATA numLocks)
   : _numLocks(numLocks)
   , _header(NULL)
   , _mapping(NULL)
+  , _userSemCntr(0)
 {}
+
+/**
+ * Get an ID for a new write lock
+ *
+ * @return a non-negative lockID on success, -1 on failure
+ */
+IDATA
+OSSharedMemoryCacheConfig::getNewWriteLockID()
+{
+  if (_userSemCntr < (_totalNumSems-1)) {
+    return ++_userSemCntr;
+  } else {
+    return -1;
+  }
+}
+
+/**
+ * Get an ID for a readwrite area lock
+ *
+ * @return a non-negative lockID on success, -1 on failure
+ */
+IDATA
+OSSharedMemoryCacheConfig::getReadWriteLockID() {
+  return this->getNewWriteLockID();
+}
+
+/**
+ * Get an ID for a write area lock
+ *
+ * @return a non-negative lockID on success, -1 on failure
+ */
+IDATA
+OSSharedMemoryCacheConfig::getWriteLockID() {
+  return this->getNewWriteLockID();
+}
+
 
 IDATA
 OSSharedMemoryCacheConfig::acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo *lastErrorInfo)
@@ -94,7 +131,7 @@ IDATA OSSharedMemoryCacheConfig::releaseHeaderWriteLock(OMRPortLibrary* library,
  * @return 0 if the operation has been successful, -1 if an error has occured
  */
 IDATA
-OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions* configOptions, LastErrorInfo* lastErrorInfo)
+OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
   IDATA rc;
@@ -119,11 +156,11 @@ OSSharedMemoryCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, OS
     /* CMVC 97181 : Don't print error message because if JVM terminates with ^C signal, this function will return -1 and this is not an error*/
     I_32 myerror = omrerror_last_error_number();
     if ( ((I_32)(myerror | 0xFFFF0000)) != OMRPORT_ERROR_SYSV_IPC_ERRNO_EINTR) {
-#if !defined(WIN32)
-      OSC_ERR_TRACE2(configOptions, J9NLS_SHRC_CC_SYSV_AQUIRE_LOCK_FAILED_ENTER_MUTEX, omrshsem_deprecated_getid(_semhandle), myerror);
-#else
-      OSC_ERR_TRACE1(configOptions, J9NLS_SHRC_CC_AQUIRE_LOCK_FAILED_ENTER_MUTEX, myerror);
-#endif
+//#if !defined(WIN32)
+//      OSC_ERR_TRACE2(configOptions, J9NLS_SHRC_CC_SYSV_AQUIRE_LOCK_FAILED_ENTER_MUTEX, omrshsem_deprecated_getid(_semhandle), myerror);
+//#else
+//      OSC_ERR_TRACE1(configOptions, J9NLS_SHRC_CC_AQUIRE_LOCK_FAILED_ENTER_MUTEX, myerror);
+//#endif
       Trc_SHR_OSC_enterMutex_Exit3(myerror);
       Trc_SHR_Assert_ShouldNeverHappen();
       return -1;

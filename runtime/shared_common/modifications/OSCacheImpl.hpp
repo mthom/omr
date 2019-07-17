@@ -169,6 +169,8 @@ protected:
   
   void commonInit();
   void commonCleanup();
+
+  virtual IDATA verifyCacheHeader() = 0;
   
   OMRPortLibrary* _portLibrary;
   //  I_32  _openMode; // now addressed by the OSCacheConfigOptions class.

@@ -335,6 +335,10 @@ public:
    // control
    void AppendBuilder(TR::IlBuilder *builder);
 
+   TR::IlValue *CallVirtual(const char *functionName, int32_t numArgs, ...);
+     
+   TR::IlValue *CallVirtual(TR::MethodBuilder *calleeMB, int32_t numArgs, TR::IlValue ** argValues);
+     
    /**
     * @brief Call a function via a TR::MethodBuilder object, possibly inlining it
     * @param calleeMB the target function's TR::MethodBuilder object

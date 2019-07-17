@@ -85,45 +85,46 @@ public:
 
   OSSharedMemoryCacheConfig(UDATA numLocks);
 
-  virtual IDATA getWriteLockID(void);
-  virtual IDATA getReadWriteLockID(void);
+  virtual IDATA getWriteLockID();
+  virtual IDATA getReadWriteLockID();
 
-  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, OSCacheConfigOptions* configOptions,
-			    LastErrorInfo* lastErrorInfo = NULL);
+  virtual IDATA acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo = NULL);
   virtual IDATA releaseLock(OMRPortLibrary* library, UDATA lockID);
 
   virtual void serializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize) = 0;
   virtual void initializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize) = 0;
   
-  // let these be decided by the classes of the generational header
-  // versions. They will know where the locks lie and how large they
-  // are.
-  virtual U_64 getLockOffset(UDATA lockID) = 0;
-  virtual U_64 getLockSize(UDATA lockID) = 0;
+  virtual void* getHeaderLocation() {
+    return _header->regionStartAddress();
+  }
 
-  virtual U_64* getHeaderLocation() = 0;
-  virtual U_64* getHeaderSize() = 0;
+  virtual UDATA getHeaderSize() {
+    return _header->regionSize();
+  }
 
-  // this is _dataStart, wherever that ultimately ends up.
-  virtual U_64* getDataSectionLocation() = 0;
+  virtual void* getDataSectionLocation() = 0;
   virtual U_32 getDataSectionSize() = 0;
 
-//  virtual void setCacheSizeInHeader(U_xo32 size) {
-//    *getCacheSizeFieldLocation() = size;
-//  }
+  virtual U_32* getCacheSizeFieldLocation() = 0;  
+  virtual U_32 getCacheSize() = 0;
 
-  virtual U_32* getCacheSizeFieldLocation() = 0;
-    
-//  virtual void setDataSectionLengthInHeader(U_32 size) = 0;
+  virtual U_32* getDataLengthFieldLocation() = 0;
 
+  virtual U_64* getInitCompleteLocation() = 0;
+  virtual bool setCacheInitComplete() = 0;
+  
 protected:
   friend class OSSharedMemoryCache;
   friend class OSSharedMemoryCachePolicies;
   friend class OSSharedMemoryCacheStats;
 
+  virtual IDATA getNewWriteLockID();
+  
   IDATA acquireHeaderWriteLock(OMRPortLibrary* library, const char* cacheName, LastErrorInfo* lastErrorInfo);
   IDATA releaseHeaderWriteLock(OMRPortLibrary* library, LastErrorInfo* lastErrorInfo);
 
+  virtual void detachRegions() = 0;
+  
   UDATA _numLocks;
 
   OSSharedMemoryCacheHeaderMapping* _mapping;
@@ -136,6 +137,7 @@ protected:
   omrshsem_handle* _semhandle;
 
   UDATA _totalNumSems;
+  UDATA _userSemCntr;
   I_32 _semid;
 };
 

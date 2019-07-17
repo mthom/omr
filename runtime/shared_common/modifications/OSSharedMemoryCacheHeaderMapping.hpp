@@ -41,22 +41,18 @@ struct OSSharedMemoryCacheHeaderMapping: CacheHeaderMapping<OSSharedMemoryCacheH
   OSSharedMemoryCacheHeaderMapping()
     : _createTime(0)
     , _inDefaultControlDir(1)
+    , _attachedSemid(-1)
   {}
 
   // the owning header knows the value of numLocks.
   UDATA size() const {
-      UDATA size = 0;
-
-      size += OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH + 1;
-      size += sizeof(_createTime);
-      size += sizeof(_inDefaultControlDir);
-      
-      return size;
+    return sizeof(OSSharedMemoryCacheHeaderMapping);
   }
 
   char _eyecatcher[OMRSH_OSCACHE_SYSV_EYECATCHER_LENGTH+1];
   I_64 _createTime; // from OSCache_sysv_header1 & 2: createTime
   UDATA _inDefaultControlDir; // from OSCache_sysv_header1 & 2: inDefaultControlDir
+  I_32 _attachedSemid;
 };
 
 #endif

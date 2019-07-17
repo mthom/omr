@@ -53,7 +53,7 @@ OSMemoryMappedCacheConfig::OSMemoryMappedCacheConfig(UDATA numLocks)
   , _writeLockID(OMRSH_OSCACHE_MMAP_LOCKID_WRITELOCK)
   , _readWriteLockID(OMRSH_OSCACHE_MMAP_LOCKID_READWRITELOCK)
 {
-  _lockMutex = new (PERSISTENT_NEW) omrthread_monitor_t[numLocks];
+  _lockMutex = new omrthread_monitor_t[numLocks];
 
   // the work of this segment is accomplished in OSMemoryMappedCache::startup.
 //  omrthread_t self;

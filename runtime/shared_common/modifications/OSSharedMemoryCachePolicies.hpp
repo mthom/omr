@@ -33,13 +33,14 @@ class OSSharedMemoryCache;
 class OSSharedMemoryCachePolicies {
 public:
   OSSharedMemoryCachePolicies(OSSharedMemoryCache* cache)
-    : _cache(_cache)
+    : _cache(cache)
   {}
   
 #if !defined(WIN32)
   virtual IDATA openSharedMemory(const char* fileName, U_32 permissions, LastErrorInfo *lastErrorInfo);
   virtual IDATA openSharedSemaphore(LastErrorInfo* lastErrorInfo);
   virtual IDATA destroySharedSemaphore();
+  virtual IDATA destroySharedMemory();
 
   virtual I_32 getControlFilePermissions(char *cacheDirName, char *filename,
 					 bool& isNotReadable, bool& isReadOnly);

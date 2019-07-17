@@ -303,6 +303,7 @@ internal_shutdownJit()
 // if(cache != NULL) {
 //   delete cache;
 // }
+   TR::Compiler->cache.cleanup();
    }
 /*
 bool

@@ -23,14 +23,14 @@ IDATA
 OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
-  
+
   IDATA rc = 0;
   char cacheDirName[OMRSH_MAXPATH];		/* OMRSH_MAXPATH defined to be EsMaxPath which is 1024 */
   //  char nameWithVGen[CACHE_ROOT_MAXLEN];	/* CACHE_ROOT_MAXLEN defined to be 88 */
   char* snapshotFileName = snapshotName(); // <= CACHE_ROOT_MAXLEN in length.
   char pathFileName[OMRSH_MAXPATH];
   //  J9PortShcVersion versionData;
-  
+
   // IDATA fd = 0; // replaces by the member variable _fd.
 
   const char* ctrlDirName = _cache->_cacheLocation; // for: vm->sharedClassConfig->ctrlDirName;
@@ -69,14 +69,14 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
       OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_PORT_ERROR_MESSAGE, errormsg);
       OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_ERROR_SNAPSHOT_FILE_OPEN, pathFileName);
     }
-    
+
     rc = -1;
-  } else {  
+  } else {
     I_64 fileSize = omrfile_flength(_fd);
     LastErrorInfo lastErrorInfo;
     I_32 openMode = _cache->_configOptions->openMode(); // 0;
     SH_CacheFileAccess cacheFileAccess = OMRSH_CACHE_FILE_ACCESS_ALLOWED;
-  
+
     // we expect that _configOptions has been configured with the
     // restore settingsprior to this function being called. In J9,
     // this function configures the restored cache as it goes about
@@ -105,14 +105,14 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
       default:
 	Trc_SHR_Assert_ShouldNeverHappen();
       }
-    
+
       omrfile_close(_fd);
       rc = -1;
       Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileAccessNotAllowed(pathFileName);
       goto done;
     }
 
-    if (!fileSizeWithinBounds()) {  
+    if (!fileSizeWithinBounds()) {
       Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileSizeInvalid(pathFileName, fileSize);
       //    OSC_ERR_TRACE4(_cache->_configOptions, J9NLS_SHRC_OSCACHE_ERROR_SNAPSHOT_FILE_LENGTH, pathFileName, fileSize,
       //		   MIN_CC_SIZE, MAX_CC_SIZE);
@@ -121,7 +121,7 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
     } else if (omrfile_lock_bytes(_fd, OMRPORT_FILE_WRITE_LOCK | OMRPORT_FILE_WAIT_FOR_LOCK, 0, fileSize) < 0) {
       I_32 errorno = omrerror_last_error_number();
       const char * errormsg = omrerror_last_error_message();
-      
+
       Trc_SHR_OSC_Sysv_restoreFromSnapshot_fileLockFailed(pathFileName);
       OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_PORT_ERROR_NUMBER, errorno);
       Trc_SHR_Assert_True(errormsg != NULL);
@@ -130,7 +130,7 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
       rc = -1;
     } else {
       // the commented lines in this section are all J9 specific.
-      
+
       //OMRSharedCachePreinitConfig* piconfig = vm->sharedCachePreinitConfig;
       //OMR_VMThread* currentThread = omr_vmthread_getCurrent(vm); //vm->internalVMFunctions->currentVMThread(vm);
       bool rcStartup = false;
@@ -160,14 +160,14 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
       // should no longer be necessary:
       // _cache->_configOptions->_openMode = openMode;
       _cache->_numLocks = numLocks;
-      
+
       rcStartup = _cache->startup(_cache->_cacheName, ctrlDirName);
-      
+
       if (false == rcStartup) {
 	// Trc_SHR_OSC_Sysv_restoreFromSnapshot_cacheStartupFailed1(currentThread);
 	OSC_ERR_TRACE(_cache->_configOptions, J9NLS_SHRC_OSCACHE_ERROR_STARTUP_CACHE);
 	_cache->destroy(false);
-      
+
 	rc = -1;
       } else if (OMRSH_OSCACHE_CREATED != _cache->getError()) {
 	/* Another VM has created the cache */
@@ -177,7 +177,7 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
 	rc = -1;
       } else {
 	// this is where the implementation-specific (ie. subclass of OSSharedMemoryCache) work takes over.
-	rc = restoreFromExistingSnapshot();      
+	rc = restoreFromExistingSnapshot();
 	//      SH_CacheMap* cm = (SH_CacheMap *)vm->sharedClassConfig->sharedClassCache;
 	//      bool cacheHasIntegrity = false;
 	//      I_32 semid = 0;
@@ -199,9 +199,9 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
 	//      osCacheSysvHeader = (OSCachesysv_header_version_current *)(_headerStart);
 	//      semid = osCacheSysvHeader->attachedSemid;
 	//      theVMCntr = theca->vmCntr;
-	//	
+	//
 	//      Trc_SHR_Assert_Equals(theVMCntr, 0);
-	//				
+	//
 	//      fileRc = omrfile_read(_fd, osCacheSysvHeader, nbytes);
 	//      if (fileRc < 0) {
 	//	I_32 errorno = omrerror_last_error_number();
@@ -262,9 +262,8 @@ OSSharedMemoryCacheSnapshot::restoreFromSnapshot(IDATA numLocks)
       omrfile_close(_fd);
     }
   }
-  
+
  done:
   Trc_SHR_OSC_Sysv_restoreFromSnapshot_Exit(rc);
-  return rc;  
+  return rc;
 }
-  
