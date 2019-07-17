@@ -113,7 +113,7 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   uintptrj_t relocationRecordSize = sizeof(uintptrj_t);
   uintptrj_t tempNull = 0;
   if(_relocationData) {
-    relocationRecordSize = static_cast<uintptrj_t>(*_relocationData);
+    relocationRecordSize += static_cast<uintptrj_t>(*_relocationData);
   } else {
     _relocationData = reinterpret_cast<uint8_t*>(&tempNull);
   }
