@@ -32,7 +32,7 @@ class OSSharedMemoryCacheIterator: public OSCacheIterator
 public:
   OSSharedMemoryCacheIterator(char* cacheDir, char* resultBuf)
     : _cacheDir(cacheDir)
-    , _resultBuf(_resultBuf)
+    , _resultBuf(resultBuf)
   {}
   
   virtual UDATA findFirst(OMRPortLibrary *portLibrary);

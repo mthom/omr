@@ -20,19 +20,19 @@ public:
     , _cacheSize(cacheSize)
   {}
 
-  bool useUserHomeDirectoryForCacheDir() {
+  bool useUserHomeDirectoryForCacheDir() override {
     return true;
   }
 
-  bool isUserSpecifiedCacheDir() {
+  bool isUserSpecifiedCacheDir() override {
     return false;
   }
   // is the cache being opened in read-only mode?
-  bool readOnlyOpenMode() {
+  bool readOnlyOpenMode() override {
     return false;
   }
 
-  I_32 fileMode() {
+  I_32 fileMode() override {
     I_32 perm = 0;
 
     Trc_SHR_OSC_Mmap_getFileMode_Entry();
@@ -55,7 +55,7 @@ public:
     return perm;
   }
 
-  bool semaphoreCheckEnabled() {
+  bool semaphoreCheckEnabled() override {
     return false;
   }
   
@@ -103,65 +103,65 @@ public:
     return false;
   }
   
-  bool openToStatExistingCache() {
+  bool openToStatExistingCache() override {
     return false;
   }
 
   // reasons for stats. Should have a StatReason enum.
-  bool statToDestroy() {
+  bool statToDestroy() override {
     return false; // like SHR_STATS_REASON_DESTROY
   }
 
-  bool statExpired() {
+  bool statExpired() override {
     return false; // like SHR_STATS_REASON_EXPIRE
   }
   
-  bool statIterate() {
+  bool statIterate() override {
     return false; // like SHR_STATS_REASON_ITERATE
   }
   
-  bool statList() {
+  bool statList() override {
     return false; // like SHR_STATS_REASON_LIST
   }
 
-  OSCacheConfigOptions& setOpenReason(StartupReason) { return *this; }
-  OSCacheConfigOptions& setReadOnlyOpenMode() { return *this; }
-  OSCacheConfigOptions& setOpenMode(I_32) { return *this; }
+  OSCacheConfigOptions& setOpenReason(StartupReason) override { return *this; }
+  OSCacheConfigOptions& setReadOnlyOpenMode() override { return *this; }
+  OSCacheConfigOptions& setOpenMode(I_32) override { return *this; }
 
   // the block size of the cache.
-  U_32 cacheSize() {
+  U_32 cacheSize() override {
     return _cacheSize;
   }
   
-  OSCacheConfigOptions& setCacheSize(U_32 size) {
+  OSCacheConfigOptions& setCacheSize(U_32 size) override {
     _cacheSize = size;
     return *this;
   }
 
-  U_32 maxCRCSamples() {
+  U_32 maxCRCSamples() override {
     return MAX_CRC_SAMPLES;
   }
 
   // does the cache create a file?
-  bool createFile() {
+  bool createFile() override {
     return true;
   }
 
   // do we try to open the cache read-only if we failed to open the cache with write permissions?
-  bool tryReadOnlyOnOpenFailure() {
+  bool tryReadOnlyOnOpenFailure() override {
     return false;
   }
 
   // when the cache is corrupt, do we dump its contents?
-  bool disableCorruptCacheDumps() {
+  bool disableCorruptCacheDumps() override {
     return true;
   }
 
-  bool verboseEnabled() {
+  bool verboseEnabled() override {
     return false;
   }
 
-  void resetVerboseOptionsFromFlags(UDATA) {}
+  void resetVerboseOptionsFromFlags(UDATA) override {}
   
   bool groupAccessEnabled() override {
     return true; // true iff _groupPerm = 1 in the J9 cache.
@@ -169,13 +169,13 @@ public:
   
   // allocate the cache in the user's home directory.
   // we already do this, so this function does nothing.
-  void useUserHomeDirectoryForCacheLocation() {}
+  void useUserHomeDirectoryForCacheLocation() override {}
   
   // render the options to a bit vector understood by the functions of the OMR port library.
   // the only place this is used currently is inside OSCacheUtils.cpp, exactly once, to
   // open a shared memory block. So, the contents of this member function are derived from
   // OSCache.cpp:getCacheDir.
-  U_32 renderToFlags() {
+  U_32 renderToFlags() override {
     U_32 flags = OMRSHMEM_GETDIR_APPEND_BASEDIR;
 
     if(!groupAccessEnabled()) {
@@ -185,11 +185,11 @@ public:
     return flags;
   }
 
-  UDATA renderCreateOptionsToFlags() {
+  UDATA renderCreateOptionsToFlags() override {
     return 0;
   }
   
-  UDATA renderVerboseOptionsToFlags() {
+  UDATA renderVerboseOptionsToFlags() override {
     return 0;
   }
 

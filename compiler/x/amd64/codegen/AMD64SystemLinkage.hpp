@@ -46,6 +46,8 @@ class AMD64SystemLinkage : public TR::X86SystemLinkage
    protected:
    AMD64SystemLinkage(TR::CodeGenerator *cg) : TR::X86SystemLinkage(cg) {}
 
+   virtual uint8_t *generateVirtualIndirectThunk(TR::Node *callNode);
+
    virtual int32_t layoutParm(TR::Node *parmNode, int32_t &dataCursor, uint16_t &intReg, uint16_t &floatReg, TR::parmLayoutResult &layoutResult);
    virtual int32_t layoutParm(TR::ParameterSymbol *paramSymbol, int32_t &dataCursor, uint16_t &intReg, uint16_t &floatRrgs, TR::parmLayoutResult&);
    virtual uint32_t getAlignment(TR::DataType type);
@@ -55,6 +57,9 @@ class AMD64SystemLinkage : public TR::X86SystemLinkage
    virtual TR::Register *buildIndirectDispatch(TR::Node *callNode);
    virtual TR::Register *buildDirectDispatch(TR::Node *callNode, bool spillFPRegs);
 
+   virtual void buildVirtualOrComputedCall(TR::X86CallSite &site, TR::LabelSymbol *entryLabel, TR::LabelSymbol *doneLabel, uint8_t *thunk);
+   virtual TR::Instruction *buildPICSlot(TR::X86PICSlot picSlot, TR::LabelSymbol *mismatchLabel, TR::LabelSymbol *doneLabel, TR::X86CallSite &site);
+     
    TR::Register *buildVolatileAndReturnDependencies(TR::Node *callNode, TR::RegisterDependencyConditions *deps);
 
    virtual TR::RealRegister* getSingleWordFrameAllocationRegister() { return machine()->getRealRegister(TR::RealRegister::r11); }

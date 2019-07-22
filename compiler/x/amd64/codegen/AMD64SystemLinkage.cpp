@@ -461,6 +461,87 @@ TR::AMD64ABILinkage::AMD64ABILinkage(TR::CodeGenerator *cg)
    TR_ASSERT(p == (machine()->getNumGlobalGPRs() + machine()->_numGlobalFPRs), "assertion failure");
    }
 
+uint8_t *TR::AMD64SystemLinkage::generateVirtualIndirectThunk(TR::Node *callNode)
+   {
+   int32_t              codeSize;
+   TR::SymbolReference  *glueSymRef;
+   uint8_t             *thunk;
+   uint8_t             *thunkEntry;
+   uint8_t             *cursor;
+   TR::Compilation * comp = cg()->comp();
+
+   (void)storeArguments(callNode, NULL, true, &codeSize);
+   codeSize += 12;  // +10 MOV8RegImm64 +2 JMPReg
+
+   // TR_J9VMBase *fej9 = (TR_J9VMBase *)(cg()->fe());
+
+   // Allocate the thunk in the cold code section
+   //
+//   if (fej9->storeOffsetToArgumentsInVirtualIndirectThunks())
+//      {
+      codeSize += 8;
+      thunk = (uint8_t *)comp->trMemory()->allocateMemory(codeSize, heapAlloc);
+      cursor = thunkEntry = thunk + 8; // 4 bytes holding the size of storeArguments
+//      }
+//   else
+//      {
+//      thunk = (uint8_t *)cg()->allocateCodeMemory(codeSize, true);
+//      cursor = thunkEntry = thunk;
+//      }
+
+   switch (callNode->getDataType())
+      {
+      case TR::NoType:
+         glueSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_AMD64icallVMprJavaSendVirtual0, false, false, false);
+         break;
+      case TR::Int64:
+         glueSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_AMD64icallVMprJavaSendVirtualJ, false, false, false);
+         break;
+      case TR::Address:
+         glueSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_AMD64icallVMprJavaSendVirtualL, false, false, false);
+         break;
+      case TR::Int32:
+         glueSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_AMD64icallVMprJavaSendVirtual1, false, false, false);
+         break;
+      case TR::Float:
+         glueSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_AMD64icallVMprJavaSendVirtualF, false, false, false);
+         break;
+      case TR::Double:
+         glueSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_AMD64icallVMprJavaSendVirtualD, false, false, false);
+         break;
+      default:
+         TR_ASSERT(0, "Bad return data type '%s' for call node [" POINTER_PRINTF_FORMAT "]\n",
+                 comp->getDebug()->getName(callNode->getDataType()),
+                 callNode);
+      }
+
+   cursor = storeArguments(callNode, cursor, false, NULL);
+
+//   if (fej9->storeOffsetToArgumentsInVirtualIndirectThunks())
+//      {
+      *((int32_t *)thunk + 1) = cursor - thunkEntry;
+//      }
+
+   // MOV8RegImm64 rdi, glueAddress
+   //
+   *(uint16_t *)cursor = 0xbf48;
+   cursor += 2;
+   *(uint64_t *)cursor = (uintptrj_t)glueSymRef->getMethodAddress();
+   cursor += 8;
+
+   // JMPReg rdi
+   //
+   *(uint8_t *)cursor++ = 0xff;
+   *(uint8_t *)cursor++ = 0xe7;
+
+//   if (fej9->storeOffsetToArgumentsInVirtualIndirectThunks())
+      *(int32_t *)thunk = cursor - thunkEntry;
+
+   diagnostic("\n-- ( Created J2I thunk " POINTER_PRINTF_FORMAT " for node " POINTER_PRINTF_FORMAT " )\n", thunkEntry, callNode);
+
+   return thunkEntry;
+   }
+
 
 TR::Register *
 TR::AMD64SystemLinkage::buildVolatileAndReturnDependencies(
@@ -758,6 +839,155 @@ TR::AMD64SystemLinkage::buildIndirectDispatch(TR::Node *callNode)
    return returnReg;
    }
 
+void TR::AMD64SystemLinkage::buildVirtualOrComputedCall(TR::X86CallSite &site, TR::LabelSymbol *entryLabel, TR::LabelSymbol *doneLabel, uint8_t *thunk)
+   {
+   // TR_J9VMBase *fej9 = (TR_J9VMBase *)(comp()->fe());
+   if (entryLabel)
+      generateLabelInstruction(LABEL, site.getCallNode(), entryLabel, cg());
+
+   TR::SymbolReference *methodSymRef = site.getSymbolReference();
+   if (comp()->getOption(TR_TraceCG))
+      {
+      traceMsg(comp(), "buildVirtualOrComputedCall(%p), isComputed=%d\n", site.getCallNode(), methodSymRef->getSymbol()->castToMethodSymbol()->isComputed());
+      }
+   bool evaluateVftEarly = methodSymRef->isUnresolved();// || fej9->forceUnresolvedDispatch();
+
+   if (methodSymRef->getSymbol()->castToMethodSymbol()->isComputed())
+      {
+      buildVFTCall(site, CALLReg, site.evaluateVFT(), NULL);
+      }
+   else if (evaluateVftEarly)
+      {
+      site.evaluateVFT(); // We must evaluate the VFT here to avoid a later evaluation that pollutes the VPic shape.
+      buildVPIC(site, entryLabel, doneLabel);
+      }
+   else if (site.resolvedVirtualShouldUseVFTCall())
+      {
+      // Call through VFT
+      //
+      buildVFTCall(site, CALLMem, NULL, generateX86MemoryReference(site.evaluateVFT(), methodSymRef->getOffset(), cg()));
+      }
+   else
+      {
+      site.evaluateVFT(); // We must evaluate the VFT here to avoid a later evaluation that pollutes the VPic shape.
+      buildVPIC(site, entryLabel, doneLabel);
+      }
+   }
+
+static TR_AtomicRegion X86PicSlotAtomicRegion[] =
+   {
+   { 0x0, 8 }, // Maximum instruction size that can be patched atomically.
+   { 0,0 }
+   };
+
+TR::Instruction *
+TR::AMD64SystemLinkage::buildPICSlot(TR::X86PICSlot picSlot, TR::LabelSymbol *mismatchLabel, TR::LabelSymbol *doneLabel, TR::X86CallSite &site)
+   {
+   TR::Register *cachedAddressRegister = cg()->allocateRegister();
+
+   TR::Node *node = site.getCallNode();
+   uint64_t addrToBeCompared = (uint64_t) picSlot.getClassAddress();
+   TR::Instruction *firstInstruction;
+   if (picSlot.getMethodAddress())
+      {
+      addrToBeCompared = (uint64_t) picSlot.getMethodAddress();
+      firstInstruction = generateRegImm64Instruction(MOV8RegImm64, node, cachedAddressRegister, addrToBeCompared, cg());
+      }
+   else
+      firstInstruction = generateRegImm64Instruction(MOV8RegImm64, node, cachedAddressRegister, (uint64_t)picSlot.getClassAddress(), cg());
+
+
+   firstInstruction->setNeedsGCMap(site.getPreservedRegisterMask());
+
+   if (!site.getFirstPICSlotInstruction())
+      site.setFirstPICSlotInstruction(firstInstruction);
+
+   if (picSlot.needsPicSlotAlignment())
+      {
+      generateBoundaryAvoidanceInstruction(
+         X86PicSlotAtomicRegion,
+         8,
+         8,
+         firstInstruction,
+         cg());
+      }
+
+   TR::Register *vftReg = site.evaluateVFT();
+
+   // The ordering of these registers in this compare instruction is important in order to get the
+   // VFT register into the ModRM r/m field of the generated instruction.
+   //
+   if (picSlot.getMethodAddress())
+      generateMemRegInstruction(CMP8MemReg, node,
+                                generateX86MemoryReference(vftReg, picSlot.getSlot(), cg()), cachedAddressRegister, cg());
+   else
+      generateRegRegInstruction(CMP8RegReg, node, cachedAddressRegister, vftReg, cg());
+
+   cg()->stopUsingRegister(cachedAddressRegister);
+
+   if (picSlot.needsJumpOnNotEqual())
+      {
+      if (picSlot.needsLongConditionalBranch())
+         {
+         generateLongLabelInstruction(JNE4, node, mismatchLabel, cg());
+         }
+      else
+         {
+         TR_X86OpCodes op = picSlot.needsShortConditionalBranch() ? JNE1 : JNE4;
+         generateLabelInstruction(op, node, mismatchLabel, cg());
+         }
+      }
+   else if (picSlot.needsJumpOnEqual())
+      {
+      if (picSlot.needsLongConditionalBranch())
+         {
+         generateLongLabelInstruction(JE4, node, mismatchLabel, cg());
+         }
+      else
+         {
+         TR_X86OpCodes op = picSlot.needsShortConditionalBranch() ? JE1 : JE4;
+         generateLabelInstruction(op, node, mismatchLabel, cg());
+         }
+      }
+
+   TR::Instruction *instr;
+   if (picSlot.getMethod())
+      {
+      TR::SymbolReference * callSymRef = comp()->getSymRefTab()->findOrCreateMethodSymbol(
+            node->getSymbolReference()->getOwningMethodIndex(), -1, picSlot.getMethod(), TR::MethodSymbol::Virtual);
+
+      instr = generateImmSymInstruction(CALLImm4, node, (intptrj_t)picSlot.getMethod()->startAddressForJittedMethod(), callSymRef, cg());
+      }
+   else if (picSlot.getHelperMethodSymbolRef())
+      {
+      TR::MethodSymbol *helperMethod = picSlot.getHelperMethodSymbolRef()->getSymbol()->castToMethodSymbol();
+      instr = generateImmSymInstruction(CALLImm4, node, (uint32_t)(uintptrj_t)helperMethod->getMethodAddress(), picSlot.getHelperMethodSymbolRef(), cg());
+      }
+   else
+      {
+      instr = generateImmInstruction(CALLImm4, node, 0, cg());
+      }
+
+   instr->setNeedsGCMap(site.getPreservedRegisterMask());
+
+   // Put a GC map on this label, since the instruction after it may provide
+   // the return address in this stack frame while PicBuilder is active
+   //
+   // TODO: Can we get rid of some of these?  Maybe they don't cost anything.
+   //
+   if (picSlot.needsJumpToDone())
+      {
+      instr = generateLabelInstruction(JMP4, node, doneLabel, cg());
+      instr->setNeedsGCMap(site.getPreservedRegisterMask());
+      }
+
+   if (picSlot.generateNextSlotLabelInstruction())
+      {
+      generateLabelInstruction(LABEL, node, mismatchLabel, cg());
+      }
+
+   return firstInstruction;
+   }
 
 TR::Register *TR::AMD64SystemLinkage::buildDirectDispatch(
       TR::Node *callNode,

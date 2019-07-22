@@ -36,7 +36,7 @@ namespace TR { class Block; }
 namespace TR { class BytecodeBuilder; }
 namespace TR { class IlGeneratorMethodDetails; }
 namespace TR { class IlBuilder; }
-namespace TR { class ResolvedMethodSymbol; } 
+namespace TR { class ResolvedMethodSymbol; }
 namespace TR { class SymbolReference; }
 namespace TR { class SymbolReferenceTable; }
 namespace TR { class VirtualMachineState; }
@@ -335,10 +335,9 @@ public:
    // control
    void AppendBuilder(TR::IlBuilder *builder);
 
-//   TR::IlValue *CallVirtual(const char *functionName, int32_t numArgs, ...);
-//     
-//   TR::IlValue *CallVirtual(TR::MethodBuilder *calleeMB, int32_t numArgs, TR::IlValue ** argValues);
-     
+   TR::IlValue *CallVirtual(const char *name, int32_t numArgs, ...);
+   TR::IlValue *CallVirtual(const char *functionName, int32_t numArgs, TR::IlValue ** argValues);
+
    /**
     * @brief Call a function via a TR::MethodBuilder object, possibly inlining it
     * @param calleeMB the target function's TR::MethodBuilder object
@@ -394,6 +393,9 @@ public:
    TR::IlValue *ComputedCall(const char *name, int32_t numArgs, TR::IlValue **args);
 
    TR::IlValue *genCall(TR::SymbolReference *methodSymRef, int32_t numArgs, TR::IlValue ** paramValues, bool isDirectCall = true);
+   TR::IlValue *genCallWithVFTChild(TR::SymbolReference *methodSymRef, int32_t numArgs, TR::IlValue ** paramValues);
+   TR::IlValue *genCallVirtual(TR::SymbolReference *methodSymRef, TR::Node *vftLoad, int32_t numArgs, TR::IlValue ** argValues, bool isDirectCall = false);
+
    void Goto(TR::IlBuilder **dest);
    void Goto(TR::IlBuilder *dest);
    void Return();
@@ -606,7 +608,7 @@ public:
 
    /**
     * @brief Set the ClientCallback buildIL function
-    * 
+    *
     * @param callback function pointer to the buildIL() callback for the client
     */
    void setClientCallback_buildIL(void *callback)
@@ -616,7 +618,7 @@ public:
 
    /**
     * @brief Set the Client Allocator function
-    * 
+    *
     * @param allocator function pointer to the client object allocator
     */
    static void setClientAllocator(ClientAllocator allocator)
@@ -640,7 +642,7 @@ protected:
     * @brief pointer to a client object that corresponds to this object
     */
    void                        * _client;
- 
+
    /**
     * @brief pointer to buildIL callback function for this object
     * usually NULL, but client objects can set this via setBuildILCallback() to be called
@@ -773,7 +775,7 @@ protected:
       }
 
    TR::Block *emptyBlock();
-   
+
    virtual uint32_t countBlocks();
 
    void pullInBuilderTrees(TR::IlBuilder *builder,

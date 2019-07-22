@@ -1035,6 +1035,16 @@
                     {"name":"arguments","type":"IlValue","attributes":["array","can_be_vararg"],"array-len":"numArgs"}
                     ]
                 },
+                { "name": "CallVirtual"
+                , "overloadsuffix": "WithArgArray"
+                , "flags": []
+                , "return": "IlValue"
+                , "parms": [
+                    {"name":"name","type":"constString"},
+                    {"name":"numArgs","type":"int32"},
+                    {"name":"arguments","type":"IlValue","attributes":["array","can_be_vararg"],"array-len":"numArgs"}
+                    ]
+                },
                 { "name": "ComputedCall"
                 , "overloadsuffix":"WithArgArray"
                 , "flags": []

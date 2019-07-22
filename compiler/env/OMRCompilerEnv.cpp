@@ -52,7 +52,7 @@ OMR::CompilerEnv::initialize()
    self()->initializeTargetEnvironment();
 
    om.initialize();
-   
+
    _initialized = true;
    }
 
@@ -93,6 +93,27 @@ OMR::CompilerEnv::initializeHostEnvironment()
 
    }
 
+void*
+OMR::CompilerEnv::setVirtualDispatchThunk(const TR::VirtualDispatchKey& key, void *thunkPtr)
+   {
+   _virtualFunctionsMap[key] = thunkPtr;
+   return thunkPtr;
+   }
+
+void*
+OMR::CompilerEnv::getVirtualDispatchThunk(const TR::VirtualDispatchKey& key)
+   {
+   auto value = _virtualFunctionsMap.find(key);
+
+   if (value == _virtualFunctionsMap.end())
+      {
+      return nullptr;
+      }
+   else
+      {
+      return value->second;
+      }
+   }
 
 // Projects are encouraged to over-ride this function in their project
 // extension.
