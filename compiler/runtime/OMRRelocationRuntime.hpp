@@ -39,6 +39,8 @@
 #include "env/OMRCPU.hpp" // for TR_ProcessorFeatureFlags
 #include "env/JitConfig.hpp" // for JitConfig, it got moved
 #include "runtime/OMRRelocationRuntimeTypes.hpp" 
+#include "runtime/RelocationRuntimeLogger.hpp"
+
 #ifndef OMR_RELOCATION_RUNTIME_CONNECTOR
 #define OMR_RELOCATION_RUNTIME_CONNECTOR
 namespace OMR { class RelocationRuntime; }
@@ -149,7 +151,7 @@ class RelocationRuntime {
       TR_ALLOC(TR_Memory::Relocation)
       void * operator new(size_t, TR::JitConfig *);
       RelocationRuntime(TR::JitConfig *jitCfg);
-
+      TR::RelocationRuntime* self();
       TR::RelocationTarget *reloTarget()                           { return _reloTarget; }
       TR::AOTStats *aotStats()                                     { return _aotStats; }
       TR::JitConfig *jitConfig()                                    { return _jitConfig; }
@@ -174,7 +176,6 @@ class RelocationRuntime {
       UDATA dataCacheDelta()                                      { return _dataCacheDelta; }
       UDATA classReloAmount()                                     { return _classReloAmount; }
       U_8 *baseAddress()                                          { return _baseAddress; }
-      uintptr_t compileFirstClassLocation()                       { return _compileFirstClassLocation; }
 
       UDATA reloStartTime()                                       { return _reloStartTime; }
       void setReloStartTime(UDATA time)                           { _reloStartTime = time; }

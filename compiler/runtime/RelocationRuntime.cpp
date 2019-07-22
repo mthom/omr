@@ -27,34 +27,7 @@ TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationR
    _method = NULL;
    _jitConfig = jitCfg;
    _trMemory = NULL;
-   _options = NULL;
 
-
-   #if defined(TR_HOST_X86)
-      #if defined(TR_HOST_64BIT)
-      _reloTarget =  (new (PERSISTENT_NEW) TR::RelocationTarget(this));
-      #else
-      _reloTarget = new (PERSISTENT_NEW) TR_X86RelocationTarget(this);
-      #endif
-   #elif defined(TR_HOST_POWER)
-      #if defined(TR_HOST_64BIT)
-      _reloTarget = new (PERSISTENT_NEW) TR_PPC64RelocationTarget(this);
-      #else
-      _reloTarget = new (PERSISTENT_NEW) TR_PPC32RelocationTarget(this);
-      #endif
-   #elif defined(TR_HOST_S390)
-      _reloTarget = new (PERSISTENT_NEW) TR_S390RelocationTarget(this);
-   #elif defined(TR_HOST_ARM)
-      _reloTarget = new (PERSISTENT_NEW) TR_ARMRelocationTarget(this);
-   #else
-      TR_ASSERT(0, "Unsupported relocation target");
-   #endif
-
-   if (_reloTarget == NULL)
-      {
-      // TODO: need error condition here
-      return;
-      }
 
 
       _isLoading = false;

@@ -41,7 +41,7 @@
 #include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
 #include "runtime/RelocationRecord.hpp"
-
+#include "runtime/RelocationRuntime.hpp"
 #include "WASMCompositeCache.hpp"
 
 extern TR_RuntimeHelperTable runtimeHelpers;
@@ -119,6 +119,7 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 
 bool storeCodeEntry(const char *methodName, void *codeLocation) {
   TR::SharedCache* cache = TR::Compiler->cache;
+  
   return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
 }
 
@@ -165,19 +166,19 @@ void *getCodeEntry(const char *methodName){
 }
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
-  uint8_t *relocationHeader = 0;
-  TR::SharedCache* cache = TR::Compiler->cache;
-  U_32 codeLength;
-  cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-//   relocationHeader+=sizeof(uint32_t);
+   uint8_t *relocationHeader = 0;
+   TR::SharedCache* cache = TR::Compiler->cache;
+   U_32 codeLength;
+   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
    TR::RelocationRecordBinaryTemplate * binaryReloRecords =
    reinterpret_cast<TR::RelocationRecordBinaryTemplate *> (relocationHeader);
          TR::RelocationRecordGroup reloGroup(binaryReloRecords);
-   //  reloGroup.applyRelocations(reloRuntime,reloRuntime->reloTarget(),relocationHeader);
-  uintptrj_t sizeOfRelocations = *reinterpret_cast<uintptrj_t *>(relocationHeader);
-  uint8_t *endOfRelocations = relocationHeader+sizeOfRelocations;
-  uint16_t relocationSize = 0;
-  uint32_t index;
+   // if ( (uintptrj_t) *relocationHeader != 0)
+   // reloGroup.applyRelocations(reloRuntime,reloRuntime->reloTarget(),(uint8_t*)warmCode);
+
+   uint32_t sizeOfRelocations = *reinterpret_cast<uint32_t*>(relocationHeader);
+   uint8_t *endOfRelocations = relocationHeader+sizeOfRelocations;
+   uint16_t relocationSize = 0;
   relocationHeader+=sizeof(uintptrj_t );
   while(relocationHeader<endOfRelocations){
     TR::RelocationRecordBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocationHeader);
@@ -217,7 +218,6 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
       default:
 	return;
     }
-    
     relocationHeader+=relocationSize;
   }
   

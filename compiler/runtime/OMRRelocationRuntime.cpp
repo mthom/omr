@@ -29,6 +29,7 @@
 #include "j9jitnls.h"
 #endif
 
+#include <iostream>
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
 #include "env/jittypes.h"
@@ -47,14 +48,49 @@
 #include "runtime/RelocationRuntimeLogger.hpp"
 
 #include "control/Recompilation.hpp"
-
+#include "runtime/RelocationTarget.hpp"
 #include "codegen/CodeGenerator.hpp"
 #include "compile/ResolvedMethod.hpp"
 
 OMR::RelocationRuntime::RelocationRuntime(TR::JitConfig*)
 {
-  
+   //This should be fixed with Options fix
+   _options = NULL;
+  _reloLogger = new (PERSISTENT_NEW) TR::RelocationRuntimeLogger(self());
+
+   #if defined(TR_HOST_X86)
+      #if defined(TR_HOST_64BIT)
+      _reloTarget =  (new (PERSISTENT_NEW) TR::RelocationTarget(self()));
+      #else
+      _reloTarget = new (PERSISTENT_NEW) TR_X86RelocationTarget(this);
+      #endif
+   #elif defined(TR_HOST_POWER)
+      #if defined(TR_HOST_64BIT)
+      _reloTarget = new (PERSISTENT_NEW) TR_PPC64RelocationTarget(this);
+      #else
+      _reloTarget = new (PERSISTENT_NEW) TR_PPC32RelocationTarget(this);
+      #endif
+   #elif defined(TR_HOST_S390)
+      _reloTarget = new (PERSISTENT_NEW) TR_S390RelocationTarget(this);
+   #elif defined(TR_HOST_ARM)
+      _reloTarget = new (PERSISTENT_NEW) TR_ARMRelocationTarget(this);
+   #else
+      TR_ASSERT(0, "Unsupported relocation target");
+   #endif
+
+   if (_reloTarget == NULL)
+      {
+      std::cerr<<" Was unable to create a reloTarget, cannot use Relocations"
+         << std::endl;
+      // TODO: need error condition here
+      return;
+      }
 }
+
+TR::RelocationRuntime * OMR::RelocationRuntime::self()
+   {
+   return static_cast<TR::RelocationRuntime*>(this);
+   }
 
 void
 OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
@@ -109,11 +145,11 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
    // if (!aotMethodHeaderVersionsMatch())
    //    return NULL; 
 
-   oldDataStart = (U_8 *)_aotMethodHeaderEntry->compileMethodDataStartPC;
-   oldCodeStart = (U_8 *)_aotMethodHeaderEntry->compileMethodCodeStartPC;
+   oldDataStart = NULL;// (U_8 *)_aotMethodHeaderEntry->compileMethodDataStartPC;
+   oldCodeStart = NULL;//(U_8 *)_aotMethodHeaderEntry->compileMethodCodeStartPC;
 
-   UDATA dataSize = _aotMethodHeaderEntry->compileMethodDataSize;
-   UDATA codeSize = _aotMethodHeaderEntry->compileMethodCodeSize;
+   UDATA dataSize = NULL;// _aotMethodHeaderEntry->compileMethodDataSize;
+   UDATA codeSize = NULL;//_aotMethodHeaderEntry->compileMethodCodeSize;
 
    TR_ASSERT(codeSize > sizeof(OMR::CodeCacheMethodHeader), "codeSize for AOT loads should include the CodeCacheHeader");
 

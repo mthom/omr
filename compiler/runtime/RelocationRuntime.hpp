@@ -39,8 +39,9 @@ class SharedCacheRelocationRuntime : public RelocationRuntime {
 public:
       TR_ALLOC(TR_Memory::Relocation);
       void * operator new(size_t, TR::JitConfig *);
-      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg) : RelocationRuntime(jitCfg) {
+      SharedCacheRelocationRuntime(TR::SharedCache* cache) : RelocationRuntime(NULL) {
          _sharedCacheIsFull=false;
+         _cache = cache;
          }
 
    //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
@@ -61,7 +62,7 @@ private:
       virtual uint8_t * allocateSpaceInDataCache(UDATA metaDataSize, UDATA type);
       virtual void initializeAotRuntimeInfo();
       virtual void initializeCacheDeltas();
-
+      TR::SharedCache* _cache;
       virtual void incompatibleCache(U_32 module, U_32 reason, char *assumeMessage);
 
       void checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHeader * hdrInCache, intptr_t featureFlags);
