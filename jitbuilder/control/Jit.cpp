@@ -173,53 +173,8 @@ void relocateCodeEntry(const char *methodName,void *warmCode) {
    TR::RelocationRecordBinaryTemplate * binaryReloRecords =
    reinterpret_cast<TR::RelocationRecordBinaryTemplate *> (relocationHeader);
          TR::RelocationRecordGroup reloGroup(binaryReloRecords);
-   // if ( (uintptrj_t) *relocationHeader != 0)
-   // reloGroup.applyRelocations(reloRuntime,reloRuntime->reloTarget(),(uint8_t*)warmCode);
-
-   uint32_t sizeOfRelocations = *reinterpret_cast<uint32_t*>(relocationHeader);
-   uint8_t *endOfRelocations = relocationHeader+sizeOfRelocations;
-   uint16_t relocationSize = 0;
-  relocationHeader+=sizeof(uintptrj_t );
-  while(relocationHeader<endOfRelocations){
-    TR::RelocationRecordBinaryTemplate *rrbintemp = reinterpret_cast<TR::RelocationRecordBinaryTemplate *>(relocationHeader);
-//  TR::SharedCacheRelocationRuntime *reloRuntime = TR::Compiler->reloRuntime;
-    switch(rrbintemp->_type){
-      case TR_DataAddress:
-	{
-	TR::RelocationRecordDataAddress reloRecord (reloRuntime,rrbintemp);
-	relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
-	uint8_t *cursor = relocationHeader+sizeof(TR::RelocationRecordDataAddressBinaryTemplate);
-	if(relocationSize){
-	  while(cursor!=relocationHeader+relocationSize){
-	    reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+*reinterpret_cast<uint16_t*>(cursor)-rrbintemp->_extra);
-	    cursor+=2;
-	  }
-	}
-	}
-	break;
-      case TR_MethodCallAddress:
-	{
-	  TR::RelocationRecordMethodCallAddress reloRecord (reloRuntime,rrbintemp);
-	  relocationSize = *reinterpret_cast<uint16_t *>(relocationHeader);
-	  uint8_t *cursor = relocationHeader+sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate);
-	  if(relocationSize){
-	    while(cursor!=relocationHeader+relocationSize){
-	      reloRecord.applyRelocation(reloRuntime,reloRuntime->reloTarget(),(uint8_t *)warmCode+*reinterpret_cast<uint16_t*>(cursor)-rrbintemp->_extra);
-	      cursor+=2;
-	    }
-	  }
-	}
-	break;
-      case TR_ArbitrarySizedHeader:{
-      OMR::RelocationRecordArbitrarySizedHeader reloRecord (reloRuntime,rrbintemp);
-      relocationSize = (uint16_t)(reloRecord.bytesInHeaderAndPayload());
-      }
-	break;
-      default:
-	return;
-    }
-    relocationHeader+=relocationSize;
-  }
+   if ( (uintptrj_t) *relocationHeader != 0)
+   reloGroup.applyRelocations(reloRuntime,reloRuntime->reloTarget(),(uint8_t*)warmCode);
   
 }
 

@@ -100,7 +100,11 @@ namespace TR {
 class RelocationRuntime;
 class RelocationTarget;
 class RelocationRuntimeLogger;
-union RelocationRecordPrivateData;
+struct RelocationRecordMethodCallPrivateData
+   {
+      uintptrj_t callTargetOffset;
+   };
+
    union RelocationRecordPrivateData
    {
 //       TR::RelocationRecordHelperAddressPrivateData helperAddress;
@@ -111,11 +115,11 @@ union RelocationRecordPrivateData;
 //       TR::RelocationRecordWithOffsetPrivateData offset;
 //       TR::RelocationRecordArrayCopyPrivateData arraycopy;
 //       TR::RelocationRecordPointerPrivateData pointer;
-//       TR::RelocationRecordMethodCallPrivateData methodCall;
+      TR::RelocationRecordMethodCallPrivateData methodCall;
 //       TR::RelocationRecordEmitClassPrivateData emitClass;
 //       TR::RelocationRecordDebugCounterPrivateData debugCounter;
 //       TR::RelocationSymbolFromManagerPrivateData symbolFromManager;
-    int yetToImplement;
+    
    };
 
 }
@@ -274,7 +278,7 @@ class RelocationRecordMethodCallAddress : public RelocationRecord
       virtual char *name() { return "MethodCallAddress"; }
       virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordMethodCallAddressBinaryTemplate); }
       virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
-
+      virtual void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
       uint8_t* address(TR::RelocationTarget *reloTarget);
       void setAddress(TR::RelocationTarget *reloTarget, uint8_t* callTargetAddress);
 

@@ -98,13 +98,9 @@ OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
 					       U_8 *codeStart,
 					       U_8 *oldCodeStart)
 {
-   UDATA startPC = 0;
-   // initializeCacheDeltas();
-   // _newMethodCodeStart = codeStart;
-   //TODO implement relocate here apply relocations of binaryrelocationGroup should be called here
-   reloLogger()->relocationDump();
 
 }
+
 
 OMRJITExceptionTable *
 OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
