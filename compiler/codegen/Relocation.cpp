@@ -350,7 +350,7 @@ void TR::ExternalRelocation::apply(TR::CodeGenerator *codeGen)
    {
    TR::Compilation *comp = codeGen->comp();
    AOTcgDiag1(comp, "TR::ExternalRelocation::apply updateLocation=" POINTER_PRINTF_FORMAT " \n", getUpdateLocation());
-   uint8_t * relocatableMethodCodeStart = (uint8_t *)comp->getRelocatableMethodCodeStart();
+   uint8_t * relocatableMethodCodeStart = (uint8_t *)codeGen->getCodeStart();
    getRelocationRecord()->addRelocationEntry((uint32_t)(getUpdateLocation() - relocatableMethodCodeStart));
    }
 
