@@ -24,6 +24,7 @@
 //OMRPORT #include "j9cp.h"
 #include "omrcfg.h"
 #include "omr.h"
+#include "runtime/CodeCache.hpp"
 //#include "j9consts.h"
 #if defined(J9VM_OPT_SHARED_CLASSES)
 #include "j9jitnls.h"
@@ -103,41 +104,44 @@ OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
 
 
 OMRJITExceptionTable *
-OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
-						      TR_FrontEnd *theFE,
-						      TR::CodeCache *aotMCCRuntimeCodeCache,
-						      const  OMRSharedCacheHeader *cacheEntry,
-						      OMRMethod *theMethod,
-						      bool shouldUseCompiledCopy,
-						      TR::Options *options,
-						      TR::Compilation *compilation,
-						      TR_ResolvedMethod *resolvedMethod)
+OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
+                     
+                        // OMR_VMThread* vmThread,
+						      // TR_FrontEnd *theFE,
+						      // TR::CodeCache *aotMCCRuntimeCodeCache,
+						      const  void *cacheEntry
+						      // OMRMethod *theMethod,
+						      // bool shouldUseCompiledCopy,
+						      // TR::Options *options,
+						      // TR::Compilation *compilation,
+						      // TR_ResolvedMethod *resolvedMethod
+                        )
    {
-     _currentThread = vmThread;
-   _fe = theFE;
-   _codeCache = aotMCCRuntimeCodeCache;
-   _method = theMethod;
-   _useCompiledCopy = shouldUseCompiledCopy;
-   _classReloAmount = 0;
-   _exceptionTable = NULL;
-   _newExceptionTableStart = NULL;
-   _relocationStatus = RelocationNoError;
-   _haveReservedCodeCache = false; // MCT
-   _returnCode = 0;
+   //   _currentThread = vmThread;
+   // _fe = theFE;
+   // _codeCache = aotMCCRuntimeCodeCache;
+   // _method = theMethod;
+   // _useCompiledCopy = shouldUseCompiledCopy;
+   // _classReloAmount = 0;
+   // _exceptionTable = NULL;
+   // _newExceptionTableStart = NULL;
+   // _relocationStatus = RelocationNoError;
+   // _haveReservedCodeCache = false; // MCT
+   // _returnCode = 0;
 
-   _trMemory = comp()->trMemory();
-   _currentResolvedMethod = resolvedMethod;
+   // _trMemory = comp()->trMemory();
+   // _currentResolvedMethod = resolvedMethod;
 
 
-   _options = options;
-   TR_ASSERT(_options, "Options were not correctly initialized.");
+   // _options = options;
+   // TR_ASSERT(_options, "Options were not correctly initialized.");
 
    uint8_t *tempCodeStart, *tempDataStart;
    uint8_t *oldDataStart, *oldCodeStart, *newCodeStart;
    tempDataStart = (uint8_t *)cacheEntry;
 
    //Check method header is valid
-   _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry + 1); // skip the header J9JITDataCacheHeader
+   _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry); // skip the header J9JITDataCacheHeader
    // if (!aotMethodHeaderVersionsMatch())
    //    return NULL; 
 
@@ -151,10 +155,10 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
 
      
 
-   _newExceptionTableStart = allocateSpaceInDataCache(10,10);//_exceptionTableCacheEntry->size, _exceptionTableCacheEntry->type);
-   tempCodeStart = tempDataStart + dataSize;
-   if (_newExceptionTableStart)
-     {
+   // _newExceptionTableStart = allocateSpaceInDataCache(10,10);//_exceptionTableCacheEntry->size, _exceptionTableCacheEntry->type);
+   // tempCodeStart = tempDataStart + dataSize;
+   // if (_newExceptionTableStart)
+   //   {
        // _exceptionTable = reinterpret_cast<J9JITExceptionTable *>(_newExceptionTableStart + sizeof(J9JITDataCacheHeader)); // Get new exceptionTable location
 
        // This must be an AOT load because for AOT compilations we relocate in place
@@ -197,8 +201,8 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
 
    if (haveReservedCodeCache())
       codeCache()->unreserve();
-   return _exceptionTable;
-   }
+   // return _exceptionTable;
+   // }
 }
 // This whole function can be dealt with more easily by meta-data relocations rather than this specialized function
 //   but leave it here for now
@@ -257,44 +261,18 @@ const UDATA OMR::SharedCacheRelocationRuntime::aotHeaderKeyLength = sizeof(OMR::
 U_8 *
 OMR::SharedCacheRelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize)
    {
-   // TR_FrontEnd *fej9 = _fe;
-   // //TR::CodeCacheManager *manager = TR::CodeCacheManager::instance();
-
-   // int32_t compThreadID = fej9->getCompThreadIDForVMThread(_currentThread);
-   // if (!codeCache())
-   //    {
-   //    int32_t numReserved;
-
-   //    _codeCache = manager->reserveCodeCache(false, codeSize, compThreadID, &numReserved);  // Acquire a cold/warm code cache.
-   //    if (!codeCache())
-   //       {
-   //       // TODO: how do we pass back error codes to trigger retrial?
-   //       //if (numReserved >= 1) // We could still get some code space in caches that are currently reserved
-   //       //    *returnCode = compilationCodeReservationFailure; // this will promp a retrial
-   //       return NULL;
-   //       }
-   //     // The GC may unload classes if code caches have been switched
-
-   //    if (compThreadID >= 0 && fej9->getCompilationShouldBeInterruptedFlag())
-   //       {
-   //       codeCache()->unreserve(); // cancel the reservation
-   //       //*returnCode = compilationInterrupted; // allow retrial //FIXME: how do we pass error codes?
-   //       return NULL; // fail this AOT load
-   //       }
-   //    _haveReservedCodeCache = true;
-   //    }
-
-   // uint8_t *coldCode;
-   // U_8 *codeStart = manager->allocateCodeMemory(codeSize, 0, &_codeCache, &coldCode, false);
-   // // FIXME: the GC may unload classes if code caches have been switched
-   // if (compThreadID >= 0 && fej9->getCompilationShouldBeInterruptedFlag())
-   //    {
-   //    codeCache()->unreserve(); // cancel the reservation
-   //    _haveReservedCodeCache = false;
-   //    //*returnCode = compilationInterrupted; // allow retrial
-   //    return NULL; // fail this AOT load
-   //    }
-   // return codeStart;
+TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance(); 
+ int32_t numReserved;
+  static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
+  if(!codeCache){
+    return nullptr;
+  }
+  uint8_t * coldCode = nullptr;
+  void * warmCode =  manager->allocateCodeMemory(codeSize, 0, &codeCache, &coldCode, false);
+  if(!warmCode){
+    codeCache->unreserve();
+    return nullptr;
+  }
    }
 
 

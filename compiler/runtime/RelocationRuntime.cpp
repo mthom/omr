@@ -141,41 +141,41 @@ TR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHe
 
 
 // TR::AOTHeader *
-// OMR::SharedCacheRelocationRuntime::createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fee)
+// OMR::SharedCacheRelocationRuntime::createAOTHeader()
 //    {
-// //    PORT_ACCESS_FROM_JAVAVM(javaVM());
+//    PORT_ACCESS_FROM_JAVAVM(javaVM());
 
-// //    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
-// //    TR_AOTHeader * aotHeader = (TR_AOTHeader *)j9mem_allocate_memory(sizeof(TR_AOTHeader), J9MEM_CATEGORY_JIT);
+//    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
+//    TR_AOTHeader * aotHeader = (TR_AOTHeader *)j9mem_allocate_memory(sizeof(TR_AOTHeader), J9MEM_CATEGORY_JIT);
 
-// //    if (aotHeader)
-// //       {
-// //       aotHeader->eyeCatcher = TR_AOTHeaderEyeCatcher;
+//    if (aotHeader)
+//       {
+//       aotHeader->eyeCatcher = TR_AOTHeaderEyeCatcher;
 
-// //       TR_Version *aotHeaderVersion = &aotHeader->version;
-// //       memset(aotHeaderVersion, 0, sizeof(TR_Version));
-// //       aotHeaderVersion->structSize = sizeof(TR_Version);
-// //       aotHeaderVersion->majorVersion = TR_AOTHeaderMajorVersion;
-// //       aotHeaderVersion->minorVersion = TR_AOTHeaderMinorVersion;
-// //       strncpy(aotHeaderVersion->vmBuildVersion, EsBuildVersionString, sizeof(EsBuildVersionString));
-// //       strncpy(aotHeaderVersion->jitBuildVersion, TR_BUILD_NAME, std::min(strlen(TR_BUILD_NAME), sizeof(aotHeaderVersion->jitBuildVersion)));
+//       TR_Version *aotHeaderVersion = &aotHeader->version;
+//       memset(aotHeaderVersion, 0, sizeof(TR_Version));
+//       aotHeaderVersion->structSize = sizeof(TR_Version);
+//       aotHeaderVersion->majorVersion = TR_AOTHeaderMajorVersion;
+//       aotHeaderVersion->minorVersion = TR_AOTHeaderMinorVersion;
+//       strncpy(aotHeaderVersion->vmBuildVersion, EsBuildVersionString, sizeof(EsBuildVersionString));
+//       strncpy(aotHeaderVersion->jitBuildVersion, TR_BUILD_NAME, std::min(strlen(TR_BUILD_NAME), sizeof(aotHeaderVersion->jitBuildVersion)));
 
-// //       aotHeader->processorSignature = TR::Compiler->target.cpu.id();
-// //       aotHeader->gcPolicyFlag = javaVM()->memoryManagerFunctions->j9gc_modron_getWriteBarrierType(javaVM());
-// //       aotHeader->lockwordOptionHashValue = getCurrentLockwordOptionHashValue(pjavaVM);
-// // #if defined(J9VM_GC_COMPRESSED_POINTERS)
-// //       aotHeader->compressedPointerShift = javaVM()->memoryManagerFunctions->j9gc_objaccess_compressedPointersShift(javaVM()->internalVMFunctions->currentVMThread(javaVM()));
-// // #else
-// //       aotHeader->compressedPointerShift = 0;
-// // #endif
+//       aotHeader->processorSignature = TR::Compiler->target.cpu.id();
+//       aotHeader->gcPolicyFlag = javaVM()->memoryManagerFunctions->j9gc_modron_getWriteBarrierType(javaVM());
+//       aotHeader->lockwordOptionHashValue = getCurrentLockwordOptionHashValue(pjavaVM);
+// #if defined(J9VM_GC_COMPRESSED_POINTERS)
+//       aotHeader->compressedPointerShift = javaVM()->memoryManagerFunctions->j9gc_objaccess_compressedPointersShift(javaVM()->internalVMFunctions->currentVMThread(javaVM()));
+// #else
+//       aotHeader->compressedPointerShift = 0;
+// #endif
 
-// //       aotHeader->processorFeatureFlags = TR::Compiler->target.cpu.getProcessorFeatureFlags();
+//       aotHeader->processorFeatureFlags = TR::Compiler->target.cpu.getProcessorFeatureFlags();
 
-// //       // Set up other feature flags
-// //       aotHeader->featureFlags = generateFeatureFlags(fe);
+//       // Set up other feature flags
+//       aotHeader->featureFlags = generateFeatureFlags(fe);
 
-// //       // Set ArrayLet Size if supported
-// //       aotHeader->arrayLetLeafSize = TR::Compiler->om.arrayletLeafSize();
+//       // Set ArrayLet Size if supported
+//       aotHeader->arrayLetLeafSize = TR::Compiler->om.arrayletLeafSize();
 // //       }
 
 //    return NULL;

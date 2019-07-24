@@ -117,11 +117,11 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    TR::CodeCache *firstCodeCache = codeCacheManager.initialize(true, 1);
 }
 
-bool storeCodeEntry(const char *methodName, void *codeLocation) {
-  TR::SharedCache* cache = TR::Compiler->cache;
-  
-  return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
-}
+bool storeCodeEntry(const char *methodName, void *codeLocation) 
+   {
+   TR::SharedCache* cache = TR::Compiler->cache;
+   return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+   }
 
 bool initializeSharedCache(TR::RawAllocator raw) {  
   TR::Compiler->cache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");

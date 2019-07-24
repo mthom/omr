@@ -492,7 +492,6 @@ compileMethodFromDetails(
 
    TR_OptimizationPlan::freeOptimizationPlan(plan);
 
-
    return startPC;
    }
 

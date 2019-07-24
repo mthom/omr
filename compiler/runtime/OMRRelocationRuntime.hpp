@@ -157,6 +157,8 @@ class RelocationRuntime {
       TR::JitConfig *jitConfig()                                    { return _jitConfig; }
       TR_FrontEnd *fe()                                           { return _fe; }
       OMR_VM *omrVM()                                          { return _omrVM; }
+      TR::AOTMethodHeader* createMethodHeader(uintptrj_t *codeLocation,
+                              uint32_t codeLength);
       TR_Memory *trMemory()                                       { return _trMemory; }
       TR::CompilationInfo *compInfo()                              { return _compInfo; }
       OMR_VMThread *currentThread()                                 { return _currentThread; }
@@ -191,15 +193,18 @@ class RelocationRuntime {
       TR_ResolvedMethod *currentResolvedMethod()                  { return _currentResolvedMethod; }
 
       // current main entry point
-      OMRJITExceptionTable *prepareRelocateAOTCodeAndData(OMR_VMThread* vmThread,
-                                                         TR_FrontEnd *fe,
-                                                         TR::CodeCache *aotMCCRuntimeCodeCache,
-                                                         const  OMRSharedCacheHeader *cacheEntry,
-                                                         OMRMethod *theMethod,
-                                                         bool shouldUseCompiledCopy,
-                                                         TR::Options *options,
-                                                         TR::Compilation *compilation,
-                                                         TR_ResolvedMethod *resolvedMethod);
+      OMRJITExceptionTable *prepareRelocateAOTCodeAndData(
+                                                         //  OMR_VMThread* vmThread,
+                                                         // TR_FrontEnd *fe,
+                                                         // TR::CodeCache *aotMCCRuntimeCodeCache,
+                                                         void *cacheEntry
+                                                         // OMRMethod *theMethod,
+                                                         // bool shouldUseCompiledCopy,
+                                                         // TR::Options *options,
+                                                         // TR::Compilation *compilation,
+                                                         // TR_ResolvedMethod *resolvedMethod
+                                                         
+                                                         );
 
       // virtual bool storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
       // virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
