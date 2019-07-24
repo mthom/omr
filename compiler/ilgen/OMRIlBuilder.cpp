@@ -125,7 +125,7 @@ OMR::IlBuilder::initSequence()
 
 bool
 OMR::IlBuilder::injectIL()
-   {
+{
    TraceIL("Inside injectIL()\n");
    TraceIL("original entry %p\n", cfg()->getStart());
    TraceIL("original exit %p\n", cfg()->getEnd());
@@ -2126,7 +2126,7 @@ TR::IlValue *
 OMR::IlBuilder::genCallVirtual(TR::SymbolReference *methodSymRef, TR::Node *vftLoad, int32_t numArgs, TR::IlValue ** argValues, bool isDirectCall /* false by default*/)
    {
    TR::DataType returnType = methodSymRef->getSymbol()->castToMethodSymbol()->getMethod()->returnType();
-   TR::Node *callNode = TR::Node::createWithSymRef(isDirectCall ? TR::ILOpCode::getDirectCall(returnType) : TR::ILOpCode::getIndirectCall(returnType), numArgs, methodSymRef);
+   TR::Node *callNode = TR::Node::createWithSymRef(isDirectCall ? TR::ILOpCode::getDirectCall(returnType) : TR::ILOpCode::getIndirectCall(returnType), numArgs + 1, methodSymRef);
 
    callNode->setAndIncChild(0, vftLoad);
    
