@@ -51,4 +51,8 @@ compiler_library(env
 	${CMAKE_CURRENT_LIST_DIR}/OMRCompilerEnv.cpp
 	${CMAKE_CURRENT_LIST_DIR}/PersistentAllocator.cpp
 
+
+	# We need to make
+	${CMAKE_CURRENT_LIST_DIR}/OMRAotAdapter.cpp
+
 )

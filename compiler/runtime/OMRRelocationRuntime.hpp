@@ -197,7 +197,7 @@ class RelocationRuntime {
                                                          //  OMR_VMThread* vmThread,
                                                          // TR_FrontEnd *fe,
                                                          // TR::CodeCache *aotMCCRuntimeCodeCache,
-                                                         void *cacheEntry
+                                                         const void *cacheEntry
                                                          // OMRMethod *theMethod,
                                                          // bool shouldUseCompiledCopy,
                                                          // TR::Options *options,

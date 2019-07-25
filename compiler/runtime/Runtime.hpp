@@ -484,10 +484,8 @@ typedef struct AOTStats
    }AOTStats;
 typedef struct AOTMethodHeader 
    {
-
    uintptrj_t  compiledCodeStart;
    uintptrj_t  compiledCodeSize;
-
    uintptrj_t compiledDataSize;
    uintptrj_t relocationsStart;
    // uintptrj_t  exceptionTableStart;

@@ -43,14 +43,16 @@
 #include "runtime/RelocationRecord.hpp"
 #include "runtime/RelocationRuntime.hpp"
 #include "WASMCompositeCache.hpp"
+#include "env/AotAdapter.hpp"
 
 extern TR_RuntimeHelperTable runtimeHelpers;
 extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *callBacks, int32_t *numHelpers, int32_t *CCPreLoadedCodeSize);
 
 //Shared cache relocation runtime. It is not thread safe.
 //
-static TR::SharedCacheRelocationRuntime *reloRuntime;
-
+static TR::AotAdapter* AotAdapter;
+TR::SharedCache* cache;
+TR::SharedCacheRelocationRuntime* reloRuntime;
 static void
 initHelper(void *helper, TR_RuntimeHelper id)
    {
@@ -119,30 +121,26 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 
 bool storeCodeEntry(const char *methodName, void *codeLocation) 
    {
-   TR::SharedCache* cache = TR::Compiler->cache;
    return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
    }
 
 bool initializeSharedCache(TR::RawAllocator raw) {  
-  TR::Compiler->cache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
-  reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL);
-  return TR::Compiler->cache;
+   AotAdapter = new TR::AotAdapter();
+   AotAdapter->initializeAOTClasses(raw);
+   cache = AotAdapter->sc();
+   reloRuntime = AotAdapter->rr();
+   return AotAdapter->sc();
 }
 
 void *getCodeEntry(const char *methodName){
-//TR::Compilation* comp = TR::comp();
-//TR::CodeGenerator* cg = comp->cg();
   TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
   U_32 codeLength = 0;
-  TR::SharedCache* cache = TR::Compiler->cache;
+
   uint8_t *relocationHeader = 0;
   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
   if(!sharedCacheMethod) {
     return nullptr;
   }
-//TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
-//TR::RelocationRuntime reloRuntime (NULL);
-//TR::RelocationRecordMethodCallAddress reloRecord (&reloRuntime,(TR::RelocationRecordBinaryTemplate *)rrbintemp);
   int32_t numReserved;
   static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
   if(!codeCache){
@@ -167,7 +165,6 @@ void *getCodeEntry(const char *methodName){
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
    uint8_t *relocationHeader = 0;
-   TR::SharedCache* cache = TR::Compiler->cache;
    U_32 codeLength;
    cache->loadCodeEntry(methodName,codeLength,relocationHeader);
    TR::RelocationRecordBinaryTemplate * binaryReloRecords =

@@ -116,7 +116,7 @@ RelocationRuntimeLogger::relocationDump()
          bool wasLocked=lockLog();
 
          // TODO: this code is busTED
-         header = (RelocationRecord *)((U_8 *)reloRuntime()->exceptionTableCacheEntry() + reloRuntime()->aotMethodHeaderEntry()->offsetToRelocationDataItems);
+         // header = (RelocationRecord *)((U_8 *)reloRuntime()->exceptionTableCacheEntry() + reloRuntime()->aotMethodHeaderEntry()->offsetToRelocationDataItems);
          endRecord = (RelocationRecord *) ((U_8 *) header + header->size(reloRuntime()->reloTarget()));
 
          reloRecord = (U_8 *) header;
