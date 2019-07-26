@@ -43,7 +43,7 @@ public:
          _sharedCacheIsFull=false;
          _cache = cache;
          }
-
+      TR::RelocationRuntime* self();
    //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
    //    virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
    //   virtual bool validateAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);

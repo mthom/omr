@@ -87,6 +87,20 @@ UDATA WASMCompositeCache::dataSectionFreeSpace() const
   return dataSectionSize - (UDATA) (_codeUpdatePtr - startAddress);
 }
 
+typedef struct AOTMethodHeader 
+   {
+   uint8_t* compiledCodeStart;
+   uint32_t compiledCodeSize;
+   uint8_t* relocationsStart;
+   uint32_t relocationsSize;
+   // uintptrj_t  exceptionTableStart;
+   // // Here, compiledDataStart is a pointer to any data persisted along with the
+   // // compiled code. offset to RelocationsTable points to Relocations, should
+   // // be equal 
+   // uintptrj_t compiledDataStart;
+   // uintptrj_t compiledDataSize;
+   } AOTMethodHeader;
+
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
 bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength)
@@ -103,30 +117,29 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   WASMCacheEntry* entryLocation = _codeUpdatePtr++;
 
   memcpy(entryLocation, &entry, sizeof(WASMCacheEntry));
-  memcpy(_codeUpdatePtr, codeLocation, codeLength);
+  AOTMethodHeader* hdr = (AOTMethodHeader*) _relocationData;
+  // memcpy(_codeUpdatePtr, codeLocation, codeLength);
+  // _codeUpdatePtr += codeLength;
 
-  _codeUpdatePtr += codeLength;
+  // _codeEntries[methodName] = entryLocation;
 
-  _codeEntries[methodName] = entryLocation;
-
-  // now write the relocation record to the cache.
-  uintptrj_t relocationRecordSize = sizeof(uintptrj_t);
-  uintptrj_t tempNull = 0;
-  if(_relocationData) {
-    relocationRecordSize += static_cast<uintptrj_t>(*_relocationData);
-  } else {
-    _relocationData = reinterpret_cast<uint8_t*>(&tempNull);
-  }
-  
-  memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
-  _relocationData = nullptr;
-  _codeUpdatePtr+=relocationRecordSize;
+  // // now write the relocation record to the cache.
+  memcpy(_codeUpdatePtr,hdr,sizeof(AOTMethodHeader));
+  memcpy(_codeUpdatePtr,(hdr->compiledCodeStart),hdr->compiledCodeSize);
+  _codeUpdatePtr += hdr->compiledCodeSize;
+   memcpy(_codeUpdatePtr,reinterpret_cast<uint8_t*>(hdr->relocationsStart),hdr->relocationsSize);
+  _codeUpdatePtr += hdr->relocationsSize;
+   
+  // memcpy(_codeUpdatePtr,_relocationData,relocationRecordSize);
+  // memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
+  // _relocationData = nullptr;
+  // _codeUpdatePtr+=relocationRecordSize;
   
   return true;
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
-void *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, uint8_t *&relocationHeader) {
+WASMCacheEntry *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, uint8_t *&relocationHeader) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[methodName];
     if(entry) {

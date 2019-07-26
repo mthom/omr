@@ -166,12 +166,8 @@ void *getCodeEntry(const char *methodName){
 void relocateCodeEntry(const char *methodName,void *warmCode) {
    uint8_t *relocationHeader = 0;
    U_32 codeLength;
-   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-   TR::RelocationRecordBinaryTemplate * binaryReloRecords =
-   reinterpret_cast<TR::RelocationRecordBinaryTemplate *> (relocationHeader);
-         TR::RelocationRecordGroup reloGroup(binaryReloRecords);
-   if ( (uintptrj_t) *relocationHeader != 0)
-   reloGroup.applyRelocations(reloRuntime,reloRuntime->reloTarget(),(uint8_t*)warmCode);
+   WASMCacheEntry* item =  cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+   reloRuntime->self()->prepareRelocateAOTCodeAndData((TR::AOTMethodHeader*)(item+1));
   
 }
 

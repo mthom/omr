@@ -40,7 +40,7 @@ public:
 
   UDATA baseSharedCacheAddress();
 
-  void *loadCodeEntry(const char *methodName, U_32 &codeLength,uint8_t *&relocationHeader);
+ WASMCacheEntry *loadCodeEntry(const char *methodName, U_32 &codeLength,uint8_t *&relocationHeader);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 

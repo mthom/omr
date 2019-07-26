@@ -286,6 +286,11 @@ TR::SharedCacheRelocationRuntime::methodAddress(char *methodName)
    return _symbolLocation[method];
    }
 
+TR::RelocationRuntime *
+TR::SharedCacheRelocationRuntime::self()
+   {
+   return static_cast<TR::RelocationRuntime*> (this);
+   }
 void
 TR::SharedCacheRelocationRuntime::registerLoadedMethod(const char *&methodName, void *&methodAddress)
    {

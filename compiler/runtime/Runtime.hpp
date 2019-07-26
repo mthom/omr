@@ -484,15 +484,16 @@ typedef struct AOTStats
    }AOTStats;
 typedef struct AOTMethodHeader 
    {
-   uintptrj_t  compiledCodeStart;
-   uintptrj_t  compiledCodeSize;
-   uintptrj_t compiledDataSize;
-   uintptrj_t relocationsStart;
+   uint8_t* compiledCodeStart;
+   uint32_t compiledCodeSize;
+   uint8_t* relocationsStart;
+   uint32_t relocationsSize;
    // uintptrj_t  exceptionTableStart;
    // // Here, compiledDataStart is a pointer to any data persisted along with the
    // // compiled code. offset to RelocationsTable points to Relocations, should
    // // be equal 
    // uintptrj_t compiledDataStart;
+   // uintptrj_t compiledDataSize;
    } AOTMethodHeader;
 }
 

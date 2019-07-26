@@ -157,8 +157,8 @@ class RelocationRuntime {
       TR::JitConfig *jitConfig()                                    { return _jitConfig; }
       TR_FrontEnd *fe()                                           { return _fe; }
       OMR_VM *omrVM()                                          { return _omrVM; }
-      TR::AOTMethodHeader* createMethodHeader(uintptrj_t *codeLocation,
-                              uint32_t codeLength);
+      TR::AOTMethodHeader* createMethodHeader(uint8_t *codeLocation,
+                            uint32_t codeLength,  uint8_t* reloLocation,uint32_t reloSize);
       TR_Memory *trMemory()                                       { return _trMemory; }
       TR::CompilationInfo *compInfo()                              { return _compInfo; }
       OMR_VMThread *currentThread()                                 { return _currentThread; }
@@ -197,7 +197,7 @@ class RelocationRuntime {
                                                          //  OMR_VMThread* vmThread,
                                                          // TR_FrontEnd *fe,
                                                          // TR::CodeCache *aotMCCRuntimeCodeCache,
-                                                         const void *cacheEntry
+                                                         TR::AOTMethodHeader *cacheEntry
                                                          // OMRMethod *theMethod,
                                                          // bool shouldUseCompiledCopy,
                                                          // TR::Options *options,
@@ -280,10 +280,12 @@ class RelocationRuntime {
 
       virtual void initializeCacheDeltas()                                                 {}
 
-      void relocateAOTCodeAndData(U_8 *tempDataStart,
-                                  U_8 *oldDataStart,
-                                  U_8 *codeStart,
-                                  U_8 *oldCodeStart);
+      void relocateAOTCodeAndData(
+                                 //  U_8 *tempDataStart,
+                                 //  U_8 *oldDataStart,
+                                 //  U_8 *oldCodeStart,
+                                  U_8 *codeStart
+                                 );
 
       void relocateMethodMetaData(UDATA codeRelocationAmount, UDATA dataRelocationAmount);
 

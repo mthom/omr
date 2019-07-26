@@ -92,14 +92,31 @@ TR::RelocationRuntime * OMR::RelocationRuntime::self()
    {
    return static_cast<TR::RelocationRuntime*>(this);
    }
+TR::AOTMethodHeader* 
+OMR::RelocationRuntime::createMethodHeader(uint8_t *codeLocation,
+                            uint32_t codeLength,  uint8_t* reloLocation,uint32_t reloSize){
+      
+   _aotMethodHeaderEntry = (TR::AOTMethodHeader*)new (TR::comp()->cg()->trHeapMemory()) (TR::AOTMethodHeader);
+   _aotMethodHeaderEntry->compiledCodeSize = codeLength;
+   _aotMethodHeaderEntry->relocationsSize  = reloSize;
+   _aotMethodHeaderEntry->compiledCodeStart  =codeLocation;
+   _aotMethodHeaderEntry->relocationsStart  =  reloLocation;
 
+   return _aotMethodHeaderEntry;
+}
 void
-OMR::RelocationRuntime::relocateAOTCodeAndData(U_8 *tempDataStart,
-					       U_8 *oldDataStart,
-					       U_8 *codeStart,
-					       U_8 *oldCodeStart)
+OMR::RelocationRuntime::relocateAOTCodeAndData(
+                     //  U_8 *tempDataStart,
+					      //  U_8 *oldDataStart,
+					      //  U_8 *codeStart,
+					       U_8 *codeStart
+                      )
 {
-
+   TR::RelocationRecordBinaryTemplate * binaryReloRecords =
+   reinterpret_cast<TR::RelocationRecordBinaryTemplate *> (_aotMethodHeaderEntry->relocationsStart);
+         TR::RelocationRecordGroup reloGroup(binaryReloRecords);
+   if ( _aotMethodHeaderEntry->relocationsSize != 0)
+   reloGroup.applyRelocations(self(),self()->reloTarget(),(uint8_t*)codeStart);
 }
 
 
@@ -109,7 +126,7 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
                         // OMR_VMThread* vmThread,
 						      // TR_FrontEnd *theFE,
 						      // TR::CodeCache *aotMCCRuntimeCodeCache,
-						      const  void *cacheEntry
+						      TR::AOTMethodHeader *cacheEntry
 						      // OMRMethod *theMethod,
 						      // bool shouldUseCompiledCopy,
 						      // TR::Options *options,
@@ -132,7 +149,7 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
    // _trMemory = comp()->trMemory();
    // _currentResolvedMethod = resolvedMethod;
 
-
+   _aotMethodHeaderEntry = cacheEntry;
    // _options = options;
    // TR_ASSERT(_options, "Options were not correctly initialized.");
 
@@ -141,16 +158,12 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
    tempDataStart = (uint8_t *)cacheEntry;
 
    //Check method header is valid
-   _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry); // skip the header J9JITDataCacheHeader
+   _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry);
    // if (!aotMethodHeaderVersionsMatch())
    //    return NULL; 
 
-   oldDataStart = NULL;// (U_8 *)_aotMethodHeaderEntry->compileMethodDataStartPC;
-   oldCodeStart = NULL;//(U_8 *)_aotMethodHeaderEntry->compileMethodCodeStartPC;
-
-   UDATA dataSize = NULL;// _aotMethodHeaderEntry->compileMethodDataSize;
-   UDATA codeSize = NULL;//_aotMethodHeaderEntry->compileMethodCodeSize;
-
+   UDATA codeSize = _aotMethodHeaderEntry->compiledCodeSize;
+   tempCodeStart = reinterpret_cast<uint8_t*>(_aotMethodHeaderEntry->compiledCodeStart);
    TR_ASSERT(codeSize > sizeof(OMR::CodeCacheMethodHeader), "codeSize for AOT loads should include the CodeCacheHeader");
 
      
@@ -195,7 +208,7 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
        if (_relocationStatus == RelocationNoError)
 	 {
       initializeAotRuntimeInfo();
-      relocateAOTCodeAndData(tempDataStart, oldDataStart, newCodeStart, oldCodeStart);
+      relocateAOTCodeAndData(newCodeStart);
       }
 
 
