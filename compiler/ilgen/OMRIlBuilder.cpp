@@ -2133,12 +2133,12 @@ OMR::IlBuilder::genCallVirtual(TR::SymbolReference *methodSymRef, TR::Node *vftL
    // TODO: should really verify argument types here
    int32_t childIndex = 1; // skip the vftLoad at index 0
    for (int32_t a=0;a < numArgs;a++)
-      {
-      TR::IlValue *arg = argValues[a];
-      if (arg->getDataType() == TR::Int8 || arg->getDataType() == TR::Int16 || (Word == Int64 && arg->getDataType() == TR::Int32))
-         arg = ConvertTo(Word, arg);
-      callNode->setAndIncChild(childIndex++, loadValue(arg));
-      }
+       {
+       TR::IlValue *arg = argValues[a];
+       if (arg->getDataType() == TR::Int8 || arg->getDataType() == TR::Int16 || (Word == Int64 && arg->getDataType() == TR::Int32))
+          arg = ConvertTo(Word, arg);
+       callNode->setAndIncChild(childIndex++, loadValue(arg));
+       }
 
    // callNode must be anchored by itself
    genTreeTop(callNode);

@@ -94,7 +94,7 @@ struct PicParameters
    int32_t roundedSizeOfSlot;
    int32_t defaultNumberOfSlots;
    };
-  
+
 class X86PICSlot
    {
    public:
@@ -112,11 +112,11 @@ class X86PICSlot
 
    TR_OpaqueMethodBlock *getMethodAddress()                      { return _methodAddress; }
 
-   int32_t getSlot()                                           { return _slot; }
+   int32_t getSlot()                                             { return _slot; }
 
    void                setHelperMethodSymbolRef(TR::SymbolReference *symRef)
                                                                  { _helperMethodSymbolRef = symRef; }
-   TR::SymbolReference *getHelperMethodSymbolRef()                { return _helperMethodSymbolRef; }
+   TR::SymbolReference *getHelperMethodSymbolRef()               { return _helperMethodSymbolRef; }
 
    void                setJumpOnNotEqual()                       { _branchType = BranchJNE; }
    bool                needsJumpOnNotEqual()                     { return _branchType == BranchJNE; }
@@ -237,11 +237,11 @@ class X86CallSite
 
    bool _useLastITableCache;
    };
-  
+
 class X86SystemLinkage : public TR::Linkage
    {
    public:
-     
+
    struct PicParameters IPicParameters;
    struct PicParameters VPicParameters;
 
@@ -284,12 +284,21 @@ class X86SystemLinkage : public TR::Linkage
     * is guarenteed to be safe for such uses.
     */
    virtual TR::RealRegister* getSingleWordFrameAllocationRegister() = 0;
+
+   int32_t argAreaSize(TR::ResolvedMethodSymbol*);
+   int32_t argAreaSize(TR::Node*);
      
+   int32_t buildVirtualArgs(TR::Node*, TR::RegisterDependencyConditions*);
+   int32_t buildPrivateVirtualLinkageArgs(TR::Node                             *callNode,
+					  TR::RegisterDependencyConditions  *dependencies,
+					  bool                                 rightToLeft,
+					  bool                                 passArgsOnStack);
+
    public:
 
    const TR::X86LinkageProperties& getProperties();
 
-   virtual TR::Register *buildIndirectDispatch(TR::Node *callNode) = 0;
+   virtual TR::Register *buildIndirectDispatch(TR::Node *callNode);
    virtual TR::Register *buildDirectDispatch(TR::Node *callNode, bool spillFPRegs) = 0;
 
    virtual void mapIncomingParms(TR::ResolvedMethodSymbol *method);

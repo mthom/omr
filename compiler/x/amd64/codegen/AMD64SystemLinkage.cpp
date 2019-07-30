@@ -165,6 +165,7 @@ TR::AMD64Win64FastCallLinkage::AMD64Win64FastCallLinkage(TR::CodeGenerator *cg)
 
    _properties._preservedRegisterMapForGC = 0;
 
+   _properties._vtableIndexArgumentRegister = TR::RealRegister::r12;
    _properties._framePointerRegister = TR::RealRegister::ebp;
    _properties._methodMetaDataRegister = TR::RealRegister::NoReg;
    _properties._offsetToFirstParm = RETURN_ADDRESS_SIZE;
@@ -285,7 +286,8 @@ TR::AMD64ABILinkage::AMD64ABILinkage(TR::CodeGenerator *cg)
       IntegersInRegisters |
       LongsInRegisters    |
       FloatsInRegisters   |
-      ReservesOutgoingArgsInPrologue;
+      ReservesOutgoingArgsInPrologue |
+      NeedsThunksForIndirectCalls;
 
    if (!cg->comp()->getOption(TR_OmitFramePointer))
       _properties._properties |= AlwaysDedicateFramePointerRegister;
@@ -415,6 +417,8 @@ TR::AMD64ABILinkage::AMD64ABILinkage(TR::CodeGenerator *cg)
    _properties._allocationOrder[p++] = TR::RealRegister::ecx;
    _properties._allocationOrder[p++] = TR::RealRegister::r8;
    _properties._allocationOrder[p++] = TR::RealRegister::r9;
+   
+   _properties._vtableIndexArgumentRegister = TR::RealRegister::r8;
 
    // Preserved regs
    //
@@ -788,9 +792,13 @@ int32_t TR::AMD64SystemLinkage::buildArgs(
 TR::Register *
 TR::AMD64SystemLinkage::buildIndirectDispatch(TR::Node *callNode)
    {
+   if (callNode->getSymbol()->castToMethodSymbol()->getMethodKind() == TR::MethodSymbol::Virtual) {
+       return TR::X86SystemLinkage::buildIndirectDispatch(callNode);       
+   }
+     
    TR::SymbolReference *methodSymRef = callNode->getSymbolReference();
-   TR_ASSERT(methodSymRef->getSymbol()->castToMethodSymbol()->isComputed(), "system linkage only supports computed indirect call for now %p\n", callNode);
-
+   // TR_ASSERT(methodSymRef->getSymbol()->castToMethodSymbol()->isComputed(), "system linkage only supports computed indirect call for now %p\n", callNode);
+   
    // Evaluate VFT
    //
    TR::Register *vftRegister;
@@ -888,6 +896,7 @@ TR::AMD64SystemLinkage::buildPICSlot(TR::X86PICSlot picSlot, TR::LabelSymbol *mi
    TR::Node *node = site.getCallNode();
    uint64_t addrToBeCompared = (uint64_t) picSlot.getClassAddress();
    TR::Instruction *firstInstruction;
+   
    if (picSlot.getMethodAddress())
       {
       addrToBeCompared = (uint64_t) picSlot.getMethodAddress();

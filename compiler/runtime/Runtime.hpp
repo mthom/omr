@@ -26,6 +26,7 @@
 #include "env/defines.h"
 #include "env/jittypes.h"
 
+#include "env/CompilerEnv.hpp"
 #include "env/Processors.hpp"
 
 #include "codegen/LinkageConventionsEnum.hpp"
@@ -163,12 +164,21 @@ enum TR_RuntimeHelper
 
    };
 
+static void VFTRuntimeHelper() {
+   TR::Compiler->om.VFTRuntimeHelper();
+}
+
 class TR_RuntimeHelperTable
    {
 public:
 
     static const intptrj_t INVALID_FUNCTION_POINTER = 0xdeadb00f;
 
+    TR_RuntimeHelperTable() {
+        _linkage[TR_AMD64icallVMprJavaSendVirtual0] = TR_Helper;
+	_helpers[TR_AMD64icallVMprJavaSendVirtual0] = (void*) &VFTRuntimeHelper;
+    }
+     
     /**
      * \brief
      *

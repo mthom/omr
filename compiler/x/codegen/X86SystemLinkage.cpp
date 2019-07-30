@@ -24,6 +24,7 @@
 #include <stddef.h>
 #include "codegen/CodeGenerator.hpp"
 #include "codegen/FPTreeEvaluator.hpp"
+#include "codegen/HelperCallSnippet.hpp"
 #include "codegen/Instruction.hpp"
 #include "codegen/Linkage.hpp"
 #include "codegen/Linkage_inlines.hpp"
@@ -49,6 +50,24 @@
 #include "codegen/X86Instruction.hpp"
 #include "x/codegen/X86Ops.hpp"
 #include "env/CompilerEnv.hpp"
+
+// Hacks related to 8 byte slots
+#define DOUBLE_SIZED_ARGS (1)
+
+////////////////////////////////////////////////
+//
+// Helpful definitions
+//
+// These are only here to make the rest of the code below somewhat
+// self-documenting.
+//
+
+enum
+   {
+   RETURN_ADDRESS_SIZE=8,
+   NUM_INTEGER_LINKAGE_REGS=4,
+   NUM_FLOAT_LINKAGE_REGS=8,
+   };
 
 static void evaluateCommonedNodes(TR::Node *node, TR::CodeGenerator *cg)
    {
@@ -91,6 +110,329 @@ const TR::X86LinkageProperties& TR::X86SystemLinkage::getProperties()
    return _properties;
    }
 
+
+int32_t TR::X86SystemLinkage::argAreaSize(TR::ResolvedMethodSymbol *methodSymbol)
+   {
+   int32_t result = 0;
+   ListIterator<TR::ParameterSymbol>   paramIterator(&(methodSymbol->getParameterList()));
+   TR::ParameterSymbol                *paramCursor;
+   for (paramCursor = paramIterator.getFirst(); paramCursor; paramCursor = paramIterator.getNext())
+      {
+      result += paramCursor->getRoundedSize() * ((DOUBLE_SIZED_ARGS && paramCursor->getDataType() != TR::Address) ? 2 : 1);
+      }
+   return result;
+   }
+
+int32_t TR::X86SystemLinkage::argAreaSize(TR::Node *callNode)
+   {
+   // TODO: We only need this function because unresolved calls don't have a
+   // TR::ResolvedMethodSymbol, and only TR::ResolvedMethodSymbol has
+   // getParameterList().  If getParameterList() ever moves to TR::MethodSymbol,
+   // then this function becomes unnecessary.
+   //
+   TR::Node *child;
+   int32_t  i;
+   int32_t  result  = 0;
+   int32_t  firstArgument   = callNode->getFirstArgumentIndex();
+   int32_t  lastArgument    = callNode->getNumChildren() - 1;
+   for (i=firstArgument; i <= lastArgument; i++)
+      {
+      child = callNode->getChild(i);
+      result += child->getRoundedSize() * ((DOUBLE_SIZED_ARGS && child->getDataType() != TR::Address) ? 2 : 1);
+      }
+   return result;
+   }
+
+int32_t TR::X86SystemLinkage::buildVirtualArgs(TR::Node                             *callNode,
+					       TR::RegisterDependencyConditions  *dependencies)
+   {
+   TR::MethodSymbol *methodSymbol = callNode->getSymbol()->getMethodSymbol();
+   TR::SymbolReference *methodSymRef = callNode->getSymbolReference();
+   bool passArgsOnStack = true;
+   bool rightToLeft = methodSymbol && methodSymbol->isHelper()
+      && !methodSymRef->isOSRInductionHelper(); //we want the arguments for induceOSR to be passed from left to right as in any other non-helper call
+   /*
+   if (callNode->getOpCode().isIndirect())
+      {
+      if (methodSymbol->isVirtual() &&
+         !methodSymRef->isUnresolved() &&
+	 !comp()->getOption(TR_FullSpeedDebug) && // On FSD we need to call these through the vtable (because the methodIsOverridden flag is unreliable) so we need args to be in regs
+          methodSymbol->isVMInternalNative())
+         {
+         TR_ResolvedMethod *resolvedMethod = methodSymbol->castToResolvedMethodSymbol()->getResolvedMethod();
+         passArgsOnStack = (
+            !resolvedMethod->virtualMethodIsOverridden() &&
+            !resolvedMethod->isAbstract());
+         }
+      else
+         {
+         passArgsOnStack = false;
+         }
+      }
+   else
+      {
+      passArgsOnStack = methodSymbol->isVMInternalNative() && cg()->supportVMInternalNatives();
+      }
+   
+   switch (callNode->getSymbol()->castToMethodSymbol()->getMandatoryRecognizedMethod())
+      {
+      case TR::java_lang_invoke_ComputedCalls_dispatchJ9Method:
+      case TR::java_lang_invoke_MethodHandle_invokeWithArgumentsHelper:
+         passArgsOnStack = true;
+         break;
+      default:
+      	break;
+      }
+   */
+//#ifdef J9VM_OPT_JAVA_CRYPTO_ACCELERATION
+//   // Violate the right-to-left linkage requirement for JIT helpers for the AES helpers.
+//   // Call them with Java method private linkage.
+//   //
+//   if (cg()->enableAESInHardwareTransformations())
+//      {
+//      if (methodSymbol && methodSymbol->isHelper())
+//         {
+//         switch (methodSymRef->getReferenceNumber())
+//            {
+//            case TR_doAESInHardwareInner:
+//            case TR_expandAESKeyInHardwareInner:
+//               rightToLeft = false;
+//               break;
+//
+//            default:
+//               break;
+//            }
+//         }
+//      }
+//#endif
+
+   return buildPrivateVirtualLinkageArgs(callNode, dependencies, rightToLeft, passArgsOnStack);
+   }
+
+int32_t TR::X86SystemLinkage::buildPrivateVirtualLinkageArgs(TR::Node                             *callNode,
+							     TR::RegisterDependencyConditions  *dependencies,
+							     bool                                 rightToLeft,
+							     bool                                 passArgsOnStack)
+   {
+   TR::RealRegister::RegNum   noReg         = TR::RealRegister::NoReg;
+   TR::RealRegister          *stackPointer  = machine()->getRealRegister(TR::RealRegister::esp);
+   int32_t                    firstArgument = callNode->getFirstArgumentIndex();
+   int32_t                    lastArgument  = callNode->getNumChildren() - 1;
+   int32_t                    offset        = 0;
+
+   uint16_t                   numIntArgs     = 0,
+                              numFloatArgs   = 0,
+                              numSpecialArgs = 0;
+
+   int                        numDupedArgRegs = 0;
+   TR::Register               *dupedArgRegs[NUM_INTEGER_LINKAGE_REGS + NUM_FLOAT_LINKAGE_REGS];
+
+   // Even though the parameters will be passed on the stack, create dummy linkage registers
+   // to ensure that if the call were to be made using the linkage registers (e.g., in a guarded
+   // devirtual snippet if it was overridden) then the registers would be available at this
+   // point.
+   //
+   bool createDummyLinkageRegisters = (callNode->getOpCode().isIndirect() && passArgsOnStack) ? true: false;
+
+   int32_t parmAreaSize = argAreaSize(callNode);
+
+   int32_t start, stop, step;
+   if (rightToLeft || getProperties().passArgsRightToLeft())
+      {
+      start = lastArgument;
+      stop  = firstArgument - 1;
+      step  = -1;
+      TR_ASSERT(stop <= start, "Loop must terminate");
+      }
+   else
+      {
+      start = firstArgument;
+      stop  = lastArgument + 1;
+      step  = 1;
+      TR_ASSERT(stop >= start, "Loop must terminate");
+      }
+
+   // we're going to align the stack depend on the alignment property
+   // adjust = something
+   // allocateSize = parmAreaSize + adjust;
+   // then subtract stackpointer with allocateSize
+   uint32_t alignedParmAreaSize = parmAreaSize;
+
+   if (!getProperties().getReservesOutgoingArgsInPrologue() && !callNode->getSymbol()->castToMethodSymbol()->isHelper())
+      {
+      // Align the stack for alignment larger than 16 bytes(stack is aligned to the multiple of sizeOfJavaPointer by default, which is 4 bytes on 32-bit, and 8 bytes on 64-bit)
+      // Basically, we're aligning the start of next frame (after the return address) to a multiple of staceFrameAlignmentInBytes
+      // Stack frame alignment is needed for stack allocated object alignment
+      uint32_t stackFrameAlignment = 8; //cg()->fej9()->getLocalObjectAlignmentInBytes();
+      if (stackFrameAlignment > TR::Compiler->om.sizeofReferenceAddress())
+         {
+         uint32_t frameSize = parmAreaSize + cg()->getFrameSizeInBytes() + getProperties().getRetAddressWidth();
+         frameSize += stackFrameAlignment - (frameSize % stackFrameAlignment);
+         alignedParmAreaSize = frameSize - cg()->getFrameSizeInBytes() - getProperties().getRetAddressWidth();
+         traceMsg(comp(), "parm area size was %d, and is aligned to %d\n", parmAreaSize, alignedParmAreaSize);
+         }
+      if (alignedParmAreaSize > 0)
+         generateRegImmInstruction((alignedParmAreaSize <= 127 ? SUBRegImms() : SUBRegImm4()), callNode, stackPointer, alignedParmAreaSize, cg());
+      }
+
+   int32_t i;
+   for (i = start; i != stop; i += step)
+      {
+      TR::Node                *child     = callNode->getChild(i);
+      TR::DataType             type      = child->getType();
+      TR::RealRegister::RegNum  rregIndex = noReg;
+      TR::DataType            dt        = type.getDataType();
+
+      switch (dt)
+         {
+         case TR::Float:
+         case TR::Double:
+            rregIndex =
+               (numFloatArgs < NUM_FLOAT_LINKAGE_REGS) && (!passArgsOnStack || createDummyLinkageRegisters)
+               ? getProperties().getFloatArgumentRegister(numFloatArgs)
+               : noReg
+               ;
+            numFloatArgs++;
+            break;
+         case TR::Address:
+         default:
+            {
+            if (i == firstArgument && !callNode->getSymbolReference()->isUnresolved())
+               {
+		   rregIndex = getProperties().getVTableIndexArgumentRegister();
+		   numSpecialArgs++;
+               // TODO:JSR292: This should really be in the front-end
+		 /*		 
+               TR::MethodSymbol *sym = callNode->getSymbol()->castToMethodSymbol();
+               switch (sym->getMandatoryRecognizedMethod())
+                  {
+                  case TR::java_lang_invoke_ComputedCalls_dispatchJ9Method:
+                     rregIndex = getProperties().getJ9MethodArgumentRegister();
+                     numSpecialArgs++;
+                     break;
+                  case TR::java_lang_invoke_ComputedCalls_dispatchVirtual:
+                     rregIndex = getProperties().getVTableIndexArgumentRegister();
+                     numSpecialArgs++;
+                     break;
+                  default:
+                  	break;
+                  }
+		 */
+               }
+            if (rregIndex == noReg)
+               {
+               rregIndex =
+                  (numIntArgs < NUM_INTEGER_LINKAGE_REGS) && (!passArgsOnStack || createDummyLinkageRegisters)
+                  ? getProperties().getIntegerArgumentRegister(numIntArgs)
+                  : noReg
+                  ;
+               numIntArgs++;
+               }
+            break;
+            }
+         }
+
+      bool willKeepConstRegLiveAcrossCall = true;
+      rcount_t oldRefCount = child->getReferenceCount();
+      TR::Register *childReg = child->getRegister();
+      if (child->getOpCode().isLoadConst() &&
+            !childReg &&
+            (callNode->getSymbol()->castToMethodSymbol()->isStatic() ||
+             callNode->getChild(callNode->getFirstArgumentIndex()) != child))
+         {
+         child->setReferenceCount(1);
+         willKeepConstRegLiveAcrossCall = false;
+         }
+
+      TR::Register *vreg = NULL;
+      if ((rregIndex != noReg) ||
+          (child->getOpCodeValue() != TR::iconst) ||
+          (child->getOpCodeValue() == TR::iconst && childReg))
+         vreg = cg()->evaluate(child);
+
+      if (rregIndex != noReg)
+         {
+         bool needsZeroExtension = (child->getDataType() == TR::Int32) && !vreg->areUpperBitsZero();
+         TR::Register *preCondReg;
+
+         if (/*!child->getOpCode().isLoadConst() &&*/ (child->getReferenceCount() > 1))
+            {
+            preCondReg = cg()->allocateRegister(vreg->getKind());
+            if (vreg->containsCollectedReference())
+               preCondReg->setContainsCollectedReference();
+
+            generateRegRegInstruction(needsZeroExtension? MOVZXReg8Reg4 : TR::Linkage::movOpcodes(RegReg, movType(child->getDataType())), child, preCondReg, vreg, cg());
+            vreg = preCondReg;
+
+            TR_ASSERT(numDupedArgRegs < NUM_INTEGER_LINKAGE_REGS + NUM_FLOAT_LINKAGE_REGS, "assertion failure");
+            dupedArgRegs[numDupedArgRegs++] = preCondReg;
+            }
+         else
+            {
+            preCondReg = vreg;
+            if (needsZeroExtension)
+               generateRegRegInstruction(MOVZXReg8Reg4, child, preCondReg, vreg, cg());
+            }
+
+         dependencies->addPreCondition(preCondReg, rregIndex, cg());
+         }
+
+      offset += child->getRoundedSize() * ((DOUBLE_SIZED_ARGS && dt != TR::Address) ? 2 : 1);
+
+      if ((rregIndex == noReg) || (rregIndex != noReg && createDummyLinkageRegisters))
+         {
+         if (vreg)
+            generateMemRegInstruction(
+               TR::Linkage::movOpcodes(MemReg, fullRegisterMovType(vreg)),
+               child,
+               generateX86MemoryReference(stackPointer, parmAreaSize-offset, cg()),
+               vreg,
+               cg()
+               );
+         else
+            {
+            int32_t konst = child->getInt();
+            generateMemImmInstruction(
+               S8MemImm4,
+               child,
+               generateX86MemoryReference(stackPointer, parmAreaSize-offset, cg()),
+               konst,
+               cg()
+               );
+            }
+         }
+
+      if (vreg)
+         {
+         cg()->decReferenceCount(child);
+         ////if (child->getOpCode().isLoadConst() && !childReg)
+         if (!willKeepConstRegLiveAcrossCall)
+            {
+            child->setReferenceCount(oldRefCount-1);
+            child->setRegister(NULL);
+            }
+         }
+      else
+         child->setReferenceCount(oldRefCount-1);
+      }
+
+
+   // Now that we're finished making the precondition, all the interferences
+   // are established, and we can stopUsing these regs.
+   //
+   for (i = 0; i < numDupedArgRegs; i++)
+      {
+      cg()->stopUsingRegister(dupedArgRegs[i]);
+      }
+
+   // Sanity check
+   //
+   TR_ASSERT(numIntArgs + numFloatArgs + numSpecialArgs == callNode->getNumChildren() - callNode->getFirstArgumentIndex(), "assertion failure");
+   TR_ASSERT(offset == parmAreaSize, "assertion failure");
+
+   return alignedParmAreaSize;
+   }
+
 TR::Register *TR::X86SystemLinkage::buildIndirectDispatch(TR::Node *callNode)
    {
    TR::StackMemoryRegion stackMemoryRegion(*comp()->trMemory());
@@ -99,7 +441,7 @@ TR::Register *TR::X86SystemLinkage::buildIndirectDispatch(TR::Node *callNode)
    TR::X86CallSite site(callNode, this);
 
    // buildCallArgs.
-   site.setArgSize(buildArgs(site.getCallNode(), site.getPreConditionsUnderConstruction()));
+   site.setArgSize(buildVirtualArgs(site.getCallNode(), site.getPreConditionsUnderConstruction()));
    
    bool skipVFTmaskInstruction = false;
    if (callNode->getSymbol()->castToMethodSymbol()->firstArgumentIsReceiver())
@@ -155,7 +497,7 @@ TR::Register *TR::X86SystemLinkage::buildIndirectDispatch(TR::Node *callNode)
       virtualThunk = TR::Compiler->getVirtualDispatchThunk(method);
 
       if (!virtualThunk)
-	virtualThunk = TR::Compiler->setVirtualDispatchThunk(method, generateVirtualIndirectThunk(callNode));
+	 virtualThunk = TR::Compiler->setVirtualDispatchThunk(method, generateVirtualIndirectThunk(callNode));
       }
 
    site.setThunkAddress((uint8_t *)virtualThunk);
@@ -425,7 +767,6 @@ TR::Register *TR::X86SystemLinkage::buildCallPostconditions(TR::X86CallSite &sit
    return returnRegister;
    }
 
-
 void TR::X86SystemLinkage::buildVPIC(TR::X86CallSite &site, TR::LabelSymbol *entryLabel, TR::LabelSymbol *doneLabel)
    {
      //   TR_J9VMBase *fej9 = (TR_J9VMBase *)(fe());
@@ -442,6 +783,7 @@ void TR::X86SystemLinkage::buildVPIC(TR::X86CallSite &site, TR::LabelSymbol *ent
    if (numVPicSlots > 1)
       {
       TR::X86PICSlot emptyPicSlot = TR::X86PICSlot(VPicParameters.defaultSlotAddress, NULL);
+
       emptyPicSlot.setNeedsShortConditionalBranch();
       emptyPicSlot.setJumpOnNotEqual();
       emptyPicSlot.setNeedsPicSlotAlignment();
@@ -462,6 +804,7 @@ void TR::X86SystemLinkage::buildVPIC(TR::X86CallSite &site, TR::LabelSymbol *ent
    // (long branch to lookup snippet, fall through to doneLabel)
    //
    TR::X86PICSlot lastPicSlot = TR::X86PICSlot(VPicParameters.defaultSlotAddress, NULL, false);
+   
    lastPicSlot.setJumpOnNotEqual();
    lastPicSlot.setNeedsPicSlotAlignment();
    lastPicSlot.setNeedsLongConditionalBranch();
@@ -491,7 +834,7 @@ void TR::X86SystemLinkage::buildVPIC(TR::X86CallSite &site, TR::LabelSymbol *ent
 //      cg());
 //
 //   snippet->gcMap().setGCRegisterMask(site.getPreservedRegisterMask());
-//   cg()->addSnippet(snippet);
+   cg()->addSnippet(snippet);
 
    cg()->incPicSlotCountBy(VPicParameters.defaultNumberOfSlots);
    cg()->reserveNTrampolines(VPicParameters.defaultNumberOfSlots);
