@@ -834,7 +834,7 @@ void TR::X86SystemLinkage::buildVPIC(TR::X86CallSite &site, TR::LabelSymbol *ent
 //      cg());
 //
 //   snippet->gcMap().setGCRegisterMask(site.getPreservedRegisterMask());
-   cg()->addSnippet(snippet);
+//   cg()->addSnippet(snippet);
 
    cg()->incPicSlotCountBy(VPicParameters.defaultNumberOfSlots);
    cg()->reserveNTrampolines(VPicParameters.defaultNumberOfSlots);

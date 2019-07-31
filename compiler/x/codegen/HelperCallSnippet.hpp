@@ -33,73 +33,73 @@ namespace TR { class SymbolReference; }
 
 namespace TR {
 
-class X86PicDataSnippet : public TR::Snippet
-   {
-   TR::SymbolReference *_methodSymRef;
-   TR::SymbolReference *_dispatchSymRef;
-   TR::Instruction     *_slotPatchInstruction;
-   TR::Instruction     *_startOfPicInstruction;
-   TR::LabelSymbol      *_doneLabel;
-   uint8_t            *_thunkAddress;
-   int32_t             _numberOfSlots;
-   bool                _isInterface;
-   bool                _hasJ2IThunkInPicData;
-
-   public:
-
-   X86PicDataSnippet(
-      int32_t              numberOfSlots,
-      TR::Instruction      *startOfPicInstruction,
-      TR::LabelSymbol       *snippetLabel,
-      TR::LabelSymbol       *doneLabel,
-      TR::SymbolReference  *methodSymRef,
-      TR::Instruction      *slotPatchInstruction,
-      uint8_t             *thunkAddress,
-      bool                 isInterface,
-      TR::CodeGenerator *cg) :
-         TR::Snippet(cg, NULL, snippetLabel, true),
-         _numberOfSlots(numberOfSlots),
-         _startOfPicInstruction(startOfPicInstruction),
-         _methodSymRef(methodSymRef),
-         _doneLabel(doneLabel),
-         _slotPatchInstruction(slotPatchInstruction),
-         _isInterface(isInterface),
-         _dispatchSymRef(NULL),
-         _thunkAddress(thunkAddress),
-         _hasJ2IThunkInPicData(shouldEmitJ2IThunkPointer())
-      {}
-
-   bool isInterface()         {return _isInterface;}
-   int32_t getNumberOfSlots() {return _numberOfSlots;}
-   bool hasJ2IThunkInPicData() {return _hasJ2IThunkInPicData;}
-
-   TR::SymbolReference *getDispatchSymRef() {return _dispatchSymRef;}
-   TR::SymbolReference *getMethodSymRef() {return _methodSymRef;}
-
-   TR::LabelSymbol *getDoneLabel() {return _doneLabel;}
-
-   bool forceUnresolvedDispatch()
-      {
-      return true; //((TR_J9VMBase*)(cg()->fe()))->forceUnresolvedDispatch();
-      }
-
-   bool unresolvedDispatch()
-      {
-      return _methodSymRef->isUnresolved() || forceUnresolvedDispatch();
-      }
-
-   uint8_t *encodeConstantPoolInfo(uint8_t *cursor);
-   uint8_t *encodeJ2IThunkPointer(uint8_t *cursor);
-
-   virtual Kind getKind() { return (_isInterface ? IsIPicData : IsVPicData); }
-
-   virtual uint8_t *emitSnippetBody();
-
-   virtual uint32_t getLength(int32_t estimatedSnippetStart);
-
-   private:
-   bool shouldEmitJ2IThunkPointer();
-   };
+//class X86PicDataSnippet : public TR::Snippet
+//   {
+//   TR::SymbolReference *_methodSymRef;
+//   TR::SymbolReference *_dispatchSymRef;
+//   TR::Instruction     *_slotPatchInstruction;
+//   TR::Instruction     *_startOfPicInstruction;
+//   TR::LabelSymbol      *_doneLabel;
+//   uint8_t            *_thunkAddress;
+//   int32_t             _numberOfSlots;
+//   bool                _isInterface;
+//   bool                _hasJ2IThunkInPicData;
+//
+//   public:
+//
+//   X86PicDataSnippet(
+//      int32_t              numberOfSlots,
+//      TR::Instruction      *startOfPicInstruction,
+//      TR::LabelSymbol       *snippetLabel,
+//      TR::LabelSymbol       *doneLabel,
+//      TR::SymbolReference  *methodSymRef,
+//      TR::Instruction      *slotPatchInstruction,
+//      uint8_t             *thunkAddress,
+//      bool                 isInterface,
+//      TR::CodeGenerator *cg) :
+//         TR::Snippet(cg, NULL, snippetLabel, true),
+//         _numberOfSlots(numberOfSlots),
+//         _startOfPicInstruction(startOfPicInstruction),
+//         _methodSymRef(methodSymRef),
+//         _doneLabel(doneLabel),
+//         _slotPatchInstruction(slotPatchInstruction),
+//         _isInterface(isInterface),
+//         _dispatchSymRef(NULL),
+//         _thunkAddress(thunkAddress),
+//         _hasJ2IThunkInPicData(shouldEmitJ2IThunkPointer())
+//      {}
+//
+//   bool isInterface()         {return _isInterface;}
+//   int32_t getNumberOfSlots() {return _numberOfSlots;}
+//   bool hasJ2IThunkInPicData() {return _hasJ2IThunkInPicData;}
+//
+//   TR::SymbolReference *getDispatchSymRef() {return _dispatchSymRef;}
+//   TR::SymbolReference *getMethodSymRef() {return _methodSymRef;}
+//
+//   TR::LabelSymbol *getDoneLabel() {return _doneLabel;}
+//
+//   bool forceUnresolvedDispatch()
+//      {
+//      return true; //((TR_J9VMBase*)(cg()->fe()))->forceUnresolvedDispatch();
+//      }
+//
+//   bool unresolvedDispatch()
+//      {
+//      return _methodSymRef->isUnresolved() || forceUnresolvedDispatch();
+//      }
+//
+//   uint8_t *encodeConstantPoolInfo(uint8_t *cursor);
+//   uint8_t *encodeJ2IThunkPointer(uint8_t *cursor);
+//
+//   virtual Kind getKind() { return (_isInterface ? IsIPicData : IsVPicData); }
+//
+//   virtual uint8_t *emitSnippetBody();
+//
+//   virtual uint32_t getLength(int32_t estimatedSnippetStart);
+//
+//   private:
+//   bool shouldEmitJ2IThunkPointer();
+//   };
   
 class X86HelperCallSnippet : public TR::X86RestartSnippet
    {
