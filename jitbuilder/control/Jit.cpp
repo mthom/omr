@@ -124,11 +124,12 @@ bool storeCodeEntry(const char *methodName, void *codeLocation)
    return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
    }
 
-bool initializeSharedCache(TR::RawAllocator raw) {  
+bool initializeAOT(TR::RawAllocator raw, TR::CodeCacheManager* codeCacheManager) {  
    AotAdapter = new TR::AotAdapter();
-   AotAdapter->initializeAOTClasses(raw);
+   AotAdapter->initializeAOTClasses(raw,codeCacheManager);
    cache = AotAdapter->sc();
    reloRuntime = AotAdapter->rr();
+   TR::comp()->setReloRuntime(reloRuntime);
    return AotAdapter->sc();
 }
 
@@ -226,12 +227,13 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
-   initializeSharedCache(rawAllocator);
+
    
    if (commonJitInit(fe, options) < 0)
      return false;
 
    initializeCodeCache(fe.codeCacheManager());
+   initializeAOT(rawAllocator,&(fe.codeCacheManager()));
 
    return true;
    }

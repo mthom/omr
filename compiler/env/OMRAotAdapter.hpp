@@ -23,6 +23,7 @@
 #define OMR_AOTADAPTER_INCL
 #include "env/RawAllocator.hpp"
 #include "infra/Annotations.hpp"
+#include "runtime/CodeCacheManager.hpp"
 #ifndef OMR_AOTADAPTER_CONNECTOR
 #define OMR_AOTADAPTER_CONNECTOR
 namespace OMR { class AotAdapter; }
@@ -42,14 +43,14 @@ class OMR_EXTENSIBLE AotAdapter{
 public:
     AotAdapter(){};
     TR::AotAdapter* self();
-    void initializeAOTClasses(TR::RawAllocator allocator);
+    void initializeAOTClasses(TR::RawAllocator allocator, TR::CodeCacheManager* CodeCacheManager);
     TR::SharedCache* sc() {return _sharedCache;}
     TR::SharedCacheRelocationRuntime* rr() {return _reloRuntime;}
-    TR::CodeCache* cc() {return _codeCache;}
+     TR::CodeCacheManager* cc() {return _codeCacheManager;}
  private:
     TR::SharedCache* _sharedCache;
     TR::SharedCacheRelocationRuntime* _reloRuntime;
-    TR::CodeCache*    _codeCache;
+    TR::CodeCacheManager*    _codeCacheManager;
     TR::CompilerEnv* _compiler;
 };
 }

@@ -121,13 +121,14 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   // memcpy(_codeUpdatePtr, codeLocation, codeLength);
   // _codeUpdatePtr += codeLength;
 
-  // _codeEntries[methodName] = entryLocation;
+  _codeEntries[methodName] = entryLocation;
 
   // // now write the relocation record to the cache.
   memcpy(_codeUpdatePtr,hdr,sizeof(AOTMethodHeader));
+  _codeUpdatePtr += sizeof(AOTMethodHeader);
   memcpy(_codeUpdatePtr,(hdr->compiledCodeStart),hdr->compiledCodeSize);
   _codeUpdatePtr += hdr->compiledCodeSize;
-   memcpy(_codeUpdatePtr,reinterpret_cast<uint8_t*>(hdr->relocationsStart),hdr->relocationsSize);
+  memcpy(_codeUpdatePtr,reinterpret_cast<uint8_t*>(hdr->relocationsStart),hdr->relocationsSize);
   _codeUpdatePtr += hdr->relocationsSize;
    
   // memcpy(_codeUpdatePtr,_relocationData,relocationRecordSize);

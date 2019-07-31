@@ -22,7 +22,7 @@
 #include "runtime/RelocationRuntime.hpp"
 #include "runtime/RelocationTarget.hpp"
 
-TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationRuntimeConnector(jitCfg)
+TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg, TR::CodeCacheManager * ccm):OMR::RelocationRuntimeConnector(jitCfg,ccm)
    {
    _method = NULL;
    _jitConfig = jitCfg;
@@ -43,12 +43,12 @@ TR::RelocationRuntime::RelocationRuntime(TR::JitConfig *jitCfg):OMR::RelocationR
    }
 
 
-const char TR::SharedCacheRelocationRuntime::aotHeaderKey[] = "J9AOTHeader";
+const char OMR::SharedCacheRelocationRuntime::aotHeaderKey[] = "J9AOTHeader";
 // When we write out the header, we don't seem to include the \0 character at the end of the string.
-const UDATA TR::SharedCacheRelocationRuntime::aotHeaderKeyLength = sizeof(TR::SharedCacheRelocationRuntime::aotHeaderKey) - 1;
+const UDATA OMR::SharedCacheRelocationRuntime::aotHeaderKeyLength = sizeof(TR::SharedCacheRelocationRuntime::aotHeaderKey) - 1;
 
 U_8 *
-TR::SharedCacheRelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize)
+OMR::SharedCacheRelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize)
    {
    // TR_FrontEnd *fej9 = _fe;
    // //TR::CodeCacheManager *manager = TR::CodeCacheManager::instance();
@@ -94,7 +94,7 @@ TR::SharedCacheRelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize)
 // TODO: why do shared cache and JXE paths manage alignment differently?
 //       main reason why there are two implementations here
 uint8_t *
-TR::SharedCacheRelocationRuntime::allocateSpaceInDataCache(uintptr_t metaDataSize,
+OMR::SharedCacheRelocationRuntime::allocateSpaceInDataCache(uintptr_t metaDataSize,
                                                           uintptr_t type)
    {
    // Ensure data cache is aligned
@@ -107,7 +107,7 @@ TR::SharedCacheRelocationRuntime::allocateSpaceInDataCache(uintptr_t metaDataSiz
 
 
 void
-TR::SharedCacheRelocationRuntime::initializeAotRuntimeInfo()
+OMR::SharedCacheRelocationRuntime::initializeAotRuntimeInfo()
    {
       //TODO implement me
       return;
@@ -115,7 +115,7 @@ TR::SharedCacheRelocationRuntime::initializeAotRuntimeInfo()
 
 
 void
-TR::SharedCacheRelocationRuntime::initializeCacheDeltas()
+OMR::SharedCacheRelocationRuntime::initializeCacheDeltas()
    {
    _dataCacheDelta = 0;
    _codeCacheDelta = 0;
@@ -125,7 +125,7 @@ TR::SharedCacheRelocationRuntime::initializeCacheDeltas()
 
 
 void
-TR::SharedCacheRelocationRuntime::incompatibleCache(U_32 module_name, U_32 reason, char *assumeMessage)
+OMR::SharedCacheRelocationRuntime::incompatibleCache(U_32 module_name, U_32 reason, char *assumeMessage)
    {
       //TODO fill me
    }
@@ -133,7 +133,7 @@ TR::SharedCacheRelocationRuntime::incompatibleCache(U_32 module_name, U_32 reaso
 
 
 void
-TR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHeader *hdrInCache, intptr_t featureFlags)
+OMR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHeader *hdrInCache, intptr_t featureFlags)
    {
       //Checks may follow here
    }
@@ -235,7 +235,7 @@ TR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHe
 //    }
 
 uintptr_t
-TR::SharedCacheRelocationRuntime::generateFeatureFlags(TR_FrontEnd *fe)
+OMR::SharedCacheRelocationRuntime::generateFeatureFlags(TR_FrontEnd *fe)
    {
 //    uintptr_t featureFlags = 0;
 //    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
@@ -280,19 +280,19 @@ TR::SharedCacheRelocationRuntime::generateFeatureFlags(TR_FrontEnd *fe)
 //    return featureFlags;
    }
 void *
-TR::SharedCacheRelocationRuntime::methodAddress(char *methodName)
+OMR::SharedCacheRelocationRuntime::methodAddress(char *methodName)
    {
    std::string method(const_cast<const char *>(methodName));
    return _symbolLocation[method];
    }
 
 TR::RelocationRuntime *
-TR::SharedCacheRelocationRuntime::self()
+OMR::SharedCacheRelocationRuntime::self()
    {
-   return static_cast<TR::RelocationRuntime*> (this);
+   return reinterpret_cast<TR::RelocationRuntime*> (this);
    }
 void
-TR::SharedCacheRelocationRuntime::registerLoadedMethod(const char *&methodName, void *&methodAddress)
+OMR::SharedCacheRelocationRuntime::registerLoadedMethod(const char *&methodName, void *&methodAddress)
    {
    std::string method(methodName);
    _symbolLocation[methodName] = methodAddress;

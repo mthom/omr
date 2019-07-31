@@ -447,6 +447,10 @@ compileMethodFromDetails(
                                   startPC,
                                   translationTime/1000,
                                   translationTime%1000);
+         if (compiler.compileRelocatableCode()){
+            // compiler.getSharedCache()->store
+            
+         }
          }
       else /* of rc == COMPILATION_SUCCEEDED */
          {

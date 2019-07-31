@@ -41,7 +41,9 @@ class TR_Debug;
 namespace TR { class ExternalRelocation; }
 namespace TR { class IteratedExternalRelocation; }
 namespace TR { class AheadOfTimeCompile; }
-namespace TR { class RelocationRecord; }
+namespace TR { class RelocationRecord; 
+class RelocationRuntime;
+}
 namespace OMR
 {
 
@@ -61,8 +63,8 @@ class OMR_EXTENSIBLE AheadOfTimeCompile
 
    TR::Compilation * comp()     { return _comp; }
    TR_Debug *   getDebug();
-   TR_Memory *      trMemory();
-
+   TR_Memory *      trMemory() ;
+   TR::RelocationRuntime* reloRuntime(){ return _reloRuntime;}
    TR_LinkHead<TR::IteratedExternalRelocation>& getAOTRelocationTargets() {return _aotRelocationTargets;}
 
    uint32_t getSizeOfAOTRelocations()             {return _sizeOfAOTRelocations;}
@@ -97,14 +99,16 @@ class OMR_EXTENSIBLE AheadOfTimeCompile
     * Do project-specific processing of an AOT relocation just before combining
     * it into an IteratedExternalRelocation.
     */
+
    static void interceptAOTRelocation(TR::ExternalRelocation *relocation) { }
    static const size_t SIZEPOINTER = sizeof(uintptrj_t);
    private:
-   TR::Compilation *                           _comp;
-   TR_LinkHead<TR::IteratedExternalRelocation> _aotRelocationTargets;
-   uint32_t                                   _sizeOfAOTRelocations;
-   uint8_t                                   *_relocationData;
-   uint32_t                                  *_aotRelocationKindToHeaderSizeMap;
+   TR::Compilation *                            _comp;
+   TR_LinkHead<TR::IteratedExternalRelocation>  _aotRelocationTargets;
+   uint32_t                                     _sizeOfAOTRelocations;
+   uint8_t                                      *_relocationData;
+   uint32_t                                     *_aotRelocationKindToHeaderSizeMap;
+   TR::RelocationRuntime*                       _reloRuntime;
    };
 
 }

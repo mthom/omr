@@ -115,12 +115,13 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
     if (self()->getSizeOfAOTRelocations() != 0)
       {
       uint8_t *relocationDataCursor = self()->setRelocationData(fej9->allocateRelocationData(self()->comp(), self()->getSizeOfAOTRelocations() + sizeof(uintptrj_t )));
+      uint8_t * copy = relocationDataCursor;
       TR::Compilation* comp = TR::comp();
       TR::CodeGenerator* cg = comp->cg();
       // set up the size for the region
       TR::RelocationRecordBinaryTemplate* groups = reinterpret_cast<
-       TR::RelocationRecordBinaryTemplate*> (relocationDataCursor);
-      TR::RelocationRuntime *reloRuntime =new (cg->trHeapMemory()) TR::RelocationRuntime(NULL);
+      TR::RelocationRecordBinaryTemplate*> (relocationDataCursor);
+      TR::RelocationRuntime *reloRuntime =comp->reloRuntime();
       TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
       OMR::RelocationRecordGroup reloGroup(groups);
       reloGroup.setSize(reloTarget,self()->getSizeOfAOTRelocations()+SIZEPOINTER);
@@ -130,7 +131,7 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
       uint8_t* codeLocation = (comp->cg()->getCodeStart());
       uint32_t codeLength = cg->getCodeLength();
       // reloRuntime->createMethodHeader(codeLocation,&groups,,self()->getSizeOfAOTRelocations()+SIZEPOINTER);
-      sharedCache->setRelocationData(reinterpret_cast<uint8_t*>(reloRuntime->createMethodHeader(codeLocation,codeLength,relocationDataCursor,self()->getSizeOfAOTRelocations()+SIZEPOINTER)));
+      sharedCache->setRelocationData(reinterpret_cast<uint8_t*>(reloRuntime->createMethodHeader(codeLocation,codeLength,copy,self()->getSizeOfAOTRelocations()+SIZEPOINTER)));
       // set up pointers for each iterated relocation and initialize header
       TR::IteratedExternalRelocation *s;
       for (s = self()->getAOTRelocationTargets().getFirst();
@@ -157,9 +158,9 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    uint8_t flags = 0;
    TR_ResolvedMethod *resolvedMethod;
 
-   TR::RelocationRuntime *reloRuntime =new (cg->trHeapMemory()) TR::RelocationRuntime(NULL);
+   TR::RelocationRuntime *reloRuntime =TR::comp()->reloRuntime();
    TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
-         TR::SharedCache* sharedCache = TR::Compiler->cache;
+   TR::SharedCache* sharedCache = TR::Compiler->cache;
    uint8_t * aotMethodCodeStart = (uint8_t *) comp->getRelocatableMethodCodeStart();
    // size of relocation goes first in all types
    *(uint16_t *) cursor = relocation->getSizeOfRelocationData();

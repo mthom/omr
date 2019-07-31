@@ -58,6 +58,7 @@ namespace TR {
    class RelocationTarget;
    class RelocationRuntimeLogger;
    class RelocationRecordBinaryTemplate;
+   class CodeCacheManager;
 // class Resolved method will probably need to be returned back
 // when the generic object model is here, since resolved method is one of 
 // classes that could be used for abstraction
@@ -150,7 +151,7 @@ class RelocationRuntime {
    public:
       TR_ALLOC(TR_Memory::Relocation)
       void * operator new(size_t, TR::JitConfig *);
-      RelocationRuntime(TR::JitConfig *jitCfg);
+      RelocationRuntime(TR::JitConfig *jitCfg,TR::CodeCacheManager* manager);
       TR::RelocationRuntime* self();
       TR::RelocationTarget *reloTarget()                           { return _reloTarget; }
       TR::AOTStats *aotStats()                                     { return _aotStats; }
@@ -207,6 +208,7 @@ class RelocationRuntime {
                                                          );
 
       // virtual bool storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
+      virtual bool storeAOTHeader();
       // virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
       // virtual bool validateAOTHeader(OMR_VM *jomrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
 
@@ -271,7 +273,7 @@ class RelocationRuntime {
 #endif
 
    private:
-      virtual uint8_t * allocateSpaceInCodeCache(UDATA codeSize)                           { return NULL; }
+      virtual uint8_t * allocateSpaceInCodeCache(UDATA codeSize)  ;
 
       virtual uint8_t * allocateSpaceInDataCache(UDATA metaDataSize,
                                                  UDATA type)                               { return NULL; }
@@ -314,6 +316,7 @@ class RelocationRuntime {
       TR::JitConfig *_jitConfig;
       OMR_VM *_omrVM;
       TR_FrontEnd *_fe;
+      TR::CodeCacheManager* _manager;
       TR_Memory *_trMemory;
       TR::CompilationInfo * _compInfo;
       TR::RelocationRuntimeLogger *_reloLogger;
@@ -374,11 +377,12 @@ namespace OMR
 class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
 public:
       TR_ALLOC(TR_Memory::Relocation);
+      TR::RelocationRuntime* self();
       void * operator new(size_t, TR::JitConfig *);
-      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg) : OMR::RelocationRuntime(jitCfg) {
+      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg,TR::CodeCacheManager *ccm) : OMR::RelocationRuntime(jitCfg,ccm) {
          _sharedCacheIsFull=false;
          }
-
+      virtual bool storeAOTHeader();
    //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
    //    virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
    //   virtual bool validateAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
@@ -388,7 +392,7 @@ public:
   //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
 
       //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
-      virtual void *methodAddress(char *&methodName);
+      virtual void *methodAddress(char *methodName);
       virtual void registerLoadedMethod(const char *&methodName,void *&methodAddress);
 
 private:
@@ -412,5 +416,5 @@ private:
       static const UDATA aotHeaderKeyLength;
       std::map<std::string,void *> _symbolLocation;
 };
-} // end namespaceTR
+} // end namespace OMR
 #endif   // RELOCATION_RUNTIME_INCL

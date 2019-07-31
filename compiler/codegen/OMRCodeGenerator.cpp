@@ -1913,16 +1913,16 @@ OMR::CodeGenerator::processRelocations()
       ++iterator;
       }
    //TR_ASSERTC(missedSite == -1, comp(), "Site %d is missing relocation\n", missedSite);
-   if (1){
+   if (comp()->compileRelocatableCode()){
          //This is to process aot relocations
       // Call the platform specific processing of relocations
       auto theAOT = self()->getAheadOfTimeCompile();
       theAOT->processRelocations();
       int i = 0 ;
-         for (auto aotIterator = self()->getExternalRelocationList().begin(); aotIterator != self()->getExternalRelocationList().end(); ++aotIterator)
+      for (auto aotIterator = self()->getExternalRelocationList().begin(); aotIterator != self()->getExternalRelocationList().end(); ++aotIterator)
       {
       // Traverse the AOT/external labels
-	  (*aotIterator)->apply(self());
+	   (*aotIterator)->apply(self());
       }
    }
    }
