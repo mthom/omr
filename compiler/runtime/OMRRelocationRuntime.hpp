@@ -194,7 +194,7 @@ class RelocationRuntime {
       TR_ResolvedMethod *currentResolvedMethod()                  { return _currentResolvedMethod; }
 
       // current main entry point
-      OMRJITExceptionTable *prepareRelocateAOTCodeAndData(
+      void *prepareRelocateAOTCodeAndData(
                                                          //  OMR_VMThread* vmThread,
                                                          // TR_FrontEnd *fe,
                                                          // TR::CodeCache *aotMCCRuntimeCodeCache,

@@ -23,9 +23,9 @@
 #include "env/CompilerEnv.hpp"
 #include "runtime/RelocationRuntime.hpp"
 
- void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator rawAllocator,TR::CodeCacheManager* cc){
+ void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::CodeCacheManager* cc){
   _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
-  _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL,cc);
+  _reloRuntime =  reinterpret_cast<TR::RelocationRuntime*>(new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL,cc));
   _codeCacheManager = cc;
 
   TR::Compiler->cache = _sharedCache;

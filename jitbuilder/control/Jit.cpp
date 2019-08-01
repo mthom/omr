@@ -124,39 +124,34 @@ bool storeCodeEntry(const char *methodName, void *codeLocation)
    return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
    }
 
-bool initializeAOT(TR::RawAllocator raw, TR::CodeCacheManager* codeCacheManager) {  
+bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager) {  
    AotAdapter = new TR::AotAdapter();
    AotAdapter->initializeAOTClasses(raw,codeCacheManager);
    cache = AotAdapter->sc();
-   reloRuntime = AotAdapter->rr();
+   reloRuntime = (TR::SharedCacheRelocationRuntime*)AotAdapter->rr();
    return AotAdapter->sc();
 }
 
 void *getCodeEntry(const char *methodName){
-  TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
-  U_32 codeLength = 0;
+//   TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
+//   U_32 codeLength = 0;
 
-  uint8_t *relocationHeader = 0;
-  void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-  if(!sharedCacheMethod) {
-    return nullptr;
-  }
-  int32_t numReserved;
-  static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
-  if(!codeCache){
-    return nullptr;
-  }
-  uint8_t * coldCode = nullptr;
-  void * warmCode =  manager->allocateCodeMemory(codeLength, 0, &codeCache, &coldCode, false);
-  if(!warmCode){
-    codeCache->unreserve();
-    return nullptr;
-  }
-  memcpy(warmCode,sharedCacheMethod,codeLength);
-//size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
-//if(relocationSize){
-//   reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
-//}
+//   uint8_t *relocationHeader = 0;
+//   void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+//   if(!sharedCacheMethod) {
+   //  return nullptr;
+//   }
+//   int32_t numReserved;
+//   static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
+//   if(!codeCache){
+   //  return nullptr;
+   U_32 codeLength = 0 ;
+   uint8_t* somthing = 0;
+   WASMCacheEntry* t = AotAdapter->sc()->loadCodeEntry(methodName,codeLength,somthing);
+   t=t+sizeof(WASMCacheEntry);
+    void* warmCode  = AotAdapter->rr()->prepareRelocateAOTCodeAndData(reinterpret_cast<TR::AOTMethodHeader*>(t) );
+  
+  
 //cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
   reloRuntime->registerLoadedMethod(methodName,warmCode);
   return warmCode;
@@ -213,12 +208,14 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
    omr_vmthread_alloc(omrvm,&vmThread);
 //   omr_vmthread_init(vmThread);
    vmThread->_vm = omrvm;
+
 //   omr_vmthread_getCurrent(omrvm);
 //   omr_vmthread_firstAttach(omrvm,&vmThread);
 // omrshr_init(omrvm,0,nullptr);
    //omrshr_storeCompiledMethod(vmThread, 
    TR::Compiler->initialize();
    TR::Compiler->vm._vmThread = vmThread;
+
    // --------------------------------------------------------------------------
    static JitBuilder::FrontEnd fe;
    auto jitConfig = fe.jitConfig();
@@ -232,8 +229,8 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
      return false;
 
    initializeCodeCache(fe.codeCacheManager());
-   initializeAOT(rawAllocator,&(fe.codeCacheManager()));
-
+   initializeAOT(&rawAllocator,&(fe.codeCacheManager()));
+   TR::Compiler->aotAdapter = AotAdapter;
    return true;
    }
 
@@ -276,6 +273,7 @@ internal_initializeJit()
 int32_t
 internal_compileMethodBuilder(TR::MethodBuilder *m, void **entry)
    {
+ 
    auto rc = m->Compile(entry);
 
 #if defined(J9ZOS390)

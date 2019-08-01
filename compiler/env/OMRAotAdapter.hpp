@@ -35,6 +35,7 @@ namespace TR
     class SharedCacheRelocationRuntime;
     class SharedCache;
     class CodeCache;
+    class RelocationRuntime;
     class CompilerEnv;
     }
 namespace OMR
@@ -43,13 +44,13 @@ class OMR_EXTENSIBLE AotAdapter{
 public:
     AotAdapter(){};
     TR::AotAdapter* self();
-    void initializeAOTClasses(TR::RawAllocator allocator, TR::CodeCacheManager* CodeCacheManager);
+    void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
     TR::SharedCache* sc() {return _sharedCache;}
-    TR::SharedCacheRelocationRuntime* rr() {return _reloRuntime;}
+    TR::RelocationRuntime* rr() {return _reloRuntime;}
      TR::CodeCacheManager* cc() {return _codeCacheManager;}
  private:
     TR::SharedCache* _sharedCache;
-    TR::SharedCacheRelocationRuntime* _reloRuntime;
+    TR::RelocationRuntime* _reloRuntime;
     TR::CodeCacheManager*    _codeCacheManager;
     TR::CompilerEnv* _compiler;
 };

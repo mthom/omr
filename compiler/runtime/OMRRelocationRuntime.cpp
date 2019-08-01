@@ -116,6 +116,7 @@ OMR::RelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize){
    static TR::CodeCache *codeCache = _manager->reserveCodeCache(false, 0, 0, &numReserved);
    uint8_t * coldCode = nullptr;
    uint8_t * code =  _manager->allocateCodeMemory(codeSize, 0, &codeCache, &coldCode, false);
+   _codeCache = codeCache;
    return code;
 }
 void
@@ -134,7 +135,7 @@ OMR::RelocationRuntime::relocateAOTCodeAndData(
 }
 
 
-OMRJITExceptionTable *
+void *
 OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
                      
                         // OMR_VMThread* vmThread,
@@ -223,10 +224,9 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
       initializeAotRuntimeInfo();
       relocateAOTCodeAndData(newCodeStart);
       }
-
-
-   if (haveReservedCodeCache())
-      codeCache()->unreserve();
+   return newCodeStart;
+   // if (haveReservedCodeCache())
+   //    codeCache()->unreserve();
    // return _exceptionTable;
    // }
 }

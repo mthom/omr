@@ -43,7 +43,7 @@ namespace OMR { typedef OMR::CompilerEnv CompilerEnvConnector; }
 #include "env/VMEnv.hpp"
 #include "env/VMMethodEnv.hpp"
 #include "env/SharedCache.hpp"
-
+#include "env/AotAdapter.hpp"
 namespace TR { class CompilerEnv; }
 
 
@@ -100,6 +100,10 @@ public:
 
    TR::SharedCache* cache;
    
+   // AOT object, used for AOT
+   //
+   TR::AotAdapter* aotAdapter;
+
    bool isInitialized() { return _initialized; }
 
    // --------------------------------------------------------------------------
@@ -111,6 +115,9 @@ public:
    //
    void initialize();
 
+   // Set the AOT object
+   //
+   void setAOTAdapter (TR::AotAdapter* ao) { aotAdapter = ao;}
    TR::PersistentAllocator &persistentAllocator() { return _persistentAllocator; }
 
 protected:

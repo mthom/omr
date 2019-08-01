@@ -348,7 +348,10 @@ compileMethodFromDetails(
    TR_ASSERT(TR::comp() == NULL, "there seems to be a current TLS TR::Compilation object %p for this thread. At this point there should be no current TR::Compilation object", TR::comp());
    TR::Compilation compiler(0, TR::Compiler->vm._vmThread, &fe, &compilee, request, options, dispatchRegion, &trMemory, plan);
    TR_ASSERT(TR::comp() == &compiler, "the TLS TR::Compilation object %p for this thread does not match the one %p just created.", TR::comp(), &compiler);
-
+   if (compiler.compileRelocatableCode())
+      {
+      compiler.setReloRuntime(TR::Compiler->aotAdapter->rr());
+      }
    try
       {
       //fprintf(stderr,"loading JIT debug\n");
@@ -449,6 +452,7 @@ compileMethodFromDetails(
                                   translationTime%1000);
          if (compiler.compileRelocatableCode()){
             // compiler.getSharedCache()->store
+            TR::Compiler->aotAdapter->rr()->storeRelocationData(compiler.getAotMethodDataStart());
             
          }
          }
