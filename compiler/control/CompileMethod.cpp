@@ -451,7 +451,6 @@ compileMethodFromDetails(
                                   translationTime/1000,
                                   translationTime%1000);
          if (compiler.compileRelocatableCode()){
-            // compiler.getSharedCache()->store
             TR::Compiler->aotAdapter->rr()->storeRelocationData(compiler.getAotMethodDataStart());
             
          }
