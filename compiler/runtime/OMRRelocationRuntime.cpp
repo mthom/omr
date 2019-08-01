@@ -89,6 +89,11 @@ OMR::RelocationRuntime::RelocationRuntime(TR::JitConfig* t, TR::CodeCacheManager
       }
 }
 
+TR::RelocationRuntime * OMR::SharedCacheRelocationRuntime::self()
+   {
+   return reinterpret_cast<TR::RelocationRuntime*>(this);
+   }
+
 TR::RelocationRuntime * OMR::RelocationRuntime::self()
    {
    return static_cast<TR::RelocationRuntime*>(this);

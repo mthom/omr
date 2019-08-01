@@ -487,7 +487,7 @@ OMR::RelocationRecordDataAddress::offset(TR::RelocationTarget *reloTarget)
 int32_t 
 OMR::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
    {
-   TR::SharedCacheRelocationRuntime *rr = static_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
+   TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
    std::string name = "gl_"+std::to_string(reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset);
    reloTarget->storeAddress((uint8_t*)rr->methodAddress(const_cast<char*>(name.c_str())), reloLocation);
    }

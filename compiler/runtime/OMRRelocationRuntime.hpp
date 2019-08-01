@@ -397,7 +397,6 @@ public:
 
 private:
       uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
-      virtual uint8_t * allocateSpaceInCodeCache(UDATA codeSize);
       virtual uint8_t * allocateSpaceInDataCache(UDATA metaDataSize, UDATA type);
       virtual void initializeAotRuntimeInfo();
       virtual void initializeCacheDeltas();

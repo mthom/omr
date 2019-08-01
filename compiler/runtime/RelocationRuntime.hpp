@@ -38,7 +38,7 @@ class OMR_EXTENSIBLE RelocationRuntime : public OMR::RelocationRuntimeConnector
 class OMR_EXTENSIBLE SharedCacheRelocationRuntime : public OMR::SharedCacheRelocationRuntimeConnector
    {
    public:
-   SharedCacheRelocationRuntime(JitConfig* jitConfig,TR::CodeCacheManager* ccm);
-};
+   SharedCacheRelocationRuntime(JitConfig* jitConfig,TR::CodeCacheManager* ccm):OMR::SharedCacheRelocationRuntimeConnector(jitConfig,ccm){};
+   };
 }
 #endif

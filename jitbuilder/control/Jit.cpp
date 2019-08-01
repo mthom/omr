@@ -129,7 +129,6 @@ bool initializeAOT(TR::RawAllocator raw, TR::CodeCacheManager* codeCacheManager)
    AotAdapter->initializeAOTClasses(raw,codeCacheManager);
    cache = AotAdapter->sc();
    reloRuntime = AotAdapter->rr();
-   TR::comp()->setReloRuntime(reloRuntime);
    return AotAdapter->sc();
 }
 
