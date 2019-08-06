@@ -501,3 +501,451 @@ int32_t TR::X86HelperCallSnippet::branchDisplacementToHelper(
 
    return (int32_t)(helperAddress - nextInstructionAddress);
    }
+
+//bool TR::X86PicDataSnippet::shouldEmitJ2IThunkPointer()
+//   {
+//     /*
+//   if (!TR::Compiler->target.is64Bit())
+//      return false; // no j2i thunks on 32-bit
+//
+//   if (!isInterface())
+//      return unresolvedDispatch(); // invokevirtual could be private
+//
+//   // invokeinterface
+//   if (forceUnresolvedDispatch())
+//      return true; // forced to assume it could be private/Object
+//
+//   // Since interface method symrefs are always unresolved, check to see
+//   // whether we know that it's a normal interface call. If we don't, then
+//   // it could be private/Object.
+//   uintptrj_t itableIndex = (uintptrj_t)-1;
+//   int32_t cpIndex = _methodSymRef->getCPIndex();
+//   TR_ResolvedMethod *owningMethod = _methodSymRef->getOwningMethod(comp());
+//   TR_OpaqueClassBlock *interfaceClass =
+//      owningMethod->getResolvedInterfaceMethod(cpIndex, &itableIndex);
+//   return interfaceClass == NULL;
+//     */
+//   return true;
+//   }
+
+//uint8_t *TR::X86PicDataSnippet::encodeConstantPoolInfo(uint8_t *cursor)
+//   {
+//   uintptrj_t cpAddr = (uintptrj_t)_methodSymRef->getOwningMethod(cg()->comp())->constantPool();
+//   *(uintptrj_t *)cursor = cpAddr;
+//
+//   uintptr_t inlinedSiteIndex = (uintptr_t)-1;
+//   if (_startOfPicInstruction->getNode() != NULL)
+//      inlinedSiteIndex = _startOfPicInstruction->getNode()->getInlinedSiteIndex();
+//
+//   if (_hasJ2IThunkInPicData)
+//      {
+//      TR_ASSERT(
+//         TR::Compiler->target.is64Bit(),
+//         "expecting a 64-bit target for thunk relocations");
+//
+//      auto info =
+//         (TR_RelocationRecordInformation *)comp()->trMemory()->allocateMemory(
+//            sizeof (TR_RelocationRecordInformation),
+//            heapAlloc);
+//
+//      int offsetToJ2IVirtualThunk = isInterface() ? 0x22 : 0x18;
+//
+//      info->data1 = cpAddr;
+//      info->data2 = inlinedSiteIndex;
+//      info->data3 = offsetToJ2IVirtualThunk;
+//
+//      cg()->addExternalRelocation(
+//         new (cg()->trHeapMemory()) TR::ExternalRelocation(
+//            cursor,
+//            (uint8_t *)info,
+//            NULL,
+//            TR_J2IVirtualThunkPointer,
+//            cg()),
+//         __FILE__,
+//         __LINE__,
+//         _startOfPicInstruction->getNode());
+//      }
+//   else if (_thunkAddress)
+//      {
+//      TR_ASSERT(TR::Compiler->target.is64Bit(), "expecting a 64-bit target for thunk relocations");
+//      cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,
+//                                                                             *(uint8_t **)cursor,
+//                                                                             (uint8_t *)inlinedSiteIndex,
+//                                                                             TR_Thunks, cg()),
+//                             __FILE__,
+//                             __LINE__,
+//                             _startOfPicInstruction->getNode());
+//      }
+//   else
+//      {
+//      cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,
+//                                                                                  (uint8_t *)cpAddr,
+//                                                                                   (uint8_t *)inlinedSiteIndex,
+//                                                                                   TR_ConstantPool,
+//                                                                                   cg()),
+//                             __FILE__,
+//                             __LINE__,
+//                             _startOfPicInstruction->getNode());
+//      }
+//
+//   // DD/DQ cpIndex
+//   //
+//   cursor += sizeof(uintptrj_t);
+//   *(uintptrj_t *)cursor = (uintptrj_t)_methodSymRef->getCPIndexForVM();
+//   cursor += sizeof(uintptrj_t);
+//
+//   return cursor;
+//   }
+//
+//uint8_t *TR::X86PicDataSnippet::encodeJ2IThunkPointer(uint8_t *cursor)
+//   {
+//   TR_ASSERT_FATAL(_hasJ2IThunkInPicData, "did not expect j2i thunk pointer");
+//   TR_ASSERT_FATAL(_thunkAddress != NULL, "null virtual j2i thunk");
+//
+//   // DD/DQ j2iThunk
+//   *(uintptrj_t *)cursor = (uintptrj_t)_thunkAddress;
+//   cursor += sizeof(uintptrj_t);
+//
+//   return cursor;
+//   }
+//
+//uint8_t *TR::X86PicDataSnippet::emitSnippetBody()
+//   {
+//   uint8_t *startOfSnippet = cg()->getBinaryBufferCursor();
+//
+//   uint8_t *cursor = startOfSnippet;
+//
+//   TR::X86SystemLinkage *x86Linkage = toX86PrivateLinkage(cg()->getLinkage());
+//
+//   int32_t disp32;
+//
+//   TR_RuntimeHelper resolveSlotHelper, populateSlotHelper;
+//   int32_t sizeofPicSlot;
+//   /*
+//   if (isInterface())
+//      {
+//      // IPIC
+//      //
+//      // Slow interface lookup dispatch.
+//      //
+//
+//      // Align the IPIC data to a pointer-sized boundary to ensure that the
+//      // interface class and itable offset are naturally aligned.
+//      uintptr_t offsetToIpicData = 10;
+//      uintptr_t unalignedIpicDataStart = (uintptr_t)cursor + offsetToIpicData;
+//      uintptr_t alignMask = sizeof (uintptrj_t) - 1;
+//      uintptr_t alignedIpicDataStart =
+//         (unalignedIpicDataStart + alignMask) & ~alignMask;
+//      cursor += alignedIpicDataStart - unalignedIpicDataStart;
+//
+//      getSnippetLabel()->setCodeLocation(cursor);
+//
+//      // Slow path lookup dispatch
+//      //
+//      _dispatchSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_X86IPicLookupDispatch, false, false, false);
+//
+//      *cursor++ = 0xe8;  // CALL
+//      disp32 = cg()->branchDisplacementToHelperOrTrampoline(cursor+4, _dispatchSymRef);
+//      *(int32_t *)cursor = disp32;
+//
+//      cg()->addExternalRelocation(new (cg()->trHeapMemory())
+//         TR::ExternalRelocation(cursor,
+//                                    (uint8_t *)_dispatchSymRef,
+//                                    TR_HelperAddress,
+//                                    cg()), __FILE__, __LINE__, _startOfPicInstruction->getNode());
+//      cursor += 4;
+//
+//      // Lookup dispatch needs its stack map here.
+//      //
+//      gcMap().registerStackMap(cursor, cg());
+//
+//      // Restart jump (always long for predictable size).
+//      //
+//      disp32 = _doneLabel->getCodeLocation() - (cursor + 5);
+//      *cursor++ = 0xe9;
+//      *(int32_t *)cursor = disp32;
+//      cursor += 4;
+//
+//      // DD/DQ constantPool address
+//      // DD/DQ cpIndex
+//      //
+//      if (unresolvedDispatch())
+//         {
+//         cursor = encodeConstantPoolInfo(cursor);
+//         }
+//      else
+//         {
+//         TR_ASSERT_FATAL(0, "Can't handle resolved IPICs here yet!");
+//         }
+//
+//      // Because the interface class and itable offset (immediately following)
+//      // are written at runtime and might be read concurrently by another
+//      // thread, they must be naturally aligned to guarantee that all accesses
+//      // to them are atomic.
+//      TR_ASSERT_FATAL(
+//         ((uintptr_t)cursor & (sizeof(uintptrj_t) - 1)) == 0,
+//         "interface class and itable offset IPIC data slots are unaligned");
+//
+//      // Reserve space for resolved interface class and itable offset.
+//      // These slots will be populated during interface class resolution.
+//      // The itable offset slot doubles as a direct J9Method pointer slot.
+//      //
+//      // DD/DQ  0x00000000
+//      // DD/DQ  0x00000000
+//      //
+//      *(uintptrj_t*)cursor = 0;
+//      cursor += sizeof(uintptrj_t);
+//      *(uintptrj_t*)cursor = 0;
+//      cursor += sizeof(uintptrj_t);
+//
+//      if (TR::Compiler->target.is64Bit())
+//         {
+//         // REX+MOV of MOVRegImm64 instruction
+//         //
+//         uint16_t *slotPatchInstructionBytes = (uint16_t *)_slotPatchInstruction->getBinaryEncoding();
+//         *(uint16_t *)cursor = *slotPatchInstructionBytes;
+//         cursor += 2;
+//
+//         if (unresolvedDispatch() && _hasJ2IThunkInPicData)
+//            cursor = encodeJ2IThunkPointer(cursor);
+//         }
+//      else
+//      {
+//         // ModRM byte of CMPMemImm4 instruction
+//         //
+//      uint8_t *slotPatchInstructionBytes = _slotPatchInstruction->getBinaryEncoding();
+//      *cursor = *(slotPatchInstructionBytes+1);
+//      cursor++;
+//      }
+//
+//      resolveSlotHelper = TR_X86resolveIPicClass;
+//      populateSlotHelper = TR_X86populateIPicSlotClass;
+//      sizeofPicSlot = x86Linkage->IPicParameters.roundedSizeOfSlot;
+//      }
+//   else
+//      {*/
+//      // VPIC
+//      //
+//      // Slow path dispatch through vtable
+//      //
+//
+//      uint8_t callModRMByte = 0;
+//
+//      // DD/DQ constantPool address
+//      // DD/DQ cpIndex
+//      //
+//      if (unresolvedDispatch())
+//         {
+//         // Align the real snippet entry point because it will be patched with
+//         // the vtable dispatch when the method is resolved.
+//         //
+//         intptrj_t entryPoint = ((intptrj_t)cursor +
+//                                 ((3 * sizeof(uintptrj_t)) +
+//                                  (hasJ2IThunkInPicData() ? sizeof(uintptrj_t) : 0) +
+//                                  (TR::Compiler->target.is64Bit() ? 4 : 1)));
+//
+//         intptrj_t requiredEntryPoint =
+//            (entryPoint + (cg()->getLowestCommonCodePatchingAlignmentBoundary()-1) &
+//            (intptrj_t)(~(cg()->getLowestCommonCodePatchingAlignmentBoundary()-1)));
+//
+//         cursor += (requiredEntryPoint - entryPoint);
+//
+//         // Put the narrow integers before the pointer-sized ones. This way,
+//         // directMethod (which is mutable) will be aligned simply as a
+//         // consequence of the alignment required for patching the code that
+//         // immediately follows the VPIC data.
+//         if (TR::Compiler->target.is64Bit())
+//            {
+//            // REX prefix of MOVRegImm64 instruction
+//            //
+//            uint8_t *slotPatchInstructionBytes = (uint8_t *)_slotPatchInstruction->getBinaryEncoding();
+//            *cursor++ = *slotPatchInstructionBytes++;
+//
+//            // MOV op of MOVRegImm64 instruction
+//            //
+//            *cursor++ = *slotPatchInstructionBytes;
+//
+//            // REX prefix for the CALLMem instruction.
+//            //
+//            *cursor++ = *(slotPatchInstructionBytes+9);
+//
+//            // Convert the CMP ModRM byte into the ModRM byte for the CALLMem instruction.
+//            //
+//            slotPatchInstructionBytes += 11;
+//            callModRMByte = (*slotPatchInstructionBytes & 7) + 0x90;
+//            *cursor++ = callModRMByte;
+//            }
+//         else
+//            {
+//            // CMP ModRM byte
+//            //
+//            uint8_t *slotPatchInstructionBytes = (uint8_t *)_slotPatchInstruction->getBinaryEncoding();
+//            *cursor++ = *(slotPatchInstructionBytes+1);
+//            }
+//
+//         // DD/DQ cpAddr
+//         // DD/DQ cpIndex
+//         //
+//         cursor = encodeConstantPoolInfo(cursor);
+//
+//         // Because directMethod (immediately following) is written at runtime
+//         // and might be read concurrently by another thread, it must be
+//         // naturally aligned to ensure that all accesses to it are atomic.
+//         TR_ASSERT_FATAL(
+//            ((uintptr_t)cursor & (sizeof(uintptrj_t) - 1)) == 0,
+//            "directMethod VPIC data slot is unaligned");
+//
+//         // DD/DQ directMethod (initially null)
+//         *(uintptrj_t *)cursor = 0;
+//         cursor += sizeof(uintptrj_t);
+//
+//         if (TR::Compiler->target.is64Bit())
+//            {
+//            // DD/DQ j2iThunk
+//            cursor = encodeJ2IThunkPointer(cursor);
+//            }
+//         }
+//      else
+//         {
+//         TR_ASSERT_FATAL(0, "Can't handle resolved VPICs here yet!");
+//         }
+//
+//      _dispatchSymRef = cg()->symRefTab()->findOrCreateRuntimeHelper(TR_X86populateVPicVTableDispatch, false, false, false);
+//
+//      getSnippetLabel()->setCodeLocation(cursor);
+//
+//      if (!isInterface() && _methodSymRef->isUnresolved())
+//         {
+//         TR_ASSERT((((intptrj_t)cursor & (cg()->getLowestCommonCodePatchingAlignmentBoundary()-1)) == 0),
+//                 "Mis-aligned VPIC snippet");
+//         }
+//
+//      *cursor++ = 0xe8;  // CALL
+//      disp32 = cg()->branchDisplacementToHelperOrTrampoline(cursor+4, _dispatchSymRef);
+//      *(int32_t *)cursor = disp32;
+//
+//      cg()->addExternalRelocation(new (cg()->trHeapMemory())
+//         TR::ExternalRelocation(cursor,
+//				(uint8_t *)_dispatchSymRef,
+//				TR_HelperAddress,
+//				cg()), __FILE__, __LINE__, _startOfPicInstruction->getNode());
+//      cursor += 4;
+//
+//      // Populate vtable dispatch needs its stack map here.
+//      //
+//      gcMap().registerStackMap(cursor, cg());
+//
+//      // Add padding after the call to snippet to hold the eventual indirect call instruction.
+//      //
+//      if (TR::Compiler->target.is64Bit())
+//         {
+//         *(uint16_t *)cursor = 0;
+//         cursor += 2;
+//
+//         if (callModRMByte == 0x94)
+//            {
+//            // SIB byte required for CMP
+//            //
+//            *(uint8_t *)cursor = 0;
+//            cursor++;
+//            }
+//         }
+//      else
+//         {
+//         *(uint8_t *)cursor = 0;
+//         cursor++;
+//         }
+//
+//      // Restart jump (always long for predictable size).
+//      //
+//      // TODO: no longer the case since data moved before call.
+//      //
+//      disp32 = _doneLabel->getCodeLocation() - (cursor + 5);
+//      *cursor++ = 0xe9;
+//      *(int32_t *)cursor = disp32;
+//      cursor += 4;
+//
+//      resolveSlotHelper = TR_X86resolveVPicClass;
+//      populateSlotHelper = TR_X86populateVPicSlotClass;
+//      sizeofPicSlot = x86Linkage->VPicParameters.roundedSizeOfSlot;
+//      //}
+//
+//   if (_numberOfSlots >= 1)
+//      {
+//      // Patch each Pic slot to route through the population helper
+//      //
+//      int32_t numPicSlots = _numberOfSlots;
+//      uint8_t *picSlotCursor = _startOfPicInstruction->getBinaryEncoding();
+//
+//      TR::SymbolReference *resolveSlotHelperSymRef =
+//         cg()->symRefTab()->findOrCreateRuntimeHelper(resolveSlotHelper, false, false, false);
+//      TR::SymbolReference *populateSlotHelperSymRef =
+//         cg()->symRefTab()->findOrCreateRuntimeHelper(populateSlotHelper, false, false, false);
+//
+//      // Patch first slot test with call to resolution helper.
+//      //
+//      *picSlotCursor++ = 0xe8;    // CALL
+//      disp32 = cg()->branchDisplacementToHelperOrTrampoline(picSlotCursor+4, resolveSlotHelperSymRef);
+//      *(int32_t *)picSlotCursor = disp32;
+//
+//      cg()->addExternalRelocation(new (cg()->trHeapMemory())
+//         TR::ExternalRelocation(picSlotCursor,
+//                                    (uint8_t *)resolveSlotHelperSymRef,
+//                                    TR_HelperAddress,
+//                                    cg()),  __FILE__, __LINE__, _startOfPicInstruction->getNode());
+//
+//         picSlotCursor = (uint8_t *)(picSlotCursor - 1 + sizeofPicSlot);
+//
+//         // Patch remaining slots with call to populate helper.
+//         //
+//         while (--numPicSlots)
+//            {
+//            *picSlotCursor++ = 0xe8;    // CALL
+//            disp32 = cg()->branchDisplacementToHelperOrTrampoline(picSlotCursor+4, populateSlotHelperSymRef);
+//            *(int32_t *)picSlotCursor = disp32;
+//
+//            cg()->addExternalRelocation(new (cg()->trHeapMemory())
+//               TR::ExternalRelocation(picSlotCursor,
+//                                          (uint8_t *)populateSlotHelperSymRef,
+//                                          TR_HelperAddress,
+//                                          cg()), __FILE__, __LINE__, _startOfPicInstruction->getNode());
+//            picSlotCursor = (uint8_t *)(picSlotCursor - 1 + sizeofPicSlot);
+//            }
+//      }
+//
+//   return cursor;
+//   }
+//
+//uint32_t TR::X86PicDataSnippet::getLength(int32_t estimatedSnippetStart)
+//   {
+//   if (isInterface())
+//      {
+//      return   5                                 // Lookup dispatch
+//             + 5                                 // JMP done
+//             + (4 * sizeof(uintptrj_t))          // Resolve slots
+//             + (TR::Compiler->target.is64Bit() ? 2 : 1)   // ModRM or REX+MOV
+//             + (_hasJ2IThunkInPicData ? sizeof(uintptrj_t) : 0) // j2i thunk pointer
+//             + sizeof (uintptrj_t) - 1;          // alignment
+//      }
+//   else
+//      {
+//      return   6                                 // CALL [Mem] (pessimistically assume a SIB is needed)
+//             + (TR::Compiler->target.is64Bit() ? 2 : 0)   // REX for CALL + SIB for CALL (64-bit)
+//             + 5                                 // JMP done
+//             + (2 * sizeof(uintptrj_t))          // cpAddr, cpIndex
+//             + (unresolvedDispatch() ? sizeof(uintptrj_t) : 0)  // directMethod
+//             + (_hasJ2IThunkInPicData ? sizeof(uintptrj_t) : 0) // j2i thunk
+//
+//             // 64-bit Data
+//             // -----------
+//             //  2 (REX+MOV)
+//             // +2 (REX+ModRM for CALL)
+//             //
+//             // 32-bit Data
+//             // -----------
+//             //  1 (ModRM for CMP)
+//             //
+//             + (TR::Compiler->target.is64Bit() ? 4 : 1)
+//             + cg()->getLowestCommonCodePatchingAlignmentBoundary()-1;
+//      }
+//   }

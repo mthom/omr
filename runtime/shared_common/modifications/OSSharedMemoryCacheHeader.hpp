@@ -38,14 +38,16 @@ public:
     , _mapping(mapping)
   {}
 
+  typedef class OSSharedMemoryCacheConfig config_type;
+  
   virtual void create(OMRPortLibrary* library, bool inDefaultControlDir);
   virtual void refresh(OMRPortLibrary* library, bool inDefaultControlDir);
 
-protected:
   virtual OSSharedMemoryCacheHeaderMapping* baseMapping() {
     return _mapping->baseMapping();
   }
-  
+
+protected:  
   virtual void refresh(OMRPortLibrary* library, OSSharedMemoryCacheHeaderMapping* mapping,
 		       bool inDefaultControlDir);
   

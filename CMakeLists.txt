@@ -33,6 +33,8 @@ project(omr VERSION ${OMR_VERSION} LANGUAGES CXX C)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH})
 
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE -fstack-protector-all")
+
 set_property(GLOBAL PROPERTY USE_FOLDERS TRUE)
 
 include(OmrAssert)
@@ -173,13 +175,13 @@ if(OMR_JITBUILDER)
 	add_subdirectory(jitbuilder)
 endif(OMR_JITBUILDER)
 
-if(OMR_SHARED_CACHE)
-  add_subdirectory(runtime/shared_common)  
-endif(OMR_SHARED_CACHE)
+## if(OMR_SHARED_CACHE)
+##   add_subdirectory(runtime/shared_common)  
+## endif(OMR_SHARED_CACHE)
 
-if(WASM_SHARED_CACHE)
-  add_subdirectory(runtime/shared_common/modifications/wasm)
-endif(WASM_SHARED_CACHE)  
+if(SOM_SHARED_CACHE)
+  add_subdirectory(runtime/shared_common/modifications/som_cache)
+endif(SOM_SHARED_CACHE)  
 
 if(OMR_SHARED_CACHE_MODS)
   add_subdirectory(runtime/shared_common/modifications)

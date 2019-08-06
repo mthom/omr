@@ -125,7 +125,7 @@ OMR::IlBuilder::initSequence()
 
 bool
 OMR::IlBuilder::injectIL()
-   {
+{
    TraceIL("Inside injectIL()\n");
    TraceIL("original entry %p\n", cfg()->getStart());
    TraceIL("original exit %p\n", cfg()->getEnd());
@@ -2071,6 +2071,88 @@ OMR::IlBuilder::Call(TR::MethodBuilder *calleeMB, int32_t numArgs, ...)
    va_end(args);
 
    return Call(calleeMB, numArgs, argValues);
+   }
+
+TR::IlValue *
+OMR::IlBuilder::CallVirtual(const char *functionName, int32_t numArgs, ...)
+   {
+   TraceIL("IlBuilder[ %p ]::CallVirtual %s\n", this, functionName);
+   va_list args;
+   va_start(args, numArgs);
+   TR::IlValue **argValues = processCallArgs(_comp, numArgs, args);
+   va_end(args);
+   TR::ResolvedMethod *resolvedMethod = _methodBuilder->lookupFunction(functionName);
+   if (resolvedMethod == NULL) // && _methodBuilder->RequestFunction(functionName))
+     return NULL;
+     //resolvedMethod = _methodBuilder->lookupFunction(functionName);
+   TR_ASSERT(resolvedMethod, "Could not identify function %s\n", functionName);
+
+   TR::SymbolReference *methodSymRef = symRefTab()->findOrCreateMethodSymbol(JITTED_METHOD_INDEX, -1, resolvedMethod,
+									     TR::MethodSymbol::Virtual, false);
+   return genCallWithVFTChild(methodSymRef, numArgs, argValues);
+   }
+
+
+TR::IlValue *
+OMR::IlBuilder::CallVirtual(const char *functionName, int32_t numArgs, TR::IlValue ** argValues)
+   {
+   TraceIL("IlBuilder[ %p ]::CallVirtual %s\n", this, functionName);
+   TR::ResolvedMethod *resolvedMethod = _methodBuilder->lookupFunction(functionName);
+   if (resolvedMethod == NULL)// && _methodBuilder->RequestFunction(functionName))
+     return NULL;
+     //resolvedMethod = _methodBuilder->lookupFunction(functionName);
+   
+   TR_ASSERT(resolvedMethod, "Could not identify function %s\n", functionName);
+
+   TR::SymbolReference *methodSymRef = symRefTab()->findOrCreateMethodSymbol(JITTED_METHOD_INDEX, -1, resolvedMethod,
+									     TR::MethodSymbol::Virtual, false);
+   return genCallWithVFTChild(methodSymRef, numArgs, argValues);
+   }
+
+TR::IlValue *
+OMR::IlBuilder::genCallWithVFTChild(TR::SymbolReference *methodSymRef, int32_t numArgs, TR::IlValue ** paramValues)
+   {
+   if (numArgs <= 0)
+      return NULL;
+
+   TR::IlValue* receiver = paramValues[0];
+   TR::Node *vftLoad  = TR::Node::createWithSymRef(TR::aloadi, 1, 1, loadValue(receiver), symRefTab()->findOrCreateVftSymbolRef());
+   
+   return genCallVirtual(methodSymRef, vftLoad, numArgs, paramValues, false); // an indirect call.
+   }
+
+
+TR::IlValue *
+OMR::IlBuilder::genCallVirtual(TR::SymbolReference *methodSymRef, TR::Node *vftLoad, int32_t numArgs, TR::IlValue ** argValues, bool isDirectCall /* false by default*/)
+   {
+   TR::DataType returnType = methodSymRef->getSymbol()->castToMethodSymbol()->getMethod()->returnType();
+   TR::Node *callNode = TR::Node::createWithSymRef(isDirectCall ? TR::ILOpCode::getDirectCall(returnType) : TR::ILOpCode::getIndirectCall(returnType), numArgs + 1, methodSymRef);
+
+   callNode->setAndIncChild(0, vftLoad);
+   
+   // TODO: should really verify argument types here
+   int32_t childIndex = 1; // skip the vftLoad at index 0
+   for (int32_t a=0;a < numArgs;a++)
+       {
+       TR::IlValue *arg = argValues[a];
+       if (arg->getDataType() == TR::Int8 || arg->getDataType() == TR::Int16 || (Word == Int64 && arg->getDataType() == TR::Int32))
+          arg = ConvertTo(Word, arg);
+       callNode->setAndIncChild(childIndex++, loadValue(arg));
+       }
+
+   // callNode must be anchored by itself
+   genTreeTop(callNode);
+
+   if (returnType != TR::NoType)
+      {
+      TR::IlValue *returnValue = newValue(callNode->getDataType(), callNode);
+      if (returnType != callNode->getDataType())
+         returnValue = convertTo(returnType, returnValue, false);
+
+      return returnValue;
+      }
+
+   return NULL;
    }
 
 /*

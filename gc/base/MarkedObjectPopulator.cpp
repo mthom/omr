@@ -26,6 +26,7 @@
 #include "HeapMapIterator.hpp"
 #include "HeapRegionDescriptor.hpp"
 #include "ObjectHeapBufferedIterator.hpp"
+#include "ObjectModelBase.hpp"
 
 #include "MarkedObjectPopulator.hpp"
 

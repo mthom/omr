@@ -84,6 +84,10 @@ public:
 
   virtual U_32 computeCRC(U_32 seed, U_32 stepSize) = 0;
 
+  virtual void setCacheLayout(OSCacheLayout* layout) {
+    _layout = layout;
+  }
+
 protected:  
   OSCacheLayout* _layout;
   int _regionID;

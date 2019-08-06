@@ -167,6 +167,83 @@ OSSharedMemoryCachePolicies::openSharedSemaphore(LastErrorInfo *lastErrorInfo) /
 }
 
 IDATA
+OSSharedMemoryCachePolicies::destroySharedMemory()
+{
+  IDATA rc = -1;
+  OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
+
+  Trc_SHR_OSC_Sysv_DestroySysVMemoryHelper_Enter();
+
+//  J9PortShcVersion versionData;
+//  U_64 cacheVMVersion;
+//  UDATA genVersion;
+  UDATA action;
+
+//  genVersion = getGenerationFromName(_shmFileName);
+//  if (0 == getValuesFromShcFilePrefix(OMRPORTLIB, _shmFileName, &versionData)) {
+//    goto done;
+//  }
+//
+//  cacheVMVersion = getCacheVersionToU64(versionData.esVersionMajor, versionData.esVersionMinor);
+
+  //action = SH_OSCachesysv::SysVCacheFileTypeHelper(cacheVMVersion, genVersion);
+  action = OMRSH_SYSV_REGULAR_CONTROL_FILE;
+  rc = omrshmem_destroy(_cache->_cacheLocation, _cache->_configOptions->groupPermissions(),
+			&_cache->_config->_shmhandle);
+//	switch(action){
+//		case OMRSH_SYSV_REGULAR_CONTROL_FILE:
+//			rc = omrshmem_destroy(_cacheDirName, _groupPerm, &_shmhandle);
+//			break;
+//		case OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE:
+//			rc = omrshmem_destroyDeprecated(_cacheDirName, _groupPerm, &_shmhandle, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
+//			break;
+//		case OMRSH_SYSV_OLDER_CONTROL_FILE:
+//			rc = omrshmem_destroyDeprecated(_cacheDirName, _groupPerm, &_shmhandle, OMRSH_SYSV_OLDER_CONTROL_FILE);
+//			break;
+//		default:
+//			Trc_SHR_Assert_ShouldNeverHappen();
+//			break;
+//	}
+
+  if (-1 == rc) {
+#if !defined(WIN32)
+    I_32 errorno = omrerror_last_error_number();
+    I_32 lastError = errorno | OMRPORT_ERROR_SYSTEM_CALL_ERRNO_MASK;
+    I_32 lastSysCall = errorno - lastError;
+    
+    if ((OMRPORT_ERROR_SYSV_IPC_SHMCTL_ERROR == lastSysCall) && (OMRPORT_ERROR_SYSV_IPC_ERRNO_EPERM == lastError)) {
+      OSC_ERR_TRACE1(_cache->_configOptions,
+		     J9NLS_SHRC_OSCACHE_SHARED_MEMORY_DESTROY_NOT_PERMITTED,
+		     omrshmem_getid(_cache->_config->_shmhandle));
+    } else {
+      const char * errormsg = omrerror_last_error_message();
+      OSC_ERR_TRACE1(_cache->_configOptions,
+		     J9NLS_SHRC_OSCACHE_DESTROYSHM_ERROR_WITH_SHMID,
+		     omrshmem_getid(_cache->_config->_shmhandle));
+      OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR,
+		     errorno);
+      Trc_SHR_Assert_True(errormsg != NULL);
+      OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR,
+		     errormsg);
+    }
+#else /* !defined(WIN32) */
+    I_32 errorno = omrerror_last_error_number();
+    const char * errormsg = omrerror_last_error_message();
+    OSC_ERR_TRACE(_cache->_configOptions, J9NLS_SHRC_OSCACHE_DESTROYSHM_ERROR);
+    OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_NUMBER_SYSV_ERR,
+		   errorno);
+    Trc_SHR_Assert_True(errormsg != NULL);
+    OSC_ERR_TRACE1(_cache->_configOptions, J9NLS_SHRC_OSCACHE_PORT_ERROR_MESSAGE_SYSV_ERR,
+		   errormsg);
+#endif /* !defined(WIN32) */
+	}
+
+done:
+  Trc_SHR_OSC_Sysv_DestroySysVMemoryHelper_Exit(rc);
+  return rc;  
+}
+
+IDATA
 OSSharedMemoryCachePolicies::destroySharedSemaphore()
 {
   IDATA rc = -1;

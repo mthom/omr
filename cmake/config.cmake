@@ -19,7 +19,7 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 #############################################################################
 
-set(OMR_WARNINGS_AS_ERRORS ON CACHE BOOL "Treat compile warnings as errors")
+set(OMR_WARNINGS_AS_ERRORS OFF CACHE BOOL "Treat compile warnings as errors")
 set(OMR_ENHANCED_WARNINGS ON CACHE BOOL "Enable enhanced compiler warnings")
 
 ###
@@ -35,14 +35,14 @@ set(OMR_EXAMPLE ON CACHE BOOL "Enable the Example application")
 set(OMR_TOOLS ON CACHE BOOL "Enable the native build tools")
 set(OMR_DDR ON CACHE BOOL "Enable DDR")
 set(OMR_RAS_TDF_TRACE ON CACHE BOOL "Enable trace engine")
-set(OMR_FVTEST ON CACHE BOOL "Enable the FV Testing.")
+set(OMR_FVTEST OFF CACHE BOOL "Enable the FV Testing.")
 
 set(OMR_PORT ON CACHE BOOL "Enable portability library")
 set(OMR_OMRSIG ON CACHE BOOL "Enable the OMR signal compatibility library")
 set(OMR_THREAD ON CACHE BOOL "Enable thread library")
-set(OMR_SHARED_CACHE OFF CACHE BOOL "Disable the shared cache")
+# set(OMR_SHARED_CACHE OFF CACHE BOOL "Disable the shared cache")
 set(OMR_SHARED_CACHE_MODS ON CACHE BOOL "Enable the refactored shared cache")
-set(WASM_SHARED_CACHE OFF CACHE BOOL "Enable the WASM shared cache")
+set(SOM_SHARED_CACHE ON CACHE BOOL "Enable the SOM shared cache")
 
 set(OMR_COMPILER ON CACHE BOOL "Enable the Compiler")
 set(OMR_JITBUILDER ON CACHE BOOL "Enable building JitBuilder")
@@ -100,7 +100,7 @@ set(OMR_TRACE_LIB "omrtrace" CACHE STRING "Name of the trace library to link aga
 ### Glue library names
 ###
 
-set(OMR_GC_GLUE_TARGET "NOTFOUND" CACHE STRING "The gc glue target, must be interface library")
+set(OMR_GC_GLUE_TARGET "omr_som_gc_glue" CACHE STRING "The gc glue target, must be interface library")
 set(OMR_UTIL_GLUE_TARGET "NOTFOUND" CACHE STRING "The util glue target, must be interface library")
 set(OMR_RAS_GLUE_TARGET "NOTFOUND" CACHE STRING "The ras glue target, must be interface library")
 set(OMR_CORE_GLUE_TARGET "NOTFOUND" CACHE STRING "The core glue target, must be and interface library")

@@ -16,6 +16,7 @@ bool OSCacheContiguousRegion::adjustRegionStartAndSize(void* blockAddress, uintp
 {
   _regionStart = blockAddress;
   _regionSize = size;
+  return true;
 }
 
 bool OSCacheContiguousRegion::alignToPageBoundary(UDATA osPageSize)

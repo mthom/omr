@@ -23,12 +23,15 @@
 
 #include <stddef.h>
 #include "codegen/CodeGenerator.hpp"
+#include "codegen/FPTreeEvaluator.hpp"
+#include "codegen/HelperCallSnippet.hpp"
 #include "codegen/Instruction.hpp"
 #include "codegen/Linkage.hpp"
 #include "codegen/Linkage_inlines.hpp"
+#include "codegen/LiveRegister.hpp"
 #include "codegen/Machine.hpp"
 #include "codegen/MemoryReference.hpp"
-#include "codegen/RealRegister.hpp"
+#include "codegen/RegisterPair.hpp"
 #include "compile/Compilation.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
@@ -48,6 +51,55 @@
 #include "x/codegen/X86Ops.hpp"
 #include "env/CompilerEnv.hpp"
 
+// Hacks related to 8 byte slots
+#define DOUBLE_SIZED_ARGS (1)
+
+////////////////////////////////////////////////
+//
+// Helpful definitions
+//
+// These are only here to make the rest of the code below somewhat
+// self-documenting.
+//
+
+enum
+   {
+   RETURN_ADDRESS_SIZE=8,
+   NUM_INTEGER_LINKAGE_REGS=4,
+   NUM_FLOAT_LINKAGE_REGS=8,
+   };
+
+static void evaluateCommonedNodes(TR::Node *node, TR::CodeGenerator *cg)
+   {
+   // There is a rule that if a node with a symref is evaluated, it must be
+   // evaluated in the first treetop under which it appears.  (The so-called
+   // "prompt evaluation" rule).  Since we don't know what future trees will
+   // do, this effectively means that any symref-bearing node that is commoned
+   // with another treetop must be evaluated now.
+   // We approximate this by saying that any node with a refcount >= 2 must be
+   // evaluated now.  The "refcount >= 2" is a conservative approximation of
+   // "commoned with another treetop" because the latter is not cheap to figure out.
+   // "Any node" is an approximation of "any node with a symref"; we do that
+   // because it allows us to use a simple linear-time tree walk without
+   // resorting to visit counts.
+   //
+   TR::Compilation * comp= cg->comp();
+   if (node->getRegister() == NULL)
+      {
+      if (node->getReferenceCount() >= 2)
+         {
+         if (comp->getOption(TR_TraceCG))
+            traceMsg(comp, "Promptly evaluating commoned node %s\n", cg->getDebug()->getName(node));
+         cg->evaluate(node);
+         }
+      else
+         {
+         for (int32_t i = 0; i < node->getNumChildren(); i++)
+            evaluateCommonedNodes(node->getChild(i), cg);
+         }
+      }
+   }
+
 TR::X86SystemLinkage::X86SystemLinkage(TR::CodeGenerator *cg)
    : TR::Linkage(cg)
    {
@@ -58,11 +110,826 @@ const TR::X86LinkageProperties& TR::X86SystemLinkage::getProperties()
    return _properties;
    }
 
+
+int32_t TR::X86SystemLinkage::argAreaSize(TR::ResolvedMethodSymbol *methodSymbol)
+   {
+   int32_t result = 0;
+   ListIterator<TR::ParameterSymbol>   paramIterator(&(methodSymbol->getParameterList()));
+   TR::ParameterSymbol                *paramCursor;
+   for (paramCursor = paramIterator.getFirst(); paramCursor; paramCursor = paramIterator.getNext())
+      {
+      result += paramCursor->getRoundedSize() * ((DOUBLE_SIZED_ARGS && paramCursor->getDataType() != TR::Address) ? 2 : 1);
+      }
+   return result;
+   }
+
+int32_t TR::X86SystemLinkage::argAreaSize(TR::Node *callNode)
+   {
+   // TODO: We only need this function because unresolved calls don't have a
+   // TR::ResolvedMethodSymbol, and only TR::ResolvedMethodSymbol has
+   // getParameterList().  If getParameterList() ever moves to TR::MethodSymbol,
+   // then this function becomes unnecessary.
+   //
+   TR::Node *child;
+   int32_t  i;
+   int32_t  result  = 0;
+   int32_t  firstArgument   = callNode->getFirstArgumentIndex();
+   int32_t  lastArgument    = callNode->getNumChildren() - 1;
+   for (i=firstArgument; i <= lastArgument; i++)
+      {
+      child = callNode->getChild(i);
+      result += child->getRoundedSize() * ((DOUBLE_SIZED_ARGS && child->getDataType() != TR::Address) ? 2 : 1);
+      }
+   return result;
+   }
+
+int32_t TR::X86SystemLinkage::buildVirtualArgs(TR::Node                             *callNode,
+					       TR::RegisterDependencyConditions  *dependencies)
+   {
+   TR::MethodSymbol *methodSymbol = callNode->getSymbol()->getMethodSymbol();
+   TR::SymbolReference *methodSymRef = callNode->getSymbolReference();
+   bool passArgsOnStack = true;
+   bool rightToLeft = methodSymbol && methodSymbol->isHelper()
+      && !methodSymRef->isOSRInductionHelper(); //we want the arguments for induceOSR to be passed from left to right as in any other non-helper call
+   /*
+   if (callNode->getOpCode().isIndirect())
+      {
+      if (methodSymbol->isVirtual() &&
+         !methodSymRef->isUnresolved() &&
+	 !comp()->getOption(TR_FullSpeedDebug) && // On FSD we need to call these through the vtable (because the methodIsOverridden flag is unreliable) so we need args to be in regs
+          methodSymbol->isVMInternalNative())
+         {
+         TR_ResolvedMethod *resolvedMethod = methodSymbol->castToResolvedMethodSymbol()->getResolvedMethod();
+         passArgsOnStack = (
+            !resolvedMethod->virtualMethodIsOverridden() &&
+            !resolvedMethod->isAbstract());
+         }
+      else
+         {
+         passArgsOnStack = false;
+         }
+      }
+   else
+      {
+      passArgsOnStack = methodSymbol->isVMInternalNative() && cg()->supportVMInternalNatives();
+      }
+   
+   switch (callNode->getSymbol()->castToMethodSymbol()->getMandatoryRecognizedMethod())
+      {
+      case TR::java_lang_invoke_ComputedCalls_dispatchJ9Method:
+      case TR::java_lang_invoke_MethodHandle_invokeWithArgumentsHelper:
+         passArgsOnStack = true;
+         break;
+      default:
+      	break;
+      }
+   */
+//#ifdef J9VM_OPT_JAVA_CRYPTO_ACCELERATION
+//   // Violate the right-to-left linkage requirement for JIT helpers for the AES helpers.
+//   // Call them with Java method private linkage.
+//   //
+//   if (cg()->enableAESInHardwareTransformations())
+//      {
+//      if (methodSymbol && methodSymbol->isHelper())
+//         {
+//         switch (methodSymRef->getReferenceNumber())
+//            {
+//            case TR_doAESInHardwareInner:
+//            case TR_expandAESKeyInHardwareInner:
+//               rightToLeft = false;
+//               break;
+//
+//            default:
+//               break;
+//            }
+//         }
+//      }
+//#endif
+
+   return buildPrivateVirtualLinkageArgs(callNode, dependencies, rightToLeft, passArgsOnStack);
+   }
+
+int32_t TR::X86SystemLinkage::buildPrivateVirtualLinkageArgs(TR::Node                             *callNode,
+							     TR::RegisterDependencyConditions  *dependencies,
+							     bool                                 rightToLeft,
+							     bool                                 passArgsOnStack)
+   {
+   TR::RealRegister::RegNum   noReg         = TR::RealRegister::NoReg;
+   TR::RealRegister          *stackPointer  = machine()->getRealRegister(TR::RealRegister::esp);
+   int32_t                    firstArgument = callNode->getFirstArgumentIndex();
+   int32_t                    lastArgument  = callNode->getNumChildren() - 1;
+   int32_t                    offset        = 0;
+
+   uint16_t                   numIntArgs     = 0,
+                              numFloatArgs   = 0,
+                              numSpecialArgs = 0;
+
+   int                        numDupedArgRegs = 0;
+   TR::Register               *dupedArgRegs[NUM_INTEGER_LINKAGE_REGS + NUM_FLOAT_LINKAGE_REGS];
+
+   // Even though the parameters will be passed on the stack, create dummy linkage registers
+   // to ensure that if the call were to be made using the linkage registers (e.g., in a guarded
+   // devirtual snippet if it was overridden) then the registers would be available at this
+   // point.
+   //
+   bool createDummyLinkageRegisters = (callNode->getOpCode().isIndirect() && passArgsOnStack) ? true: false;
+
+   int32_t parmAreaSize = argAreaSize(callNode);
+
+   int32_t start, stop, step;
+   if (rightToLeft || getProperties().passArgsRightToLeft())
+      {
+      start = lastArgument;
+      stop  = firstArgument - 1;
+      step  = -1;
+      TR_ASSERT(stop <= start, "Loop must terminate");
+      }
+   else
+      {
+      start = firstArgument;
+      stop  = lastArgument + 1;
+      step  = 1;
+      TR_ASSERT(stop >= start, "Loop must terminate");
+      }
+
+   // we're going to align the stack depend on the alignment property
+   // adjust = something
+   // allocateSize = parmAreaSize + adjust;
+   // then subtract stackpointer with allocateSize
+   uint32_t alignedParmAreaSize = parmAreaSize;
+
+   if (!getProperties().getReservesOutgoingArgsInPrologue() && !callNode->getSymbol()->castToMethodSymbol()->isHelper())
+      {
+      // Align the stack for alignment larger than 16 bytes(stack is aligned to the multiple of sizeOfJavaPointer by default, which is 4 bytes on 32-bit, and 8 bytes on 64-bit)
+      // Basically, we're aligning the start of next frame (after the return address) to a multiple of staceFrameAlignmentInBytes
+      // Stack frame alignment is needed for stack allocated object alignment
+      uint32_t stackFrameAlignment = 8; //cg()->fej9()->getLocalObjectAlignmentInBytes();
+      if (stackFrameAlignment > TR::Compiler->om.sizeofReferenceAddress())
+         {
+         uint32_t frameSize = parmAreaSize + cg()->getFrameSizeInBytes() + getProperties().getRetAddressWidth();
+         frameSize += stackFrameAlignment - (frameSize % stackFrameAlignment);
+         alignedParmAreaSize = frameSize - cg()->getFrameSizeInBytes() - getProperties().getRetAddressWidth();
+         traceMsg(comp(), "parm area size was %d, and is aligned to %d\n", parmAreaSize, alignedParmAreaSize);
+         }
+      if (alignedParmAreaSize > 0)
+         generateRegImmInstruction((alignedParmAreaSize <= 127 ? SUBRegImms() : SUBRegImm4()), callNode, stackPointer, alignedParmAreaSize, cg());
+      }
+
+   int32_t i;
+   for (i = start; i != stop; i += step)
+      {
+      TR::Node                *child     = callNode->getChild(i);
+      TR::DataType             type      = child->getType();
+      TR::RealRegister::RegNum  rregIndex = noReg;
+      TR::DataType            dt        = type.getDataType();
+
+      switch (dt)
+         {
+         case TR::Float:
+         case TR::Double:
+            rregIndex =
+               (numFloatArgs < NUM_FLOAT_LINKAGE_REGS) && (!passArgsOnStack || createDummyLinkageRegisters)
+               ? getProperties().getFloatArgumentRegister(numFloatArgs)
+               : noReg
+               ;
+            numFloatArgs++;
+            break;
+         case TR::Address:
+         default:
+            {
+            if (i == firstArgument && !callNode->getSymbolReference()->isUnresolved())
+               {
+		   rregIndex = getProperties().getVTableIndexArgumentRegister();
+		   numSpecialArgs++;
+               // TODO:JSR292: This should really be in the front-end
+		 /*		 
+               TR::MethodSymbol *sym = callNode->getSymbol()->castToMethodSymbol();
+               switch (sym->getMandatoryRecognizedMethod())
+                  {
+                  case TR::java_lang_invoke_ComputedCalls_dispatchJ9Method:
+                     rregIndex = getProperties().getJ9MethodArgumentRegister();
+                     numSpecialArgs++;
+                     break;
+                  case TR::java_lang_invoke_ComputedCalls_dispatchVirtual:
+                     rregIndex = getProperties().getVTableIndexArgumentRegister();
+                     numSpecialArgs++;
+                     break;
+                  default:
+                  	break;
+                  }
+		 */
+               }
+            if (rregIndex == noReg)
+               {
+               rregIndex =
+                  (numIntArgs < NUM_INTEGER_LINKAGE_REGS) && (!passArgsOnStack || createDummyLinkageRegisters)
+                  ? getProperties().getIntegerArgumentRegister(numIntArgs)
+                  : noReg
+                  ;
+               numIntArgs++;
+               }
+            break;
+            }
+         }
+
+      bool willKeepConstRegLiveAcrossCall = true;
+      rcount_t oldRefCount = child->getReferenceCount();
+      TR::Register *childReg = child->getRegister();
+      if (child->getOpCode().isLoadConst() &&
+            !childReg &&
+            (callNode->getSymbol()->castToMethodSymbol()->isStatic() ||
+             callNode->getChild(callNode->getFirstArgumentIndex()) != child))
+         {
+         child->setReferenceCount(1);
+         willKeepConstRegLiveAcrossCall = false;
+         }
+
+      TR::Register *vreg = NULL;
+      if ((rregIndex != noReg) ||
+          (child->getOpCodeValue() != TR::iconst) ||
+          (child->getOpCodeValue() == TR::iconst && childReg))
+         vreg = cg()->evaluate(child);
+
+      if (rregIndex != noReg)
+         {
+         bool needsZeroExtension = (child->getDataType() == TR::Int32) && !vreg->areUpperBitsZero();
+         TR::Register *preCondReg;
+
+         if (/*!child->getOpCode().isLoadConst() &&*/ (child->getReferenceCount() > 1))
+            {
+            preCondReg = cg()->allocateRegister(vreg->getKind());
+            if (vreg->containsCollectedReference())
+               preCondReg->setContainsCollectedReference();
+
+            generateRegRegInstruction(needsZeroExtension? MOVZXReg8Reg4 : TR::Linkage::movOpcodes(RegReg, movType(child->getDataType())), child, preCondReg, vreg, cg());
+            vreg = preCondReg;
+
+            TR_ASSERT(numDupedArgRegs < NUM_INTEGER_LINKAGE_REGS + NUM_FLOAT_LINKAGE_REGS, "assertion failure");
+            dupedArgRegs[numDupedArgRegs++] = preCondReg;
+            }
+         else
+            {
+            preCondReg = vreg;
+            if (needsZeroExtension)
+               generateRegRegInstruction(MOVZXReg8Reg4, child, preCondReg, vreg, cg());
+            }
+
+         dependencies->addPreCondition(preCondReg, rregIndex, cg());
+         }
+
+      offset += child->getRoundedSize() * ((DOUBLE_SIZED_ARGS && dt != TR::Address) ? 2 : 1);
+
+      if ((rregIndex == noReg) || (rregIndex != noReg && createDummyLinkageRegisters))
+         {
+         if (vreg)
+            generateMemRegInstruction(
+               TR::Linkage::movOpcodes(MemReg, fullRegisterMovType(vreg)),
+               child,
+               generateX86MemoryReference(stackPointer, parmAreaSize-offset, cg()),
+               vreg,
+               cg()
+               );
+         else
+            {
+            int32_t konst = child->getInt();
+            generateMemImmInstruction(
+               S8MemImm4,
+               child,
+               generateX86MemoryReference(stackPointer, parmAreaSize-offset, cg()),
+               konst,
+               cg()
+               );
+            }
+         }
+
+      if (vreg)
+         {
+         cg()->decReferenceCount(child);
+         ////if (child->getOpCode().isLoadConst() && !childReg)
+         if (!willKeepConstRegLiveAcrossCall)
+            {
+            child->setReferenceCount(oldRefCount-1);
+            child->setRegister(NULL);
+            }
+         }
+      else
+         child->setReferenceCount(oldRefCount-1);
+      }
+
+
+   // Now that we're finished making the precondition, all the interferences
+   // are established, and we can stopUsing these regs.
+   //
+   for (i = 0; i < numDupedArgRegs; i++)
+      {
+      cg()->stopUsingRegister(dupedArgRegs[i]);
+      }
+
+   // Sanity check
+   //
+   TR_ASSERT(numIntArgs + numFloatArgs + numSpecialArgs == callNode->getNumChildren() - callNode->getFirstArgumentIndex(), "assertion failure");
+   TR_ASSERT(offset == parmAreaSize, "assertion failure");
+
+   return alignedParmAreaSize;
+   }
+
 TR::Register *TR::X86SystemLinkage::buildIndirectDispatch(TR::Node *callNode)
    {
-   TR_ASSERT(0, "TR::X86SystemLinkage::buildIndirectDispatch is not supported");
-   return NULL;
+   TR::StackMemoryRegion stackMemoryRegion(*comp()->trMemory());
+   TR_FrontEnd *fe = comp()->fe();
+   
+   TR::X86CallSite site(callNode, this);
+
+   // buildCallArgs.
+   site.setArgSize(buildVirtualArgs(site.getCallNode(), site.getPreConditionsUnderConstruction()));
+   
+   bool skipVFTmaskInstruction = false;
+   if (callNode->getSymbol()->castToMethodSymbol()->firstArgumentIsReceiver())
+      {
+      // if this is an indirect call, the receiver is at index 1.
+      TR::Node *rcvrChild = callNode->getChild(callNode->getFirstArgumentIndex()); 
+      TR::Node  *vftChild = callNode->getFirstChild();
+      bool loadVFTForNullCheck = false;
+
+      if (cg()->getCurrentEvaluationTreeTop()->getNode()->getOpCodeValue() == TR::NULLCHK
+         && vftChild->getOpCode().isLoadIndirect()
+         && vftChild->getFirstChild() == cg()->getCurrentEvaluationTreeTop()->getNode()->getNullCheckReference()
+         && vftChild->getFirstChild()->isNonNull() == false)
+         loadVFTForNullCheck = true;
+
+      if (rcvrChild->isNonNull() == false || callNode->getFirstChild()->getReferenceCount() > 1)
+         {
+         /*
+         if (vftChild->getRegister() == NULL)
+            {
+            cg()->generateDebugCounter(
+               TR::DebugCounter::debugCounterName(comp(), "cg.vftload/%s/(%s)/%d/%d", "loadvft",
+                                    comp()->signature(),
+                                    callNode->getByteCodeInfo().getCallerIndex(),
+                                    callNode->getByteCodeInfo().getByteCodeIndex()));
+            }*/
+         site.evaluateVFT();
+         }
+      }
+
+   // Children of the VFT expression may also survive the call.
+   // (Note that the following is not sufficient for the VFT node
+   // itself, which should use site.evaluateVFT instead.)
+   //
+   if (skipVFTmaskInstruction == false)
+      evaluateCommonedNodes(callNode->getFirstChild(), cg());
+
+   TR::Instruction *startBookmark = cg()->getAppendInstruction();
+   TR::LabelSymbol *startLabel    = generateLabelSymbol(cg());
+   TR::LabelSymbol *doneLabel     = generateLabelSymbol(cg());
+   startLabel->setStartInternalControlFlow();
+   doneLabel->setEndInternalControlFlow();
+
+   // Allocate thunk if necessary
+   //
+   void *virtualThunk = NULL;
+   
+   if (getProperties().getNeedsThunksForIndirectCalls())
+      {
+      TR::MethodSymbol *methodSymbol = callNode->getSymbol()->castToMethodSymbol();
+      TR_Method       *method       = methodSymbol->getMethod();
+
+      virtualThunk = TR::Compiler->getVirtualDispatchThunk(method);
+
+      if (!virtualThunk)
+	 virtualThunk = TR::Compiler->setVirtualDispatchThunk(method, generateVirtualIndirectThunk(callNode));
+      }
+
+   site.setThunkAddress((uint8_t *)virtualThunk);
+
+   TR::LabelSymbol *picMismatchLabel = NULL;
+   // Build the call
+   //
+   //if (site.getMethodSymbol()->isVirtual() || site.getMethodSymbol()->isComputed())
+   buildVirtualOrComputedCall(site, picMismatchLabel, doneLabel, (uint8_t *)virtualThunk);   
+
+   // Construct postconditions
+   //
+   TR::Node *vftChild = callNode->getFirstChild();
+   TR::Register *vftRegister = vftChild->getRegister();
+   TR::Register *returnRegister;
+   
+   if (vftChild->getRegister() && (vftChild->getReferenceCount() > 1))
+      {
+      // VFT child survives the call, so we must include it in the postconditions.
+      returnRegister = buildCallPostconditions(site);
+      if (vftChild->getRegister() && vftChild->getRegister()->getRegisterPair())
+         {
+         site.addPostCondition(vftChild->getRegister()->getRegisterPair()->getHighOrder(), TR::RealRegister::NoReg);
+         site.addPostCondition(vftChild->getRegister()->getRegisterPair()->getLowOrder(), TR::RealRegister::NoReg);
+         }
+      else
+         site.addPostCondition(vftChild->getRegister(), TR::RealRegister::NoReg);
+      cg()->recursivelyDecReferenceCount(vftChild);
+      }
+   else
+      {
+      // VFT child dies here; decrement it early so it doesn't interfere with dummy regs.
+      cg()->recursivelyDecReferenceCount(vftChild);
+      returnRegister = buildCallPostconditions(site);
+      }
+
+   site.stopAddingConditions();
+
+   // Create the internal control flow region and VFP adjustment
+   //
+   generateLabelInstruction(startBookmark, LABEL, startLabel, site.getPreConditionsUnderConstruction(), cg());
+   if (!getProperties().getCallerCleanup())
+      generateVFPCallCleanupInstruction(-site.getArgSize(), callNode, cg());
+   generateLabelInstruction(LABEL, callNode, doneLabel, site.getPostConditionsUnderConstruction(), cg());
+
+   // Stop using the killed registers that are not going to persist
+   //
+   stopUsingKilledRegisters(site.getPostConditionsUnderConstruction(), returnRegister);
+
+   if (callNode->getType().isFloatingPoint())
+      {
+      static char *forceX87LinkageForSSE = feGetEnv("TR_ForceX87LinkageForSSE");
+      if (callNode->getReferenceCount() == 1 && returnRegister->getKind() == TR_X87)
+         {
+         // If the method returns a floating-point value that is not used, insert a
+         // dummy store to eventually pop the value from the floating-point stack.
+         //
+         generateFPSTiST0RegRegInstruction(FSTRegReg, callNode, returnRegister, returnRegister, cg());
+         }
+      else if (forceX87LinkageForSSE && returnRegister->getKind() == TR_FPR)
+         {
+         // If the caller expects the return value in an XMMR, insert a
+         // transfer from the floating-point stack to the XMMR via memory.
+         //
+         coerceFPReturnValueToXMMR(callNode, site.getPostConditionsUnderConstruction(), site.getMethodSymbol(), returnRegister);
+         }
+      }
+
+   if (cg()->enableRegisterAssociations())
+      associatePreservedRegisters(site.getPostConditionsUnderConstruction(), returnRegister);
+
+   cg()->setImplicitExceptionPoint(site.getImplicitExceptionPoint());
+
+   return returnRegister;
    }
+
+TR::Register *TR::X86SystemLinkage::buildCallPostconditions(TR::X86CallSite &site)
+   {
+   TR::RegisterDependencyConditions *dependencies = site.getPostConditionsUnderConstruction();
+   TR_ASSERT(dependencies != NULL, "assertion failure");
+
+   const TR::X86LinkageProperties &properties   = getProperties();
+   const TR::RealRegister::RegNum  noReg        = TR::RealRegister::NoReg;
+   TR::Node                       *callNode     = site.getCallNode();
+   TR::MethodSymbol               *methodSymbol = callNode->getSymbolReference()->getSymbol()->castToMethodSymbol();
+   bool                calleePreservesRegisters = methodSymbol->preservesAllRegisters();
+
+// #ifdef J9VM_OPT_JAVA_CRYPTO_ACCELERATION
+//    // AES helpers actually use Java private linkage and do not preserve all
+//    // registers.  This should really be handled by the linkage.
+//    //
+//    if (cg()->enableAESInHardwareTransformations() && methodSymbol && methodSymbol->isHelper())
+//       {
+//       TR::SymbolReference *methodSymRef = callNode->getSymbolReference();
+//       switch (methodSymRef->getReferenceNumber())
+//          {
+//          case TR_doAESInHardwareInner:
+//          case TR_expandAESKeyInHardwareInner:
+//             calleePreservesRegisters = false;
+//             break;
+// 
+//          default:
+//             break;
+//          }
+//       }
+// #endif
+
+   // We have to be careful to allocate the return register after the
+   // dependency conditions for the other killed registers have been set up,
+   // otherwise it will be marked as interfering with them.
+
+   // Figure out which is the return register
+   //
+   TR::RealRegister::RegNum  returnRegIndex, highReturnRegIndex=noReg;
+   TR_RegisterKinds          returnKind;
+   
+   switch(callNode->getDataType())
+      {
+      default:
+         TR_ASSERT(0, "Unrecognized call node data type: #%d", (int)callNode->getDataType());
+         // fall through
+      case TR::NoType:
+         returnRegIndex  = noReg;
+         returnKind      = TR_NoRegister;
+         break;
+      case TR::Int64:
+         if (cg()->usesRegisterPairsForLongs())
+            {
+            returnRegIndex     = getProperties().getLongLowReturnRegister();
+            highReturnRegIndex = getProperties().getLongHighReturnRegister();
+            returnKind         = TR_GPR;
+            break;
+            }
+         // else fall through
+      case TR::Int8:
+      case TR::Int16:
+      case TR::Int32:
+      case TR::Address:
+         returnRegIndex  = getProperties().getIntegerReturnRegister();
+         returnKind      = TR_GPR;
+         break;
+      case TR::Float:
+      case TR::Double:
+         returnRegIndex  = getProperties().getFloatReturnRegister();
+         returnKind      = TR_FPR;
+         break;
+      }
+
+   // Find the registers that are already in the postconditions so we don't add them again.
+   // (The typical example is the ramMethod.)
+   //
+   int32_t gprsAlreadyPresent = TR::RealRegister::noRegMask;
+   TR_X86RegisterDependencyGroup *group = dependencies->getPostConditions();
+   
+   for (int i = 0; i < dependencies->getAddCursorForPost(); i++)
+      {
+      TR::RegisterDependency *dep = group->getRegisterDependency(i);
+      TR_ASSERT(dep->getRealRegister() <= TR::RealRegister::LastAssignableGPR, "Currently, only GPRs can be added to call postcondition before buildCallPostconditions; found %s", cg()->getDebug()->getRealRegisterName(dep->getRealRegister()-1));
+      gprsAlreadyPresent |= TR::RealRegister::gprMask((TR::RealRegister::RegNum)dep->getRealRegister());
+      }
+
+   // Add postconditions indicating the state of arg regs (other than the return reg)
+   //
+   if (calleePreservesRegisters)
+      {
+      // For all argument-register preconditions, add an identical
+      // postcondition, thus indicating that the arguments are preserved.
+      // Note: this assumes the postcondition regdeps have preconditions too; see COPY_PRECONDITIONS_TO_POSTCONDITIONS.
+      //
+      TR_X86RegisterDependencyGroup *preConditions = dependencies->getPreConditions();
+      for (int i = 0; i < dependencies->getAddCursorForPre(); i++)
+         {
+         TR::RegisterDependency *preCondition = preConditions->getRegisterDependency(i);
+         TR::RealRegister::RegNum   regIndex     = preCondition->getRealRegister();
+
+         if (regIndex <= TR::RealRegister::LastAssignableGPR && (gprsAlreadyPresent & TR::RealRegister::gprMask(regIndex)))
+            continue;
+
+         if (
+            regIndex != returnRegIndex && regIndex != highReturnRegIndex
+            && (properties.isIntegerArgumentRegister(regIndex) || properties.isFloatArgumentRegister(regIndex))
+            ){
+            dependencies->addPostCondition(preCondition->getRegister(), regIndex, cg());
+            }
+         }
+      }
+   else
+      {
+      // Kill all non-preserved int and float regs besides the return register,
+      // by assigning them to unused virtual registers
+      //
+      TR::RealRegister::RegNum regIndex;
+
+      for (regIndex = TR::RealRegister::FirstGPR; regIndex <= TR::RealRegister::LastAssignableGPR; regIndex = (TR::RealRegister::RegNum)(regIndex + 1))
+         {
+         // Skip non-assignable registers
+         //
+         if (machine()->getRealRegister(regIndex)->getState() == TR::RealRegister::Locked)
+            continue;
+
+         // Skip registers already present
+         if (gprsAlreadyPresent & TR::RealRegister::gprMask(regIndex))
+            continue;
+
+         if ((regIndex != returnRegIndex) && (regIndex != highReturnRegIndex) && !properties.isPreservedRegister(regIndex))
+            {
+            TR::Register *dummy = cg()->allocateRegister(TR_GPR);
+            dummy->setPlaceholderReg();
+            dependencies->addPostCondition(dummy, regIndex, cg());
+            cg()->stopUsingRegister(dummy);
+            }
+         }
+
+      TR_LiveRegisters *lr = cg()->getLiveRegisters(TR_FPR);
+      if(!lr || lr->getNumberOfLiveRegisters() > 0)
+         {
+         for (regIndex = TR::RealRegister::FirstXMMR; regIndex <= TR::RealRegister::LastXMMR; regIndex = (TR::RealRegister::RegNum)(regIndex + 1))
+            {
+            TR_ASSERT(regIndex != highReturnRegIndex, "highReturnRegIndex should not be an XMM register.");
+            if ((regIndex != returnRegIndex) && !properties.isPreservedRegister(regIndex))
+               {
+               TR::Register *dummy = cg()->allocateRegister(TR_FPR);
+               dummy->setPlaceholderReg();
+               dependencies->addPostCondition(dummy, regIndex, cg());
+               cg()->stopUsingRegister(dummy);
+               }
+            }
+         }
+      }
+
+   // Preserve the VM thread register
+   //
+   dependencies->addPostCondition(cg()->getMethodMetaDataRegister(), getProperties().getMethodMetaDataRegister(), cg());
+
+   // Now that everything is dead, we can allocate the return register without
+   // interference
+   //
+   TR::Register *returnRegister;
+   if (highReturnRegIndex)
+      {
+      TR::Register *lo = cg()->allocateRegister(returnKind);
+      TR::Register *hi = cg()->allocateRegister(returnKind);
+      returnRegister = cg()->allocateRegisterPair(lo, hi);
+      dependencies->addPostCondition(lo, returnRegIndex,     cg());
+      dependencies->addPostCondition(hi, highReturnRegIndex, cg());
+      }
+   else if (returnRegIndex)
+      {
+      TR_ASSERT(returnKind != TR_NoRegister, "assertion failure");
+      if (callNode->getDataType() == TR::Address)
+         {
+         returnRegister = cg()->allocateCollectedReferenceRegister();
+         }
+      else
+         {
+         returnRegister = cg()->allocateRegister(returnKind);
+         if (callNode->getDataType() == TR::Float)
+            returnRegister->setIsSinglePrecision();
+         }
+      dependencies->addPostCondition(returnRegister, returnRegIndex, cg());
+      }
+   else
+      {
+      returnRegister = NULL;
+      }
+
+   return returnRegister;
+   }
+
+void TR::X86SystemLinkage::buildVPIC(TR::X86CallSite &site, TR::LabelSymbol *entryLabel, TR::LabelSymbol *doneLabel)
+   {
+     //   TR_J9VMBase *fej9 = (TR_J9VMBase *)(fe());
+   TR_ASSERT(doneLabel, "a doneLabel is required for VPIC dispatches");
+
+   if (entryLabel)
+      generateLabelInstruction(LABEL, site.getCallNode(), entryLabel, cg());
+
+   int32_t numVPicSlots = VPicParameters.defaultNumberOfSlots;
+
+   TR::SymbolReference *callHelperSymRef =
+      cg()->symRefTab()->findOrCreateRuntimeHelper(TR_X86populateVPicSlotCall, true, true, false);
+
+   if (numVPicSlots > 1)
+      {
+      TR::X86PICSlot emptyPicSlot = TR::X86PICSlot(VPicParameters.defaultSlotAddress, NULL);
+
+      emptyPicSlot.setNeedsShortConditionalBranch();
+      emptyPicSlot.setJumpOnNotEqual();
+      emptyPicSlot.setNeedsPicSlotAlignment();
+      emptyPicSlot.setHelperMethodSymbolRef(callHelperSymRef);
+      emptyPicSlot.setGenerateNextSlotLabelInstruction();
+
+      // Generate all slots except the last
+      // (short branch to next slot, jump to doneLabel)
+      //
+      while (--numVPicSlots)
+         {
+         TR::LabelSymbol *nextSlotLabel = generateLabelSymbol(cg());
+         buildPICSlot(emptyPicSlot, nextSlotLabel, doneLabel, site);
+         }
+      }
+
+   // Generate the last slot
+   // (long branch to lookup snippet, fall through to doneLabel)
+   //
+   TR::X86PICSlot lastPicSlot = TR::X86PICSlot(VPicParameters.defaultSlotAddress, NULL, false);
+   
+   lastPicSlot.setJumpOnNotEqual();
+   lastPicSlot.setNeedsPicSlotAlignment();
+   lastPicSlot.setNeedsLongConditionalBranch();
+
+   if (TR::Compiler->target.is32Bit())
+      {
+      lastPicSlot.setNeedsPicCallAlignment();
+      }
+
+   lastPicSlot.setHelperMethodSymbolRef(callHelperSymRef);
+
+   TR::LabelSymbol *snippetLabel = generateLabelSymbol(cg());
+
+   TR::Instruction *slotPatchInstruction = buildPICSlot(lastPicSlot, snippetLabel, NULL, site);
+
+   TR::Instruction *startOfPicInstruction = site.getFirstPICSlotInstruction();
+   
+//   TR::X86PicDataSnippet *snippet = new (trHeapMemory()) TR::X86PicDataSnippet(
+//      VPicParameters.defaultNumberOfSlots,
+//      startOfPicInstruction,
+//      snippetLabel,
+//      doneLabel,
+//      site.getSymbolReference(),
+//      slotPatchInstruction,
+//      site.getThunkAddress(),
+//      false,
+//      cg());
+//
+//   snippet->gcMap().setGCRegisterMask(site.getPreservedRegisterMask());
+//   cg()->addSnippet(snippet);
+
+   cg()->incPicSlotCountBy(VPicParameters.defaultNumberOfSlots);
+   cg()->reserveNTrampolines(VPicParameters.defaultNumberOfSlots);
+   }
+
+
+TR::Instruction *TR::X86SystemLinkage::buildVFTCall(TR::X86CallSite &site, TR_X86OpCode dispatchOp, TR::Register *targetAddressReg, TR::MemoryReference *targetAddressMemref)
+   {
+   TR::Node *callNode = site.getCallNode();
+   if (cg()->enableSinglePrecisionMethods() &&
+       comp()->getJittedMethodSymbol()->usesSinglePrecisionMode())
+      {
+      auto cds = cg()->findOrCreate2ByteConstant(callNode, DOUBLE_PRECISION_ROUND_TO_NEAREST);
+      generateMemInstruction(LDCWMem, callNode, generateX86MemoryReference(cds, cg()), cg());
+      }
+
+   TR::Instruction *callInstr;
+   if (dispatchOp.sourceIsMemRef())
+      {
+      TR_ASSERT(targetAddressMemref, "Call via memory requires memref");
+      // Fix the displacement at 4 bytes so j2iVirtual can decode it if necessary
+      if (targetAddressMemref)
+         targetAddressMemref->setForceWideDisplacement();
+      callInstr = generateCallMemInstruction(dispatchOp.getOpCodeValue(), callNode, targetAddressMemref, cg());
+      }
+   else
+      {
+      TR_ASSERT(targetAddressReg, "Call via register requires register");
+      TR::Node *callNode = site.getCallNode();
+      TR::ResolvedMethodSymbol *resolvedMethodSymbol = callNode->getSymbol()->getResolvedMethodSymbol();
+      bool mayReachJ2IThunk = true;
+//      if (resolvedMethodSymbol && resolvedMethodSymbol->getRecognizedMethod() == TR::java_lang_invoke_ComputedCalls_dispatchDirect)
+//         mayReachJ2IThunk = false;
+      if (mayReachJ2IThunk && dispatchOp.isCallOp())
+         {
+         // Bad news.
+         //
+         // icallVMprJavaSendPatchupVirtual requires that a virtual call site
+         // either (1) uses a CALLMem with a fixed VFT offset, or (2) puts the
+         // VFT index into r8 and uses a CALLImm4 with a fixed call target.
+         // We have neither a fixed VFT offset nor a fixed call target!
+         // Adding support for CALLReg is difficult because the instruction is
+         // a different length, making it hard to back up and disassemble it.
+         //
+         // Therefore, we cannot have the return address pointing after a
+         // CALLReg instruction.  Instead, we use a CALLImm4 with a fixed
+         // displacement to get to out-of-line instructions that do a JMPReg.
+
+         // Mainline call
+         //
+         TR::LabelSymbol *jmpLabel   = TR::LabelSymbol::create(cg()->trHeapMemory(),cg());
+         callInstr = generateLabelInstruction(CALLImm4, callNode, jmpLabel, cg());
+
+         // Jump outlined
+         //
+         {
+         TR_OutlinedInstructionsGenerator og(jmpLabel, callNode, cg());
+         generateRegInstruction(JMPReg, callNode, targetAddressReg, cg());
+         }
+
+         // The targetAddressReg doesn't appear to be used in mainline code, so
+         // register assignment may do weird things like spill it.  We'd prefer it
+         // to stay in a register, though we don't care which.
+         //
+         TR::RegisterDependencyConditions *dependencies = site.getPostConditionsUnderConstruction();
+         if (targetAddressReg && targetAddressReg->getRegisterPair())
+            {
+            dependencies->unionPreCondition(targetAddressReg->getRegisterPair()->getHighOrder(), TR::RealRegister::NoReg, cg());
+            dependencies->unionPreCondition(targetAddressReg->getRegisterPair()->getLowOrder(), TR::RealRegister::NoReg, cg());
+            }
+         else
+            dependencies->unionPreCondition(targetAddressReg, TR::RealRegister::NoReg, cg());
+         }
+      else
+         {
+         callInstr = generateRegInstruction(dispatchOp.getOpCodeValue(), callNode, targetAddressReg, cg());
+         }
+      }
+
+   callInstr->setNeedsGCMap(site.getPreservedRegisterMask());
+
+   TR_ASSERT_FATAL(
+      !site.getSymbolReference()->isUnresolved() || site.getMethodSymbol()->isInterface(),
+      "buildVFTCall: unresolved virtual site");
+
+   if (cg()->enableSinglePrecisionMethods() &&
+       comp()->getJittedMethodSymbol()->usesSinglePrecisionMode())
+      {
+      auto cds = cg()->findOrCreate2ByteConstant(callNode, SINGLE_PRECISION_ROUND_TO_NEAREST);
+      generateMemInstruction(LDCWMem, callNode, generateX86MemoryReference(cds, cg()), cg());
+      }
+
+   return callInstr;
+   }
+
 
 int32_t TR::X86SystemLinkage::computeMemoryArgSize(
       TR::Node *callNode,
@@ -82,8 +949,6 @@ int32_t TR::X86SystemLinkage::computeMemoryArgSize(
       }
    return sizeOfOutGoingArgs;
    }
-
-
 
 static const TR::RealRegister::RegNum NOT_ASSIGNED = (TR::RealRegister::RegNum)-1;
 
@@ -884,4 +1749,124 @@ TR::X86SystemLinkage::layoutTypeOnStack(
          return 0;
       }
    return typeAlign;
+   }
+
+TR::X86CallSite::X86CallSite(TR::Node *callNode, TR::Linkage *calleeLinkage)
+   :_callNode(callNode)
+   ,_linkage(calleeLinkage)
+   ,_vftImplicitExceptionPoint(NULL)
+   ,_firstPICSlotInstruction(NULL)
+   ,_profiledTargets(NULL)
+   ,_interfaceClassOfMethod(NULL)
+   ,_argSize(-1)
+   ,_preservedRegisterMask(0)
+   ,_thunkAddress(NULL)
+   ,_useLastITableCache(false)
+   {
+     
+//   TR_J9VMBase *fej9 = (TR_J9VMBase *)(fe());
+//   if (getMethodSymbol()->isInterface())
+//      {
+//      // Find the class pointer to the interface class if it is already loaded.
+//      // This is needed by both static PICs
+//      //
+//      TR::Method *interfaceMethod = getMethodSymbol()->getMethod();
+//      int32_t len = interfaceMethod->classNameLength();
+//      char * s = classNameToSignature(interfaceMethod->classNameChars(), len, comp());
+//      _interfaceClassOfMethod = fej9->getClassFromSignature(s, len, getSymbolReference()->getOwningMethod(comp()));
+//      }
+
+//   setupVirtualGuardInfo();
+//   computeProfiledTargets();
+
+   // Initialize the register dependencies with conservative estimates of the
+   // number of conditions
+   //
+   uint32_t numPreconditions =
+        calleeLinkage->getProperties().getNumIntegerArgumentRegisters()
+      + calleeLinkage->getProperties().getNumFloatArgumentRegisters()
+      + 3; // VM Thread + eax + possible vtableIndex/J9Method arg on IA32
+
+   uint32_t numPostconditions =
+        calleeLinkage->getProperties().getNumberOfVolatileGPRegisters()
+      + calleeLinkage->getProperties().getNumberOfVolatileXMMRegisters()
+      + 3; // return reg + VM Thread + scratch
+
+   _preConditionsUnderConstruction  = generateRegisterDependencyConditions(numPreconditions, 0, cg());
+   _postConditionsUnderConstruction = generateRegisterDependencyConditions((COPY_PRECONDITIONS_TO_POSTCONDITIONS? numPreconditions : 0), numPostconditions + (COPY_PRECONDITIONS_TO_POSTCONDITIONS? numPreconditions : 0), cg());
+
+   _preservedRegisterMask = getLinkage()->getProperties().getPreservedRegisterMapForGC();
+   if (getMethodSymbol()->preservesAllRegisters())
+      {
+      _preservedRegisterMask |= TR::RealRegister::getAvailableRegistersMask(TR_GPR);
+      if (callNode->getDataType() != TR::NoType)
+         {
+         // Cross our fingers and hope things that preserve all regs only return ints
+         _preservedRegisterMask &= ~TR::RealRegister::gprMask(getLinkage()->getProperties().getIntegerReturnRegister());
+         }
+      }
+   }
+
+bool TR::X86CallSite::shouldUseInterpreterLinkage()
+   {
+   return false;
+//   if (getMethodSymbol()->isVirtual() &&
+//      !getSymbolReference()->isUnresolved() &&
+//      getMethodSymbol()->isVMInternalNative() &&
+//      !getResolvedMethod()->virtualMethodIsOverridden() &&
+//      !getResolvedMethod()->isAbstract())
+//      return true;
+//   else
+//      return false;
+   }
+
+
+TR::Register *TR::X86CallSite::evaluateVFT()
+   {
+   TR::Node *vftNode = getCallNode()->getFirstChild();
+   if (vftNode->getRegister())
+      return vftNode->getRegister();
+   else
+      {
+      TR::Register *result = cg()->evaluate(vftNode);
+      //_vftImplicitExceptionPoint = cg()->getImplicitExceptionPoint();
+      return result;
+      }
+   }
+
+bool TR::X86CallSite::resolvedVirtualShouldUseVFTCall()
+   {
+   return true;
+//   TR_J9VMBase *fej9 = (TR_J9VMBase *)(fe());
+//   TR_ASSERT(getMethodSymbol()->isVirtual() && !getSymbolReference()->isUnresolved(), "assertion failure");
+//
+//   return
+//      !fej9->forceUnresolvedDispatch() &&
+//      (!comp()->getOption(TR_EnableVPICForResolvedVirtualCalls)    ||
+//       getProfiledTargets()                                        ||
+//       getCallNode()->isTheVirtualCallNodeForAGuardedInlinedCall() ||
+//       ( comp()->getSymRefTab()->findObjectNewInstanceImplSymbol() &&
+//         comp()->getSymRefTab()->findObjectNewInstanceImplSymbol()->getSymbol() == getResolvedMethodSymbol()));
+   }
+
+void TR::X86CallSite::stopAddingConditions()
+   {
+   if (COPY_PRECONDITIONS_TO_POSTCONDITIONS)
+      {
+      TR_X86RegisterDependencyGroup *preconditions  = getPreConditionsUnderConstruction()->getPreConditions();
+      TR_X86RegisterDependencyGroup *postconditions = getPostConditionsUnderConstruction()->getPostConditions();
+      for (uint8_t i = 0; i < getPreConditionsUnderConstruction()->getAddCursorForPre(); i++)
+         {
+         TR::RegisterDependency *pre  = preconditions->getRegisterDependency(i);
+         getPostConditionsUnderConstruction()->unionPreCondition(pre->getRegister(), pre->getRealRegister(), cg(), pre->getFlags());
+         TR::RegisterDependency *post = postconditions->findDependency(pre->getRealRegister(), getPostConditionsUnderConstruction()->getAddCursorForPost());
+         if (!post)
+            getPostConditionsUnderConstruction()->addPostCondition(pre->getRegister(), pre->getRealRegister(), cg(), pre->getFlags());
+         }
+      }
+
+   _preConditionsUnderConstruction->stopAddingPreConditions();
+   _preConditionsUnderConstruction->stopAddingPostConditions();
+   _postConditionsUnderConstruction->stopAddingPreConditions();
+   _postConditionsUnderConstruction->stopAddingPostConditions();
    }

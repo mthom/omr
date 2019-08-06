@@ -31,6 +31,7 @@ namespace OMR { class CompilerEnv; }
 namespace OMR { typedef OMR::CompilerEnv CompilerEnvConnector; }
 #endif
 
+#include <map>
 
 #include "infra/Annotations.hpp"
 #include "env/RawAllocator.hpp"
@@ -43,9 +44,9 @@ namespace OMR { typedef OMR::CompilerEnv CompilerEnvConnector; }
 #include "env/VMEnv.hpp"
 #include "env/VMMethodEnv.hpp"
 #include "env/SharedCache.hpp"
+#include "env/VirtualDispatchKey.hpp"
 
 namespace TR { class CompilerEnv; }
-
 
 namespace OMR
 {
@@ -97,8 +98,7 @@ public:
 
    // Shared cache class. Should be thread safe.
    //
-
-   TR::SharedCache* cache;
+   TR::SharedCache cache;
    
    bool isInitialized() { return _initialized; }
 
@@ -113,6 +113,9 @@ public:
 
    TR::PersistentAllocator &persistentAllocator() { return _persistentAllocator; }
 
+   void* setVirtualDispatchThunk(const TR::VirtualDispatchKey& key, void *thunkPtr);
+   void* getVirtualDispatchThunk(const TR::VirtualDispatchKey& key);
+   
 protected:
    // Initialize 'target' environment for this compiler
    //
@@ -126,6 +129,7 @@ private:
 
    bool _initialized;
 
+   std::map<TR::VirtualDispatchKey, void*> _virtualFunctionsMap;
    TR::PersistentAllocator _persistentAllocator;
 
 public:

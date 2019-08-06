@@ -50,7 +50,7 @@ class TR_PseudoRandomNumbersListElement
    public:
 
    TR_PseudoRandomNumbersListElement()
-     :_next(0), _curIndex(0)
+     : _curIndex(0), _next(0)
       {}
 
    int32_t _pseudoRandomNumbers[PSEUDO_RANDOM_NUMBERS_SIZE];
@@ -70,12 +70,12 @@ class PersistentInfo
    friend class ::OMR::Options;
    PersistentInfo(TR_PersistentMemory *pm) :
          _persistentMemory(pm),
-         _lastDebugCounterResetSeconds(0),
          _pseudoRandomNumbersListHead(NULL),
          _curPseudoRandomNumbersListElem(NULL),
          _curIndex(0),
+         _staticCounters(NULL),	 
          _dynamicCounters(NULL),
-         _staticCounters(NULL),
+	 _lastDebugCounterResetSeconds(0),	 
          _persistentTOC(NULL)
       {}
 

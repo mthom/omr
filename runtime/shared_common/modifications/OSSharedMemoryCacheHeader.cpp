@@ -4,6 +4,8 @@
 void
 OSSharedMemoryCacheHeader::create(OMRPortLibrary* library, bool inDefaultControlDir)
 {
+  *_mapping = regionStartAddress();
+  
   OSSharedMemoryCacheHeaderMapping* mapping = _mapping->baseMapping();
   memset(mapping, 0, mapping->size());
 

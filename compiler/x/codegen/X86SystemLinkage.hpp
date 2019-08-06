@@ -24,16 +24,25 @@
 
 #include <stdint.h>
 #include "codegen/Linkage.hpp"
+#include "codegen/RealRegister.hpp"
 #include "codegen/Register.hpp"
 #include "codegen/RegisterConstants.hpp"
+#include "codegen/RegisterDependency.hpp"
 #include "il/DataTypes.hpp"
 
 namespace TR { class CodeGenerator; }
 namespace TR { class Instruction; }
 namespace TR { class Node; }
 namespace TR { class ParameterSymbol; }
-namespace TR { class RegisterDependencyConditions; }
+// namespace TR { class RegisterDependencyConditions; }
 namespace TR { class ResolvedMethodSymbol; }
+
+// This is an overkill way to make sure the preconditions survive up to the call instruction.
+// It's also necessary to make sure any spills happen below the internal control flow, due
+// to the nature of the backward register assignment pass.
+// TODO: Put the preconditions on the call instruction itself.
+//
+#define COPY_PRECONDITIONS_TO_POSTCONDITIONS (1)
 
 namespace TR {
 
@@ -61,8 +70,183 @@ typedef struct parmLayoutResult
       }
    } parmLayoutResult;
 
+
+enum
+   {
+   BranchJNE     = 0,
+   BranchJE      = 1,
+   BranchNopJMP  = 2
+   };
+
+enum
+   {
+   PicSlot_NeedsShortConditionalBranch      = 0x01,
+   PicSlot_NeedsLongConditionalBranch       = 0x02,
+   PicSlot_NeedsPicSlotAlignment            = 0x04,
+   PicSlot_NeedsPicCallAlignment            = 0x08,
+   PicSlot_NeedsJumpToDone                  = 0x10,
+   PicSlot_GenerateNextSlotLabelInstruction = 0x20
+   };
+
+struct PicParameters
+   {
+   intptrj_t defaultSlotAddress;
+   int32_t roundedSizeOfSlot;
+   int32_t defaultNumberOfSlots;
+   };
+
+class X86PICSlot
+   {
+   public:
+
+   TR_ALLOC(TR_Memory::Linkage);
+
+   X86PICSlot(uintptrj_t classAddress, TR_ResolvedMethod *method, bool jumpToDone=true, TR_OpaqueMethodBlock *m = NULL, int32_t slot = -1):
+     _classAddress(classAddress), _method(method), _helperMethodSymbolRef(NULL), _branchType(BranchJNE), _methodAddress(m), _slot(slot)
+      {
+      if (jumpToDone) setNeedsJumpToDone(); // TODO: Remove this oddball.  We can tell whether we need a dump to done based on whether a doneLabel is passed to buildPICSlot
+      }
+
+   uintptrj_t          getClassAddress()                         { return _classAddress; }
+   TR_ResolvedMethod  *getMethod()                               { return _method; }
+
+   TR_OpaqueMethodBlock *getMethodAddress()                      { return _methodAddress; }
+
+   int32_t getSlot()                                             { return _slot; }
+
+   void                setHelperMethodSymbolRef(TR::SymbolReference *symRef)
+                                                                 { _helperMethodSymbolRef = symRef; }
+   TR::SymbolReference *getHelperMethodSymbolRef()               { return _helperMethodSymbolRef; }
+
+   void                setJumpOnNotEqual()                       { _branchType = BranchJNE; }
+   bool                needsJumpOnNotEqual()                     { return _branchType == BranchJNE; }
+
+   void                setJumpOnEqual()                          { _branchType = BranchJE; }
+   bool                needsJumpOnEqual()                        { return _branchType == BranchJE; }
+
+   void                setNopAndJump()                           { _branchType = BranchNopJMP; }
+   bool                needsNopAndJump()                         { return _branchType == BranchNopJMP; }
+
+   bool                needsShortConditionalBranch()             {return _flags.testAny(PicSlot_NeedsShortConditionalBranch);}
+   void                setNeedsShortConditionalBranch()          {_flags.set(PicSlot_NeedsShortConditionalBranch);}
+
+   bool                needsLongConditionalBranch()              {return _flags.testAny(PicSlot_NeedsLongConditionalBranch);}
+   void                setNeedsLongConditionalBranch()           {_flags.set(PicSlot_NeedsLongConditionalBranch);}
+
+   bool                needsPicSlotAlignment()                   {return _flags.testAny(PicSlot_NeedsPicSlotAlignment);}
+   void                setNeedsPicSlotAlignment()                {_flags.set(PicSlot_NeedsPicSlotAlignment);}
+
+   bool                needsPicCallAlignment()                   {return _flags.testAny(PicSlot_NeedsPicCallAlignment);}
+   void                setNeedsPicCallAlignment()                {_flags.set(PicSlot_NeedsPicCallAlignment);}
+
+   bool                needsJumpToDone()                         {return _flags.testAny(PicSlot_NeedsJumpToDone);}
+   void                setNeedsJumpToDone()                      {_flags.set(PicSlot_NeedsJumpToDone);}
+
+   bool                generateNextSlotLabelInstruction()        {return _flags.testAny(PicSlot_GenerateNextSlotLabelInstruction);}
+   void                setGenerateNextSlotLabelInstruction()     {_flags.set(PicSlot_GenerateNextSlotLabelInstruction);}
+
+   protected:
+
+   flags8_t            _flags;
+   uintptrj_t          _classAddress;
+   TR_ResolvedMethod  *_method;
+   TR::SymbolReference *_helperMethodSymbolRef;
+   TR_OpaqueMethodBlock *_methodAddress;
+   int32_t             _slot;
+   uint8_t             _branchType;
+   };
+
+class X86CallSite
+   {
+   public:
+
+   X86CallSite(TR::Node *callNode, TR::Linkage *calleeLinkage);
+
+   TR::Node      *getCallNode(){ return _callNode; }
+   TR::Linkage *getLinkage(){ return _linkage; }
+
+   TR::CodeGenerator *cg(){ return _linkage->cg(); }
+   TR::Compilation    *comp(){ return _linkage->comp(); }
+   TR_FrontEnd         *fe(){ return _linkage->fe(); }
+
+   // Register dependency construction
+   TR::RegisterDependencyConditions *getPreConditionsUnderConstruction() { return _preConditionsUnderConstruction; }
+   TR::RegisterDependencyConditions *getPostConditionsUnderConstruction(){ return _postConditionsUnderConstruction; }
+
+   void addPreCondition (TR::Register *virtualReg, TR::RealRegister::RegNum realReg){ _preConditionsUnderConstruction->unionPreCondition(virtualReg, realReg, cg()); }
+   void addPostCondition(TR::Register *virtualReg, TR::RealRegister::RegNum realReg){ _postConditionsUnderConstruction->unionPostCondition(virtualReg, realReg, cg()); }
+   void stopAddingConditions();
+
+   // Immutable call site properties
+   TR::ResolvedMethodSymbol *getCallerSym(){ return comp()->getMethodSymbol(); }
+   TR::MethodSymbol         *getMethodSymbol(){ return _callNode->getSymbol()->castToMethodSymbol(); }
+   TR::ResolvedMethodSymbol *getResolvedMethodSymbol(){ return _callNode->getSymbol()->getResolvedMethodSymbol(); }
+   TR_ResolvedMethod       *getResolvedMethod(){ return getResolvedMethodSymbol()? getResolvedMethodSymbol()->getResolvedMethod() : NULL; }
+   TR::SymbolReference      *getSymbolReference(){ return _callNode->getSymbolReference(); }
+   TR_OpaqueClassBlock     *getInterfaceClassOfMethod(){ return _interfaceClassOfMethod; } // NULL for virtual methods
+
+   // Abstraction of complex decision logic
+   bool shouldUseInterpreterLinkage();
+   //   bool vftPointerMayPersist();
+   TR_ScratchList<TR::X86PICSlot> *getProfiledTargets(){ return _profiledTargets; } // NULL if there aren't any
+   TR_VirtualGuardKind getVirtualGuardKind(){ return _virtualGuardKind; }
+   TR_ResolvedMethod *getDevirtualizedMethod(){ return _devirtualizedMethod; }  // The method to be dispatched statically
+   TR::SymbolReference *getDevirtualizedMethodSymRef(){ return _devirtualizedMethodSymRef; }
+   TR::Register *evaluateVFT();
+   TR::Instruction *getImplicitExceptionPoint(){ return _vftImplicitExceptionPoint; }
+   TR::Instruction *setImplicitExceptionPoint(TR::Instruction *instr){ return _vftImplicitExceptionPoint = instr; }
+   uint32_t getPreservedRegisterMask(){ return _preservedRegisterMask; }
+   bool resolvedVirtualShouldUseVFTCall();
+
+   TR::Instruction *getFirstPICSlotInstruction() {return _firstPICSlotInstruction;}
+   void setFirstPICSlotInstruction(TR::Instruction *f) {_firstPICSlotInstruction = f;}
+   uint8_t *getThunkAddress() {return _thunkAddress;}
+   void setThunkAddress(uint8_t *t) {_thunkAddress = t;}
+
+   float getMinProfiledCallFrequency(){ return .075F; }  // Tuned for megamorphic site in jess; so bear in mind before changing
+
+   public:
+
+   bool    argsHaveBeenBuilt(){ return _argSize >= 0; }
+   void    setArgSize(int32_t s){ TR_ASSERT(!argsHaveBeenBuilt(), "assertion failure"); _argSize = s; }
+   int32_t getArgSize(){ TR_ASSERT(argsHaveBeenBuilt(), "assertion failure"); return _argSize; }
+
+   bool useLastITableCache(){ return _useLastITableCache; }
+
+   private:
+
+   TR::Node       *_callNode;
+   TR::Linkage *_linkage;
+   TR_OpaqueClassBlock *_interfaceClassOfMethod;
+   int32_t  _argSize;
+   uint32_t _preservedRegisterMask;
+   TR::RegisterDependencyConditions *_preConditionsUnderConstruction;
+   TR::RegisterDependencyConditions *_postConditionsUnderConstruction;
+   TR::Instruction *_vftImplicitExceptionPoint;
+   TR::Instruction *_firstPICSlotInstruction;
+
+     //   void computeProfiledTargets();
+   TR_ScratchList<TR::X86PICSlot> *_profiledTargets;
+
+     // void setupVirtualGuardInfo();
+   TR_VirtualGuardKind  _virtualGuardKind;
+   TR_ResolvedMethod   *_devirtualizedMethod;
+   TR::SymbolReference  *_devirtualizedMethodSymRef;
+
+   uint8_t *_thunkAddress;
+
+   bool _useLastITableCache;
+   };
+
 class X86SystemLinkage : public TR::Linkage
    {
+   public:
+
+   struct PicParameters IPicParameters;
+   struct PicParameters VPicParameters;
+
+   virtual uint8_t *generateVirtualIndirectThunk(TR::Node *callNode) = 0;
+
    protected:
    X86SystemLinkage(TR::CodeGenerator *cg);
 
@@ -84,7 +268,12 @@ class X86SystemLinkage : public TR::Linkage
    virtual int32_t layoutParm(TR::Node *parmNode, int32_t &dataCursor, uint16_t &intReg, uint16_t &floatReg, TR::parmLayoutResult &layoutResult) = 0;
    virtual int32_t layoutParm(TR::ParameterSymbol *paramSymbol, int32_t &dataCursor, uint16_t &intReg, uint16_t &floatRrgs, TR::parmLayoutResult&) = 0;
 
+   virtual void buildVirtualOrComputedCall(TR::X86CallSite &site, TR::LabelSymbol *entryLabel, TR::LabelSymbol *doneLabel, uint8_t *thunk) = 0;
    virtual TR::Register* buildVolatileAndReturnDependencies(TR::Node*, TR::RegisterDependencyConditions*) = 0;
+   virtual TR::Instruction *buildVFTCall(X86CallSite &site, TR_X86OpCode dispatchOp, TR::Register *targetAddressReg, TR::MemoryReference *targetAddressMemref);
+   virtual void buildVPIC(X86CallSite &site, TR::LabelSymbol *entryLabel, TR::LabelSymbol *doneLabel);
+   virtual TR::Instruction *buildPICSlot(TR::X86PICSlot picSlot, TR::LabelSymbol *mismatchLabel, TR::LabelSymbol *doneLabel, X86CallSite &site)=0;
+   virtual TR::Register *buildCallPostconditions(X86CallSite &site);
 
    /**
     * @brief Returns a register appropriate for allocating/de-allocating small stack frames
@@ -96,11 +285,20 @@ class X86SystemLinkage : public TR::Linkage
     */
    virtual TR::RealRegister* getSingleWordFrameAllocationRegister() = 0;
 
+   int32_t argAreaSize(TR::ResolvedMethodSymbol*);
+   int32_t argAreaSize(TR::Node*);
+     
+   int32_t buildVirtualArgs(TR::Node*, TR::RegisterDependencyConditions*);
+   int32_t buildPrivateVirtualLinkageArgs(TR::Node                             *callNode,
+					  TR::RegisterDependencyConditions  *dependencies,
+					  bool                                 rightToLeft,
+					  bool                                 passArgsOnStack);
+
    public:
 
    const TR::X86LinkageProperties& getProperties();
 
-   virtual TR::Register *buildIndirectDispatch(TR::Node *callNode) = 0;
+   virtual TR::Register *buildIndirectDispatch(TR::Node *callNode);
    virtual TR::Register *buildDirectDispatch(TR::Node *callNode, bool spillFPRegs) = 0;
 
    virtual void mapIncomingParms(TR::ResolvedMethodSymbol *method);

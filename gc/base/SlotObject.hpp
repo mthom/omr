@@ -70,7 +70,7 @@ public:
 	 * Read reference from slot
 	 * @return address of object slot reference to.
 	 */
-	MMINLINE omrobjectptr_t readReferenceFromSlot()
+	omrobjectptr_t readReferenceFromSlot()
 	{
 		return convertPointerFromToken(*_slot);
 	}

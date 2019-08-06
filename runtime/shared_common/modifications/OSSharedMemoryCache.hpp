@@ -72,28 +72,45 @@ public:
 
   SH_CacheAccess isCacheAccessible() const;
   UDATA isCacheActive() const;
-  //  IDATA restoreFromSnapshot(const char* cacheName, UDATA numLocks, bool& cacheExists);
 
+  typedef OSSharedMemoryCacheHeader header_type;
   typedef OSSharedMemoryCacheConfig config_type;
-
+  typedef OSSharedMemoryCacheIterator iterator_type;
+  
 protected:
   friend class OSSharedMemoryCachePolicies;
   friend class OSSharedMemoryCacheSnapshot;
   friend class OSSharedMemoryCacheStats;
 
-  virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
+  // virtual OSSharedMemoryCacheIterator* getSharedMemoryCacheIterator() = 0;
 
+  virtual void writeSemaphoreAndSharedMemoryFileNames() {
+    sprintf(_semFileName, "%s%s%s", _cacheName, OMRSH_SEMAPHORE_ID, OMRSH_MEMORY_ID);
+    _shmFileName = _cacheName;
+  }
+  
   IDATA installLayout(LastErrorInfo* lastErrorInfo);
+  
   void setError(IDATA ec);
+  IDATA getError();
+
+  void runExitProcedure() {}
+
+  IDATA getLockCapabilities() {
+    return J9OSCACHE_DATA_WRITE_LOCK;
+  }
+  
   IDATA openCache(const char* cacheName);
 
   // factory method to construct a policy object that decides how the
   // interface to shared memory *and* semaphores is handled.
-  virtual OSSharedMemoryCachePolicies* constructSharedMemoryPolicy();
+  virtual OSSharedMemoryCachePolicies* constructSharedMemoryPolicies();
 
   // factory method to construct a snapshot object. it's pure because OSSharedMemoryCacheSnapshot
   // class is abstract.
-  virtual OSSharedMemoryCacheSnapshot* constructSharedMemoryCacheSnapshot() = 0;
+  // I've commented this out because this class should be concrete. Subclasses
+  // can add their own factory methods.
+  // virtual OSSharedMemoryCacheSnapshot* constructSharedMemoryCacheSnapshot() = 0;
 
   virtual OSCacheMemoryProtector* constructMemoryProtector();
 
@@ -103,12 +120,11 @@ protected:
   virtual void errorHandler(U_32 moduleName, U_32 id, LastErrorInfo *lastErrorInfo);
   virtual void printErrorMessage(LastErrorInfo* lastErrorInfo);
 
-  virtual UDATA getPermissionsRegionGranularity();
-  
-  // this is largely J9 specific. let it be overloaded.
-  virtual IDATA verifyCacheHeader() = 0;
+  virtual UDATA getPermissionsRegionGranularity();  
+  virtual IDATA verifyCacheHeader();
 
-  IDATA restoreFromSnapshot(IDATA numLocks);
+  // see the comment about why constructSharedMemoryCacheSnapshot() was commented out.
+  // IDATA restoreFromSnapshot(IDATA numLocks);
 
   IDATA detachRegion();
 
@@ -119,7 +135,6 @@ protected:
   OMRControlFileStatus _controlFileStatus;
 
   IDATA _attachCount; // was _attach_count, but then why were we mixing case styles?
-  UDATA _userSemCntr;
 
   char* _shmFileName;
   char* _semFileName;

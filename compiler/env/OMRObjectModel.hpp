@@ -84,12 +84,13 @@ class ObjectModel
    uintptrj_t getArrayElementWidthInBytes(TR::Compilation* comp, uintptrj_t objectPointer);
    uintptrj_t decompressReference(TR::Compilation* comp, uintptrj_t compressedReference);
 
-
+   void VFTRuntimeHelper() {}
+     
    int32_t compressedReferenceShiftOffset();
 
    int32_t compressedReferenceShift();
 
-   uintptrj_t offsetOfObjectVftField() { return 0; }
+   uintptrj_t offsetOfObjectVftField() { return 0x13; }
 
    // --------------------------------------------------------------------------
    // Object shape

@@ -736,7 +736,7 @@ OSMemoryMappedCache::attach()//OMR_VMThread *currentThread, J9PortShcVersion* ex
   // cacheHeader = (OSCachemmap_header_version_current *)_headerStart;
 
   /* Verify the header */
-  if ((headerRc = _config->isCacheHeaderValid()) != OMRSH_OSCACHE_HEADER_OK) {
+  if ((headerRc = verifyCacheHeader()) != OMRSH_OSCACHE_HEADER_OK) {
     handleCacheHeaderCorruption(headerRc);
     goto detach;
   }
@@ -1026,3 +1026,48 @@ OSMemoryMappedCache::checkTime(U_64 moduleTime)
   I_64* cacheTime = _config->getLastAttachTimeLocation();
   return moduleTime<*cacheTime;
 }
+
+/**
+ * Method to determine whether a persistent cache's header is valid
+ * 
+ * @param [in] headerArg  A pointer to the cache header
+ * @param [in] versionData  The expected cache version
+ * 
+ * @return true if header is valid, false if the header is invalid or doesn't match the versionData
+ * THREADING: Pre-req caller holds the cache header write lock
+ */
+IDATA
+OSMemoryMappedCache::verifyCacheHeader()
+{
+  OSMemoryMappedCacheHeaderMapping* headerMapping = _config->_mapping;
+  //  Trc_SHR_OSC_Mmap_isCacheHeaderValid_Entry(header);
+  IDATA headerRc;
+  //   U_32 headerLen = MMAP_CACHEHEADERSIZE;
+  
+  OMRPORT_ACCESS_FROM_OMRPORT(_portLibrary);
+	
+  if (strncmp(headerMapping->_eyecatcher, OMRSH_OSCACHE_MMAP_EYECATCHER, OMRSH_OSCACHE_MMAP_EYECATCHER_LENGTH)) {
+    Trc_SHR_OSC_Mmap_isCacheHeaderValid_eyecatcherFailed(headerMapping->_eyecatcher, OMRSH_OSCACHE_MMAP_EYECATCHER);
+    errorHandler(J9NLS_SHRC_OSCACHE_MMAP_ISCACHEHEADERVALID_EYECATCHER, NULL); /* TODO: Add values */
+     
+    OSC_ERR_TRACE1(_configOptions, J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_HEADER_BAD_EYECATCHER, headerMapping->_eyecatcher);
+    setCorruptionContext(CACHE_HEADER_BAD_EYECATCHER, (UDATA)(headerMapping->_eyecatcher));
+    return OMRSH_OSCACHE_HEADER_CORRUPT;
+  }
+
+  //   if (header->oscHdr.size != _cacheSize) {
+  //     Trc_SHR_OSC_Mmap_isCacheHeaderValid_wrongSize(header->oscHdr.size, _cacheSize);
+  //     OSC_ERR_TRACE1(J9NLS_SHRC_OSCACHE_CORRUPT_CACHE_HEADER_INCORRECT_CACHE_SIZE, header->oscHdr.size);
+  //     setCorruptionContext(CACHE_HEADER_INCORRECT_CACHE_SIZE, (UDATA)header->oscHdr.size);
+  //     return OMRSH_OSCACHE_HEADER_CORRUPT;
+  //   }
+  //	
+  //   if ((headerRc = checkOSCacheHeader(&(header->oscHdr), versionData, headerLen)) != OMRSH_OSCACHE_HEADER_OK) {
+  //     Trc_SHR_OSC_Mmap_isCacheHeaderValid_OSCacheHeaderBad(headerRc);
+  //     return headerRc; 
+  //   }
+	
+  Trc_SHR_OSC_Mmap_isCacheHeaderValid_Exit();
+  return OMRSH_OSCACHE_HEADER_OK;
+} 
+

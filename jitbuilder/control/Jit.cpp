@@ -41,9 +41,12 @@
 #include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
 #include "runtime/RelocationRecord.hpp"
+
 #include "runtime/RelocationRuntime.hpp"
 #include "WASMCompositeCache.hpp"
 #include "env/AotAdapter.hpp"
+
+//#include "WASMCompositeCache.hpp"
 
 extern TR_RuntimeHelperTable runtimeHelpers;
 extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *callBacks, int32_t *numHelpers, int32_t *CCPreLoadedCodeSize);
@@ -119,10 +122,18 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    TR::CodeCache *firstCodeCache = codeCacheManager.initialize(true, 1);
 }
 
+
 bool storeCodeEntry(const char *methodName, void *codeLocation) 
    {
    return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
    }
+
+
+bool storeCodeEntry(const char *methodName, void *codeLocation) {
+  TR::SharedCache* cache = TR::Compiler->cache;
+  return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+}
+
 
 bool initializeSharedCache(TR::RawAllocator raw) {  
    AotAdapter = new TR::AotAdapter();
@@ -230,7 +241,9 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
 
+
    initializeSharedCache(rawAllocator);
+//   initializeSharedCache();
    
    if (commonJitInit(fe, options) < 0)
      return false;
@@ -273,7 +286,7 @@ internal_initializeJitWithOptions(char *options)
 bool
 internal_initializeJit()
    {
-   return initializeJitBuilder(0, 0, 0, (char *)"-Xjit:acceptHugeMethods,enableBasicBlockHoisting,omitFramePointer,useILValidator");
+   return initializeJitBuilder(0, 0, 0, (char *)"-Xjit:acceptHugeMethods,enableBasicBlockHoisting,omitFramePointer,useILValidator,traceIlGen,traceFull,log=trtrace.log,paranoidOptCheck");
    }
 
 int32_t
@@ -309,6 +322,7 @@ internal_shutdownJit()
 // if(cache != NULL) {
 //   delete cache;
 // }
+   TR::Compiler->cache.cleanup();
    }
 
 bool
@@ -333,6 +347,7 @@ void internal_relocateCodeEntry(char *methodName,void *warmCode)
    {
      relocateCodeEntry(const_cast<const char*>(methodName),warmCode);
    }
+
 
 void internal_setCodeEntry(char *methodName, void *codeLocation)
    {

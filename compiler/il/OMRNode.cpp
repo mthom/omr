@@ -3227,8 +3227,6 @@ OMR::Node::setNullCheckReference(TR::Node *refNode)
    return;
    }
 
-
-
 int32_t
 OMR::Node::getFirstArgumentIndex()
    {

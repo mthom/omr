@@ -108,7 +108,7 @@ public:
 	MMINLINE uintptr_t
 	getObjectHeaderSizeInBytes(omrobjectptr_t objectPtr)
 	{
-		return sizeof(ObjectHeader);
+	  return sizeof(size_t); //sizeof(ObjectHeader);
 	}
 
 	/**
@@ -135,8 +135,8 @@ public:
 	 */
 	MMINLINE uintptr_t
 	getObjectSizeInBytesWithHeader(omrobjectptr_t objectPtr)
-	{
-		return objectPtr->header.sizeInBytes();
+        {
+	  return sizeof(*objectPtr);//->header.sizeInBytes();
 	}
 
 	/**

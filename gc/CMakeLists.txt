@@ -233,7 +233,7 @@ if(OMR_GC_MODRON_STANDARD)
 				base/standard/CompactFixHeapForWalkTask.cpp
 				base/standard/CompactScheme.cpp
 				base/standard/ParallelCompactTask.cpp
-				
+
 				stats/CompactStats.cpp
 		)
 	endif()
@@ -254,7 +254,7 @@ if(OMR_GC_MODRON_STANDARD)
 				base/standard/RememberedSetSATB.cpp
 				base/standard/WorkPacketsConcurrent.cpp
 				base/standard/WorkPacketsSATB.cpp
-				
+
 				stats/ConcurrentGCStats.cpp
 		)
 		if(OMR_GC_MODRON_SCAVENGER)
@@ -276,14 +276,14 @@ if(OMR_GC_MODRON_STANDARD)
 				base/HeapSplit.cpp # TODO delete as this should not be used anymore!
 				base/MemorySubSpaceGenerational.cpp
 				base/MemorySubSpaceSemiSpace.cpp
-				
+
 				base/standard/ConfigurationGenerational.cpp
 				base/standard/CopyScanCacheList.cpp
 				base/standard/ParallelScavengeTask.cpp
 				base/standard/PhysicalSubArenaVirtualMemorySemiSpace.cpp
 				base/standard/RSOverflow.cpp
 				base/standard/Scavenger.cpp
-				
+
 				stats/ScavengerCopyScanRatio.cpp
 		)
 		if(OMR_GC_CONCURRENT_SCAVENGER)
@@ -344,6 +344,8 @@ if(OMR_ENHANCED_WARNINGS)
 	target_compile_options(omrgc PRIVATE ${OMR_ENHANCED_WARNING_FLAG})
 endif()
 
+add_definitions(-DGC_TYPE=OMR_GARBAGE_COLLECTION)
+
 target_include_directories(omrgc
 	PUBLIC
 		.
@@ -356,9 +358,15 @@ target_include_directories(omrgc
 		stats
 		structs
 		verbose
-		verbose/handler_standard
+		verbose/handler_standard		
 	INTERFACE
-		$<TARGET_PROPERTY:${OMR_GC_GLUE_TARGET},INTERFACE_INCLUDE_DIRECTORIES>
+	        $<TARGET_PROPERTY:${OMR_GC_GLUE_TARGET},INTERFACE_INCLUDE_DIRECTORIES>
+)
+
+target_include_directories(omrgc
+  PUBLIC
+     "${CMAKE_CURRENT_SOURCE_DIR}/../../omrglue"
+     "${CMAKE_CURRENT_SOURCE_DIR}/../../src"
 )
 
 target_link_libraries(omrgc

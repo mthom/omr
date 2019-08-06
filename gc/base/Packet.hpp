@@ -140,7 +140,7 @@ public:
 		return (_currentPtr == _topPtr);
 	}
 
-	MMINLINE void *pop(MM_EnvironmentBase *env)
+	void *pop(MM_EnvironmentBase *env)
 	{
 		if(_currentPtr > _basePtr) {
 			void *result = (void *)*(--_currentPtr);
@@ -157,7 +157,7 @@ public:
 	 * @return TRUE is room in current packet for element; FALSE otherwise
 	 *
 	 */
-	MMINLINE bool push(MM_EnvironmentBase *env, void *element)
+	bool push(MM_EnvironmentBase *env, void *element)
 	{
 		if(_currentPtr < _topPtr) {
 			*_currentPtr++ = (uintptr_t)element;

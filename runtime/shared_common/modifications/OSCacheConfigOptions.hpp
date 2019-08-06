@@ -82,6 +82,8 @@ public:
   virtual bool statIterate() = 0; // like SHR_STATS_REASON_ITERATE
   virtual bool statList() = 0; // like SHR_STATS_REASON_LIST
 
+  virtual bool semaphoreCheckEnabled() = 0;    
+  
   virtual OSCacheConfigOptions& setOpenReason(StartupReason reason) = 0;
   virtual OSCacheConfigOptions& setReadOnlyOpenMode() = 0;
   virtual OSCacheConfigOptions& setOpenMode(I_32 openMode)= 0;
@@ -102,7 +104,7 @@ public:
   virtual bool disableCorruptCacheDumps()= 0;
 
   virtual bool verboseEnabled()= 0;
-  virtual bool groupAccessEnabled()= 0; // true iff _groupPerm = 1 in the J9 cache.
+  virtual bool groupAccessEnabled() = 0; // true iff _groupPerm = 1 in the J9 cache.
   // allocate the cache in the user's home directory.
   virtual void useUserHomeDirectoryForCacheLocation()= 0;
   // render the options to a bit vector understood by the functions of the OMR port library.
@@ -110,7 +112,8 @@ public:
 
   virtual UDATA renderCreateOptionsToFlags()= 0;
   virtual UDATA renderVerboseOptionsToFlags()= 0;
-
+  virtual void resetVerboseOptionsFromFlags(UDATA flags) = 0;
+  
   // flags obviated so far:
   /* appendBaseDir (a variable inside getCacheDir)
      appendBaseDir = (NULL == ctrlDirName) || (OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT == cacheType) || (OMRPORT_SHR_CACHE_TYPE_SNAPSHOT == cacheType);
