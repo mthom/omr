@@ -112,12 +112,8 @@ OMR::RelocationRuntime::createMethodHeader(uint8_t *codeLocation,
 }
 uint8_t * 
 OMR::RelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize){
-   int32_t numReserved;
-   static TR::CodeCache *codeCache = _manager->reserveCodeCache(false, 0, 0, &numReserved);
-   uint8_t * coldCode = nullptr;
-   uint8_t * code =  _manager->allocateCodeMemory(codeSize, 0, &codeCache, &coldCode, false);
-   _codeCache = codeCache;
-   return code;
+
+   return  NULL;
 }
 void
 OMR::RelocationRuntime::relocateAOTCodeAndData(
@@ -141,7 +137,8 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
                         // OMR_VMThread* vmThread,
 						      // TR_FrontEnd *theFE,
 						      // TR::CodeCache *aotMCCRuntimeCodeCache,
-						      TR::AOTMethodHeader *cacheEntry
+						      TR::AOTMethodHeader *cacheEntry,
+                        void * newCodeStart
 						      // OMRMethod *theMethod,
 						      // bool shouldUseCompiledCopy,
 						      // TR::Options *options,
@@ -169,7 +166,7 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
    // TR_ASSERT(_options, "Options were not correctly initialized.");
 
    uint8_t *tempCodeStart, *tempDataStart;
-   uint8_t *oldDataStart, *oldCodeStart, *newCodeStart;
+   uint8_t *oldDataStart, *oldCodeStart;
    tempDataStart = (uint8_t *)cacheEntry;
 
    //Check method header is valid
@@ -205,24 +202,25 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
        // newCodeStart points after a OMR::CodeCacheMethodHeader, but tempCodeStart points at a OMR::CodeCacheMethodHeader
        // to keep alignment consistent, back newCodeStart over the OMR::CodeCacheMethodHeader
        //we can still do the code start without the bodyInfo! need check in cleanup!
-       newCodeStart = allocateSpaceInCodeCache(codeSize-sizeof(OMR::CodeCacheMethodHeader));
-       if (newCodeStart)
+      //  newCodeStart = allocateSpaceInCodeCache(codeSize);//-sizeof(OMR::CodeCacheMethodHeader));
+   if (newCodeStart)
 	 {
-	   TR_ASSERT(_codeCache->isReserved(), "codeCache must be reserved"); // MCT
-	   newCodeStart = ((U_8*)newCodeStart) - sizeof(OMR::CodeCacheMethodHeader);
+	   // TR_ASSERT(_codeCache->isReserved(), "codeCache must be reserved"); // MCT
+	   // newCodeStart = ((U_8*)newCodeStart) - sizeof(OMR::CodeCacheMethodHeader);
 	   // Before copying, memorize the real size of the block returned by the code cache manager
 	   // and fix it later
-	   U_32 blockSize = ((OMR::CodeCacheMethodHeader*)newCodeStart)->_size;
-	   memcpy(newCodeStart, tempCodeStart, codeSize);  // the real size may have been overwritten
-	   ((OMR::CodeCacheMethodHeader*)newCodeStart)->_size = blockSize; // fix it
+	   // U_32 blockSize = ((OMR::CodeCacheMethodHeader*)newCodeStart)->_size;
+	   // memcpy(newCodeStart, tempCodeStart, codeSize);  // the real size may have been overwritten
+	   // ((OMR::CodeCacheMethodHeader*)newCodeStart)->_size = blockSize; // fix it
 	   // Must fix the pointer to the metadata which is stored in the OMR::CodeCacheMethodHeader
 	   //((OMR::CodeCacheMethodHeader*)newCodeStart)->_metaData = NULL;
+      _relocationStatus = TR_AotRelocationCleanUp::RelocationNoError;
 	 }
        
        if (_relocationStatus == RelocationNoError)
 	 {
       initializeAotRuntimeInfo();
-      relocateAOTCodeAndData(newCodeStart);
+      relocateAOTCodeAndData((U_8*)newCodeStart);
       }
    return newCodeStart;
    // if (haveReservedCodeCache())
@@ -375,50 +373,29 @@ OMR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTH
 //    return NULL;
 //    }
 bool 
-OMR::RelocationRuntime::storeAOTHeader(){
-   //  "This should never happen"
+OMR::RelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize){
+   // //  "This should never happen"
    return false;
 }
 
 bool
 // OMR::SharedCacheRelocationRuntime::storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread)
-OMR::SharedCacheRelocationRuntime::storeAOTHeader()
+OMR::SharedCacheRelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize )
    {
-//   TR::AOTHeader *aotHeader = createAOTHeader(omrVM,fe);
-   // if (!aotHeader)
-   //    {
-   //      return false;
-   //    }
+   TR::SharedCache* sharedCache = TR::Compiler->cache;
 
-   // // J9SharedDataDescriptor dataDescriptor;
-   // // UDATA aotHeaderLen = sizeof(TR_AOTHeader);
+   // TR_ASSERT(comp, "AOT compilation that succeeded must have a compilation object");
+   // J9JITDataCacheHeader *aotMethodHeader      = (J9JITDataCacheHeader *)comp->getAotMethodDataStart();
+   // TR_ASSERT(aotMethodHeader, "The header must have been set");
+   TR::AOTMethodHeader   *aotMethodHeaderEntry =new TR::AOTMethodHeader();
 
-   // // dataDescriptor.address = (U_8*)aotHeader;
-   // // dataDescriptor.length = aotHeaderLen;
-   // // dataDescriptor.type =  J9SHR_DATA_TYPE_AOTHEADER;
-   // // dataDescriptor.flags = J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE;
-   // bool store = false;
-   // // const void* store = javaVM()->sharedClassConfig->storeSharedData(curThread,
-   // //                                                                aotHeaderKey,
-   // //                                                                aotHeaderKeyLength,
-   // //                                                                &dataDescriptor);
-   // if (store)
-   //    {
-   //    // If a header already exists, the old one is returned
-   //    // Thus, we must check the validity of the header
-   //    // return validateAOTHeader();
-   //    return true;
-   //    }
-   // else
-   //    {
-   //    // The store failed for some odd reason; maybe the cache is full
-   //    // Let's prevent any further store operations to avoid overhead
-   //    // TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
+   aotMethodHeaderEntry->compiledCodeSize = codeSize;
+   aotMethodHeaderEntry->compiledCodeStart = codeStart;
+   aotMethodHeaderEntry->relocationsSize = dataSize;
+   aotMethodHeaderEntry->relocationsStart = dataStart;
+   
 
-   //    // TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_HEADER_STORE_FAILED);
-   //    // TR_J9SharedCache::setStoreSharedDataFailedLength(aotHeaderLen);
-   //    return false;
-   //    }
+   sharedCache->setRelocationData(reinterpret_cast<uint8_t*>(aotMethodHeaderEntry));
    }
 
 

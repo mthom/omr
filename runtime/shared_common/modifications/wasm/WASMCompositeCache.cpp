@@ -105,7 +105,8 @@ typedef struct AOTMethodHeader
 // simply return 0.
 bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength)
 {
-  UDATA allocSize = sizeof(WASMCacheEntry) + codeLength;
+  AOTMethodHeader* hdr = (AOTMethodHeader*) _relocationData;
+  UDATA allocSize = sizeof(WASMCacheEntry) + codeLength+hdr->relocationsSize;
   UDATA freeSpace = dataSectionFreeSpace();
 
   if(freeSpace < allocSize) {
@@ -117,7 +118,6 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   WASMCacheEntry* entryLocation = _codeUpdatePtr++;
 
   memcpy(entryLocation, &entry, sizeof(WASMCacheEntry));
-  AOTMethodHeader* hdr = (AOTMethodHeader*) _relocationData;
   // memcpy(_codeUpdatePtr, codeLocation, codeLength);
   // _codeUpdatePtr += codeLength;
 
@@ -126,11 +126,13 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   // // now write the relocation record to the cache.
   memcpy(_codeUpdatePtr,hdr,sizeof(AOTMethodHeader));
   _codeUpdatePtr += sizeof(AOTMethodHeader);
-  memcpy(_codeUpdatePtr,(hdr->compiledCodeStart),hdr->compiledCodeSize);
+
+  memcpy(_codeUpdatePtr,hdr->compiledCodeStart,hdr->compiledCodeSize);
   _codeUpdatePtr += hdr->compiledCodeSize;
-  memcpy(_codeUpdatePtr,reinterpret_cast<uint8_t*>(hdr->relocationsStart),hdr->relocationsSize);
+  memcpy(_codeUpdatePtr,hdr->relocationsStart,hdr->relocationsSize);
   _codeUpdatePtr += hdr->relocationsSize;
-   
+  reinterpret_cast<AOTMethodHeader*>((uint8_t*)entryLocation+sizeof(WASMCacheEntry))->compiledCodeStart= (uint8_t*)entryLocation+sizeof(WASMCacheEntry) +sizeof(AOTMethodHeader); 
+  reinterpret_cast<AOTMethodHeader*>((uint8_t*)entryLocation+sizeof(WASMCacheEntry))->relocationsStart = (uint8_t*)entryLocation+sizeof(WASMCacheEntry) +sizeof(AOTMethodHeader) + hdr->compiledCodeSize; 
   // memcpy(_codeUpdatePtr,_relocationData,relocationRecordSize);
   // memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
   // _relocationData = nullptr;
@@ -143,12 +145,12 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
 WASMCacheEntry *WASMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, uint8_t *&relocationHeader) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[methodName];
-    if(entry) {
-      uint8_t *bytePointer = reinterpret_cast<uint8_t *>(entry);
-      relocationHeader = bytePointer+sizeof(WASMCacheEntry)+entry->codeLength;
-      codeLength = entry->codeLength;
-      entry++;
-    }
+    // if(entry) {
+    //   uint8_t *bytePointer = reinterpret_cast<uint8_t *>(entry);
+    //   relocationHeader = bytePointer+sizeof(WASMCacheEntry)+entry->codeLength;
+    //   codeLength = entry->codeLength;
+    //   entry++;
+    // }
     return entry;
 //  void * methodArea =  mmap(NULL,
 //            codeLength,

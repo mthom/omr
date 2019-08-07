@@ -46,11 +46,11 @@ public:
     TR::AotAdapter* self();
     void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
     TR::SharedCache* sc() {return _sharedCache;}
-    TR::RelocationRuntime* rr() {return _reloRuntime;}
+    TR::SharedCacheRelocationRuntime* rr() {return _reloRuntime;}
      TR::CodeCacheManager* cc() {return _codeCacheManager;}
  private:
     TR::SharedCache* _sharedCache;
-    TR::RelocationRuntime* _reloRuntime;
+    TR::SharedCacheRelocationRuntime* _reloRuntime;
     TR::CodeCacheManager*    _codeCacheManager;
     TR::CompilerEnv* _compiler;
 };

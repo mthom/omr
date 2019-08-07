@@ -148,22 +148,26 @@ void *getCodeEntry(const char *methodName){
    U_32 codeLength = 0 ;
    uint8_t* somthing = 0;
    WASMCacheEntry* t = AotAdapter->sc()->loadCodeEntry(methodName,codeLength,somthing);
-   t=t+sizeof(WASMCacheEntry);
-    void* warmCode  = AotAdapter->rr()->prepareRelocateAOTCodeAndData(reinterpret_cast<TR::AOTMethodHeader*>(t) );
-  
-  
-//cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
-  reloRuntime->registerLoadedMethod(methodName,warmCode);
-  return warmCode;
-//return cache->loadCodeEntry(methodName);
+   if (t == NULL)
+      return NULL;
+   uint8_t* h=(uint8_t*)t+sizeof(WASMCacheEntry);
+   TR::AOTMethodHeader* aotHeader = (TR::AOTMethodHeader*) h;
+   int32_t numReserved;
+   TR::CodeCacheManager* manager = TR::CodeCacheManager::instance();
+   static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
+   uint8_t * coldCode = nullptr;
+   void* code =  manager->allocateCodeMemory(  aotHeader->compiledCodeSize, 0, &codeCache, &coldCode, false);
+   memcpy(code,aotHeader->compiledCodeStart,aotHeader->compiledCodeSize);
+   reloRuntime->registerLoadedMethod(methodName,code);
+   return code;
 }
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
    uint8_t *relocationHeader = 0;
    U_32 codeLength;
    WASMCacheEntry* item =  cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-   reloRuntime->self()->prepareRelocateAOTCodeAndData((TR::AOTMethodHeader*)(item+1));
-  
+   warmCode = reloRuntime->self()->prepareRelocateAOTCodeAndData((TR::AOTMethodHeader*)(item+1),reloRuntime->methodAddress((char*)methodName));
+   // reloRuntime->registerLoadedMethod(methodName,warmCode);
 }
 
 /*void registerCallRelocation(const char *caller,const char *callee) {

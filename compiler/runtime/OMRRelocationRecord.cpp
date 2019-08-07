@@ -438,7 +438,7 @@ OMR::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::Relocatio
    uint8_t *callTargetAddress = address(reloTarget);
    char methodName[8]{};
    memcpy(methodName,&callTargetAddress,8);
-   callTargetAddress = reinterpret_cast<uint8_t*>(dynamic_cast<TR::SharedCacheRelocationRuntime *>(reloRuntime)->methodAddress(methodName));
+   callTargetAddress = reinterpret_cast<uint8_t*>(reinterpret_cast<TR::SharedCacheRelocationRuntime *>(reloRuntime)->methodAddress(methodName));
    return callTargetAddress;
    }
 void 

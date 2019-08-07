@@ -60,6 +60,8 @@
 #include "omrformatconsts.h"
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/SymbolValidationManager.hpp"
+#include "runtime/RelocationRuntime.hpp"
+#include "codegen/AheadOfTimeCompile.hpp"
 
 #include "omrsrp.h"
 //extern "C" {
@@ -450,10 +452,14 @@ compileMethodFromDetails(
                                   startPC,
                                   translationTime/1000,
                                   translationTime%1000);
-         if (compiler.compileRelocatableCode()){
-            TR::Compiler->aotAdapter->rr()->storeRelocationData(compiler.getAotMethodDataStart());
-            
-         }
+         if (compiler.compileRelocatableCode())
+            {
+            TR::Compiler->aotAdapter->rr()->storeAotInformation(
+                        startPC,
+                        compiler.cg()->getCodeLength(),
+                        compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
+                        compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
+            }
          }
       else /* of rc == COMPILATION_SUCCEEDED */
          {
