@@ -121,7 +121,7 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 
 bool storeCodeEntry(const char *methodName, void *codeLocation) 
    {
-   return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+   return cache->storeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
    }
 
 bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager) {  
@@ -137,7 +137,7 @@ void *getCodeEntry(const char *methodName){
   U_32 codeLength = 0;
   uint8_t *relocationHeader = 0;
 
-  void *sharedCacheData = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+  void *sharedCacheData = cache->loadEntry(methodName);
   
   if(!sharedCacheData ) {
     return nullptr;
@@ -164,7 +164,7 @@ void *getCodeEntry(const char *methodName){
 void relocateCodeEntry(const char *methodName,void *warmCode) {
    uint8_t *relocationHeader = 0;
    U_32 codeLength;
-   WASMCacheEntry* sharedCacheData =  cache->loadCodeEntry(methodName,codeLength,relocationHeader);
+   WASMCacheEntry* sharedCacheData =  cache->loadEntry(methodName);
   uint8_t* h=(uint8_t*)sharedCacheData +sizeof(WASMCacheEntry);
    TR::AOTMethodHeader aotHeader = *(reinterpret_cast<TR::AOTMethodHeader*>(h));
      reloRuntime->self()->prepareRelocateAOTCodeAndData(&aotHeader,warmCode);

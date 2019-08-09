@@ -15,7 +15,7 @@
 #include "WASMCacheEntry.hpp"
 #include "WASMDataSectionEntryIterator.hpp"
 #include "WASMOSCache.hpp"
-
+#include "runtime/Runtime.hpp"
 #include "env/TRMemory.hpp"
 
 class WASMCompositeCache {
@@ -35,11 +35,11 @@ public:
   
   bool startup(const char* cacheName, const char* ctrlDirName);
 
-  bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
+  bool storeEntry(const char* elementName, void* data, uint32_t size);
 
   UDATA baseSharedCacheAddress();
 
- WASMCacheEntry *loadCodeEntry(const char *methodName, U_32 &codeLength,uint8_t *&relocationHeader);
+ WASMCacheEntry *loadEntry(const char *elementName);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 

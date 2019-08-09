@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include "env/defines.h"
 #include "env/jittypes.h"
-
+#include <list>
 #include "env/Processors.hpp"
 
 #include "codegen/LinkageConventionsEnum.hpp"
@@ -482,11 +482,32 @@ typedef struct AOTStats
    uint32_t numRelocationsFailedByType[TR_NumExternalRelocationKinds];
 
    }AOTStats;
-      typedef struct StorageMessage{
+
+   //This enum correspond to the fields in AOTHeader when we attempt to serialize it
+   typedef enum
+   {
+      noField = 0,
+      compiledMehtodCode  = 1,
+      relocationsData = 2
+   } CacheMessageFields;
+
+   typedef struct CacheMessageElement{
       uint32_t size;
       uint8_t* DATA;
-   } StorageMessage;
-typedef struct AOTMethodHeader 
+      CacheMessageFields field;
+   } CacheMessageElement;
+
+  class StorageMessage{
+      uint32_t totalAllocSize;
+      std::list <CacheMessageElement> Storage;
+  };
+
+class Serializable{
+      StorageMessage* serialize();
+      void desearialize();
+};
+
+class AOTMethodHeader : Serializable
    {
       // at compile time, the constructor runs with four arguments, 
       // relocationsSize, compiledCodeSize, compiledCodeStart and relocationsStart
@@ -506,9 +527,8 @@ typedef struct AOTMethodHeader
          relocationsSize   = original.relocationsSize;
          relocationsStart  = relocationsSize ? (uint8_t*) &original+sizeof(AOTMethodHeader)+compiledCodeSize : 0;
          compiledCodeStart = (uint8_t*) &original+sizeof(AOTMethodHeader);
-         
          };
-      StorageMessage* serialize();
+
       uint8_t* compiledCodeStart;
       uint32_t compiledCodeSize;
       uint8_t* relocationsStart;
@@ -521,7 +541,7 @@ typedef struct AOTMethodHeader
       // uintptrj_t compiledDataSize;
 
    
-   } AOTMethodHeader;
+   };
 }
 
 typedef struct TR_RelocationRecordInformation {
