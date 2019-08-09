@@ -1,7 +1,7 @@
 //#include <sys/mman.h>
 #include "WASMCompositeCache.hpp"
 #include "WASMOSCacheConfig.hpp"
-
+#include "runtime/Runtime.hpp"
 static OMRPortLibrary* initializePortLibrary()
 {
   static OMRPortLibrary library;
@@ -87,26 +87,45 @@ UDATA WASMCompositeCache::dataSectionFreeSpace() const
   return dataSectionSize - (UDATA) (_codeUpdatePtr - startAddress);
 }
 
-typedef struct AOTMethodHeader 
-   {
-   uint8_t* compiledCodeStart;
-   uint32_t compiledCodeSize;
-   uint8_t* relocationsStart;
-   uint32_t relocationsSize;
-   // uintptrj_t  exceptionTableStart;
-   // // Here, compiledDataStart is a pointer to any data persisted along with the
-   // // compiled code. offset to RelocationsTable points to Relocations, should
-   // // be equal 
-   // uintptrj_t compiledDataStart;
-   // uintptrj_t compiledDataSize;
-   } AOTMethodHeader;
+// typedef struct AOTMethodHeader 
+//    {
+//       // at compile time, the constructor runs with four arguments, 
+//       // relocationsSize, compiledCodeSize, compiledCodeStart and relocationsStart
+//       // at loadtime we don't know anything, so we run a copy constructor with no 
+//    public:
+//       AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize):
+//          compiledCodeStart(compiledCodeStart),
+//          compiledCodeSize(compiledCodeSize),
+//          relocationsStart(relocationsStart),
+//          relocationsSize(relocationsSize)
+//          {};
+//       AOTMethodHeader(const AOTMethodHeader &original){ 
+//          compiledCodeSize  = original.compiledCodeSize;
+//          relocationsSize   = original.relocationsSize;
+//          relocationsStart  = relocationsSize ? (uint8_t*) &original+sizeof(AOTMethodHeader)+compiledCodeSize : 0;
+//          compiledCodeStart = (uint8_t*) &original+sizeof(AOTMethodHeader);
+         
+//          };
+//       uint8_t* compiledCodeStart;
+//       uint32_t compiledCodeSize;
+//       uint8_t* relocationsStart;
+//       uint32_t relocationsSize;
+//       // uintptrj_t  exceptionTableStart;
+//       // // Here, compiledDataStart is a pointer to any data persisted along with the
+//       // // compiled code. offset to RelocationsTable points to Relocations, should
+//       // // be equal 
+//       // uintptrj_t compiledDataStart;
+//       // uintptrj_t compiledDataSize;
 
+   
+//    } AOTMethodHeader;
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
 bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength)
 {
-  AOTMethodHeader* hdr = (AOTMethodHeader*) _relocationData;
-  UDATA allocSize = sizeof(WASMCacheEntry) + codeLength+hdr->relocationsSize;
+  TR::AOTMethodHeader* hdr = (TR::AOTMethodHeader*) _relocationData;
+  codeLength = hdr->compiledCodeSize;
+  UDATA allocSize = sizeof(TR::AOTMethodHeader) + codeLength +hdr->relocationsSize;
   UDATA freeSpace = dataSectionFreeSpace();
 
   if(freeSpace < allocSize) {
@@ -114,7 +133,7 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   }
 
   // yes, there's an extraneous string copy done here, buuuht, that is fine for now.
-  WASMCacheEntry entry(methodName, codeLength);
+  WASMCacheEntry entry(methodName, allocSize);
   WASMCacheEntry* entryLocation = _codeUpdatePtr++;
 
   memcpy(entryLocation, &entry, sizeof(WASMCacheEntry));
@@ -124,16 +143,14 @@ bool WASMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocati
   _codeEntries[methodName] = entryLocation;
 
   // // now write the relocation record to the cache.
-  memcpy(_codeUpdatePtr,hdr,sizeof(AOTMethodHeader));
-  _codeUpdatePtr += sizeof(AOTMethodHeader);
+  memcpy(_codeUpdatePtr,hdr,sizeof(TR::AOTMethodHeader));
+  _codeUpdatePtr += sizeof(TR::AOTMethodHeader);
 
   memcpy(_codeUpdatePtr,hdr->compiledCodeStart,hdr->compiledCodeSize);
   _codeUpdatePtr += hdr->compiledCodeSize;
   memcpy(_codeUpdatePtr,hdr->relocationsStart,hdr->relocationsSize);
   _codeUpdatePtr += hdr->relocationsSize;
-  reinterpret_cast<AOTMethodHeader*>((uint8_t*)entryLocation+sizeof(WASMCacheEntry))->compiledCodeStart= (uint8_t*)entryLocation+sizeof(WASMCacheEntry) +sizeof(AOTMethodHeader); 
-  reinterpret_cast<AOTMethodHeader*>((uint8_t*)entryLocation+sizeof(WASMCacheEntry))->relocationsStart = (uint8_t*)entryLocation+sizeof(WASMCacheEntry) +sizeof(AOTMethodHeader) + hdr->compiledCodeSize; 
-  // memcpy(_codeUpdatePtr,_relocationData,relocationRecordSize);
+    // memcpy(_codeUpdatePtr,_relocationData,relocationRecordSize);
   // memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
   // _relocationData = nullptr;
   // _codeUpdatePtr+=relocationRecordSize;

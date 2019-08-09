@@ -482,18 +482,45 @@ typedef struct AOTStats
    uint32_t numRelocationsFailedByType[TR_NumExternalRelocationKinds];
 
    }AOTStats;
+      typedef struct StorageMessage{
+      uint32_t size;
+      uint8_t* DATA;
+   } StorageMessage;
 typedef struct AOTMethodHeader 
    {
-   uint8_t* compiledCodeStart;
-   uint32_t compiledCodeSize;
-   uint8_t* relocationsStart;
-   uint32_t relocationsSize;
-   // uintptrj_t  exceptionTableStart;
-   // // Here, compiledDataStart is a pointer to any data persisted along with the
-   // // compiled code. offset to RelocationsTable points to Relocations, should
-   // // be equal 
-   // uintptrj_t compiledDataStart;
-   // uintptrj_t compiledDataSize;
+      // at compile time, the constructor runs with four arguments, 
+      // relocationsSize, compiledCodeSize, compiledCodeStart and relocationsStart
+      // at loadtime we don't know anything, so we run constructor with no 
+      // parameters and the values from cache are derived.
+      // This is one possible implementation, for a cache with contiguous
+      // code and relocations data stored
+   public:
+      AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize):
+         compiledCodeStart(compiledCodeStart),
+         compiledCodeSize(compiledCodeSize),
+         relocationsStart(relocationsStart),
+         relocationsSize(relocationsSize)
+         {};
+      AOTMethodHeader(const AOTMethodHeader &original){ 
+         compiledCodeSize = original.compiledCodeSize;
+         relocationsSize   = original.relocationsSize;
+         relocationsStart  = relocationsSize ? (uint8_t*) &original+sizeof(AOTMethodHeader)+compiledCodeSize : 0;
+         compiledCodeStart = (uint8_t*) &original+sizeof(AOTMethodHeader);
+         
+         };
+      StorageMessage* serialize();
+      uint8_t* compiledCodeStart;
+      uint32_t compiledCodeSize;
+      uint8_t* relocationsStart;
+      uint32_t relocationsSize;
+      // uintptrj_t  exceptionTableStart;
+      // // Here, compiledDataStart is a pointer to any data persisted along with the
+      // // compiled code. offset to RelocationsTable points to Relocations, should
+      // // be equal 
+      // uintptrj_t compiledDataStart;
+      // uintptrj_t compiledDataSize;
+
+   
    } AOTMethodHeader;
 }
 

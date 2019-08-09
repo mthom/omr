@@ -30,7 +30,6 @@ public:
   }
 
   void setRelocationData(uint8_t* relocationData) {
-    if(_relocationData == nullptr)
       _relocationData = relocationData;
   }
   

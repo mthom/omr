@@ -147,6 +147,7 @@ typedef struct AOTRuntimeInfo {
 }
 #endif
 namespace OMR{
+
 class RelocationRuntime {
    public:
       TR_ALLOC(TR_Memory::Relocation)

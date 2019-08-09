@@ -102,13 +102,13 @@ TR::AOTMethodHeader*
 OMR::RelocationRuntime::createMethodHeader(uint8_t *codeLocation,
                             uint32_t codeLength,  uint8_t* reloLocation,uint32_t reloSize){
       
-   _aotMethodHeaderEntry = (TR::AOTMethodHeader*)new (TR::AOTMethodHeader);
-   _aotMethodHeaderEntry->compiledCodeSize  = codeLength;
-   _aotMethodHeaderEntry->relocationsSize   = reloSize;
-   _aotMethodHeaderEntry->compiledCodeStart = codeLocation;
-   _aotMethodHeaderEntry->relocationsStart  = reloLocation;
-
-   return _aotMethodHeaderEntry;
+   // _aotMethodHeaderEntry = (TR::AOTMethodHeader*)new (TR::AOTMethodHeader);
+   // _aotMethodHeaderEntry->compiledCodeSize  = codeLength;
+   // _aotMethodHeaderEntry->relocationsSize   = reloSize;
+   // _aotMethodHeaderEntry->compiledCodeStart = codeLocation;
+   // _aotMethodHeaderEntry->relocationsStart  = reloLocation;
+   return NULL;
+   // return _aotMethodHeaderEntry;
 }
 uint8_t * 
 OMR::RelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize){
@@ -161,16 +161,16 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
    // _trMemory = comp()->trMemory();
    // _currentResolvedMethod = resolvedMethod;
 
-   _aotMethodHeaderEntry = cacheEntry;
    // _options = options;
    // TR_ASSERT(_options, "Options were not correctly initialized.");
 
    uint8_t *tempCodeStart, *tempDataStart;
    uint8_t *oldDataStart, *oldCodeStart;
-   tempDataStart = (uint8_t *)cacheEntry;
+
 
    //Check method header is valid
    _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry);
+   tempDataStart = _aotMethodHeaderEntry->relocationsStart;
    // if (!aotMethodHeaderVersionsMatch())
    //    return NULL; 
 
@@ -383,19 +383,8 @@ bool
 OMR::SharedCacheRelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize )
    {
    TR::SharedCache* sharedCache = TR::Compiler->cache;
-
-   // TR_ASSERT(comp, "AOT compilation that succeeded must have a compilation object");
-   // J9JITDataCacheHeader *aotMethodHeader      = (J9JITDataCacheHeader *)comp->getAotMethodDataStart();
-   // TR_ASSERT(aotMethodHeader, "The header must have been set");
-   TR::AOTMethodHeader   *aotMethodHeaderEntry =new TR::AOTMethodHeader();
-
-   aotMethodHeaderEntry->compiledCodeSize = codeSize;
-   aotMethodHeaderEntry->compiledCodeStart = codeStart;
-   aotMethodHeaderEntry->relocationsSize = dataSize;
-   aotMethodHeaderEntry->relocationsStart = dataStart;
-   
-
-   sharedCache->setRelocationData(reinterpret_cast<uint8_t*>(aotMethodHeaderEntry));
+      _aotMethodHeaderEntry = (TR::AOTMethodHeader*)new (TR::AOTMethodHeader) (codeStart,codeSize,dataStart,dataSize);
+   sharedCache->setRelocationData(reinterpret_cast<uint8_t*>(_aotMethodHeaderEntry));
    }
 
 

@@ -443,8 +443,8 @@ OMR::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::Relocatio
    }
 void 
 OMR::RelocationRecordMethodCallAddress::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget){
-     TR::RelocationRecordMethodCallPrivateData *reloPrivateData = &(privateData()->methodCall)  ;
-      uint8_t *baseLocation = 0;
+   TR::RelocationRecordMethodCallPrivateData *reloPrivateData = &(privateData()->methodCall)  ;
+   uint8_t *baseLocation = 0;
    uint8_t *callTargetAddress = computeTargetMethodAddress(reloRuntime, reloTarget, baseLocation);
    reloPrivateData->callTargetOffset = (callTargetAddress - baseLocation);
 }
@@ -465,9 +465,8 @@ OMR::RelocationRecordMethodCallAddress::setAddress(TR::RelocationTarget *reloTar
 
 int32_t OMR::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
    {      
-      
-      reloTarget->storeAddress(reinterpret_cast<uint8_t*>(reinterpret_cast<TR::RelocationRecordPrivateData*>
-            (privateData())->methodCall.callTargetOffset), reloLocation);
+      uint8_t* addressOfTheFunction =(uint8_t*)(reinterpret_cast<TR::RelocationRecordPrivateData*>(privateData())->methodCall.callTargetOffset);
+      reloTarget->storeAddress( addressOfTheFunction, reloLocation);
       return 0;
    }
 

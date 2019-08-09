@@ -46,15 +46,8 @@ public:
     if(entry == NULL || entry->codeLength == 0 || !(_focus < _limit)) {
       return nullCacheEntryDescriptor;
     }
- static const size_t SIZEPOINTER = sizeof(uintptrj_t);
     WASMCacheEntryDescriptor descriptor(_focus++);
     _focus += entry->codeLength;
-    uint32_t relocationRecordSize = 0;
-    memcpy(&relocationRecordSize,&(*_focus),SIZEPOINTER);
-    relocationRecordSize+=SIZEPOINTER;
-    descriptor.relocationRecordSize = relocationRecordSize;
-    _focus += relocationRecordSize;
-
     return descriptor;
   }
 
