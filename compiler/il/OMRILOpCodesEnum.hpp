@@ -69,7 +69,7 @@
    iloadi,   // load indirect integer
    floadi,   // load indirect float
    dloadi,   // load indirect double
-   aloadi,   // load indirect address
+   aloadi,   // load indirect address   
    bloadi,   // load indirect byte
    sloadi,   // load indirect short integer
    lloadi,   // load indirect long integer

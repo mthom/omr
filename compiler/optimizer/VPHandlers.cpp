@@ -2832,6 +2832,7 @@ TR::Node *constrainStore(OMR::ValuePropagation *vp, TR::Node *node)
    return node;
    }
 
+
 // Handles istore, bstore, cstore, sstore
 //
 TR::Node *constrainIntStore(OMR::ValuePropagation *vp, TR::Node *node)

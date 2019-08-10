@@ -77,6 +77,13 @@ initializeAllHelpers(JitBuilder::JitConfig *jitConfig, TR_RuntimeHelper *helperI
       }   
    }
 
+void
+internal_invalidateJitAssumption(uint32_t assumption)
+   {
+   auto fe = JitBuilder::FrontEnd::instance();
+   fe->persistentMemory()->getPersistentInfo()->getRuntimeAssumptionTable()->notifyUserAssumptionTrigger(fe, assumption);
+   }
+
 static void
 initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 {

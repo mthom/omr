@@ -313,8 +313,8 @@ OMR::Compilation::Compilation(
 
 #ifdef J9_PROJECT_SPECIFIC
    _transientCHTable = new (_trMemory->trHeapMemory()) TR_CHTable(_trMemory);
+#endif // normalcy! move down a line to restore it.
    _metadataAssumptionList = NULL;
-#endif
    _symRefTab = new (_trMemory->trHeapMemory()) TR::SymbolReferenceTable(_method->maxBytecodeIndex(), self());
    _compilationNodes = new (_trMemory->trHeapMemory()) TR::NodePool(self(), self()->allocator());
 
@@ -2747,4 +2747,10 @@ bool OMR::Compilation::isRecursiveMethodTarget(TR::Symbol *targetSymbol)
       }
 
    return isRecursive;
+   }
+
+TR::Node *
+OMR::Compilation::createUserNopGuard(TR::Compilation * comp, TR::TreeTop * destination, uint32_t assumptionID)
+   {
+   return TR_VirtualGuard::createUserNopGuard(comp, destination, assumptionID);
    }

@@ -35,8 +35,16 @@
         , "flags": []
         , "return": "none"
         , "parms": []
-        }
-        ],
+        },
+        { "name": "invalidateJitAssumption"
+        , "overloadsuffix": ""
+        , "flags": []
+        , "return": "none"
+        , "parms": [
+	    {"name":"assumption","type":"uint32"}
+          ]
+	}
+    ],
     "classes": [
         {
             "name":"BytecodeBuilder",
@@ -892,6 +900,15 @@
                     {"name":"address","type":"IlValue"}
                     ]
                 },
+                { "name": "PatchCodeLocation"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "none"
+                , "parms": [
+                    {"name":"address","type":"IlValue"},
+		    {"name":"value","type":"IlValue"}
+                    ]
+                },
                 { "name": "LoadIndirect"
                 , "overloadsuffix": ""
                 , "flags": []
@@ -1035,6 +1052,16 @@
                     {"name":"arguments","type":"IlValue","attributes":["array","can_be_vararg"],"array-len":"numArgs"}
                     ]
                 },
+		{ "name": "ComputedCall"
+                , "overloadsuffix":"WithArgArray"
+                , "flags": []
+                , "return": "IlValue"
+                , "parms": [
+                    {"name":"name","type":"string"},
+                    {"name":"numArgs","type":"int32"},
+                    {"name":"arguments","type":"IlValue","attributes":["array","can_be_vararg"],"array-len":"numArgs"}
+                    ]
+                },		
                 { "name": "CallVirtual"
                 , "overloadsuffix": "WithArgArray"
                 , "flags": []
@@ -1045,14 +1072,13 @@
                     {"name":"arguments","type":"IlValue","attributes":["array","can_be_vararg"],"array-len":"numArgs"}
                     ]
                 },
-                { "name": "ComputedCall"
-                , "overloadsuffix":"WithArgArray"
+                { "name": "NOPGuard"
+                , "overloadsuffix":""
                 , "flags": []
-                , "return": "IlValue"
+                , "return": "uint32"
                 , "parms": [
-                    {"name":"name","type":"string"},
-                    {"name":"numArgs","type":"int32"},
-                    {"name":"arguments","type":"IlValue","attributes":["array","can_be_vararg"],"array-len":"numArgs"}
+                    {"name":"guardedPath","type":"IlBuilder", "attributes":["in_out"]},
+		    {"name":"guardFailedPath","type":"IlBuilder", "attributes":["in_out"]}
                     ]
                 },
                 { "name": "DoWhileLoop"
@@ -2013,7 +2039,7 @@
                     {"name":"vmState","type":"VirtualMachineState"},
                     {"name":"b","type":"IlBuilder"}
                     ]
-                }	
+                }
                 ],
             "services": [
                 { "name": "Get"
@@ -2183,7 +2209,7 @@
                 , "overloadsuffix": ""
                 , "flags": []
                 , "return": "int32"
-                , "parms": [                    
+                , "parms": [
                     ]
                 },
                 { "name": "SetStackTop"

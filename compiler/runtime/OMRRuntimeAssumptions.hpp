@@ -299,6 +299,23 @@ class PatchNOPedGuardSite : public OMR::LocationRedirectRuntimeAssumption
    uint8_t *_destination;
    }; // TR::PatchNOPedGuardSite
 
+class PatchNOPedGuardSiteOnUserTrigger : public PatchNOPedGuardSite
+   {
+   protected:
+   PatchNOPedGuardSiteOnUserTrigger(TR_PersistentMemory *pm, uint32_t assumptionID, uint8_t *location, uint8_t *destination)
+      : PatchNOPedGuardSite(pm, (uintptrj_t)assumptionID, RuntimeAssumptionOnUserTrigger, location, destination),
+      _assumptionID(assumptionID) {}
+   public:
+   static PatchNOPedGuardSiteOnUserTrigger *make(
+      TR_FrontEnd *fe, TR_PersistentMemory * pm, uint32_t assumptionID, uint8_t *picLocation, uint8_t *destination,
+      OMR::RuntimeAssumption **sentinel);
+   virtual TR_RuntimeAssumptionKind getAssumptionKind() { return RuntimeAssumptionOnUserTrigger; }
+   virtual void dumpInfo();
+   uint32_t getAssumptionID() { return _assumptionID; }
+   private:
+   uint32_t _assumptionID;
+   };
+  
 class PatchSites
    {
    private:
@@ -374,5 +391,37 @@ class PatchMultipleNOPedGuardSites : public OMR::LocationRedirectRuntimeAssumpti
    }; // TR::PatchMultipleNOPedGuardSites
 
 }  // namespace TR
+
+class TR_UnloadedClassPicSite : public OMR::ValueModifyRuntimeAssumption
+   {
+   protected:
+   TR_UnloadedClassPicSite(TR_PersistentMemory * pm, uintptrj_t key, uint8_t *picLocation, uint32_t size = sizeof(uintptrj_t))
+      : OMR::ValueModifyRuntimeAssumption(pm, key), _picLocation(picLocation), _size(size)
+         {}
+
+   public:
+   static TR_UnloadedClassPicSite *make(
+      TR_FrontEnd *fe, TR_PersistentMemory * pm, uintptrj_t key, uint8_t *picLocation, uint32_t size,
+      TR_RuntimeAssumptionKind kind, OMR::RuntimeAssumption **sentinel);
+   virtual TR_RuntimeAssumptionKind getAssumptionKind() { return RuntimeAssumptionOnClassUnload; }
+   virtual void compensate(TR_FrontEnd *vm, bool isSMP, void *data);
+   virtual bool equals(OMR::RuntimeAssumption &other)
+      {
+      TR_UnloadedClassPicSite *o = other.asUCPSite();
+      return (o != 0) && o->_picLocation == _picLocation;
+      }
+   virtual uint8_t *getFirstAssumingPC() { return getPicLocation(); }
+   virtual uint8_t *getLastAssumingPC() { return getPicLocation(); }
+   virtual TR_UnloadedClassPicSite *asUCPSite() { return this; }
+   uint8_t * getPicLocation()    { return _picLocation; }
+   void      setPicLocation   (uint8_t *p) { _picLocation = p; }
+   uintptrj_t getPicEntry() { return *((uintptrj_t*)_picLocation); }
+
+   virtual void dumpInfo();
+
+   private:
+   uint8_t    *_picLocation;
+   uint32_t    _size;
+   };
 
 #endif

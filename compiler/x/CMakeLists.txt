@@ -58,6 +58,7 @@ compiler_library(x
 	${CMAKE_CURRENT_LIST_DIR}/env/OMRCPU.cpp
 	${CMAKE_CURRENT_LIST_DIR}/env/OMRDebugEnv.cpp
 	${CMAKE_CURRENT_LIST_DIR}/runtime/X86RelocationTarget.cpp
+	${CMAKE_CURRENT_LIST_DIR}/runtime/VirtualGuardRuntime.cpp
 )
 
 if(TR_TARGET_BITS STREQUAL 64)

@@ -97,6 +97,7 @@ TR::Node *constrainIxor(OMR::ValuePropagation *vp, TR::Node *node);
 TR::Node *constrainLand(OMR::ValuePropagation *vp, TR::Node *node);
 TR::Node *constrainLdiv(OMR::ValuePropagation *vp, TR::Node *node);
 TR::Node *constrainLload(OMR::ValuePropagation *vp, TR::Node *node);
+TR::Node *constrainCpatch(OMR::ValuePropagation *vp, TR::Node *node);
 TR::Node *constrainLmul(OMR::ValuePropagation *vp, TR::Node *node);
 TR::Node *constrainLneg(OMR::ValuePropagation *vp, TR::Node *node);
 TR::Node *constrainLabs(OMR::ValuePropagation *vp, TR::Node *node);

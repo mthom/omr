@@ -2948,6 +2948,42 @@ OMR::IlBuilder::ForLoop(bool countsUp,
    appendBlock();
    }
 
+TR::JitAssumption
+OMR::IlBuilder::NOPGuard(TR::IlBuilder **guardedPath, TR::IlBuilder **guardFailedPath, TR::JitAssumption assumptionID)
+   {
+   static TR::JitAssumption runtimeAssumptionNumber = 1;
+
+   TR_ASSERT(guardedPath != NULL || guardFailedPath != NULL, "NoppedGuard needs both guardedPath and guardFailedPath");
+   TR_ASSERT(assumptionID < runtimeAssumptionNumber, "Error: can only reuse already defined assumption IDs");
+
+   if (assumptionID == 0)
+      assumptionID = runtimeAssumptionNumber++;
+   TR_ASSERT(runtimeAssumptionNumber != 0, "Error: used up all possible assumptionIDs!");
+
+   *guardedPath = createBuilderIfNeeded(*guardedPath);
+   *guardFailedPath = createBuilderIfNeeded(*guardFailedPath);
+
+   TR::TreeTop *failedPathEntry = (*guardFailedPath)->getEntry()->getEntry();
+   TR::Node *guard = comp()->createUserNopGuard(comp(), failedPathEntry, assumptionID);
+   genTreeTop(guard);
+
+   // need to add edge to guardFailedPath explicitly, other edges are already taken care of
+   cfg()->addEdge(_currentBlock, (*guardFailedPath)->getEntry());
+
+   TR::Block *mergeBlock = emptyBlock();
+
+   AppendBuilder(*guardedPath);
+   appendGoto(mergeBlock);
+
+   AppendBuilder(*guardFailedPath);
+   (*guardFailedPath)->_isCold = true;
+
+   appendBlock(mergeBlock);
+
+   return assumptionID;
+   }
+
+
 void
 OMR::IlBuilder::DoWhileLoop(const char *whileCondition, TR::IlBuilder **body, TR::IlBuilder **breakBuilder, TR::IlBuilder **continueBuilder)
    {
@@ -3044,9 +3080,11 @@ OMR::IlBuilder::JBCondition::client()
    return _client;
    }
 
+
 ClientAllocator OMR::IlBuilder::_clientAllocator = NULL;
 ClientAllocator OMR::IlBuilder::_getImpl = NULL;
 ClientAllocator OMR::IlBuilder::JBCase::_clientAllocator = NULL;
 ClientAllocator OMR::IlBuilder::JBCase::_getImpl = NULL;
 ClientAllocator OMR::IlBuilder::JBCondition::_clientAllocator = NULL;
 ClientAllocator OMR::IlBuilder::JBCondition::_getImpl = NULL;
+
