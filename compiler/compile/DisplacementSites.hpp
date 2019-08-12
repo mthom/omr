@@ -40,7 +40,7 @@ class TR_DisplacementSite
 
    enum DisplacementSize { bits_8, bits_16, bits_32 };
 
-   TR_DisplacementSite(TR::Compilation *comp, uint32_t assumptionID);
+   TR_DisplacementSite(TR::Compilation *comp, uint64_t assumptionID);
 
    DisplacementSize setDisplacementSize(DisplacementSize size) { return (_dispSize = size); }
 
@@ -62,7 +62,7 @@ class TR_DisplacementSite
    }
 
    private:
-   uint32_t                  _assumptionID;
+   uint64_t                  _assumptionID;
    int16_t                   _calleeIndex;
    int32_t                   _byteCodeIndex;
    DisplacementSize          _dispSize;

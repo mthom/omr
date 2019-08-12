@@ -345,6 +345,7 @@ OMR::X86::MemoryReference::MemoryReference(
       intptrj_t n,
       TR::CodeGenerator *cg,
       TR_ScratchRegisterManager *srm) :
+   _displacementSite(NULL),
    _symbolReference(cg->comp()->getSymRefTab())
    {
    TR::Compilation *comp = cg->comp();

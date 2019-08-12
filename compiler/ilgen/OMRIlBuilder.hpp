@@ -310,6 +310,7 @@ public:
    void Store(const char *name, TR::IlValue *value);
    void StoreOver(TR::IlValue *dest, TR::IlValue *value);
    TR::IlValue *LoadAt(TR::IlType *dt, TR::IlValue *address);
+   TR::IlValue *LoadAtWithPatchKey(TR::IlType *dt, TR::IlValue *address, uint64_t key);
    void StoreAt(TR::IlValue *address, TR::IlValue *value);
    TR::IlValue *LoadIndirect(const char *type, const char *field, TR::IlValue *object);
    void StoreIndirect(const char *type, const char *field, TR::IlValue *object, TR::IlValue *value);

@@ -793,20 +793,29 @@ OMR::IlBuilder::LoadIndirect(const char *type, const char *field, TR::IlValue *o
 TR::IlValue *
 OMR::IlBuilder::LoadAt(TR::IlType *dt, TR::IlValue *address)
    {
-   static TR::JitAssumption runtimeAssumptionNumber = 1;
+   TR_ASSERT(address->getDataType() == TR::Address, "LoadAt needs an address operand");
+   TR::IlValue *returnValue = indirectLoadNode(dt, loadValue(address));
+   
+   TraceIL("IlBuilder[ %p ]::%d is LoadAt type %d address %d\n", this, returnValue->getID(), dt->getPrimitiveType(), address->getID());
+   return returnValue;
+   }
 
+TR::IlValue *
+OMR::IlBuilder::LoadAtWithPatchKey(TR::IlType *dt, TR::IlValue *address, uint64_t key)
+   {
    TR_ASSERT(address->getDataType() == TR::Address, "LoadAt needs an address operand");
    TR::IlValue *returnValue = indirectLoadNode(dt, loadValue(address));
    
    // add displacement site to be filled out later by the binary encoder.
    TR::Node *load = loadValue(returnValue);
 
-   TR_DisplacementSite *site = new (comp()->trHeapMemory()) TR_DisplacementSite(comp(), runtimeAssumptionNumber++); 
+   TR_DisplacementSite *site = new (comp()->trHeapMemory()) TR_DisplacementSite(comp(), key);
 
    site->setByteCodeIndex(load->getByteCodeInfo().getByteCodeIndex());
    site->setCalleeIndex(load->getByteCodeInfo().getCallerIndex());
    
-   TraceIL("IlBuilder[ %p ]::%d is LoadAt type %d address %d\n", this, returnValue->getID(), dt->getPrimitiveType(), address->getID());
+   TraceIL("IlBuilder[ %p ]::%d is LoadAtPatchKey type %d address %d\n", this, returnValue->getID(), 
+	   dt->getPrimitiveType(), address->getID());
    return returnValue;
    }
 

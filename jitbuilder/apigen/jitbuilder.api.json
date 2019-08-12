@@ -901,6 +901,16 @@
                     {"name":"address","type":"IlValue"}
                     ]
                 },
+                { "name": "LoadAtWithPatchKey"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "IlValue"
+                , "parms": [
+                    {"name":"type","type":"IlType"},
+                    {"name":"address","type":"IlValue"},
+		    {"name":"key","type":"uint64"}
+                    ]
+                },
                 { "name": "LoadIndirect"
                 , "overloadsuffix": ""
                 , "flags": []
