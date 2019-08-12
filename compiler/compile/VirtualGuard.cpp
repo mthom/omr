@@ -53,9 +53,9 @@ TR_VirtualGuard::TR_VirtualGuard(TR_VirtualGuardTestType test, TR_VirtualGuardKi
    : _test(test), _kind(kind), _guardedMethod((callNode && callNode->getOpCode().hasSymbolReference()) ? callNode->getSymbolReference() : NULL),
      _thisClass(thisClass), _callNode(0), _calleeIndex(calleeIndex), _cannotBeRemoved(false), _byteCodeIndex(0),
      _innerAssumptions(comp->trMemory()),
-#ifdef J9_PROJECT_SPECIFIC
+     //#ifdef J9_PROJECT_SPECIFIC // uncomment to restore normalcy
      _sites(comp->trMemory()),
-#endif
+//#endif
      _mutableCallSiteObject(0),_mutableCallSiteEpoch(0),
      _evalChildren(true), _mergedWithHCRGuard(false), _mergedWithOSRGuard(false),
      _guardNode(guardNode), _currentInlinedSiteIndex(currentSiteIndex)
@@ -91,9 +91,9 @@ TR_VirtualGuard::TR_VirtualGuard(TR_VirtualGuardTestType test, TR_VirtualGuardKi
      _calleeIndex(callNode->getByteCodeInfo().getCallerIndex()),
      _byteCodeIndex(callNode->getByteCodeInfo().getByteCodeIndex()),
      _innerAssumptions(comp->trMemory()),
-#ifdef J9_PROJECT_SPECIFIC
+     //#ifdef J9_PROJECT_SPECIFIC // uncomment to restore normalcy
      _sites(comp->trMemory()),
-#endif
+//#endif
      _guardNode(guardNode), _currentInlinedSiteIndex(currentSiteIndex)
    {
    if (kind==TR_SideEffectGuard)
@@ -115,7 +115,7 @@ TR_VirtualGuard::TR_VirtualGuard(TR_VirtualGuardTestType test, TR_VirtualGuardKi
 
    }
 
-#ifdef J9_PROJECT_SPECIFIC
+//#ifdef J9_PROJECT_SPECIFIC // restore! normalcy!
 TR_VirtualGuardSite *
 TR_VirtualGuard::addNOPSite()
    {
@@ -126,7 +126,7 @@ TR_VirtualGuard::addNOPSite()
    _sites.add(site);
    return site;
    }
-#endif
+//#endif
 
 
 TR::Node*
@@ -521,9 +521,23 @@ TR_VirtualGuard::setGuardKind(TR::Node * node, TR_VirtualGuardKind kind, TR::Com
       case TR_BreakpointGuard:
          node->setIsBreakpointGuard();
          break;
+      case TR_UserNopGuard:
+         node->setIsNonoverriddenGuard();
+         break;
       default:
          TR_ASSERT(kind == TR_NonoverriddenGuard, "Expected TR_NonoverriddenGuard(%d); found %d", (int)TR_NonoverriddenGuard, kind);
          node->setIsNonoverriddenGuard();
          break;
       }
+   }
+
+TR::Node *
+TR_VirtualGuard::createUserNopGuard(TR::Compilation * comp, TR::TreeTop *destination, uint32_t assumptionID)
+   {
+   TR::Node *guard = createDummyOrSideEffectGuard(comp, NULL, destination);
+   setGuardKind(guard, TR_UserNopGuard, comp);
+   TR_VirtualGuard *vguard=new (comp->trHeapMemory()) TR_VirtualGuard(TR_NonoverriddenTest, TR_UserNopGuard, comp, destination->getNode(), guard, comp->getCurrentInlinedSiteIndex());
+   vguard->dontGenerateChildrenCode();
+   vguard->setAssumptionID(assumptionID);
+   return guard;
    }

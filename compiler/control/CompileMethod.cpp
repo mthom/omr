@@ -37,6 +37,7 @@
 #include "compile/Compilation.hpp"
 #include "compile/CompilationTypes.hpp"
 #include "compile/ResolvedMethod.hpp"
+#include "compile/DisplacementSites.hpp"
 #include "control/OptimizationPlan.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
@@ -60,6 +61,7 @@
 #include "omrformatconsts.h"
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/SymbolValidationManager.hpp"
+#include "runtime/OMRRuntimeAssumptions.hpp"
 
 #include "omrsrp.h"
 //extern "C" {
@@ -141,6 +143,71 @@ generatePerfToolEntry(uint8_t *startPC, uint8_t *endPC, const char *sig, const c
 #include "p/codegen/PPCTableOfConstants.hpp"
 #endif
 
+TR::Monitor * assumptionTableMutex = NULL;
+
+void commitDisplacementSite(TR_DisplacementSite *info, TR::Compilation *comp)
+   {
+   TR::PatchDisplacementSiteUserTrigger::make(comp->fe(), comp->trPersistentMemory(), info->getAssumptionID(), info->getLocation(),
+					      comp->getMetadataAssumptionList());//, site->getDestination(), comp->getMetadataAssumptionList());
+   }
+
+void
+commitVirtualGuard(TR_VirtualGuard *info, List<TR_VirtualGuardSite> &sites, TR::Compilation *comp)
+   {
+   if (info->getKind() == TR_UserNopGuard)
+      {
+      // should really have a way to check if assumption has already been invalidated
+      bool isNopAssumptionValid = true;
+      if (isNopAssumptionValid)
+         {
+         ListIterator<TR_VirtualGuardSite> it(&sites);
+         for (TR_VirtualGuardSite *site = it.getFirst(); site; site = it.getNext())
+            {
+            TR_ASSERT(site->getLocation(), "assertion failure");
+            TR::PatchNOPedGuardSiteOnUserTrigger::make(comp->fe(), comp->trPersistentMemory(), info->getAssumptionID(), site->getLocation(), site->getDestination(), comp->getMetadataAssumptionList());
+            }
+         }
+      else // assumption is invalid
+         {
+         ListIterator<TR_VirtualGuardSite> it(&sites);
+         for (TR_VirtualGuardSite *site = it.getFirst(); site; site = it.getNext())
+            {
+            if (comp->getOption(TR_TraceCG))
+               traceMsg(comp, "   Patching %p to %p\n", site->getLocation(), site->getDestination());
+            TR::PatchNOPedGuardSite::compensate(0, site->getLocation(), site->getDestination());
+            }
+         }
+      }
+   }
+
+// can return false from this function to abort entire compilation!
+bool
+commitGuards(TR::Compilation *comp)
+   {
+   // lock runtime assumptions table for thread safety
+   // OMR::CriticalSection lockGuards(assumptionTableMutex);
+
+   TR::list<TR_VirtualGuard*> &vguards = comp->getVirtualGuards();
+   for (auto info = vguards.begin(); info != vguards.end(); ++info)
+      {
+      List<TR_VirtualGuardSite> &sites = (*info)->getNOPSites();
+      if (sites.isEmpty())
+         continue;
+
+      // Commit the virtual guard itself
+      //
+      commitVirtualGuard(*info, sites, comp);
+      }
+
+   TR::list<TR_DisplacementSite*> &dispSites = comp->getDisplacementSites();
+   for (auto info = dispSites.begin(); info != dispSites.end(); ++info)
+      {
+      commitDisplacementSite(*info, comp);
+      }
+
+   return true;
+   }
+
 int32_t commonJitInit(OMR::FrontEnd &fe, char *cmdLineOptions)
    {
    auto jitConfig = fe.jitConfig();
@@ -152,6 +219,14 @@ int32_t commonJitInit(OMR::FrontEnd &fe, char *cmdLineOptions)
    //
    TR::Compiler->target.cpu.setProcessor(TR_DefaultPPCProcessor);
 
+   /* initialize assumptionTableMutex */
+   if (!assumptionTableMutex)
+      {
+      if (!(assumptionTableMutex = TR::Monitor::create("JIT-AssumptionTableMutex")))
+         return -1;
+      }
+
+   fe.persistentMemory()->getPersistentInfo()->getRuntimeAssumptionTable()->init();
    TR_VerboseLog::initialize(jitConfig);
    TR::Options::setCanJITCompile(true);
    TR::Options::getCmdLineOptions()->setOption(TR_NoRecompile);
@@ -383,6 +458,19 @@ compileMethodFromDetails(
       //
       rc = compiler.compile();
 
+      if (rc == COMPILATION_SUCCEEDED)
+         {
+         // try to commit virtual guards
+         if (!commitGuards(&compiler))
+            {
+            rc = COMPILATION_FAILED;
+            if (TR::Options::isAnyVerboseOptionSet(TR_VerboseCompileEnd, TR_VerbosePerformance, TR_VerboseCompFailure))
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Failure while committing guards for %s", compiler.signature());
+               }
+            }
+         }
+      
       if (rc == COMPILATION_SUCCEEDED) // success!
          {
 

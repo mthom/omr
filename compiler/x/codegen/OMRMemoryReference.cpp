@@ -32,6 +32,7 @@
 #include "codegen/Relocation.hpp"
 #include "codegen/UnresolvedDataSnippet.hpp"
 #include "compile/Compilation.hpp"
+#include "compile/DisplacementSites.hpp"
 #include "compile/ResolvedMethod.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
@@ -93,6 +94,7 @@ OMR::X86::MemoryReference::MemoryReference(TR::X86DataSnippet *cds, TR::CodeGene
    _indexNode(NULL),
    _dataSnippet(cds),
    _label(NULL),
+   _displacementSite(NULL),
    _symbolReference(cg->comp()->getSymRefTab()),
    _stride(0),
    _flags(0),
@@ -108,6 +110,7 @@ OMR::X86::MemoryReference::MemoryReference(TR::LabelSymbol *label, TR::CodeGener
    _indexNode(NULL),
    _dataSnippet(NULL),
    _label(label),
+   _displacementSite(NULL),
    _symbolReference(cg->comp()->getSymRefTab()),
    _stride(0),
    _flags(0),
@@ -123,6 +126,7 @@ OMR::X86::MemoryReference::MemoryReference(TR::SymbolReference *symRef, TR::Code
    _indexNode(NULL),
    _dataSnippet(NULL),
    _label(NULL),
+   _displacementSite(NULL),
    _symbolReference(cg->comp()->getSymRefTab()),
    _stride(0),
    _flags(0),
@@ -138,6 +142,7 @@ OMR::X86::MemoryReference::MemoryReference(TR::SymbolReference *symRef, intptrj_
    _indexNode(NULL),
    _dataSnippet(NULL),
    _label(NULL),
+   _displacementSite(NULL),
    _symbolReference(cg->comp()->getSymRefTab()),
    _stride(0),
    _flags(0),
@@ -160,6 +165,7 @@ OMR::X86::MemoryReference::MemoryReference(
    _indexNode(NULL),
    _dataSnippet(NULL),
    _label(NULL),
+   _displacementSite(NULL),
    _symbolReference(cg->comp()->getSymRefTab()),
    _stride(0),
    _flags(0),
@@ -339,6 +345,7 @@ OMR::X86::MemoryReference::MemoryReference(
       intptrj_t n,
       TR::CodeGenerator *cg,
       TR_ScratchRegisterManager *srm) :
+   _displacementSite(NULL),
    _symbolReference(cg->comp()->getSymRefTab())
    {
    TR::Compilation *comp = cg->comp();
@@ -1649,6 +1656,14 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
             {
             self()->ModRM(modRM)->setBaseDisp8();
             *cursor = (uint8_t)displacement;
+
+	    auto* dispSite = self()->getDisplacementSite();
+
+	    if (dispSite) {
+	       dispSite->setDisplacementSize(TR_DisplacementSite::bits_8);
+	       dispSite->setLocation(cursor);
+	    }
+
             ++cursor;
             }
          else
@@ -1658,6 +1673,14 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
             //
             self()->ModRM(modRM)->setBaseDisp32();
             *(int32_t *)cursor = (int32_t)displacement;
+
+	    auto* dispSite = self()->getDisplacementSite();
+
+	    if (dispSite) {
+	       dispSite->setDisplacementSize(TR_DisplacementSite::bits_32);
+	       dispSite->setLocation(cursor);
+	    }
+
             if (self()->getUnresolvedDataSnippet() != NULL)
                {
                self()->getUnresolvedDataSnippet()->setAddressOfDataReference(cursor);

@@ -31,6 +31,7 @@ namespace OMR { typedef PersistentInfo PersistentInfoConnector; }
 #include <stddef.h>
 #include <stdint.h>
 #include "codegen/TableOfConstants.hpp"
+#include "env/RuntimeAssumptionTable.hpp"
 
 class TR_AddressSet;
 class TR_DebugExt;
@@ -76,7 +77,8 @@ class PersistentInfo
          _staticCounters(NULL),	 
          _dynamicCounters(NULL),
 	 _lastDebugCounterResetSeconds(0),	 
-         _persistentTOC(NULL)
+         _persistentTOC(NULL),
+	 _runtimeAssumptionTable()
       {}
 
    TR::PersistentInfo * self();
@@ -113,7 +115,7 @@ class PersistentInfo
 
    bool isRuntimeInstrumentationEnabled() { return false; }
 
-
+   TR_RuntimeAssumptionTable *getRuntimeAssumptionTable() { return &_runtimeAssumptionTable; }
 
    protected:
    TR_PersistentMemory *_persistentMemory;
@@ -127,6 +129,7 @@ class PersistentInfo
    TR::DebugCounterGroup *_dynamicCounters;
    int64_t _lastDebugCounterResetSeconds;
    TableOfConstants *_persistentTOC;
+   TR_RuntimeAssumptionTable _runtimeAssumptionTable;
    };
 
 }

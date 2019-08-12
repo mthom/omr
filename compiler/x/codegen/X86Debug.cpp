@@ -87,11 +87,11 @@ TR_Debug::printx(TR::FILE *pOutFile, TR::Instruction  * instr)
       case TR::Instruction::IsPatchableCodeAlignment:
          print(pOutFile, (TR::X86PatchableCodeAlignmentInstruction  *)instr);
          break;
-#ifdef J9_PROJECT_SPECIFIC
+	 //#ifdef J9_PROJECT_SPECIFIC // normalcy! remove! guh!
       case TR::Instruction::IsVirtualGuardNOP:
          print(pOutFile, (TR::X86VirtualGuardNOPInstruction  *)instr);
          break;
-#endif
+	 //#endif
       case TR::Instruction::IsFence:
          print(pOutFile, (TR::X86FenceInstruction  *)instr);
          break;

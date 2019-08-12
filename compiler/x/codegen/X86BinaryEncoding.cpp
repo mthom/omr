@@ -702,7 +702,7 @@ uint8_t *TR::X86FenceInstruction::generateBinaryEncoding()
    }
 
 
-#ifdef J9_PROJECT_SPECIFIC
+// #ifdef J9_PROJECT_SPECIFIC // uncomment, normalcy!
 // -----------------------------------------------------------------------------
 // TR::X86VirtualGuardNOPInstruction
 
@@ -851,7 +851,7 @@ uint8_t *TR::X86VirtualGuardNOPInstruction::generateBinaryEncoding()
    cg()->addAccumulatedInstructionLengthError(getEstimatedBinaryLength() - getBinaryLength());
    return cursor;
    }
-#endif
+//#endif
 
 // -----------------------------------------------------------------------------
 // TR::X86ImmInstruction:: member functions

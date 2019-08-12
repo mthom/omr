@@ -27,6 +27,7 @@
 #include <string.h>
 #include "codegen/CodeGenerator.hpp"
 #include "compile/Compilation.hpp"
+#include "compile/DisplacementSites.hpp"
 #include "compile/Method.hpp"
 #include "compile/SymbolReferenceTable.hpp"
 #include "control/Recompilation.hpp"
@@ -794,7 +795,27 @@ OMR::IlBuilder::LoadAt(TR::IlType *dt, TR::IlValue *address)
    {
    TR_ASSERT(address->getDataType() == TR::Address, "LoadAt needs an address operand");
    TR::IlValue *returnValue = indirectLoadNode(dt, loadValue(address));
+   
    TraceIL("IlBuilder[ %p ]::%d is LoadAt type %d address %d\n", this, returnValue->getID(), dt->getPrimitiveType(), address->getID());
+   return returnValue;
+   }
+
+TR::IlValue *
+OMR::IlBuilder::LoadAtWithPatchKey(TR::IlType *dt, TR::IlValue *address, uint64_t key)
+   {
+   TR_ASSERT(address->getDataType() == TR::Address, "LoadAt needs an address operand");
+   TR::IlValue *returnValue = indirectLoadNode(dt, loadValue(address));
+   
+   // add displacement site to be filled out later by the binary encoder.
+   TR::Node *load = loadValue(returnValue);
+
+   TR_DisplacementSite *site = new (comp()->trHeapMemory()) TR_DisplacementSite(comp(), key);
+
+   site->setByteCodeIndex(load->getByteCodeInfo().getByteCodeIndex());
+   site->setCalleeIndex(load->getByteCodeInfo().getCallerIndex());
+   
+   TraceIL("IlBuilder[ %p ]::%d is LoadAtPatchKey type %d address %d\n", this, returnValue->getID(), 
+	   dt->getPrimitiveType(), address->getID());
    return returnValue;
    }
 
@@ -2948,6 +2969,42 @@ OMR::IlBuilder::ForLoop(bool countsUp,
    appendBlock();
    }
 
+TR::JitAssumption
+OMR::IlBuilder::NOPGuard(TR::IlBuilder **guardedPath, TR::IlBuilder **guardFailedPath, TR::JitAssumption assumptionID)
+   {
+   static TR::JitAssumption runtimeAssumptionNumber = 1;
+
+   TR_ASSERT(guardedPath != NULL || guardFailedPath != NULL, "NoppedGuard needs both guardedPath and guardFailedPath");
+   TR_ASSERT(assumptionID < runtimeAssumptionNumber, "Error: can only reuse already defined assumption IDs");
+
+   if (assumptionID == 0)
+      assumptionID = runtimeAssumptionNumber++;
+   TR_ASSERT(runtimeAssumptionNumber != 0, "Error: used up all possible assumptionIDs!");
+
+   *guardedPath = createBuilderIfNeeded(*guardedPath);
+   *guardFailedPath = createBuilderIfNeeded(*guardFailedPath);
+
+   TR::TreeTop *failedPathEntry = (*guardFailedPath)->getEntry()->getEntry();
+   TR::Node *guard = comp()->createUserNopGuard(comp(), failedPathEntry, assumptionID);
+   genTreeTop(guard);
+
+   // need to add edge to guardFailedPath explicitly, other edges are already taken care of
+   cfg()->addEdge(_currentBlock, (*guardFailedPath)->getEntry());
+
+   TR::Block *mergeBlock = emptyBlock();
+
+   AppendBuilder(*guardedPath);
+   appendGoto(mergeBlock);
+
+   AppendBuilder(*guardFailedPath);
+   (*guardFailedPath)->_isCold = true;
+
+   appendBlock(mergeBlock);
+
+   return assumptionID;
+   }
+
+
 void
 OMR::IlBuilder::DoWhileLoop(const char *whileCondition, TR::IlBuilder **body, TR::IlBuilder **breakBuilder, TR::IlBuilder **continueBuilder)
    {
@@ -3044,9 +3101,11 @@ OMR::IlBuilder::JBCondition::client()
    return _client;
    }
 
+
 ClientAllocator OMR::IlBuilder::_clientAllocator = NULL;
 ClientAllocator OMR::IlBuilder::_getImpl = NULL;
 ClientAllocator OMR::IlBuilder::JBCase::_clientAllocator = NULL;
 ClientAllocator OMR::IlBuilder::JBCase::_getImpl = NULL;
 ClientAllocator OMR::IlBuilder::JBCondition::_clientAllocator = NULL;
 ClientAllocator OMR::IlBuilder::JBCondition::_getImpl = NULL;
+

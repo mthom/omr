@@ -85,6 +85,7 @@ class TR_RandomGenerator;
 class TR_RegisterCandidates;
 class TR_ResolvedMethod;
 namespace OMR { class RuntimeAssumption; }
+class TR_DisplacementSite;
 class TR_VirtualGuard;
 class TR_VirtualGuardSite;
 namespace TR { class Block; }
@@ -765,16 +766,23 @@ public:
                          TR_OpaqueClassBlock *);
 
    TR::list<TR_VirtualGuard*> &getVirtualGuards() { return _virtualGuards; }
+   TR::list<TR_DisplacementSite*> &getDisplacementSites() { return _displacementSites; }
+
    TR_VirtualGuard *findVirtualGuardInfo(TR::Node *);
+   TR_DisplacementSite *findDisplacementSiteInfo(TR::Node *);
+
    void addVirtualGuard   (TR_VirtualGuard *guard);
    void removeVirtualGuard(TR_VirtualGuard *guard);
+
+   void addDisplacementSite (TR_DisplacementSite *site);
 
    TR::Node *createDummyOrSideEffectGuard(TR::Compilation *, int16_t, TR::Node *, TR::TreeTop *);
    TR::Node *createSideEffectGuard(TR::Compilation *, TR::Node *, TR::TreeTop *);
    TR::Node *createAOTInliningGuard(TR::Compilation *, int16_t, TR::Node *, TR::TreeTop *, TR_VirtualGuardKind);
    TR::Node *createAOTGuard(TR::Compilation *, int16_t, TR::Node *, TR::TreeTop *, TR_VirtualGuardKind);
    TR::Node *createDummyGuard(TR::Compilation *, int16_t, TR::Node *, TR::TreeTop *);
-
+   TR::Node *createUserNopGuard(TR::Compilation *, TR::TreeTop *, uint32_t);
+   
    TR_LinkHead<TR_ClassLoadCheck> *getClassesThatShouldNotBeLoaded() { return &_classesThatShouldNotBeLoaded; }
    TR_LinkHead<TR_ClassExtendCheck> *getClassesThatShouldNotBeNewlyExtended() { return &_classesThatShouldNotBeNewlyExtended;}
 
@@ -1023,11 +1031,11 @@ public:
 
 
 public:
-#ifdef J9_PROJECT_SPECIFIC
+   //#ifdef J9_PROJECT_SPECIFIC // normalcy! restore! normalcy!
    // Access to this list must be performed with assumptionTableMutex in hand
    OMR::RuntimeAssumption** getMetadataAssumptionList() { return &_metadataAssumptionList; }
    void setMetadataAssumptionList(OMR::RuntimeAssumption *a) { _metadataAssumptionList = a; }
-#endif
+   //#endif
 
    // To TransformUtil
    void setStartTree(TR::TreeTop * tt);
@@ -1143,6 +1151,7 @@ private:
    int16_t                           _inlinedFramesAdded;
 
    TR::list<TR_VirtualGuard*>              _virtualGuards;
+   TR::list<TR_DisplacementSite*>          _displacementSites;
 
    TR_LinkHead<TR_ClassLoadCheck>     _classesThatShouldNotBeLoaded;
    TR_LinkHead<TR_ClassExtendCheck>   _classesThatShouldNotBeNewlyExtended;
@@ -1222,8 +1231,9 @@ private:
 protected:
 #ifdef J9_PROJECT_SPECIFIC
    TR_CHTable *                      _transientCHTable;   // per compilation CHTable
-   OMR::RuntimeAssumption *            _metadataAssumptionList; // A special OMR::RuntimeAssumption to play the role of a sentinel for a linked list
 #endif
+   OMR::RuntimeAssumption *            _metadataAssumptionList; // A special OMR::RuntimeAssumption to play the role of a sentinel for a linked list
+   //#endif restore! normalcy! and delete the previous clause.. or rather, expand it to include the last line.
 
 private:
    void *                            _relocatableMethodCodeStart;

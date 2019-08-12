@@ -596,7 +596,13 @@ TR::Register *OMR::X86::TreeEvaluator::aloadEvaluator(TR::Node *node, TR::CodeGe
    TR::MemoryReference  *sourceMR = generateX86MemoryReference(node, cg);
    TR::Register         *reg      = TR::TreeEvaluator::loadMemory(node, sourceMR, TR_RematerializableAddress, node->getOpCode().isIndirect(), cg);
    reg->setMemRef(sourceMR);
+
    TR::Compilation *comp = cg->comp();
+   TR_DisplacementSite *site = comp->findDisplacementSiteInfo(node);
+
+   if (site) {
+      sourceMR->setDisplacementSite(site);
+   }
 
    if (!node->getSymbolReference()->isUnresolved() &&
        (node->getSymbolReference()->getSymbol()->getKind() == TR::Symbol::IsShadow) &&

@@ -47,6 +47,8 @@ namespace TR { class TypeDictionary; }
 template <class T> class List;
 template <class T> class ListAppender;
 
+namespace TR { typedef uint32_t JitAssumption; }
+
 extern "C"
 {
 typedef bool (*ClientBuildILCallback)(void *clientObject);
@@ -182,7 +184,8 @@ public:
       _partOfSequence(false),
       _connectedTrees(false),
       _comesBack(true),
-      _isHandler(false)
+      _isHandler(false),
+      _isCold(false)
       {
       }
    IlBuilder(TR::IlBuilder *source);
@@ -307,6 +310,7 @@ public:
    void Store(const char *name, TR::IlValue *value);
    void StoreOver(TR::IlValue *dest, TR::IlValue *value);
    TR::IlValue *LoadAt(TR::IlType *dt, TR::IlValue *address);
+   TR::IlValue *LoadAtWithPatchKey(TR::IlType *dt, TR::IlValue *address, uint64_t key);
    void StoreAt(TR::IlValue *address, TR::IlValue *value);
    TR::IlValue *LoadIndirect(const char *type, const char *field, TR::IlValue *object);
    void StoreIndirect(const char *type, const char *field, TR::IlValue *object, TR::IlValue *value);
@@ -520,6 +524,14 @@ public:
       }
 
    /**
+    * @brief creates a NOP guard that falls through to the guardedPath builder
+    * @param guardedPath builder object whose code will execute until the guard's assumptionID is invalidated
+    * @param guardFailedPath builder object whose code will execute after the guard's assumptionID is invalidated
+    * @param assumptionID optional parameter that can be used to assign guards to already existing assumptions
+    */     
+   virtual uint32_t NOPGuard(TR::IlBuilder **guardedPath, TR::IlBuilder **guardFailedPath, uint32_t assumptionID=0);
+
+   /**
     * @brief Generates a lookup switch-case control flow structure.
     *
     * @param selectionVar the variable to switch on.
@@ -635,7 +647,7 @@ public:
       {
       _getImpl = getter;
       }
-
+     
 protected:
 
    /**
@@ -721,6 +733,11 @@ protected:
     */
    bool                          _isHandler;
 
+   /**
+    * @brief indicates all blocks created under this builder should be marked as cold
+    */
+   bool                          _isCold;
+     
    virtual bool buildIL()
       {
       if (_clientCallbackBuildIL)

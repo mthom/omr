@@ -2274,17 +2274,17 @@ TR::Register *OMR::X86::TreeEvaluator::sucmpleEvaluator(TR::Node *node, TR::Code
 
 static bool virtualGuardHelper(TR::Node *node, TR::CodeGenerator *cg)
    {
-#ifdef J9_PROJECT_SPECIFIC
+     //#ifdef J9_PROJECT_SPECIFIC // remove to restore normalcy.
    if (!(node->isNopableInlineGuard() || node->isOSRGuard()) || !cg->getSupportsVirtualGuardNOPing())
       return false;
 
    TR::Compilation *comp = cg->comp();
    TR_VirtualGuard *virtualGuard = comp->findVirtualGuardInfo(node);
 
-   if (!((comp->performVirtualGuardNOPing() || node->isHCRGuard() || node->isOSRGuard() || cg->needClassAndMethodPointerRelocations()) &&
-         comp->isVirtualGuardNOPingRequired(virtualGuard)) &&
-         virtualGuard->canBeRemoved())
-      return false;
+//   if (!((comp->performVirtualGuardNOPing() || node->isHCRGuard() || node->isOSRGuard() || cg->needClassAndMethodPointerRelocations()) &&
+//         comp->isVirtualGuardNOPingRequired(virtualGuard)) &&
+//         virtualGuard->canBeRemoved())
+//      return false;
 
    if (   node->getOpCodeValue() != TR::ificmpne
        && node->getOpCodeValue() != TR::ifacmpne
@@ -2300,6 +2300,7 @@ static bool virtualGuardHelper(TR::Node *node, TR::CodeGenerator *cg)
       }
 
    TR_VirtualGuardSite *site = NULL;
+#ifdef J9_PROJECT_SPECIFIC
    if (cg->needClassAndMethodPointerRelocations())
       {
       site = (TR_VirtualGuardSite *)comp->addAOTNOPSite();
@@ -2332,12 +2333,14 @@ static bool virtualGuardHelper(TR::Node *node, TR::CodeGenerator *cg)
       site = virtualGuard->addNOPSite();
       }
    else
+#endif // remove to restore normalcy
       {
-      site = comp->addSideEffectNOPSite();
+      site = virtualGuard->addNOPSite(); // comp->addSideEffectNOPSite(); // remove to restore normalcy.
       }
 
    List<TR::Register> popRegisters(cg->trMemory());
    TR::RegisterDependencyConditions  *deps = 0;
+   
    if (node->getNumChildren() == 3)
       {
       TR::Node *third = node->getChild(2);
@@ -2390,9 +2393,9 @@ static bool virtualGuardHelper(TR::Node *node, TR::CodeGenerator *cg)
       }
 
    return true;
-#else
-   return false;
-#endif
+//#else // remove to restore normalcy
+//   return false;
+//#endif
    }
 
 void
