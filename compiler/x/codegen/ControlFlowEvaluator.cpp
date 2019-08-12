@@ -2340,6 +2340,7 @@ static bool virtualGuardHelper(TR::Node *node, TR::CodeGenerator *cg)
 
    List<TR::Register> popRegisters(cg->trMemory());
    TR::RegisterDependencyConditions  *deps = 0;
+   
    if (node->getNumChildren() == 3)
       {
       TR::Node *third = node->getChild(2);

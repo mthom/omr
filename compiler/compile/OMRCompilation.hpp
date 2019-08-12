@@ -85,6 +85,7 @@ class TR_RandomGenerator;
 class TR_RegisterCandidates;
 class TR_ResolvedMethod;
 namespace OMR { class RuntimeAssumption; }
+class TR_DisplacementSite;
 class TR_VirtualGuard;
 class TR_VirtualGuardSite;
 namespace TR { class Block; }
@@ -765,9 +766,15 @@ public:
                          TR_OpaqueClassBlock *);
 
    TR::list<TR_VirtualGuard*> &getVirtualGuards() { return _virtualGuards; }
+   TR::list<TR_DisplacementSite*> &getDisplacementSites() { return _displacementSites; }
+
    TR_VirtualGuard *findVirtualGuardInfo(TR::Node *);
+   TR_DisplacementSite *findDisplacementSiteInfo(TR::Node *);
+
    void addVirtualGuard   (TR_VirtualGuard *guard);
    void removeVirtualGuard(TR_VirtualGuard *guard);
+
+   void addDisplacementSite (TR_DisplacementSite *site);
 
    TR::Node *createDummyOrSideEffectGuard(TR::Compilation *, int16_t, TR::Node *, TR::TreeTop *);
    TR::Node *createSideEffectGuard(TR::Compilation *, TR::Node *, TR::TreeTop *);
@@ -1144,6 +1151,7 @@ private:
    int16_t                           _inlinedFramesAdded;
 
    TR::list<TR_VirtualGuard*>              _virtualGuards;
+   TR::list<TR_DisplacementSite*>          _displacementSites;
 
    TR_LinkHead<TR_ClassLoadCheck>     _classesThatShouldNotBeLoaded;
    TR_LinkHead<TR_ClassExtendCheck>   _classesThatShouldNotBeNewlyExtended;

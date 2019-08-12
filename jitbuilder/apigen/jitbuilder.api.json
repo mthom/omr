@@ -35,15 +35,7 @@
         , "flags": []
         , "return": "none"
         , "parms": []
-        },
-        { "name": "invalidateJitAssumption"
-        , "overloadsuffix": ""
-        , "flags": []
-        , "return": "none"
-        , "parms": [
-	    {"name":"assumption","type":"uint32"}
-          ]
-	}
+        }
     ],
     "classes": [
         {
@@ -898,15 +890,6 @@
                 , "parms": [
                     {"name":"type","type":"IlType"},
                     {"name":"address","type":"IlValue"}
-                    ]
-                },
-                { "name": "PatchCodeLocation"
-                , "overloadsuffix": ""
-                , "flags": []
-                , "return": "none"
-                , "parms": [
-                    {"name":"address","type":"IlValue"},
-		    {"name":"value","type":"IlValue"}
                     ]
                 },
                 { "name": "LoadIndirect"

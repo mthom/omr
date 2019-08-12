@@ -100,7 +100,7 @@ class TR_RuntimeAssumptionTable
 
    void reclaimAssumptions(OMR::RuntimeAssumption **sentinel, void * metaData, bool reclaimPrePrologueAssumptions = false);
    void reclaimAssumptions(void *reclaimedMetaData, bool reclaimPrePrologueAssumptions = false);
-   void notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint32_t assumptionTriggered);
+   void notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint64_t assumptionTriggered, uint8_t code);
    void notifyClassUnloadEvent(TR_FrontEnd *vm, bool isSMP,
                                TR_OpaqueClassBlock *classOwningAssumption,
                                TR_OpaqueClassBlock *picKey);

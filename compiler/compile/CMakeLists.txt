@@ -24,6 +24,7 @@ compiler_library(compile
 	${CMAKE_CURRENT_LIST_DIR}/OSRData.cpp
 	${CMAKE_CURRENT_LIST_DIR}/Method.cpp
 	${CMAKE_CURRENT_LIST_DIR}/VirtualGuard.cpp
+	${CMAKE_CURRENT_LIST_DIR}/DisplacementSites.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRSymbolReferenceTable.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRAliasBuilder.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRCompilation.cpp

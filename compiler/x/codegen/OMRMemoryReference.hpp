@@ -73,6 +73,7 @@ namespace OMR { typedef OMR::X86::MemoryReference MemoryReferenceConnector; }
 
 class TR_OpaqueClassBlock;
 class TR_ScratchRegisterManager;
+class TR_DisplacementSite;
 namespace TR { class LabelSymbol; }
 namespace TR { class MemoryReference; }
 
@@ -93,6 +94,7 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
    TR::Node *_indexNode;
    TR::Snippet *_dataSnippet;
    TR::LabelSymbol *_label;
+   TR_DisplacementSite* _displacementSite;
 
    TR::SymbolReference _symbolReference;
    int32_t _reloKind;
@@ -113,6 +115,7 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
                                                    _indexNode(NULL),
                                                    _dataSnippet(NULL),
                                                    _label(NULL),
+                                                   _displacementSite(NULL),
                                                    _symbolReference(cg->comp()->getSymRefTab()),
                                                    _stride(0),
                                                    _flags(0),
@@ -176,6 +179,7 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
                                                    _indexNode(NULL),
                                                    _dataSnippet(NULL),
                                                    _label(NULL),
+                                                   _displacementSite(NULL),
                                                    _symbolReference(cg->comp()->getSymRefTab()),
                                                    _stride(0),
                                                    _flags(0),
@@ -194,6 +198,7 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
                                                    _indexNode(NULL),
                                                    _dataSnippet(NULL),
                                                    _label(NULL),
+                                                   _displacementSite(NULL),
                                                    _symbolReference(cg->comp()->getSymRefTab()),
                                                    _stride(s),
                                                    _flags(0),
@@ -226,6 +231,10 @@ class OMR_EXTENSIBLE MemoryReference : public OMR::MemoryReference
    TR::Node *getIndexNode()            {return _indexNode;}
    TR::Node *setIndexNode(TR::Node *in) {return (_indexNode = in);}
    TR::Register *getAddressRegister(){ return NULL; }
+   
+   TR_DisplacementSite* getDisplacementSite() { return _displacementSite; }   
+   TR_DisplacementSite* setDisplacementSite(TR_DisplacementSite *site) { return (_displacementSite = site); }
+
    intptrj_t getDisplacement();
 
    // An unresolved data snippet, unresolved virtual call snippet, and constant data snippet are mutually exclusive for

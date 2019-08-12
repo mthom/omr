@@ -262,6 +262,15 @@ class SentinelRuntimeAssumption : public OMR::RuntimeAssumption
    virtual void     dumpInfo() {};
    }; // TR::SentinelRuntimeAssumption
 
+class IndirectLoadOffsetPatchSite : public OMR::LocationRedirectRuntimeAssumption 
+   { 
+   protected:
+   IndirectLoadOffsetPatchSite(TR_PersistentMemory *pm, uintptrj_t key, uint8_t *location)
+      : OMR::LocationRedirectRuntimeAssumption(pm, key), _location(location) {}
+
+   uint8_t *_location;
+   };
+  
 class PatchNOPedGuardSite : public OMR::LocationRedirectRuntimeAssumption
    {
    protected:
@@ -299,6 +308,31 @@ class PatchNOPedGuardSite : public OMR::LocationRedirectRuntimeAssumption
    uint8_t *_destination;
    }; // TR::PatchNOPedGuardSite
 
+class PatchDisplacementSiteUserTrigger : public IndirectLoadOffsetPatchSite
+   {
+   protected:
+   PatchDisplacementSiteUserTrigger(TR_PersistentMemory *pm, uint64_t assumptionID, uint8_t *location)
+      : IndirectLoadOffsetPatchSite(pm, assumptionID, location), _assumptionID(assumptionID)
+   {}
+
+   public:
+   static void compensate(uint8_t *location, uint8_t code);
+   static PatchDisplacementSiteUserTrigger *make(TR_FrontEnd *fe, TR_PersistentMemory * pm, uint64_t assumptionID, uint8_t *location,
+						 OMR::RuntimeAssumption **sentinel);     
+   uint32_t getAssumptionID() { return _assumptionID; }
+
+   virtual void compensate(TR_FrontEnd *, bool, void*) {}
+   virtual void compensate(TR_FrontEnd *, bool, uint8_t code) { compensate(_location, code); }
+   virtual TR_RuntimeAssumptionKind getAssumptionKind() { return RuntimeAssumptionOnUserTrigger; }
+   virtual void dumpInfo() {}    
+   virtual uint8_t *getFirstAssumingPC() { return _location; }
+   virtual uint8_t *getLastAssumingPC() { return _location; }
+   virtual bool equals(RuntimeAssumption &other) { return this == &other; }
+     
+   private:
+   uint64_t _assumptionID;
+   };
+  
 class PatchNOPedGuardSiteOnUserTrigger : public PatchNOPedGuardSite
    {
    protected:

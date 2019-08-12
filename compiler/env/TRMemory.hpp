@@ -385,6 +385,7 @@ public:
       MethodBranchProfileInfo,
       BranchProfileInfoManager,
       VirtualGuardSiteInfo,
+      DisplacementSiteInfo,
       WCode,
       CallGraph,
       CPOController,

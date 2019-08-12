@@ -117,7 +117,13 @@ TR::Register *OMR::X86::AMD64::TreeEvaluator::lstoreEvaluator(TR::Node *node, TR
 // also handles ilload
 TR::Register *OMR::X86::AMD64::TreeEvaluator::lloadEvaluator(TR::Node *node, TR::CodeGenerator *cg)
    {
-   TR::MemoryReference  *sourceMR = generateX86MemoryReference(node, cg);
+   TR::MemoryReference *sourceMR = generateX86MemoryReference(node, cg);
+   TR_DisplacementSite *site = cg->comp()->findDisplacementSiteInfo(node);
+
+   if (site) {
+      sourceMR->setDisplacementSite(site);
+   }
+
    TR::Register *reg = TR::TreeEvaluator::loadMemory(node, sourceMR, TR_RematerializableLong, node->getOpCode().isIndirect(), cg);
 
    reg->setMemRef(sourceMR);

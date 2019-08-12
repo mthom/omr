@@ -122,8 +122,6 @@ TR_RuntimeAssumptionTable::purgeRATTable(TR_FrontEnd *fe)
       }
    }
 
-
-
 void
 TR_RuntimeAssumptionTable::addAssumption(OMR::RuntimeAssumption *a, TR_RuntimeAssumptionKind kind, TR_FrontEnd *fe, OMR::RuntimeAssumption **sentinel)
    {
@@ -409,20 +407,19 @@ TR_RuntimeAssumptionTable::reclaimAssumptions(void *md, bool reclaimPrePrologueA
    }
 
 void
-TR_RuntimeAssumptionTable::notifyUserAssumptionTrigger(TR_FrontEnd *vm,
-                                                       uint32_t assumptionTriggered)
+TR_RuntimeAssumptionTable::notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint64_t assumptionTriggered, uint8_t code)
    {
    OMR::CriticalSection notifyUserTriggerEvent(assumptionTableMutex);
    OMR::RuntimeAssumption **headPtr = getBucketPtr(RuntimeAssumptionOnUserTrigger, hashCode((uintptrj_t)assumptionTriggered));
-   TR::PatchNOPedGuardSiteOnUserTrigger *cursor = (TR::PatchNOPedGuardSiteOnUserTrigger *)(*headPtr);
-   TR::PatchNOPedGuardSiteOnUserTrigger *prev   = 0;
-   while (cursor)
-      {
-      TR::PatchNOPedGuardSiteOnUserTrigger *next = (TR::PatchNOPedGuardSiteOnUserTrigger*)cursor->getNext();
-      cursor->compensate(vm, 0, 0);
-      prev = cursor;
-      cursor = next;
-      }
+   TR::PatchDisplacementSiteUserTrigger *cursor = (TR::PatchDisplacementSiteUserTrigger *)(*headPtr);
+// TR::PatchDisplacementSiteUserTrigger *prev   = 0;
+// while (cursor)
+//    {
+//    TR::PatchNOPedGuardSiteOnUserTrigger *next = (TR::PatchNOPedGuardSiteOnUserTrigger*)cursor->getNext();
+   cursor->compensate(vm, 0, code);
+//    prev = cursor;
+//    cursor = next;
+//    }
    }
 
 void

@@ -35,10 +35,14 @@ extern "C" void _patchVirtualGuard(uint8_t *locationAddr, uint8_t *destinationAd
 extern "C" void ASM_CALL _patchVirtualGuard(uint8_t*, uint8_t*, uint32_t);
 #endif
 
-
 void TR::PatchNOPedGuardSite::compensate(bool isSMP, uint8_t *location, uint8_t *destination)
    {
    _patchVirtualGuard(location, destination, isSMP);
+   }
+
+void TR::PatchDisplacementSiteUserTrigger::compensate(uint8_t* location, uint8_t code)
+   {
+   *location = code;
    }
 
 TR::PatchNOPedGuardSiteOnUserTrigger *
@@ -46,6 +50,15 @@ TR::PatchNOPedGuardSiteOnUserTrigger::make(
    TR_FrontEnd *fe, TR_PersistentMemory *pm, uint32_t assumptionID, uint8_t *loc, uint8_t *dest, OMR::RuntimeAssumption **sentinel)
    {
    TR::PatchNOPedGuardSiteOnUserTrigger *result = new (pm) TR::PatchNOPedGuardSiteOnUserTrigger(pm, (uintptr_t)assumptionID, loc, dest);
+   result->addToRAT(pm, RuntimeAssumptionOnUserTrigger, fe, sentinel);
+   return result;
+   }
+
+TR::PatchDisplacementSiteUserTrigger *
+TR::PatchDisplacementSiteUserTrigger::make(TR_FrontEnd *fe, TR_PersistentMemory *pm, uint64_t assumptionID, uint8_t *location,
+					  OMR::RuntimeAssumption **sentinel)
+   {
+   TR::PatchDisplacementSiteUserTrigger *result = new (pm) TR::PatchDisplacementSiteUserTrigger(pm, assumptionID, location);
    result->addToRAT(pm, RuntimeAssumptionOnUserTrigger, fe, sentinel);
    return result;
    }

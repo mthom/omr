@@ -37,6 +37,7 @@
 #include "compile/Compilation.hpp"
 #include "compile/CompilationTypes.hpp"
 #include "compile/ResolvedMethod.hpp"
+#include "compile/DisplacementSites.hpp"
 #include "control/OptimizationPlan.hpp"
 #include "control/Options.hpp"
 #include "control/Options_inlines.hpp"
@@ -144,6 +145,12 @@ generatePerfToolEntry(uint8_t *startPC, uint8_t *endPC, const char *sig, const c
 
 TR::Monitor * assumptionTableMutex = NULL;
 
+void commitDisplacementSite(TR_DisplacementSite *info, TR::Compilation *comp)
+   {
+   TR::PatchDisplacementSiteUserTrigger::make(comp->fe(), comp->trPersistentMemory(), info->getAssumptionID(), info->getLocation(),
+					      comp->getMetadataAssumptionList());//, site->getDestination(), comp->getMetadataAssumptionList());
+   }
+
 void
 commitVirtualGuard(TR_VirtualGuard *info, List<TR_VirtualGuardSite> &sites, TR::Compilation *comp)
    {
@@ -178,7 +185,7 @@ bool
 commitGuards(TR::Compilation *comp)
    {
    // lock runtime assumptions table for thread safety
-   //OMR::CriticalSection lockGuards(assumptionTableMutex);
+   OMR::CriticalSection lockGuards(assumptionTableMutex);
 
    TR::list<TR_VirtualGuard*> &vguards = comp->getVirtualGuards();
    for (auto info = vguards.begin(); info != vguards.end(); ++info)
@@ -190,6 +197,12 @@ commitGuards(TR::Compilation *comp)
       // Commit the virtual guard itself
       //
       commitVirtualGuard(*info, sites, comp);
+      }
+
+   TR::list<TR_DisplacementSite*> &dispSites = comp->getDisplacementSites();
+   for (auto info = dispSites.begin(); info != dispSites.end(); ++info)
+      {
+      commitDisplacementSite(*info, comp);
       }
 
    return true;

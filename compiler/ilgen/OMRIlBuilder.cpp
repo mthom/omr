@@ -27,6 +27,7 @@
 #include <string.h>
 #include "codegen/CodeGenerator.hpp"
 #include "compile/Compilation.hpp"
+#include "compile/DisplacementSites.hpp"
 #include "compile/Method.hpp"
 #include "compile/SymbolReferenceTable.hpp"
 #include "control/Recompilation.hpp"
@@ -792,8 +793,19 @@ OMR::IlBuilder::LoadIndirect(const char *type, const char *field, TR::IlValue *o
 TR::IlValue *
 OMR::IlBuilder::LoadAt(TR::IlType *dt, TR::IlValue *address)
    {
+   static TR::JitAssumption runtimeAssumptionNumber = 1;
+
    TR_ASSERT(address->getDataType() == TR::Address, "LoadAt needs an address operand");
    TR::IlValue *returnValue = indirectLoadNode(dt, loadValue(address));
+   
+   // add displacement site to be filled out later by the binary encoder.
+   TR::Node *load = loadValue(returnValue);
+
+   TR_DisplacementSite *site = new (comp()->trHeapMemory()) TR_DisplacementSite(comp(), runtimeAssumptionNumber++); 
+
+   site->setByteCodeIndex(load->getByteCodeInfo().getByteCodeIndex());
+   site->setCalleeIndex(load->getByteCodeInfo().getCallerIndex());
+   
    TraceIL("IlBuilder[ %p ]::%d is LoadAt type %d address %d\n", this, returnValue->getID(), dt->getPrimitiveType(), address->getID());
    return returnValue;
    }
