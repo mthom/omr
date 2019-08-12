@@ -67,6 +67,7 @@ const char * objectName[] =
    "Snippet",
    "Relocation",
    "VirtualGuard",
+   "DisplacementSite",
    "RegisterDependencyGroup",
    "RegisterDependency",
    "FrontEnd",

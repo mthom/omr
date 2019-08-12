@@ -185,7 +185,7 @@ bool
 commitGuards(TR::Compilation *comp)
    {
    // lock runtime assumptions table for thread safety
-   OMR::CriticalSection lockGuards(assumptionTableMutex);
+   // OMR::CriticalSection lockGuards(assumptionTableMutex);
 
    TR::list<TR_VirtualGuard*> &vguards = comp->getVirtualGuards();
    for (auto info = vguards.begin(); info != vguards.end(); ++info)

@@ -35,7 +35,16 @@
         , "flags": []
         , "return": "none"
         , "parms": []
-        }
+        },
+        { "name": "invalidateJitAssumption"
+        , "overloadsuffix": ""
+        , "flags": []
+        , "return": "none"
+        , "parms": [
+	    {"name":"card","type":"uint64"},
+	    {"name":"code","type":"uint8"}
+          ]
+	}
     ],
     "classes": [
         {
