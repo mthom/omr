@@ -438,13 +438,13 @@ OMR::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::Relocatio
    uint8_t *callTargetAddress = address(reloTarget);
    char methodName[8]{};
    memcpy(methodName,&callTargetAddress,8);
-   callTargetAddress = reinterpret_cast<uint8_t*>(dynamic_cast<TR::SharedCacheRelocationRuntime *>(reloRuntime)->methodAddress(methodName));
+   callTargetAddress = reinterpret_cast<uint8_t*>(reinterpret_cast<TR::SharedCacheRelocationRuntime *>(reloRuntime)->symbolAddress(methodName));
    return callTargetAddress;
    }
 void 
 OMR::RelocationRecordMethodCallAddress::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget){
-     TR::RelocationRecordMethodCallPrivateData *reloPrivateData = &(privateData()->methodCall)  ;
-      uint8_t *baseLocation = 0;
+   TR::RelocationRecordMethodCallPrivateData *reloPrivateData = &(privateData()->methodCall)  ;
+   uint8_t *baseLocation = 0;
    uint8_t *callTargetAddress = computeTargetMethodAddress(reloRuntime, reloTarget, baseLocation);
    reloPrivateData->callTargetOffset = (callTargetAddress - baseLocation);
 }
@@ -465,9 +465,8 @@ OMR::RelocationRecordMethodCallAddress::setAddress(TR::RelocationTarget *reloTar
 
 int32_t OMR::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
    {      
-      
-      reloTarget->storeAddress(reinterpret_cast<uint8_t*>(reinterpret_cast<TR::RelocationRecordPrivateData*>
-            (privateData())->methodCall.callTargetOffset), reloLocation);
+      uint8_t* addressOfTheFunction =(uint8_t*)(reinterpret_cast<TR::RelocationRecordPrivateData*>(privateData())->methodCall.callTargetOffset);
+      reloTarget->storeAddress( addressOfTheFunction, reloLocation);
       return 0;
    }
 
@@ -487,9 +486,9 @@ OMR::RelocationRecordDataAddress::offset(TR::RelocationTarget *reloTarget)
 int32_t 
 OMR::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
    {
-   TR::SharedCacheRelocationRuntime *rr = static_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
+   TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
    std::string name = "gl_"+std::to_string(reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset);
-   reloTarget->storeAddress((uint8_t*)rr->methodAddress(const_cast<char*>(name.c_str())), reloLocation);
+   reloTarget->storeAddress((uint8_t*)rr->symbolAddress(const_cast<char*>(name.c_str())), reloLocation);
    }
 
 uint32_t OMR::RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds] =

@@ -23,6 +23,10 @@
 #define OMR_AOTADAPTER_INCL
 #include "env/RawAllocator.hpp"
 #include "infra/Annotations.hpp"
+#include "jitbuilder/runtime/CodeCacheManager.hpp"
+#include "runtime/Runtime.hpp"
+#include <map>
+#include <string>
 #ifndef OMR_AOTADAPTER_CONNECTOR
 #define OMR_AOTADAPTER_CONNECTOR
 namespace OMR { class AotAdapter; }
@@ -34,23 +38,39 @@ namespace TR
     class SharedCacheRelocationRuntime;
     class SharedCache;
     class CodeCache;
+    class RelocationRuntime;
     class CompilerEnv;
     }
 namespace OMR
 {
+
+
 class OMR_EXTENSIBLE AotAdapter{
 public:
     AotAdapter(){};
     TR::AotAdapter* self();
-    void initializeAOTClasses(TR::RawAllocator allocator);
-    TR::SharedCache* sc() {return _sharedCache;}
-    TR::SharedCacheRelocationRuntime* rr() {return _reloRuntime;}
-    TR::CodeCache* cc() {return _codeCache;}
+    TR::RelocationRuntime* rr();
+    void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
+    void storeExternalSymbol(const char *symbolName, void* symbolAddress);
+    void storeHeaderForLastCompiledMethodUnderName(const char *methodName);
+    virtual void createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize);
+    void *getMethodCode(const char *methodName);
+    void relocateMethod(const char *methodName);
+
  private:
+    
+    void storeAOTMethodAndDataInTheCache(const char *methodName);
+    void registerAOTMethodHeader(std::string methodName,TR::AOTMethodHeader* hdr);
+    TR::AOTMethodHeader* loadAOTMethodAndDataFromTheCache(const char *methodName);
+    TR::AOTMethodHeader* getRegisteredAOTMethodHeader(const char * methodName);
+  
     TR::SharedCache* _sharedCache;
     TR::SharedCacheRelocationRuntime* _reloRuntime;
-    TR::CodeCache*    _codeCache;
+    TR::CodeCacheManager*    _codeCacheManager;
     TR::CompilerEnv* _compiler;
+    std::map<std::string,TR::AOTMethodHeader*> _methodNameToHeaderMap;
+    std::string _lastMethodIdentifier = "LastMethod";
+    TR::CodeCache* _cacheInUse;
 };
 }
 #endif // !defined(OMR_AOTADAPTER_INCL)

@@ -58,6 +58,7 @@ namespace TR {
    class RelocationTarget;
    class RelocationRuntimeLogger;
    class RelocationRecordBinaryTemplate;
+   class CodeCacheManager;
 // class Resolved method will probably need to be returned back
 // when the generic object model is here, since resolved method is one of 
 // classes that could be used for abstraction
@@ -146,19 +147,20 @@ typedef struct AOTRuntimeInfo {
 }
 #endif
 namespace OMR{
+
 class RelocationRuntime {
    public:
       TR_ALLOC(TR_Memory::Relocation)
       void * operator new(size_t, TR::JitConfig *);
-      RelocationRuntime(TR::JitConfig *jitCfg);
+      RelocationRuntime(TR::JitConfig *jitCfg,TR::CodeCacheManager* manager);
       TR::RelocationRuntime* self();
       TR::RelocationTarget *reloTarget()                           { return _reloTarget; }
       TR::AOTStats *aotStats()                                     { return _aotStats; }
       TR::JitConfig *jitConfig()                                    { return _jitConfig; }
       TR_FrontEnd *fe()                                           { return _fe; }
       OMR_VM *omrVM()                                          { return _omrVM; }
-      TR::AOTMethodHeader* createMethodHeader(uintptrj_t *codeLocation,
-                              uint32_t codeLength);
+      TR::AOTMethodHeader* createMethodHeader(uint8_t *codeLocation,
+                            uint32_t codeLength,  uint8_t* reloLocation,uint32_t reloSize);
       TR_Memory *trMemory()                                       { return _trMemory; }
       TR::CompilationInfo *compInfo()                              { return _compInfo; }
       OMR_VMThread *currentThread()                                 { return _currentThread; }
@@ -178,7 +180,6 @@ class RelocationRuntime {
       UDATA dataCacheDelta()                                      { return _dataCacheDelta; }
       UDATA classReloAmount()                                     { return _classReloAmount; }
       U_8 *baseAddress()                                          { return _baseAddress; }
-
       UDATA reloStartTime()                                       { return _reloStartTime; }
       void setReloStartTime(UDATA time)                           { _reloStartTime = time; }
 
@@ -193,20 +194,22 @@ class RelocationRuntime {
       TR_ResolvedMethod *currentResolvedMethod()                  { return _currentResolvedMethod; }
 
       // current main entry point
-      OMRJITExceptionTable *prepareRelocateAOTCodeAndData(
+      void *prepareRelocateAOTCodeAndData(
                                                          //  OMR_VMThread* vmThread,
                                                          // TR_FrontEnd *fe,
                                                          // TR::CodeCache *aotMCCRuntimeCodeCache,
-                                                         const void *cacheEntry
+                                                         TR::AOTMethodHeader *cacheEntry,
+                                                         void* code
                                                          // OMRMethod *theMethod,
                                                          // bool shouldUseCompiledCopy,
                                                          // TR::Options *options,
-                                                         // TR::Compilation *compilation,
+                                                         // TR::Compilation *compilation,a
                                                          // TR_ResolvedMethod *resolvedMethod
                                                          
                                                          );
 
       // virtual bool storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
+      // virtual bool storeAotInformation( uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart,uint32_t dataSize);
       // virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
       // virtual bool validateAOTHeader(OMR_VM *jomrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
 
@@ -271,7 +274,7 @@ class RelocationRuntime {
 #endif
 
    private:
-      virtual uint8_t * allocateSpaceInCodeCache(UDATA codeSize)                           { return NULL; }
+      virtual uint8_t * allocateSpaceInCodeCache(UDATA codeSize)  ;
 
       virtual uint8_t * allocateSpaceInDataCache(UDATA metaDataSize,
                                                  UDATA type)                               { return NULL; }
@@ -280,10 +283,12 @@ class RelocationRuntime {
 
       virtual void initializeCacheDeltas()                                                 {}
 
-      void relocateAOTCodeAndData(U_8 *tempDataStart,
-                                  U_8 *oldDataStart,
-                                  U_8 *codeStart,
-                                  U_8 *oldCodeStart);
+      void relocateAOTCodeAndData(
+                                 //  U_8 *tempDataStart,
+                                 //  U_8 *oldDataStart,
+                                 //  U_8 *oldCodeStart,
+                                  U_8 *codeStart
+                                 );
 
       void relocateMethodMetaData(UDATA codeRelocationAmount, UDATA dataRelocationAmount);
 
@@ -312,6 +317,7 @@ class RelocationRuntime {
       TR::JitConfig *_jitConfig;
       OMR_VM *_omrVM;
       TR_FrontEnd *_fe;
+      TR::CodeCacheManager* _manager;
       TR_Memory *_trMemory;
       TR::CompilationInfo * _compInfo;
       TR::RelocationRuntimeLogger *_reloLogger;
@@ -372,26 +378,26 @@ namespace OMR
 class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
 public:
       TR_ALLOC(TR_Memory::Relocation);
+      TR::RelocationRuntime* self();
       void * operator new(size_t, TR::JitConfig *);
-      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg) : OMR::RelocationRuntime(jitCfg) {
+      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg,TR::CodeCacheManager *ccm) : OMR::RelocationRuntime(jitCfg,ccm) {
          _sharedCacheIsFull=false;
          }
-
+      void *symbolAddress(char *symbolName);
+      void registerLoadedSymbol(const char *&symbolName,void *&symbolAddress);
+      // virtual bool storeAotInformation( uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart,uint32_t dataSize);
    //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
    //    virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
    //   virtual bool validateAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
-
-//      virtual void *isROMClassInSharedCaches(UDATA romClassValue, OMR_VM *omrVm);
- //     virtual bool isRomClassForMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
-  //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
+   //      virtual void *isROMClassInSharedCaches(UDATA romClassValue, OMR_VM *omrVm);
+   //     virtual bool isRomClassForMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
+   //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
 
       //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
-      virtual void *methodAddress(char *&methodName);
-      virtual void registerLoadedMethod(const char *&methodName,void *&methodAddress);
+
 
 private:
       uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
-      virtual uint8_t * allocateSpaceInCodeCache(UDATA codeSize);
       virtual uint8_t * allocateSpaceInDataCache(UDATA metaDataSize, UDATA type);
       virtual void initializeAotRuntimeInfo();
       virtual void initializeCacheDeltas();
@@ -410,5 +416,5 @@ private:
       static const UDATA aotHeaderKeyLength;
       std::map<std::string,void *> _symbolLocation;
 };
-} // end namespaceTR
+} // end namespace OMR
 #endif   // RELOCATION_RUNTIME_INCL

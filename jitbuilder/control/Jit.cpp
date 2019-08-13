@@ -54,8 +54,6 @@ extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *
 //Shared cache relocation runtime. It is not thread safe.
 //
 static TR::AotAdapter* AotAdapter;
-TR::SharedCache* cache;
-TR::SharedCacheRelocationRuntime* reloRuntime;
 static void
 initHelper(void *helper, TR_RuntimeHelper id)
    {
@@ -113,14 +111,14 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    codeCacheConfig._verbosePerformance = false;
    codeCacheConfig._verboseReclamation = false;
    codeCacheConfig._doSanityChecks = false;
-   codeCacheConfig._codeCacheTotalKB = 16*1024;
-   codeCacheConfig._codeCacheKB = 128;
+   codeCacheConfig._codeCacheTotalKB = 128*1024;
+   codeCacheConfig._codeCacheKB = 256;
    codeCacheConfig._codeCachePadKB = 0;
    codeCacheConfig._codeCacheAlignment = 32;
    codeCacheConfig._codeCacheFreeBlockRecylingEnabled = true;
    codeCacheConfig._largeCodePageSize = 0;
    codeCacheConfig._largeCodePageFlags = 0;
-   codeCacheConfig._maxNumberOfCodeCaches = 96;
+   codeCacheConfig._maxNumberOfCodeCaches = 256;
    codeCacheConfig._canChangeNumCodeCaches = true;
    codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool)
                                     ||  TR::Options::getCmdLineOptions()->getOption(TR_EmitExecutableELFFile);
@@ -132,79 +130,24 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 
 bool storeCodeEntry(const char *methodName, void *codeLocation) 
    {
-   return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+      AotAdapter->storeHeaderForLastCompiledMethodUnderName(methodName);
    }
 
-/*
-bool storeCodeEntry(const char *methodName, void *codeLocation) {
-  TR::SharedCache* cache = TR::Compiler->cache;
-  return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
-}
-*/
 
-bool initializeSharedCache(TR::RawAllocator raw) {  
+bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager) {  
    AotAdapter = new TR::AotAdapter();
-   AotAdapter->initializeAOTClasses(raw);
-   cache = AotAdapter->sc();
-   reloRuntime = AotAdapter->rr();
-   return AotAdapter->sc();
+   AotAdapter->initializeAOTClasses(raw,codeCacheManager);
+   return true;
 }
 
 void *getCodeEntry(const char *methodName){
-  TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
-  U_32 codeLength = 0;
-
-  uint8_t *relocationHeader = 0;
-  void *sharedCacheMethod = cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-  if(!sharedCacheMethod) {
-    return nullptr;
-  }
-  int32_t numReserved;
-  static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
-  if(!codeCache){
-    return nullptr;
-  }
-  uint8_t * coldCode = nullptr;
-  void * warmCode =  manager->allocateCodeMemory(codeLength, 0, &codeCache, &coldCode, false);
-  if(!warmCode){
-    codeCache->unreserve();
-    return nullptr;
-  }
-  memcpy(warmCode,sharedCacheMethod,codeLength);
-//size_t relocationSize = *reinterpret_cast<size_t *>(relocationHeader);
-//if(relocationSize){
-//   reloRecord.applyRelocation(&reloRuntime,reloRuntime.reloTarget(),(uint8_t *)warmCode);
-//}
-//cache->storeCallAddressToHeaders(sharedCacheMethod,offsetof(TR::RelocationRecordMethodCallAddressBinaryTemplate,_methodAddress),warmCode);
-  reloRuntime->registerLoadedMethod(methodName,warmCode);
-  return warmCode;
-//return cache->loadCodeEntry(methodName);
+  return  AotAdapter->getMethodCode(methodName);
 }
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
-   uint8_t *relocationHeader = 0;
-   U_32 codeLength;
-   cache->loadCodeEntry(methodName,codeLength,relocationHeader);
-   TR::RelocationRecordBinaryTemplate * binaryReloRecords =
-   reinterpret_cast<TR::RelocationRecordBinaryTemplate *> (relocationHeader);
-         TR::RelocationRecordGroup reloGroup(binaryReloRecords);
-   if ( (uintptrj_t) *relocationHeader != 0)
-   reloGroup.applyRelocations(reloRuntime,reloRuntime->reloTarget(),(uint8_t*)warmCode);
-  
+   AotAdapter->relocateMethod(methodName);
 }
 
-/*void registerCallRelocation(const char *caller,const char *callee) {
-  static std::map<const char *,U_32> callCount;
-  TR::SharedCache* cache = TR::Compiler->cache;
-  U_32 codeLength = 0;
-  void *relocationHeader = 0;
-  void *sharedCacheMethod = cache->loadCodeEntry(caller,codeLength,relocationHeader);
-  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
-  WASMCacheEntry *calleeEntry = static_cast<WASMCacheEntry *>(cache->loadCodeEntry(callee,codeLength,relocationHeader));
-  --calleeEntry;
-  rrbintemp->_methodAddress = reinterpret_cast<UDATA>(&(calleeEntry->methodName))-cache->baseSharedCacheAddress();
-}
-*/
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
 //   currently this argument isn't needed by anything so this function can stay internal
@@ -235,28 +178,27 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
    omr_vmthread_alloc(omrvm,&vmThread);
 //   omr_vmthread_init(vmThread);
    vmThread->_vm = omrvm;
+
 //   omr_vmthread_getCurrent(omrvm);
 //   omr_vmthread_firstAttach(omrvm,&vmThread);
 // omrshr_init(omrvm,0,nullptr);
    //omrshr_storeCompiledMethod(vmThread, 
    TR::Compiler->initialize();
    TR::Compiler->vm._vmThread = vmThread;
+
    // --------------------------------------------------------------------------
    static JitBuilder::FrontEnd fe;
    auto jitConfig = fe.jitConfig();
 //   fe.omrvm((void*)omrvm);
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
-
-
-   initializeSharedCache(rawAllocator);
-//   initializeSharedCache();
    
    if (commonJitInit(fe, options) < 0)
      return false;
 
    initializeCodeCache(fe.codeCacheManager());
-
+   initializeAOT(&rawAllocator,&(fe.codeCacheManager()));
+   TR::Compiler->aotAdapter = AotAdapter;
    return true;
    }
 
@@ -299,6 +241,7 @@ internal_initializeJit()
 int32_t
 internal_compileMethodBuilder(TR::MethodBuilder *m, void **entry)
    {
+ 
    auto rc = m->Compile(entry);
 
 #if defined(J9ZOS390)
@@ -314,6 +257,7 @@ internal_compileMethodBuilder(TR::MethodBuilder *m, void **entry)
 
    *entry = (void*) fd;
 #endif
+     
 
    return rc;
    }
@@ -359,5 +303,5 @@ void internal_relocateCodeEntry(char *methodName,void *warmCode)
 void internal_setCodeEntry(char *methodName, void *codeLocation)
    {
      const char *methodN = const_cast<const char *>(methodName);
-     reloRuntime->registerLoadedMethod(methodN,codeLocation);
+     AotAdapter->storeExternalSymbol(methodN,codeLocation);
    }

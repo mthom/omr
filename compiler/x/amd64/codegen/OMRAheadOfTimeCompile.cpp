@@ -36,6 +36,7 @@
 #include "il/SymbolReference.hpp"
 #include "ras/DebugCounter.hpp"
 #include "runtime/CodeCacheConfig.hpp"
+#include "env/AotAdapter.hpp"
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/RelocationRecord.hpp"
 #define NON_HELPER   0x00
@@ -114,19 +115,21 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
     if (self()->getSizeOfAOTRelocations() != 0)
       {
       uint8_t *relocationDataCursor = self()->setRelocationData(fej9->allocateRelocationData(self()->comp(), self()->getSizeOfAOTRelocations() + sizeof(uintptrj_t )));
+      uint8_t * copy = relocationDataCursor;
       TR::Compilation* comp = TR::comp();
       TR::CodeGenerator* cg = comp->cg();
       // set up the size for the region
       TR::RelocationRecordBinaryTemplate* groups = reinterpret_cast<
-       TR::RelocationRecordBinaryTemplate*> (relocationDataCursor);
-      TR::RelocationRuntime *reloRuntime =new (cg->trHeapMemory()) TR::RelocationRuntime(NULL);
+      TR::RelocationRecordBinaryTemplate*> (relocationDataCursor);
+      TR::RelocationRuntime *reloRuntime =comp->reloRuntime();
       TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
       OMR::RelocationRecordGroup reloGroup(groups);
-      reloGroup.setSize(reloTarget,self()->getSizeOfAOTRelocations()+SIZEPOINTER);
-       //*(uintptrj_t *)relocationDataCursor = self()->getSizeOfAOTRelocations() + sizeof(uintptrj_t );
-       relocationDataCursor +=SIZEPOINTER;
 
-      // set up pointers for each iterated relocation and initialize header
+      reloGroup.setSize(reloTarget,self()->getSizeOfAOTRelocations()+SIZEPOINTER);
+            self()->addToSizeOfAOTRelocations(SIZEPOINTER);
+       //*(uintptrj_t *)relocationDataCursor = self()->getSizeOfAOTRelocations() + sizeof(uintptrj_t );
+      relocationDataCursor +=SIZEPOINTER;
+       // set up pointers for each iterated relocation and initialize header
       TR::IteratedExternalRelocation *s;
       for (s = self()->getAOTRelocationTargets().getFirst();
            s != NULL;
@@ -143,7 +146,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    {
    TR::Compilation* comp = TR::comp();
    TR::CodeGenerator* cg = comp->cg();
-   TR::SharedCache* sharedCache = TR::Compiler->cache;
+
    //TR::SymbolValidationManager *symValManager = comp->getSymbolValidationManager();
 
    TR_VirtualGuard *guard;
@@ -152,9 +155,9 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    uint8_t flags = 0;
    TR_ResolvedMethod *resolvedMethod;
 
-   TR::RelocationRuntime *reloRuntime =new (cg->trHeapMemory()) TR::RelocationRuntime(NULL);
+   TR::RelocationRuntime *reloRuntime =TR::comp()->reloRuntime();
    TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
-   
+   // TR::SharedCache* sharedCache = TR::Compiler->cache;
    uint8_t * aotMethodCodeStart = (uint8_t *) comp->getRelocatableMethodCodeStart();
    // size of relocation goes first in all types
    *(uint16_t *) cursor = relocation->getSizeOfRelocationData();
@@ -181,7 +184,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    // This has to be created after the kind has been written into the header
    TR::RelocationRecord storage;
    TR::RelocationRecord *reloRecord = TR::RelocationRecord::create(&storage, 
-                                       reloRuntime, reloTarget,
+                                       reloRuntime->self(), reloTarget,
                                        reinterpret_cast<TR::RelocationRecordBinaryTemplate *>
                                        (relocation->getRelocationData()));
    
@@ -195,13 +198,13 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	   uint64_t methodName = 0;
 	   //Should work if method name is like func_1
 //	   strcpy(reinterpret_cast<char *>(&methodName),const_cast<const char *>(reinterpret_cast<char *>(relocation->getTargetAddress())));
+      
 	   memcpy(&methodName,relocation->getTargetAddress(),8);
 //	   mcaRecord->setAddress(reloTarget, relocation->getTargetAddress());
 	   mcaRecord->setAddress(reloTarget,reinterpret_cast<uint8_t *>(methodName));
          }
 
-
-	 sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
+	//  sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
 	 cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
 	 //	 sharedCache->setRelocationData(relocation->getRelocationData());
 	 
@@ -214,7 +217,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
             ar->setSizeOfASHLHeader(reloTarget, theSize);
             ar->fillThePayload(reloTarget, theData);
             //memcpy(cursor,theData,theSize);
-            sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
+            // sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
             cursor = relocation->getRelocationData()
                      +_relocationKindToHeaderSizeMap[targetKind]+theSize;
          }
@@ -227,7 +230,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	uint64_t index = symbol->getTOCIndex();
 	daRecord->setOffset(reloTarget,index);
 	}
-	sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
+	// sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
 	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
 	break;
       default:

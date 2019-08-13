@@ -25,8 +25,7 @@
 #include <stdint.h>
 #include "env/defines.h"
 #include "env/jittypes.h"
-
-#include "env/CompilerEnv.hpp"
+#include <list>
 #include "env/Processors.hpp"
 
 #include "codegen/LinkageConventionsEnum.hpp"
@@ -492,18 +491,41 @@ typedef struct AOTStats
    uint32_t numRelocationsFailedByType[TR_NumExternalRelocationKinds];
 
    }AOTStats;
-typedef struct AOTMethodHeader 
+
+   //This enum correspond to the fields in AOTHeader when we attempt to serialize it
+
+
+class AOTMethodHeader
    {
-   uintptrj_t  compiledCodeStart;
-   uintptrj_t  compiledCodeSize;
-   uintptrj_t compiledDataSize;
-   uintptrj_t relocationsStart;
-   // uintptrj_t  exceptionTableStart;
-   // // Here, compiledDataStart is a pointer to any data persisted along with the
-   // // compiled code. offset to RelocationsTable points to Relocations, should
-   // // be equal 
-   // uintptrj_t compiledDataStart;
-   } AOTMethodHeader;
+      // at compile time, the constructor runs with four arguments, 
+      // relocationsSize, compiledCodeSize, compiledCodeStart and relocationsStart
+      // at loadtime we don't know anything, so we run constructor with no 
+      // parameters and the values from cache are derived.
+      // This is one possible implementation, for a cache with contiguous
+      // code and relocations data stored
+   public:
+      AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize):
+         compiledCodeStart(compiledCodeStart),
+         compiledCodeSize(compiledCodeSize),
+         relocationsStart(relocationsStart),
+         relocationsSize(relocationsSize)
+         {};
+      AOTMethodHeader(uint8_t* rawData);
+      uint8_t* compiledCodeStart;
+      uint32_t compiledCodeSize;
+      uint8_t* relocationsStart;
+      uint32_t relocationsSize;
+      virtual void* serialize();
+      virtual uintptrj_t sizeOfSerializedVersion();
+      // uintptrj_t  exceptionTableStart;
+      // // Here, compiledDataStart is a pointer to any data persisted along with the
+      // // compiled code. offset to RelocationsTable points to Relocations, should
+      // // be equal 
+      // uintptrj_t compiledDataStart;
+      // uintptrj_t compiledDataSize;
+
+   
+   };
 }
 
 typedef struct TR_RelocationRecordInformation {

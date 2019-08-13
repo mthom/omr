@@ -18,7 +18,8 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-
+#ifndef AOT_ADAPTER
+#define AOT_ADAPTER
 #include "env/OMRAotAdapter.hpp"
 
 namespace TR
@@ -29,3 +30,5 @@ class OMR_EXTENSIBLE AotAdapter:public OMR::AotAdapterConnector
         AotAdapter():OMR::AotAdapterConnector(){};
     };
 }
+
+#endif

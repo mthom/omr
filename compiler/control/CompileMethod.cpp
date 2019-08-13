@@ -61,7 +61,8 @@
 #include "omrformatconsts.h"
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/SymbolValidationManager.hpp"
-#include "runtime/OMRRuntimeAssumptions.hpp"
+#include "runtime/RelocationRuntime.hpp"
+#include "codegen/AheadOfTimeCompile.hpp"
 
 #include "omrsrp.h"
 //extern "C" {
@@ -349,7 +350,7 @@ compileMethod(
    return compileMethodFromDetails(omrVMThread, details, hotness, rc);
    }
 
-static std::map<uint8_t *,uint32_t> codeLengthMap;
+// static std::map<uint8_t *,uint32_t> codeLengthMap;
 
 uint8_t *
 compileMethodFromDetails(
@@ -423,7 +424,10 @@ compileMethodFromDetails(
    TR_ASSERT(TR::comp() == NULL, "there seems to be a current TLS TR::Compilation object %p for this thread. At this point there should be no current TR::Compilation object", TR::comp());
    TR::Compilation compiler(0, TR::Compiler->vm._vmThread, &fe, &compilee, request, options, dispatchRegion, &trMemory, plan);
    TR_ASSERT(TR::comp() == &compiler, "the TLS TR::Compilation object %p for this thread does not match the one %p just created.", TR::comp(), &compiler);
-
+   if (compiler.compileRelocatableCode())
+      {
+      compiler.setReloRuntime(TR::Compiler->aotAdapter->rr());
+      }
    try
       {
       //fprintf(stderr,"loading JIT debug\n");
@@ -502,7 +506,7 @@ compileMethodFromDetails(
             TR_VerboseLog::vlogRelease();
             trfflush(jitConfig->options.vLogFile);
             }
-	 codeLengthMap[startPC] = compiler.cg()->getCodeLength();
+	//  codeLengthMap[startPC] = compiler.cg()->getCodeLength();
 //	 TR::SymbolValidationManager svm(dispatchRegion,&compilee);
 //	 NNSRP_SET(methodNameAndSignature.name,compilee.nameChars());
 //	 NNSRP_SET(methodNameAndSignature.signature,compilee.signatureChars());
@@ -535,6 +539,14 @@ compileMethodFromDetails(
                                   startPC,
                                   translationTime/1000,
                                   translationTime%1000);
+         if (compiler.compileRelocatableCode())
+            {
+            TR::Compiler->aotAdapter->createAOTMethodHeader(
+                        startPC,
+                        compiler.cg()->getCodeLength(),
+                        compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
+                        compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
+            }
          }
       else /* of rc == COMPILATION_SUCCEEDED */
          {
@@ -583,7 +595,7 @@ compileMethodFromDetails(
    return startPC;
    }
 
-uint32_t getMethodCodeLength(uint8_t *methodLocation)
-   {
-   return codeLengthMap[methodLocation];
-   }
+// uint32_t getMethodCodeLength(uint8_t *methodLocation)
+//    {
+//    return codeLengthMap[methodLocation];
+//    }

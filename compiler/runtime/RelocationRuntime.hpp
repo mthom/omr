@@ -33,50 +33,12 @@ namespace TR
 class OMR_EXTENSIBLE RelocationRuntime : public OMR::RelocationRuntimeConnector
    {
    public:
-   RelocationRuntime(JitConfig* jitConfig);
+   RelocationRuntime(JitConfig* jitConfig,TR::CodeCacheManager* ccm);
 };
-class SharedCacheRelocationRuntime : public RelocationRuntime {
-public:
-      TR_ALLOC(TR_Memory::Relocation);
-      void * operator new(size_t, TR::JitConfig *);
-      SharedCacheRelocationRuntime(TR::SharedCache* cache) : RelocationRuntime(NULL) {
-         _sharedCacheIsFull=false;
-         _cache = cache;
-         }
-
-   //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
-   //    virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
-   //   virtual bool validateAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
-
-//      virtual void *isROMClassInSharedCaches(UDATA romClassValue, OMR_VM *omrVm);
- //     virtual bool isRomClassForMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
-  //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
-
-      //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
-      virtual void *methodAddress(char *methodName);
-      virtual void registerLoadedMethod(const char *&methodName,void *&methodAddress);
-
-private:
-      uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
-      virtual uint8_t * allocateSpaceInCodeCache(UDATA codeSize);
-      virtual uint8_t * allocateSpaceInDataCache(UDATA metaDataSize, UDATA type);
-      virtual void initializeAotRuntimeInfo();
-      virtual void initializeCacheDeltas();
-      TR::SharedCache* _cache;
-      virtual void incompatibleCache(U_32 module, U_32 reason, char *assumeMessage);
-
-      void checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHeader * hdrInCache, intptr_t featureFlags);
-      bool generateError(char *assumeMessage);
-
-      bool _sharedCacheIsFull;
-
-      static bool useDFPHardware(TR_FrontEnd *fe);
-      static uintptr_t generateFeatureFlags(TR_FrontEnd *fe);
-
-      static const char aotHeaderKey[];
-      static const UDATA aotHeaderKeyLength;
-      std::map<std::string,void *> _symbolLocation;
-};
+class OMR_EXTENSIBLE SharedCacheRelocationRuntime : public OMR::SharedCacheRelocationRuntimeConnector
+   {
+   public:
+   SharedCacheRelocationRuntime(JitConfig* jitConfig,TR::CodeCacheManager* ccm):OMR::SharedCacheRelocationRuntimeConnector(jitConfig,ccm){};
+   };
 }
-
 #endif

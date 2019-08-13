@@ -43,8 +43,7 @@ namespace OMR { typedef OMR::CompilerEnv CompilerEnvConnector; }
 #include "env/ArithEnv.hpp"
 #include "env/VMEnv.hpp"
 #include "env/VMMethodEnv.hpp"
-#include "env/SharedCache.hpp"
-#include "env/VirtualDispatchKey.hpp"
+#include "env/AotAdapter.hpp"
 
 namespace TR { class CompilerEnv; }
 
@@ -95,11 +94,12 @@ public:
    // Debug environment for the compiler.  This is not thread safe.
    //
    TR::DebugEnv debug;
-
-   // Shared cache class. Should be thread safe.
-   //
-   TR::SharedCache *cache;
    
+   // AOT object, used for AOT
+   //
+
+   TR::AotAdapter* aotAdapter;
+
    bool isInitialized() { return _initialized; }
 
    // --------------------------------------------------------------------------
@@ -111,6 +111,9 @@ public:
    //
    void initialize();
 
+   // Set the AOT object
+   //
+   void setAOTAdapter (TR::AotAdapter* ao) { aotAdapter = ao;}
    TR::PersistentAllocator &persistentAllocator() { return _persistentAllocator; }
 
    void* setVirtualDispatchThunk(const TR::VirtualDispatchKey& key, void *thunkPtr);

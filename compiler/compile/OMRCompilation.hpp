@@ -110,6 +110,7 @@ namespace TR { class Symbol; }
 namespace TR { class SymbolReference; }
 namespace TR { class SymbolReferenceTable; }
 namespace TR { class TreeTop; }
+namespace TR { class SharedCacheRelocationRuntime;}
 typedef TR::SparseBitVector SharedSparseBitVector;
 
 #if _AIX
@@ -317,7 +318,8 @@ public:
    TR::CodeGenerator *cg()              { return _codeGenerator; }
    TR_FrontEnd *fe()                    { return _fe; }
    TR::Options *getOptions()            { return _options; }
-
+   TR::RelocationRuntime* reloRuntime() { return _reloRuntime;}
+   void setReloRuntime(TR::RelocationRuntime* relo) {_reloRuntime = relo;}
    TR_Memory *trMemory()                { return _trMemory; }
    TR_StackMemory trStackMemory()       { return _trMemory; }
    TR_HeapMemory trHeapMemory()         { return _trMemory; }
@@ -340,6 +342,7 @@ public:
    // return true, for example, for ahead-of-time compilations.
    //
    bool compileRelocatableCode() { return true; }
+
 
    // Maximum number of internal pointers that can be managed.
    //
@@ -1058,9 +1061,10 @@ private:
    void resetVisitCounts(vcount_t, TR::ResolvedMethodSymbol *);
    int16_t restoreInlineDepthUntil(int32_t stopIndex, TR_ByteCodeInfo &currentInfo);
    void reportFailure(const char *reason);
-
+   void * _aotMethodDataStart; // used at relocation time
+   
 protected:
-
+   TR::RelocationRuntime*             _reloRuntime;
    const char * _signature;
    TR::Options *_options;
    flags32_t _flags;
