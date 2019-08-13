@@ -51,8 +51,6 @@ extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *
 //Shared cache relocation runtime. It is not thread safe.
 //
 static TR::AotAdapter* AotAdapter;
-TR::SharedCache* cache;
-TR::SharedCacheRelocationRuntime* reloRuntime;
 static void
 initHelper(void *helper, TR_RuntimeHelper id)
    {
@@ -121,53 +119,22 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 
 bool storeCodeEntry(const char *methodName, void *codeLocation) 
    {
-   return cache->storeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
+      AotAdapter->storeHeaderForLastCompiledMethodUnderName(methodName);
    }
 
 bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager) {  
    AotAdapter = new TR::AotAdapter();
    AotAdapter->initializeAOTClasses(raw,codeCacheManager);
-   cache = AotAdapter->sc();
-   reloRuntime = (TR::SharedCacheRelocationRuntime*)AotAdapter->rr();
-   return AotAdapter->sc();
+   return true;
 }
 
 void *getCodeEntry(const char *methodName){
-  TR::CodeCacheManager *manager  = TR::CodeCacheManager::instance();
-  U_32 codeLength = 0;
-  uint8_t *relocationHeader = 0;
-
-  void *sharedCacheData = cache->loadEntry(methodName);
-  
-  if(!sharedCacheData ) {
-    return nullptr;
-  }
-  int32_t numReserved;
-  static TR::CodeCache *codeCache = manager->reserveCodeCache(false, 0, 0, &numReserved);
-  if(!codeCache){
-    return nullptr;
-  }
-   uint8_t* h=(uint8_t*)sharedCacheData +sizeof(WASMCacheEntry);
-   TR::AOTMethodHeader aotHeader = *(reinterpret_cast<TR::AOTMethodHeader*>(h));
-   codeLength=aotHeader.compiledCodeSize;
-   uint8_t * coldCode = nullptr;
-   void * warmCode =  manager->allocateCodeMemory(codeLength, 0, &codeCache, &coldCode, false);
-   if(!warmCode){
-      codeCache->unreserve();
-      return nullptr;
-   }
-   memcpy(warmCode,aotHeader.compiledCodeStart,codeLength);
-   reloRuntime->registerLoadedMethod(methodName,warmCode);
-   return warmCode;
+  return  AotAdapter->getMethodCode(methodName);
 }
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
-   uint8_t *relocationHeader = 0;
-   U_32 codeLength;
-   WASMCacheEntry* sharedCacheData =  cache->loadEntry(methodName);
-  uint8_t* h=(uint8_t*)sharedCacheData +sizeof(WASMCacheEntry);
-   TR::AOTMethodHeader aotHeader = *(reinterpret_cast<TR::AOTMethodHeader*>(h));
-     reloRuntime->self()->prepareRelocateAOTCodeAndData(&aotHeader,warmCode);
+   AotAdapter->relocateMethod(methodName);
+   // warmCode = AotAdapter->getMethodCode(methodName);
 }
 
 /*void registerCallRelocation(const char *caller,const char *callee) {
@@ -293,6 +260,7 @@ internal_compileMethodBuilder(TR::MethodBuilder *m, void **entry)
 
    *entry = (void*) fd;
 #endif
+     
 
    return rc;
    }
@@ -336,5 +304,5 @@ void internal_relocateCodeEntry(char *methodName,void *warmCode)
 void internal_setCodeEntry(char *methodName, void *codeLocation)
    {
      const char *methodN = const_cast<const char *>(methodName);
-     reloRuntime->registerLoadedMethod(methodN,codeLocation);
+     AotAdapter->storeExternalSymbol(methodN,codeLocation);
    }

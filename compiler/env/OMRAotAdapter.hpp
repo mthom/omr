@@ -23,7 +23,10 @@
 #define OMR_AOTADAPTER_INCL
 #include "env/RawAllocator.hpp"
 #include "infra/Annotations.hpp"
-#include "runtime/CodeCacheManager.hpp"
+#include "jitbuilder/runtime/CodeCacheManager.hpp"
+#include "runtime/Runtime.hpp"
+#include <map>
+#include <string>
 #ifndef OMR_AOTADAPTER_CONNECTOR
 #define OMR_AOTADAPTER_CONNECTOR
 namespace OMR { class AotAdapter; }
@@ -40,19 +43,34 @@ namespace TR
     }
 namespace OMR
 {
+
+
 class OMR_EXTENSIBLE AotAdapter{
 public:
     AotAdapter(){};
     TR::AotAdapter* self();
+    TR::RelocationRuntime* rr();
     void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
-    TR::SharedCache* sc() {return _sharedCache;}
-    TR::SharedCacheRelocationRuntime* rr() {return _reloRuntime;}
-     TR::CodeCacheManager* cc() {return _codeCacheManager;}
+    void storeExternalSymbol(const char *symbolName, void* symbolAddress);
+    void storeHeaderForLastCompiledMethodUnderName(const char *methodName);
+    void createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize);
+    void *getMethodCode(const char *methodName);
+    void relocateMethod(const char *methodName);
+
  private:
+    
+    void storeAOTMethodAndDataInTheCache(const char *methodName);
+    void registerAOTMethodHeader(std::string methodName,TR::AOTMethodHeader* hdr);
+    TR::AOTMethodHeader* loadAOTMethodAndDataFromTheCache(const char *methodName);
+    TR::AOTMethodHeader* getRegisteredAOTMethodHeader(const char * methodName);
+  
     TR::SharedCache* _sharedCache;
     TR::SharedCacheRelocationRuntime* _reloRuntime;
     TR::CodeCacheManager*    _codeCacheManager;
     TR::CompilerEnv* _compiler;
+    std::map<std::string,TR::AOTMethodHeader*> _methodNameToHeaderMap;
+    std::string _lastMethodIdentifier = "LastMethod";
+   
 };
 }
 #endif // !defined(OMR_AOTADAPTER_INCL)

@@ -156,7 +156,7 @@ bool WASMCompositeCache::storeEntry(const char* elementName, void* data, uint32_
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
-WASMCacheEntry *WASMCompositeCache::loadEntry(const char *elementName) {
+void* WASMCompositeCache::loadEntry(const char *elementName) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[elementName];
     // if(entry) {
@@ -165,7 +165,10 @@ WASMCacheEntry *WASMCompositeCache::loadEntry(const char *elementName) {
     //   codeLength = entry->codeLength;
     //   entry++;
     // }
-    return entry;
+    void *rawData = NULL;
+    if (entry)
+      rawData = (void*) (entry+1);
+    return rawData;
 //  void * methodArea =  mmap(NULL,
 //            codeLength,
 //            PROT_READ | PROT_WRITE | PROT_EXEC,

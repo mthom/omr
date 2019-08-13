@@ -438,7 +438,7 @@ OMR::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::Relocatio
    uint8_t *callTargetAddress = address(reloTarget);
    char methodName[8]{};
    memcpy(methodName,&callTargetAddress,8);
-   callTargetAddress = reinterpret_cast<uint8_t*>(reinterpret_cast<TR::SharedCacheRelocationRuntime *>(reloRuntime)->methodAddress(methodName));
+   callTargetAddress = reinterpret_cast<uint8_t*>(reinterpret_cast<TR::SharedCacheRelocationRuntime *>(reloRuntime)->symbolAddress(methodName));
    return callTargetAddress;
    }
 void 
@@ -488,7 +488,7 @@ OMR::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRun
    {
    TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
    std::string name = "gl_"+std::to_string(reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset);
-   reloTarget->storeAddress((uint8_t*)rr->methodAddress(const_cast<char*>(name.c_str())), reloLocation);
+   reloTarget->storeAddress((uint8_t*)rr->symbolAddress(const_cast<char*>(name.c_str())), reloLocation);
    }
 
 uint32_t OMR::RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds] =

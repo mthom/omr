@@ -121,7 +121,7 @@ void OMR::X86::AMD64::AheadOfTimeCompile::processRelocations()
       // set up the size for the region
       TR::RelocationRecordBinaryTemplate* groups = reinterpret_cast<
       TR::RelocationRecordBinaryTemplate*> (relocationDataCursor);
-      TR::SharedCacheRelocationRuntime *reloRuntime =comp->reloRuntime();
+      TR::RelocationRuntime *reloRuntime =comp->reloRuntime();
       TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
       OMR::RelocationRecordGroup reloGroup(groups);
 
@@ -155,9 +155,9 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    uint8_t flags = 0;
    TR_ResolvedMethod *resolvedMethod;
 
-   TR::SharedCacheRelocationRuntime *reloRuntime =TR::comp()->reloRuntime();
+   TR::RelocationRuntime *reloRuntime =TR::comp()->reloRuntime();
    TR::RelocationTarget *reloTarget = reloRuntime->reloTarget();
-   TR::SharedCache* sharedCache = TR::Compiler->cache;
+   // TR::SharedCache* sharedCache = TR::Compiler->cache;
    uint8_t * aotMethodCodeStart = (uint8_t *) comp->getRelocatableMethodCodeStart();
    // size of relocation goes first in all types
    *(uint16_t *) cursor = relocation->getSizeOfRelocationData();

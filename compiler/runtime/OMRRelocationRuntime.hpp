@@ -180,7 +180,6 @@ class RelocationRuntime {
       UDATA dataCacheDelta()                                      { return _dataCacheDelta; }
       UDATA classReloAmount()                                     { return _classReloAmount; }
       U_8 *baseAddress()                                          { return _baseAddress; }
-
       UDATA reloStartTime()                                       { return _reloStartTime; }
       void setReloStartTime(UDATA time)                           { _reloStartTime = time; }
 
@@ -210,7 +209,7 @@ class RelocationRuntime {
                                                          );
 
       // virtual bool storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
-      virtual bool storeAotInformation( uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart,uint32_t dataSize);
+      // virtual bool storeAotInformation( uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart,uint32_t dataSize);
       // virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
       // virtual bool validateAOTHeader(OMR_VM *jomrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
 
@@ -384,7 +383,9 @@ public:
       SharedCacheRelocationRuntime(TR::JitConfig *jitCfg,TR::CodeCacheManager *ccm) : OMR::RelocationRuntime(jitCfg,ccm) {
          _sharedCacheIsFull=false;
          }
-      virtual bool storeAotInformation( uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart,uint32_t dataSize);
+      void *symbolAddress(char *symbolName);
+      void registerLoadedSymbol(const char *&symbolName,void *&symbolAddress);
+      // virtual bool storeAotInformation( uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart,uint32_t dataSize);
    //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
    //    virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
    //   virtual bool validateAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
@@ -393,8 +394,7 @@ public:
    //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
 
       //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
-      virtual void *methodAddress(char *methodName);
-      virtual void registerLoadedMethod(const char *&methodName,void *&methodAddress);
+
 
 private:
       uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;

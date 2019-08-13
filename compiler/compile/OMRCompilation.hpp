@@ -317,8 +317,8 @@ public:
    TR::CodeGenerator *cg()              { return _codeGenerator; }
    TR_FrontEnd *fe()                    { return _fe; }
    TR::Options *getOptions()            { return _options; }
-   TR::SharedCacheRelocationRuntime* reloRuntime() { return _reloRuntime;}
-   void setReloRuntime(TR::SharedCacheRelocationRuntime* relo) {_reloRuntime = relo;}
+   TR::RelocationRuntime* reloRuntime() { return _reloRuntime;}
+   void setReloRuntime(TR::RelocationRuntime* relo) {_reloRuntime = relo;}
    TR_Memory *trMemory()                { return _trMemory; }
    TR_StackMemory trStackMemory()       { return _trMemory; }
    TR_HeapMemory trHeapMemory()         { return _trMemory; }
@@ -1056,7 +1056,7 @@ private:
    void * _aotMethodDataStart; // used at relocation time
    
 protected:
-   TR::SharedCacheRelocationRuntime*             _reloRuntime;
+   TR::RelocationRuntime*             _reloRuntime;
    const char * _signature;
    TR::Options *_options;
    flags32_t _flags;

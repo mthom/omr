@@ -484,30 +484,9 @@ typedef struct AOTStats
    }AOTStats;
 
    //This enum correspond to the fields in AOTHeader when we attempt to serialize it
-   typedef enum
-   {
-      noField = 0,
-      compiledMehtodCode  = 1,
-      relocationsData = 2
-   } CacheMessageFields;
 
-   typedef struct CacheMessageElement{
-      uint32_t size;
-      uint8_t* DATA;
-      CacheMessageFields field;
-   } CacheMessageElement;
 
-  class StorageMessage{
-      uint32_t totalAllocSize;
-      std::list <CacheMessageElement> Storage;
-  };
-
-class Serializable{
-      StorageMessage* serialize();
-      void desearialize();
-};
-
-class AOTMethodHeader : Serializable
+class AOTMethodHeader
    {
       // at compile time, the constructor runs with four arguments, 
       // relocationsSize, compiledCodeSize, compiledCodeStart and relocationsStart
@@ -522,17 +501,13 @@ class AOTMethodHeader : Serializable
          relocationsStart(relocationsStart),
          relocationsSize(relocationsSize)
          {};
-      AOTMethodHeader(const AOTMethodHeader &original){ 
-         compiledCodeSize = original.compiledCodeSize;
-         relocationsSize   = original.relocationsSize;
-         relocationsStart  = relocationsSize ? (uint8_t*) &original+sizeof(AOTMethodHeader)+compiledCodeSize : 0;
-         compiledCodeStart = (uint8_t*) &original+sizeof(AOTMethodHeader);
-         };
-
+      AOTMethodHeader(uint8_t* rawData);
       uint8_t* compiledCodeStart;
       uint32_t compiledCodeSize;
       uint8_t* relocationsStart;
       uint32_t relocationsSize;
+      virtual void* serialize();
+      virtual uintptrj_t sizeOfSerializedVersion();
       // uintptrj_t  exceptionTableStart;
       // // Here, compiledDataStart is a pointer to any data persisted along with the
       // // compiled code. offset to RelocationsTable points to Relocations, should

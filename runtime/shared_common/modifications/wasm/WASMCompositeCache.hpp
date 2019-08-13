@@ -39,7 +39,7 @@ public:
 
   UDATA baseSharedCacheAddress();
 
- WASMCacheEntry *loadEntry(const char *elementName);
+  void* loadEntry(const char *elementName);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 

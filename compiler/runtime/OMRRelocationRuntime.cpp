@@ -313,6 +313,19 @@ OMR::SharedCacheRelocationRuntime::initializeCacheDeltas()
    _codeCacheDelta = 0;
    }
 
+void *
+OMR::SharedCacheRelocationRuntime::symbolAddress(char *symbolName)
+   {
+   std::string symbol(const_cast<const char *>(symbolName));
+   return _symbolLocation[symbol];
+   }
+
+void
+OMR::SharedCacheRelocationRuntime::registerLoadedSymbol(const char *&symbolName, void *&symbolAddress)
+   {
+   std::string method(symbolName);
+   _symbolLocation[symbolName] = symbolAddress;
+   }
 
 
 
@@ -372,20 +385,20 @@ OMR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTH
 
 //    return NULL;
 //    }
-bool 
-OMR::RelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize){
-   // //  "This should never happen"
-   return false;
-}
+// bool 
+// OMR::RelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize){
+//    // //  "This should never happen"
+//    return false;
+// }
 
-bool
-// OMR::SharedCacheRelocationRuntime::storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread)
-OMR::SharedCacheRelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize )
-   {
-   TR::SharedCache* sharedCache = TR::Compiler->cache;
-      _aotMethodHeaderEntry = (TR::AOTMethodHeader*)new (TR::AOTMethodHeader) (codeStart,codeSize,dataStart,dataSize);
-   sharedCache->setRelocationData(reinterpret_cast<uint8_t*>(_aotMethodHeaderEntry));
-   }
+// bool
+// // OMR::SharedCacheRelocationRuntime::storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread)
+// OMR::SharedCacheRelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize )
+//    {
+//    // TR::SharedCache* sharedCache = TR::Compiler->cache;
+//    _aotMethodHeaderEntry = (TR::AOTMethodHeader*)new (TR::AOTMethodHeader) (codeStart,codeSize,dataStart,dataSize);
+//    // sharedCache->setRelocationData(reinterpret_cast<uint8_t*>(_aotMethodHeaderEntry));
+//    }
 
 
 
@@ -444,20 +457,3 @@ OMR::SharedCacheRelocationRuntime::generateFeatureFlags(TR_FrontEnd *fe)
 
 //    return featureFlags;
    }
-void *
-OMR::SharedCacheRelocationRuntime::methodAddress(char *methodName)
-   {
-   std::string method(const_cast<const char *>(methodName));
-   return _symbolLocation[method];
-   }
-
-void
-OMR::SharedCacheRelocationRuntime::registerLoadedMethod(const char *&methodName, void *&methodAddress)
-   {
-   std::string method(methodName);
-   _symbolLocation[methodName] = methodAddress;
-   }
-  
-
-
-

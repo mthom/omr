@@ -276,7 +276,7 @@ compileMethod(
    return compileMethodFromDetails(omrVMThread, details, hotness, rc);
    }
 
-static std::map<uint8_t *,uint32_t> codeLengthMap;
+// static std::map<uint8_t *,uint32_t> codeLengthMap;
 
 uint8_t *
 compileMethodFromDetails(
@@ -419,7 +419,7 @@ compileMethodFromDetails(
             TR_VerboseLog::vlogRelease();
             trfflush(jitConfig->options.vLogFile);
             }
-	 codeLengthMap[startPC] = compiler.cg()->getCodeLength();
+	//  codeLengthMap[startPC] = compiler.cg()->getCodeLength();
 //	 TR::SymbolValidationManager svm(dispatchRegion,&compilee);
 //	 NNSRP_SET(methodNameAndSignature.name,compilee.nameChars());
 //	 NNSRP_SET(methodNameAndSignature.signature,compilee.signatureChars());
@@ -454,7 +454,7 @@ compileMethodFromDetails(
                                   translationTime%1000);
          if (compiler.compileRelocatableCode())
             {
-            TR::Compiler->aotAdapter->rr()->storeAotInformation(
+            TR::Compiler->aotAdapter->createAOTMethodHeader(
                         startPC,
                         compiler.cg()->getCodeLength(),
                         compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
@@ -508,7 +508,7 @@ compileMethodFromDetails(
    return startPC;
    }
 
-uint32_t getMethodCodeLength(uint8_t *methodLocation)
-   {
-   return codeLengthMap[methodLocation];
-   }
+// uint32_t getMethodCodeLength(uint8_t *methodLocation)
+//    {
+//    return codeLengthMap[methodLocation];
+//    }
