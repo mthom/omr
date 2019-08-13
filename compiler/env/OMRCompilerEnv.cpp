@@ -33,7 +33,8 @@ OMR::CompilerEnv::CompilerEnv(
       _initialized(false),
       _persistentAllocator(persistentAllocatorKit),
       regionAllocator(_persistentAllocator),
-      cache("som_shared_cache", "/tmp")
+      //cache("som_shared_cache", "/tmp")
+      cache(nullptr)
    {
    }
 

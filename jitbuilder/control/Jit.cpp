@@ -43,7 +43,7 @@
 #include "runtime/RelocationRecord.hpp"
 
 #include "runtime/RelocationRuntime.hpp"
-#include "WASMCompositeCache.hpp"
+#include "SOMCompositeCache.hpp"
 #include "env/AotAdapter.hpp"
 
 //#include "WASMCompositeCache.hpp"
@@ -135,12 +135,12 @@ bool storeCodeEntry(const char *methodName, void *codeLocation)
    return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
    }
 
-
+/*
 bool storeCodeEntry(const char *methodName, void *codeLocation) {
   TR::SharedCache* cache = TR::Compiler->cache;
   return cache->storeCodeEntry(methodName,codeLocation,getMethodCodeLength((uint8_t *)codeLocation));
 }
-
+*/
 
 bool initializeSharedCache(TR::RawAllocator raw) {  
    AotAdapter = new TR::AotAdapter();
@@ -329,7 +329,7 @@ internal_shutdownJit()
 // if(cache != NULL) {
 //   delete cache;
 // }
-   TR::Compiler->cache.cleanup();
+   TR::Compiler->cache->cleanup();
    }
 
 bool

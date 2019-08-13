@@ -98,7 +98,7 @@ public:
 
    // Shared cache class. Should be thread safe.
    //
-   TR::SharedCache cache;
+   TR::SharedCache *cache;
    
    bool isInitialized() { return _initialized; }
 

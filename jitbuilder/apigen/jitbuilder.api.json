@@ -35,8 +35,6 @@
         , "flags": []
         , "return": "none"
         , "parms": []
-<<<<<<< HEAD
-
         },
 	{ "name": "storeCodeEntry"
         , "overloadsuffix": ""

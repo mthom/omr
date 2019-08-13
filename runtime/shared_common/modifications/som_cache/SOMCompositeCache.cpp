@@ -107,19 +107,19 @@ bool SOMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocatio
   _codeEntries[methodName] = entryLocation;
 
   // now write the relocation record to the cache.
-  size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
+  /*size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
   
   memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
-  _codeUpdatePtr+=relocationRecordSize;
+  _codeUpdatePtr+=relocationRecordSize;*/
   
   return true;
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
-void *SOMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, void *&relocationHeader) {
+void *SOMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, uint8_t *&relocationHeader) {
 //if(!_loadedMethods[methodName]){
     SOMCacheEntry *entry = _codeEntries[methodName];
-    char *bytePointer = reinterpret_cast<char *>(entry);
+    uint8_t *bytePointer = reinterpret_cast<uint8_t *>(entry);
     relocationHeader = bytePointer+sizeof(SOMCacheEntry)+entry->codeLength;
     codeLength = entry->codeLength;
     entry++;

@@ -143,7 +143,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    {
    TR::Compilation* comp = TR::comp();
    TR::CodeGenerator* cg = comp->cg();
-   //   TR::SharedCache* sharedCache = TR::Compiler->cache;
+   TR::SharedCache* sharedCache = TR::Compiler->cache;
    //TR::SymbolValidationManager *symValManager = comp->getSymbolValidationManager();
 
    TR_VirtualGuard *guard;
