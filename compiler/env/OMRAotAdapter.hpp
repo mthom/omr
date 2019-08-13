@@ -23,8 +23,9 @@
 #define OMR_AOTADAPTER_INCL
 #include "env/RawAllocator.hpp"
 #include "infra/Annotations.hpp"
-#include "jitbuilder/runtime/CodeCacheManager.hpp"
-#include "runtime/Runtime.hpp"
+#include "compiler/env/jittypes.h"
+
+// #include "runtime/Runtime.hpp"
 #include <map>
 #include <string>
 #ifndef OMR_AOTADAPTER_CONNECTOR
@@ -32,17 +33,57 @@
 namespace OMR { class AotAdapter; }
 namespace OMR { typedef OMR::AotAdapter AotAdapterConnector; }
 #endif
+
+#ifndef OMR_AOTMETHODHEADER_CONNECTOR
+#define OMR_AOTMETHODHEADER_CONNECTOR
+namespace OMR { class AOTMethodHeader; }
+namespace OMR { typedef OMR::AOTMethodHeader AOTMethodHeaderConnector; }
+#endif
 namespace TR 
     {
     class AotAdapter;
     class SharedCacheRelocationRuntime;
     class SharedCache;
     class CodeCache;
+    class CodeCacheManager;
     class RelocationRuntime;
     class CompilerEnv;
+    class AOTMethodHeader;
     }
 namespace OMR
 {
+class OMR_EXTENSIBLE AOTMethodHeader
+   {
+      // at compile time, the constructor runs with four arguments, 
+      // relocationsSize, compiledCodeSize, compiledCodeStart and relocationsStart
+      // at loadtime we don't know anything, so we run constructor with no 
+      // parameters and the values from cache are derived.
+      // This is one possible implementation, for a cache with contiguous
+      // code and relocations data stored
+   public:
+      AOTMethodHeader(){};
+      AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize):
+         compiledCodeStart(compiledCodeStart),
+         compiledCodeSize(compiledCodeSize),
+         relocationsStart(relocationsStart),
+         relocationsSize(relocationsSize)
+         {};
+      AOTMethodHeader(uint8_t* rawData);
+      uint8_t* compiledCodeStart;
+      uint32_t compiledCodeSize;
+      uint8_t* relocationsStart;
+      uint32_t relocationsSize;
+      virtual void* serialize();
+      virtual uintptrj_t sizeOfSerializedVersion();
+      // uintptrj_t  exceptionTableStart;
+      // // Here, compiledDataStart is a pointer to any data persisted along with the
+      // // compiled code. offset to RelocationsTable points to Relocations, should
+      // // be equal 
+      // uintptrj_t compiledDataStart;
+      // uintptrj_t compiledDataSize;
+
+   
+   };
 
 
 class OMR_EXTENSIBLE AotAdapter{
