@@ -53,7 +53,7 @@ public:
     void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
     void storeExternalSymbol(const char *symbolName, void* symbolAddress);
     void storeHeaderForLastCompiledMethodUnderName(const char *methodName);
-    void createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize);
+    virtual void createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize);
     void *getMethodCode(const char *methodName);
     void relocateMethod(const char *methodName);
 
@@ -70,7 +70,7 @@ public:
     TR::CompilerEnv* _compiler;
     std::map<std::string,TR::AOTMethodHeader*> _methodNameToHeaderMap;
     std::string _lastMethodIdentifier = "LastMethod";
-   
+    TR::CodeCache* _cacheInUse;
 };
 }
 #endif // !defined(OMR_AOTADAPTER_INCL)

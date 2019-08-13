@@ -42,7 +42,6 @@ namespace OMR { typedef OMR::CompilerEnv CompilerEnvConnector; }
 #include "env/ArithEnv.hpp"
 #include "env/VMEnv.hpp"
 #include "env/VMMethodEnv.hpp"
-#include "env/SharedCache.hpp"
 #include "env/AotAdapter.hpp"
 namespace TR { class CompilerEnv; }
 
@@ -94,11 +93,6 @@ public:
    // Debug environment for the compiler.  This is not thread safe.
    //
    TR::DebugEnv debug;
-
-   // Shared cache class. Should be thread safe.
-   //
-
-   TR::SharedCache* cache;
    
    // AOT object, used for AOT
    //

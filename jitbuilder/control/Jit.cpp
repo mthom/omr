@@ -134,21 +134,8 @@ void *getCodeEntry(const char *methodName){
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
    AotAdapter->relocateMethod(methodName);
-   // warmCode = AotAdapter->getMethodCode(methodName);
 }
 
-/*void registerCallRelocation(const char *caller,const char *callee) {
-  static std::map<const char *,U_32> callCount;
-  TR::SharedCache* cache = TR::Compiler->cache;
-  U_32 codeLength = 0;
-  void *relocationHeader = 0;
-  void *sharedCacheMethod = cache->loadCodeEntry(caller,codeLength,relocationHeader);
-  TR::RelocationRecordMethodCallAddressBinaryTemplate *rrbintemp = static_cast<TR::RelocationRecordMethodCallAddressBinaryTemplate *>(relocationHeader);
-  WASMCacheEntry *calleeEntry = static_cast<WASMCacheEntry *>(cache->loadCodeEntry(callee,codeLength,relocationHeader));
-  --calleeEntry;
-  rrbintemp->_methodAddress = reinterpret_cast<UDATA>(&(calleeEntry->methodName))-cache->baseSharedCacheAddress();
-}
-*/
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
 // helpers is an array of pointers to helpers that compiled code needs to reference
 //   currently this argument isn't needed by anything so this function can stay internal

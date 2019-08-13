@@ -21,6 +21,7 @@
 
 #include "env/OMRAotAdapter.hpp"
 #include "env/CompilerEnv.hpp"
+#include "env/SharedCache.hpp"
 #include "runtime/CodeCache.hpp"
 #include <iostream>
 #include "runtime/RelocationRuntime.hpp"
@@ -29,7 +30,7 @@
   _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
   _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL,cc);
   _codeCacheManager = cc;
-  TR::Compiler->cache = _sharedCache;
+//   _cacheInUse
  }
 void OMR::AotAdapter::storeExternalSymbol(const char *symbolName, void* symbolAddress){
     _reloRuntime->registerLoadedSymbol(symbolName,symbolAddress);
@@ -124,16 +125,19 @@ void OMR::AotAdapter::storeHeaderForLastCompiledMethodUnderName(const char* meth
     //   std::cerr<<"Last method not found!"<<std::endl;
     }
 }
+bool isMethodAllocatedAlready(void* pc){
+    return false;
+}
 
-void* OMR::AotAdapter::getMethodCode(const char* methodName){
+void* OMR::AotAdapter::getMethodCode(const char* methodName)
+    {
     TR::AOTMethodHeader* methodHeader = getRegisteredAOTMethodHeader(methodName);
     if (methodHeader == NULL)
         return NULL;
-    TR::CodeCache *codeCache =_codeCacheManager->findCodeCacheFromPC(methodHeader->compiledCodeStart);
-    if (codeCache==NULL)
+    if (false == isMethodAllocatedAlready(methodHeader->compiledCodeStart))
         {
         int32_t numReserved;
-        codeCache = _codeCacheManager->reserveCodeCache(false, methodHeader->compiledCodeSize, 0, &numReserved);
+        static   TR::CodeCache *codeCache = _codeCacheManager->reserveCodeCache(false, methodHeader->compiledCodeSize, 0, &numReserved);
         if(!codeCache)
             {
             return nullptr;
@@ -150,8 +154,11 @@ void* OMR::AotAdapter::getMethodCode(const char* methodName){
         _reloRuntime->registerLoadedSymbol(methodName,warmCode);
 
         return warmCode;
-        }
-    void* warmCode= methodHeader->compiledCodeStart;
-    _reloRuntime->registerLoadedSymbol(methodName,warmCode);
-    return methodHeader->compiledCodeStart;
-}
+        } 
+        else // isMethodAllocatedAlready
+        {
+            void* warmCode= methodHeader->compiledCodeStart;
+            _reloRuntime->registerLoadedSymbol(methodName,warmCode);
+            return methodHeader->compiledCodeStart;
+         }
+    }
