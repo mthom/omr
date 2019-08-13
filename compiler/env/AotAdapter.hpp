@@ -29,6 +29,14 @@ class OMR_EXTENSIBLE AotAdapter:public OMR::AotAdapterConnector
     public:
         AotAdapter():OMR::AotAdapterConnector(){};
     };
+class OMR_EXTENSIBLE AOTMethodHeader:public OMR::AOTMethodHeaderConnector
+    {
+    public:
+        AOTMethodHeader():OMR::AOTMethodHeaderConnector(){};
+        AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize)
+        :OMR::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationsStart,relocationsSize){};
+        AOTMethodHeader(uint8_t* rawData) :OMR::AOTMethodHeaderConnector(rawData){};
+    };
 }
 
 #endif

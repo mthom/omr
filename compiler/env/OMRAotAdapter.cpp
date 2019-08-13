@@ -19,7 +19,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "env/OMRAotAdapter.hpp"
+#include "env/AotAdapter.hpp"
+#include "jitbuilder/runtime/CodeCacheManager.hpp"
 #include "env/CompilerEnv.hpp"
 #include "env/SharedCache.hpp"
 #include "runtime/CodeCache.hpp"
@@ -35,7 +36,7 @@
 void OMR::AotAdapter::storeExternalSymbol(const char *symbolName, void* symbolAddress){
     _reloRuntime->registerLoadedSymbol(symbolName,symbolAddress);
 }
-void* TR::AOTMethodHeader::serialize(){
+void* OMR::AOTMethodHeader::serialize(){
     uintptrj_t allocSize = this->sizeOfSerializedVersion();
     uint8_t* buffer = (uint8_t*) malloc(allocSize);
     uint8_t* ptr = buffer;
@@ -51,7 +52,7 @@ void* TR::AOTMethodHeader::serialize(){
     ptr+=this->relocationsSize;
     return buffer;
 }
-TR::AOTMethodHeader::AOTMethodHeader(uint8_t* rawData){
+OMR::AOTMethodHeader::AOTMethodHeader(uint8_t* rawData){
     // uintptrj_t sizeOfHeader = (uintptrj_t) rawData;
     // Skip the header size
     rawData+=sizeof(uintptrj_t);
@@ -65,7 +66,7 @@ TR::AOTMethodHeader::AOTMethodHeader(uint8_t* rawData){
 
 }
 
-uintptrj_t TR::AOTMethodHeader::sizeOfSerializedVersion(){
+uintptrj_t OMR::AOTMethodHeader::sizeOfSerializedVersion(){
     return sizeof(uintptrj_t) +2*sizeof(uint8_t*)+2*sizeof(uint32_t)+this->compiledCodeSize+this->relocationsSize;
 }
 
