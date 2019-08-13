@@ -101,14 +101,14 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
    codeCacheConfig._verbosePerformance = false;
    codeCacheConfig._verboseReclamation = false;
    codeCacheConfig._doSanityChecks = false;
-   codeCacheConfig._codeCacheTotalKB = 16*1024;
-   codeCacheConfig._codeCacheKB = 128;
+   codeCacheConfig._codeCacheTotalKB = 128*1024;
+   codeCacheConfig._codeCacheKB = 256;
    codeCacheConfig._codeCachePadKB = 0;
    codeCacheConfig._codeCacheAlignment = 32;
    codeCacheConfig._codeCacheFreeBlockRecylingEnabled = true;
    codeCacheConfig._largeCodePageSize = 0;
    codeCacheConfig._largeCodePageFlags = 0;
-   codeCacheConfig._maxNumberOfCodeCaches = 96;
+   codeCacheConfig._maxNumberOfCodeCaches = 256;
    codeCacheConfig._canChangeNumCodeCaches = true;
    codeCacheConfig._emitExecutableELF = TR::Options::getCmdLineOptions()->getOption(TR_PerfTool)
                                     ||  TR::Options::getCmdLineOptions()->getOption(TR_EmitExecutableELFFile);

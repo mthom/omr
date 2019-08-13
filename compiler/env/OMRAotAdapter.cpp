@@ -133,7 +133,7 @@ void* OMR::AotAdapter::getMethodCode(const char* methodName){
     if (codeCache==NULL)
         {
         int32_t numReserved;
-        codeCache = _codeCacheManager->reserveCodeCache(false, 0, 0, &numReserved);
+        codeCache = _codeCacheManager->reserveCodeCache(false, methodHeader->compiledCodeSize, 0, &numReserved);
         if(!codeCache)
             {
             return nullptr;
