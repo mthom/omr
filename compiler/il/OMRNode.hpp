@@ -1397,6 +1397,11 @@ public:
    void setIsDirectMethodGuard(bool b = true);
    const char * printIsDirectMethodGuard();
 
+   bool isPatchableLoad();
+   void setPatchableLoad(TR::Node*);
+
+   TR::Node *getDisplacementSiteKey() { return _displacementSiteKey; }
+
    bool isOSRGuard();
    void setIsOSRGuard();
    const char * printIsOSRGuard();
@@ -1820,6 +1825,7 @@ protected:
    /// Misc properties of nodes.
    UnionPropertyA         _unionPropertyA;
 
+   TR::Node*              _displacementSiteKey;
 
 // Private functionality.
 private:

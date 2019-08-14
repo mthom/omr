@@ -28,7 +28,7 @@
 #include "env/TRMemory.hpp"
 #include "env/jittypes.h"
 #include "infra/Link.hpp"
-
+#include "infra/TRlist.hpp"
 
 class TR_FrontEnd;
 class TR_PatchJNICallSite;
@@ -90,17 +90,17 @@ class RuntimeAssumption
     * and must be run under the assumptionTableMutex
     */
    RuntimeAssumption * getNextAssumptionForSameJittedBodyEvenIfDead() const
-      { 
+      {
       return (RuntimeAssumption *)( ((uintptr_t)_nextAssumptionForSameJittedBody) & ~MARK_FOR_DELETE );
       }
-   
+
    /**
     * Update the next pointer for the same jitted body to the specified RuntimeAssumption
     *
     * This update preserves the MARK_FOR_DELETE bit.
     * Note this API only intended for use by utility methods of the RuntimeAssumptionTable
     * and must be run under the assumptionTableMutex
-    */ 
+    */
    void setNextAssumptionForSameJittedBody(RuntimeAssumption *link)
       {
       _nextAssumptionForSameJittedBody = (RuntimeAssumption*)(
@@ -147,9 +147,9 @@ class RuntimeAssumption
    /**
     * Returns true when the assumption has previously been marked using the markForDetach routine
     */
-   bool isMarkedForDetach() const 
+   bool isMarkedForDetach() const
       {
-      return ( ((uintptr_t)(_nextAssumptionForSameJittedBody) & MARK_FOR_DELETE ) == MARK_FOR_DELETE); 
+      return ( ((uintptr_t)(_nextAssumptionForSameJittedBody) & MARK_FOR_DELETE ) == MARK_FOR_DELETE);
       }
 
    virtual void     reclaim() {}
@@ -215,7 +215,7 @@ class RuntimeAssumption
    };
 
 /**
- * An abstract class representing a category of runtime assumptions that will 
+ * An abstract class representing a category of runtime assumptions that will
  * patch code at a particular location to unconditionally jump to a destination.
  */
 class LocationRedirectRuntimeAssumption : public RuntimeAssumption
@@ -228,7 +228,7 @@ class LocationRedirectRuntimeAssumption : public RuntimeAssumption
    };
 
 /**
- * An abstract class representing a category of runtime assumptions that will 
+ * An abstract class representing a category of runtime assumptions that will
  * patch code at a particular location to change its value to another value.
  */
 class ValueModifyRuntimeAssumption : public RuntimeAssumption
@@ -262,15 +262,15 @@ class SentinelRuntimeAssumption : public OMR::RuntimeAssumption
    virtual void     dumpInfo() {};
    }; // TR::SentinelRuntimeAssumption
 
-class IndirectLoadOffsetPatchSite : public OMR::LocationRedirectRuntimeAssumption 
-   { 
+class IndirectLoadOffsetPatchSite : public OMR::LocationRedirectRuntimeAssumption
+   {
    protected:
    IndirectLoadOffsetPatchSite(TR_PersistentMemory *pm, uintptrj_t key, uint8_t *location)
       : OMR::LocationRedirectRuntimeAssumption(pm, key), _location(location) {}
 
    uint8_t *_location;
    };
-  
+
 class PatchNOPedGuardSite : public OMR::LocationRedirectRuntimeAssumption
    {
    protected:
@@ -311,28 +311,32 @@ class PatchNOPedGuardSite : public OMR::LocationRedirectRuntimeAssumption
 class PatchDisplacementSiteUserTrigger : public IndirectLoadOffsetPatchSite
    {
    protected:
-   PatchDisplacementSiteUserTrigger(TR_PersistentMemory *pm, uint64_t assumptionID, uint8_t *location)
-      : IndirectLoadOffsetPatchSite(pm, assumptionID, location), _assumptionID(assumptionID)
+     PatchDisplacementSiteUserTrigger(TR_PersistentMemory *pm, uint64_t assumptionID, 
+				      TR::list<uint8_t*, TRPersistentMemoryAllocator>& sites)
+       : IndirectLoadOffsetPatchSite(pm, assumptionID, NULL), _sites(sites), _assumptionID(assumptionID)
    {}
 
    public:
-   static void compensate(uint8_t *location, uint8_t code);
-   static PatchDisplacementSiteUserTrigger *make(TR_FrontEnd *fe, TR_PersistentMemory * pm, uint64_t assumptionID, uint8_t *location,
-						 OMR::RuntimeAssumption **sentinel);     
-   uint32_t getAssumptionID() { return _assumptionID; }
+   static void compensate(TR::list<uint8_t*, TRPersistentMemoryAllocator>& sites, uint8_t code);
+   static PatchDisplacementSiteUserTrigger *make(TR_FrontEnd *fe, TR_PersistentMemory * pm, uint64_t assumptionID, 
+						 TR::list<uint8_t*, TRPersistentMemoryAllocator>& sites, 
+						 OMR::RuntimeAssumption **sentinel);
+   uint64_t getAssumptionID() { return _assumptionID; }
 
+   virtual uintptrj_t hashCode() { return getKey(); }
    virtual void compensate(TR_FrontEnd *, bool, void*) {}
-   virtual void compensate(TR_FrontEnd *, bool, uint8_t code) { compensate(_location, code); }
+   virtual void compensate(TR_FrontEnd *, bool, uint8_t code) { compensate(_sites, code); }
    virtual TR_RuntimeAssumptionKind getAssumptionKind() { return RuntimeAssumptionOnUserTrigger; }
-   virtual void dumpInfo() {}    
-   virtual uint8_t *getFirstAssumingPC() { return _location; }
-   virtual uint8_t *getLastAssumingPC() { return _location; }
+   virtual void dumpInfo() {}
+   virtual uint8_t *getFirstAssumingPC() { return NULL; }
+   virtual uint8_t *getLastAssumingPC() { return NULL; }
    virtual bool equals(RuntimeAssumption &other) { return this == &other; }
-     
+
    private:
+   TR::list<uint8_t*, TRPersistentMemoryAllocator>& _sites;
    uint64_t _assumptionID;
    };
-  
+
 class PatchNOPedGuardSiteOnUserTrigger : public PatchNOPedGuardSite
    {
    protected:
@@ -349,7 +353,7 @@ class PatchNOPedGuardSiteOnUserTrigger : public PatchNOPedGuardSite
    private:
    uint32_t _assumptionID;
    };
-  
+
 class PatchSites
    {
    private:
@@ -382,7 +386,7 @@ class PatchSites
    void add(uint8_t *location, uint8_t *destination);
 
    bool equals(PatchSites *other);
-   bool containsLocation(uint8_t *location);   
+   bool containsLocation(uint8_t *location);
 
    void addReference();
    static void reclaim(PatchSites *sites);
@@ -403,7 +407,7 @@ class PatchMultipleNOPedGuardSites : public OMR::LocationRedirectRuntimeAssumpti
 
    virtual bool equals(OMR::RuntimeAssumption &other)
       {
-      PatchMultipleNOPedGuardSites *site = other.asPMNGSite(); 
+      PatchMultipleNOPedGuardSites *site = other.asPMNGSite();
       return site != 0 && _patchSites->equals(site->getPatchSites());
       }
 

@@ -26,6 +26,7 @@
 #include <stdint.h>
 // #include "env/KnownObjectTable.hpp"
 #include "env/TRMemory.hpp"
+#include "infra/TRlist.hpp"
 // #include "env/jittypes.h"
 // #include "infra/Assert.hpp"
 // #include "infra/List.hpp"
@@ -44,29 +45,19 @@ class TR_DisplacementSite
 
    DisplacementSize setDisplacementSize(DisplacementSize size) { return (_dispSize = size); }
 
-   uint32_t getAssumptionID() { return _assumptionID; }
-   uint8_t* getLocation() { return _location; }
+   uint64_t getAssumptionID() { return _assumptionID; }
+   void addLocation(uint8_t* location);
+     
+   void setNodeAddress(uintptrj_t nodeAddress) { _nodeAddress = nodeAddress; }
+   uintptrj_t getNodeAddress() { return _nodeAddress; }
 
-   void setLocation(uint8_t* location) { _location = location; }
-   void setDisplacement(uintptrj_t disp);
-
-   int32_t getByteCodeIndex() { return _byteCodeIndex; }
-   int16_t getCalleeIndex()   { return _calleeIndex; }
-
-   void setByteCodeIndex(int32_t byteCodeIndex) {
-      _byteCodeIndex = byteCodeIndex;
-   }
-
-   void setCalleeIndex(int16_t calleeIndex) {
-      _calleeIndex = calleeIndex;
-   }
-
+   TR::list<uint8_t*, TRPersistentMemoryAllocator>& getSites() { return _sites; }
+     
    private:
-   uint64_t                  _assumptionID;
-   int16_t                   _calleeIndex;
-   int32_t                   _byteCodeIndex;
-   DisplacementSize          _dispSize;
-   uint8_t*                  _location;
+   TR::list<uint8_t*, TRPersistentMemoryAllocator>     _sites;     
+   uintptrj_t                                          _nodeAddress;
+   uint64_t                                            _assumptionID;
+   DisplacementSize                                    _dispSize;
    };
 
 #endif

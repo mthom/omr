@@ -2,24 +2,14 @@
 #include "compile/DisplacementSites.hpp"
 
 TR_DisplacementSite::TR_DisplacementSite(TR::Compilation *comp, uint64_t assumptionID)
-      : _assumptionID(assumptionID), _calleeIndex(0),
-	_byteCodeIndex(0), _dispSize(TR_DisplacementSite::bits_32), _location(NULL)
+  : _sites(getTypedAllocator<uint8_t*, TRPersistentMemoryAllocator>(TRPersistentMemoryAllocator(comp->trPersistentMemory()))),
+    _assumptionID(assumptionID), _nodeAddress(0),
+    _dispSize(TR_DisplacementSite::bits_32)
    {
    comp->addDisplacementSite(this);
    }
 
-void TR_DisplacementSite::setDisplacement(uintptrj_t disp) 
+void TR_DisplacementSite::addLocation(uint8_t* location)
    {
-   switch(_dispSize)
-      {
-      case DisplacementSize::bits_8:
-	 *_location = disp;
-	 break;
-      case DisplacementSize::bits_16:
-	 *(uint16_t*)_location = disp;
-	 break;
-      case DisplacementSize::bits_32:
-	 *(uint32_t*)_location = disp;
-	 break;
-      }
+   _sites.push_front(location);
    }

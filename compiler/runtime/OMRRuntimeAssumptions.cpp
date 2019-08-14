@@ -22,6 +22,8 @@
 #include "runtime/OMRRuntimeAssumptions.hpp"
 #include "env/jittypes.h"
 
+#include <iostream>
+
 #if defined(__IBMCPP__) && !defined(AIXPPC) && !defined(LINUXPPC)
 #define ASM_CALL __cdecl
 #else
@@ -40,9 +42,12 @@ void TR::PatchNOPedGuardSite::compensate(bool isSMP, uint8_t *location, uint8_t 
    _patchVirtualGuard(location, destination, isSMP);
    }
 
-void TR::PatchDisplacementSiteUserTrigger::compensate(uint8_t* location, uint8_t code)
+void TR::PatchDisplacementSiteUserTrigger::compensate(TR::list<uint8_t*, TRPersistentMemoryAllocator>& sites, uint8_t code)
    {
-   *location = code;
+   for (auto it = sites.begin(); it != sites.end(); ++it) 
+      {
+      *(uint32_t*)*it = code * 8;
+      }
    }
 
 TR::PatchNOPedGuardSiteOnUserTrigger *
@@ -55,10 +60,11 @@ TR::PatchNOPedGuardSiteOnUserTrigger::make(
    }
 
 TR::PatchDisplacementSiteUserTrigger *
-TR::PatchDisplacementSiteUserTrigger::make(TR_FrontEnd *fe, TR_PersistentMemory *pm, uint64_t assumptionID, uint8_t *location,
-					  OMR::RuntimeAssumption **sentinel)
+TR::PatchDisplacementSiteUserTrigger::make(TR_FrontEnd *fe, TR_PersistentMemory *pm, uint64_t assumptionID,
+					   TR::list<uint8_t*, TRPersistentMemoryAllocator>& sites, 
+					   OMR::RuntimeAssumption **sentinel)
    {
-   TR::PatchDisplacementSiteUserTrigger *result = new (pm) TR::PatchDisplacementSiteUserTrigger(pm, assumptionID, location);
+   TR::PatchDisplacementSiteUserTrigger *result = new (pm) TR::PatchDisplacementSiteUserTrigger(pm, assumptionID, sites);
    result->addToRAT(pm, RuntimeAssumptionOnUserTrigger, fe, sentinel);
    return result;
    }

@@ -809,10 +809,10 @@ OMR::IlBuilder::LoadAtWithPatchKey(TR::IlType *dt, TR::IlValue *address, uint64_
    // add displacement site to be filled out later by the binary encoder.
    TR::Node *load = loadValue(returnValue);
 
-   TR_DisplacementSite *site = new (comp()->trHeapMemory()) TR_DisplacementSite(comp(), key);
+   TR_DisplacementSite *site = new (comp()->trPersistentMemory()) TR_DisplacementSite(comp(), key);
 
-   site->setByteCodeIndex(load->getByteCodeInfo().getByteCodeIndex());
-   site->setCalleeIndex(load->getByteCodeInfo().getCallerIndex());
+   load->setPatchableLoad(load);
+   site->setNodeAddress((uintptrj_t) load);
    
    TraceIL("IlBuilder[ %p ]::%d is LoadAtPatchKey type %d address %d\n", this, returnValue->getID(), 
 	   dt->getPrimitiveType(), address->getID());
