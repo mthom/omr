@@ -44,6 +44,7 @@ namespace OMR { typedef OMR::CompilerEnv CompilerEnvConnector; }
 #include "env/VMEnv.hpp"
 #include "env/VMMethodEnv.hpp"
 #include "env/AotAdapter.hpp"
+#include "env/VirtualDispatchKey.hpp"
 
 namespace TR { class CompilerEnv; }
 

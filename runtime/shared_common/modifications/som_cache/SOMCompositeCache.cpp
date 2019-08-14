@@ -86,7 +86,7 @@ UDATA SOMCompositeCache::dataSectionFreeSpace()
 
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
-bool SOMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength)
+bool SOMCompositeCache::storeEntry(const char* methodName, void* codeLocation, U_32 codeLength)
 {
   UDATA allocSize = sizeof(SOMCacheEntry) + codeLength;
   UDATA freeSpace = dataSectionFreeSpace();
@@ -116,14 +116,10 @@ bool SOMCompositeCache::storeCodeEntry(const char* methodName, void* codeLocatio
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
-void *SOMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength, uint8_t *&relocationHeader) {
+void *SOMCompositeCache::loadEntry(const char *methodName) {
 //if(!_loadedMethods[methodName]){
     SOMCacheEntry *entry = _codeEntries[methodName];
-    uint8_t *bytePointer = reinterpret_cast<uint8_t *>(entry);
-    relocationHeader = bytePointer+sizeof(SOMCacheEntry)+entry->codeLength;
-    codeLength = entry->codeLength;
-    entry++;
-    return entry;
+
 //  void * methodArea =  mmap(NULL,
 //            codeLength,
 //            PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -134,6 +130,10 @@ void *SOMCompositeCache::loadCodeEntry(const char *methodName, U_32 &codeLength,
 //  memcpy(methodArea,entry,codeLength);
 //}
 //return _loadedMethods[methodName];
+    void *rawData = NULL;
+    if (entry)
+      rawData = (void*) (entry+1);
+    return rawData;
 }
 
 void SOMCompositeCache::storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress){

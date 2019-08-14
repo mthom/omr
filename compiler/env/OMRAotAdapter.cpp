@@ -28,7 +28,7 @@
 #include "runtime/RelocationRuntime.hpp"
 
  void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::CodeCacheManager* cc){
-  _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("wasm_shared_cache", "/tmp");
+  _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("som_shared_cache", "/tmp");
   _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL,cc);
   _codeCacheManager = cc;
 //   _cacheInUse
@@ -163,4 +163,3 @@ void* OMR::AotAdapter::getMethodCode(const char* methodName)
             return methodHeader->compiledCodeStart;
          }
     }
->>>>>>> relobrokenbranch

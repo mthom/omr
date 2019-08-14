@@ -36,11 +36,11 @@ public:
 
   bool startup(const char* cacheName, const char* ctrlDirName);
 
-  bool storeCodeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
+  bool storeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
 
   UDATA baseSharedCacheAddress();
 
-  void *loadCodeEntry(const char *methodName, U_32 &codeLength,uint8_t *&relocationHeader);
+  void *loadEntry(const char *methodName);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 

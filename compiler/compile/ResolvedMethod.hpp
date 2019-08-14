@@ -31,7 +31,7 @@
 #include "il/DataTypes.hpp"
 #include "il/ILOpCodes.hpp"
 #include "infra/Assert.hpp"
-#include "runtime/Runtime.hpp"
+//#include "runtime/Runtime.hpp"
 
 class TR_FrontEnd;
 class TR_OpaqueClassBlock;

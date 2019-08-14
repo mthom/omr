@@ -63,6 +63,7 @@
 #include "runtime/SymbolValidationManager.hpp"
 #include "runtime/RelocationRuntime.hpp"
 #include "codegen/AheadOfTimeCompile.hpp"
+#include "runtime/OMRRuntimeAssumptions.hpp"
 
 #include "omrsrp.h"
 //extern "C" {

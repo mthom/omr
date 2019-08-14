@@ -27,7 +27,7 @@
 #include "env/jittypes.h"
 #include <list>
 #include "env/Processors.hpp"
-
+#include "env/CompilerEnv.hpp"
 #include "codegen/LinkageConventionsEnum.hpp"
 
 namespace TR { class Compilation; }

@@ -38,7 +38,7 @@
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/TypeDictionary.hpp"
 #include "runtime/CodeCache.hpp"
-#include "runtime/Runtime.hpp"
+//#include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
 #include "runtime/RelocationRecord.hpp"
 
@@ -273,7 +273,7 @@ internal_shutdownJit()
 // if(cache != NULL) {
 //   delete cache;
 // }
-   TR::Compiler->cache->cleanup();
+//   TR::Compiler->cache->cleanup();
    }
 
 bool

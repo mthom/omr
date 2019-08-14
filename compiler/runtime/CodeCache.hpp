@@ -24,8 +24,6 @@
 
 #include "runtime/OMRCodeCache.hpp"
 
-#include "runtime/CodeCacheConfig.hpp"
-
 namespace TR
 {
 
