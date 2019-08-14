@@ -598,11 +598,16 @@ TR::Register *OMR::X86::TreeEvaluator::aloadEvaluator(TR::Node *node, TR::CodeGe
    reg->setMemRef(sourceMR);
 
    TR::Compilation *comp = cg->comp();
-   TR_DisplacementSite *site = comp->findDisplacementSiteInfo(node);
-
-   if (site) {
-      sourceMR->setDisplacementSite(site);
-   }
+   if (node->isPatchableLoad())
+      {
+      TR_DisplacementSite *site = (TR_DisplacementSite*) comp->findDisplacementSiteInfo(node->getDisplacementSiteKey());
+      
+      if (site) 
+	 {
+	 sourceMR->setForceWideDisplacement();
+	 sourceMR->setDisplacementSite(site);
+	 }
+      }
 
    if (!node->getSymbolReference()->isUnresolved() &&
        (node->getSymbolReference()->getSymbol()->getKind() == TR::Symbol::IsShadow) &&

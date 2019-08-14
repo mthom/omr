@@ -409,10 +409,10 @@ TR_RuntimeAssumptionTable::reclaimAssumptions(void *md, bool reclaimPrePrologueA
    }
 
 void
-TR_RuntimeAssumptionTable::notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint32_t assumptionTriggered, uint8_t code)
+TR_RuntimeAssumptionTable::notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint64_t assumptionTriggered, uint8_t code)
    {
    OMR::CriticalSection notifyUserTriggerEvent(assumptionTableMutex);
-   OMR::RuntimeAssumption **headPtr = getBucketPtr(RuntimeAssumptionOnUserTrigger, hashCode((uintptrj_t)assumptionTriggered));
+   OMR::RuntimeAssumption **headPtr = getBucketPtr(RuntimeAssumptionOnUserTrigger, (uintptrj_t) assumptionTriggered); //hashCode((uintptrj_t)assumptionTriggered));
    TR::PatchDisplacementSiteUserTrigger *cursor = (TR::PatchDisplacementSiteUserTrigger *)(*headPtr);
 // TR::PatchDisplacementSiteUserTrigger *prev   = 0;
 // while (cursor)

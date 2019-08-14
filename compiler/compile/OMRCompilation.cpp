@@ -1618,65 +1618,19 @@ OMR::Compilation::findVirtualGuardInfo(TR::Node*guardNode)
 TR_DisplacementSite *
 OMR::Compilation::findDisplacementSiteInfo(TR::Node *siteNode)
    {
-     //   TR_ASSERT(guardNode->isTheVirtualGuardForAGuardedInlinedCall() || guardNode->isOSRGuard() || guardNode->isHCRGuard() || guardNode->isProfiledGuard() || guardNode->isMethodEnterExitGuard() || guardNode->isBreakpointGuard(), "@node %p\n", guardNode);
-
-//   TR_VirtualGuardKind guardKind = TR_NoGuard;
-//   if (guardNode->isSideEffectGuard())
-//      guardKind = TR_SideEffectGuard;
-//   else if (guardNode->isHCRGuard())
-//      guardKind = TR_HCRGuard;
-//   else if (guardNode->isOSRGuard())
-//      guardKind = TR_OSRGuard;
-//   else if (guardNode->isMethodEnterExitGuard())
-//      guardKind = TR_MethodEnterExitGuard;
-//   else if (guardNode->isMutableCallSiteTargetGuard())
-//      guardKind = TR_MutableCallSiteTargetGuard;
-//   else if (guardNode->isBreakpointGuard())
-//      guardKind = TR_BreakpointGuard;
-
+   if (!siteNode->isPatchableLoad())
+      return NULL;
+     
    TR_DisplacementSite *site = NULL;
-
-//   if (self()->getOption(TR_TraceRelocatableDataDetailsCG))
-//      traceMsg(self(), "Looking for a guard for node %p with kind %d bcindex %d calleeindex %d\n", guardNode, guardKind, guardNode->getByteCodeInfo().getByteCodeIndex(), guardNode->getByteCodeInfo().getCallerIndex());
-
-//   if (guardKind != TR_NoGuard)
-//      {
-      for (auto current = _displacementSites.begin(); current != _displacementSites.end(); ++current)
-         {
-         //traceMsg(self(), "Looking at guard %p with kind %d bcindex %d calleeindex %d\n", current, current->getKind(), current->getByteCodeIndex(), current->getCalleeIndex());
-	 if (//(*current)->getKind() == guardKind &&
-             (*current)->getByteCodeIndex() == siteNode->getByteCodeInfo().getByteCodeIndex() &&
-             (*current)->getCalleeIndex() == siteNode->getByteCodeInfo().getCallerIndex())
-            {
-            site = *current;
-//            if (self()->getOption(TR_TraceRelocatableDataDetailsCG))
-//               traceMsg(self(), "found guard %p, guardkind = %d\n", guard, guardKind);
-            break;
-            }
-         }
-//   else
-//      {
-//      for (auto current = _virtualGuards.begin(); current != _virtualGuards.end(); ++current)
-//         {
-//         //traceMsg(self(), "Looking at guard %p kind %d bcindex %d calleeindex %d\n", current, current->getKind(), current->getByteCodeIndex(), current->getCalleeIndex());
-//         if ((*current)->getByteCodeIndex() == siteNode->getByteCodeInfo().getByteCodeIndex() &&
-//             (*current)->getCalleeIndex() == siteNode->getByteCodeInfo().getCallerIndex() &&
-//             (*current)->getKind() != TR_SideEffectGuard &&
-//             (*current)->getKind() != TR_HCRGuard &&
-//             (*current)->getKind() != TR_OSRGuard &&
-//             (*current)->getKind() != TR_MethodEnterExitGuard &&
-//             (*current)->getKind() != TR_MutableCallSiteTargetGuard &&
-//             (*current)->getKind() != TR_BreakpointGuard)
-//            {
-//            guard = *current;
-//            if (self()->getOption(TR_TraceRelocatableDataDetailsCG))
-//               traceMsg(self(), "found guard %p, guardkind = %d\n", guard, (*current)->getKind());
-//            break;
-//            }
-//         }
-//      }
-//
-//   TR_ASSERT(guard, "Can't find the virtual guard @ bci %d:%d, node %p \n", guardNode->getByteCodeInfo().getCallerIndex(), guardNode->getByteCodeInfo().getByteCodeIndex(), guardNode);
+   
+   for (auto current = _displacementSites.begin(); current != _displacementSites.end(); ++current)
+      {
+      if ((TR::Node *)(*current)->getNodeAddress() == siteNode)
+	 {
+	 site = *current;
+	 break;
+	 }
+      }
 
    return site;
    }

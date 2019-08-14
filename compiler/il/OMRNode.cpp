@@ -120,7 +120,8 @@ OMR::Node::Node()
      _referenceCount(0),
      _byteCodeInfo(),
      _unionBase(),
-     _unionPropertyA()
+     _unionPropertyA(),
+     _displacementSiteKey(NULL)
    {
    }
 
@@ -141,7 +142,8 @@ OMR::Node::Node(TR::Node *originatingByteCodeNode, TR::ILOpCodes op, uint16_t nu
      _referenceCount(0),
      _byteCodeInfo(),
      _unionBase(),
-     _unionPropertyA()
+     _unionPropertyA(),
+     _displacementSiteKey(NULL)
    {
    TR::Compilation * comp = TR::comp();
 
@@ -206,6 +208,9 @@ OMR::Node::Node(TR::Node *originatingByteCodeNode, TR::ILOpCodes op, uint16_t nu
       if(comp->getDebug())
         comp->getDebug()->newNode(self());
 
+      if (originatingByteCodeNode)
+	 _displacementSiteKey = originatingByteCodeNode->_displacementSiteKey;
+
    // check that _unionPropertyA union is disjoint
    TR_ASSERT(
          self()->hasSymbolReference()
@@ -240,7 +245,8 @@ OMR::Node::Node(TR::Node * from, uint16_t numChildren)
      _referenceCount(0),
      _byteCodeInfo(),
      _unionBase(),
-     _unionPropertyA()
+     _unionPropertyA(),
+     _displacementSiteKey(NULL)
    {
    TR::Compilation * comp = TR::comp();
    memcpy(self(), from, sizeof(TR::Node));
@@ -7565,7 +7571,17 @@ OMR::Node::printIsDirectMethodGuard()
    return self()->isDirectMethodGuard() ? "directMethodGuard ": "";
    }
 
+bool
+OMR::Node::isPatchableLoad()
+   {
+   return _displacementSiteKey != NULL;
+   }
 
+void
+OMR::Node::setPatchableLoad(TR::Node* displacementSiteKey)
+   {
+   _displacementSiteKey = displacementSiteKey;
+   }
 
 bool
 OMR::Node::isOSRGuard()

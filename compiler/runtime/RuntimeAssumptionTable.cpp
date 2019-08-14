@@ -123,7 +123,8 @@ TR_RuntimeAssumptionTable::purgeRATTable(TR_FrontEnd *fe)
    }
 
 void
-TR_RuntimeAssumptionTable::addAssumption(OMR::RuntimeAssumption *a, TR_RuntimeAssumptionKind kind, TR_FrontEnd *fe, OMR::RuntimeAssumption **sentinel)
+TR_RuntimeAssumptionTable::addAssumption(OMR::RuntimeAssumption *a, TR_RuntimeAssumptionKind kind, TR_FrontEnd *fe, 
+					 OMR::RuntimeAssumption **sentinel)
    {
    OMR::CriticalSection addAssumption(assumptionTableMutex);
    a->enqueueInListOfAssumptionsForJittedBody(sentinel);
@@ -410,7 +411,7 @@ void
 TR_RuntimeAssumptionTable::notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint64_t assumptionTriggered, uint8_t code)
    {
    OMR::CriticalSection notifyUserTriggerEvent(assumptionTableMutex);
-   OMR::RuntimeAssumption **headPtr = getBucketPtr(RuntimeAssumptionOnUserTrigger, hashCode((uintptrj_t)assumptionTriggered));
+   OMR::RuntimeAssumption **headPtr = getBucketPtr(RuntimeAssumptionOnUserTrigger, (uintptrj_t)assumptionTriggered); //hashCode((uintptrj_t)assumptionTriggered));
    TR::PatchDisplacementSiteUserTrigger *cursor = (TR::PatchDisplacementSiteUserTrigger *)(*headPtr);
 // TR::PatchDisplacementSiteUserTrigger *prev   = 0;
 // while (cursor)

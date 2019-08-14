@@ -147,8 +147,8 @@ TR::Monitor * assumptionTableMutex = NULL;
 
 void commitDisplacementSite(TR_DisplacementSite *info, TR::Compilation *comp)
    {
-   TR::PatchDisplacementSiteUserTrigger::make(comp->fe(), comp->trPersistentMemory(), info->getAssumptionID(), info->getLocation(),
-					      comp->getMetadataAssumptionList());//, site->getDestination(), comp->getMetadataAssumptionList());
+   TR::PatchDisplacementSiteUserTrigger::make(comp->fe(), comp->trPersistentMemory(), info->getAssumptionID(), 
+					      info->getSites(), comp->getMetadataAssumptionList());
    }
 
 void

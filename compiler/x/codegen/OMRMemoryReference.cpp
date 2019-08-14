@@ -1514,6 +1514,13 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
             // Need a sib byte with 8bit displacement field of zero to get ebp as a base register
             //
             self()->ModRM(modRM)->setBaseDisp8()->setHasSIB();
+	    auto* dispSite = self()->getDisplacementSite();
+
+	    if (dispSite) {
+	       dispSite->setDisplacementSize(TR_DisplacementSite::bits_8);
+	       dispSite->addLocation(cursor);
+	    }
+
             *++cursor = 0x00;
             }
          else
@@ -1618,10 +1625,10 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
          if (baseRegisterNumber == TR::RealRegister::vfp)
             {
             TR_ASSERT(cg->machine()->getRealRegister(baseRegisterNumber)->getAssignedRealRegister(),
-                   "virtual frame pointer must be assigned before binary encoding!\n");
+		      "virtual frame pointer must be assigned before binary encoding!\n");
 
             base = toRealRegister(cg->machine()->
-                   getRealRegister(baseRegisterNumber)->getAssignedRealRegister());
+				  getRealRegister(baseRegisterNumber)->getAssignedRealRegister());
             baseRegisterNumber = base->getRegisterNumber();
             self()->setBaseRegister(base);
             }
@@ -1640,7 +1647,6 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
 
          if (displacement == 0 &&
              !base->needsDisp() &&
-             !base->needsDisp() &&
              !self()->isForceWideDisplacement())
             {
             self()->ModRM(modRM)->setBase();
@@ -1656,7 +1662,7 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
 
 	    if (dispSite) {
 	       dispSite->setDisplacementSize(TR_DisplacementSite::bits_8);
-	       dispSite->setLocation(cursor);
+	       dispSite->addLocation(cursor);
 	    }
 
             ++cursor;
@@ -1673,7 +1679,7 @@ OMR::X86::MemoryReference::generateBinaryEncoding(
 
 	    if (dispSite) {
 	       dispSite->setDisplacementSize(TR_DisplacementSite::bits_32);
-	       dispSite->setLocation(cursor);
+	       dispSite->addLocation(cursor);
 	    }
 
             if (self()->getUnresolvedDataSnippet() != NULL)
