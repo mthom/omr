@@ -241,7 +241,7 @@ OMR::Compilation::Compilation(
    _inlinedCalls(0),
    _inlinedFramesAdded(0),
    _virtualGuards(getTypedAllocator<TR_VirtualGuard*>(self()->allocator())),
-   _displacementSites(getTypedAllocator<TR_VirtualGuard*>(self()->allocator())),
+   _displacementSites(getTypedAllocator<TR_DisplacementSite*>(self()->allocator())),
    _staticPICSites(getTypedAllocator<TR::Instruction*>(self()->allocator())),
    _staticHCRPICSites(getTypedAllocator<TR::Instruction*>(self()->allocator())),
    _staticMethodPICSites(getTypedAllocator<TR::Instruction*>(self()->allocator())),

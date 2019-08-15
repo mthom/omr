@@ -69,12 +69,15 @@ class OMR_EXTENSIBLE AOTMethodHeader
          relocationsSize(relocationsSize)
          {};
       AOTMethodHeader(uint8_t* rawData);
+      
       uint8_t* compiledCodeStart;
       uint32_t compiledCodeSize;
       uint8_t* relocationsStart;
       uint32_t relocationsSize;
+      
       virtual void* serialize();
       virtual uintptrj_t sizeOfSerializedVersion();
+      
       // uintptrj_t  exceptionTableStart;
       // // Here, compiledDataStart is a pointer to any data persisted along with the
       // // compiled code. offset to RelocationsTable points to Relocations, should
