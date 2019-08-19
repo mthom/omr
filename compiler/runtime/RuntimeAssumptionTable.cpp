@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include <algorithm>
+#include <memory>
 #include <memory.h>
 #ifdef J9_PROJECT_SPECIFIC
 #include "j9.h"
@@ -38,6 +39,7 @@
 #include "runtime/RuntimeAssumptions.hpp"
 #endif
 #include "runtime/OMRRuntimeAssumptions.hpp"
+#include "codegen/FrontEnd.hpp"
 
 extern TR::Monitor *assumptionTableMutex;
 
@@ -417,7 +419,14 @@ TR_RuntimeAssumptionTable::notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint64_t
 // while (cursor)
 //    {
 //    TR::PatchNOPedGuardSiteOnUserTrigger *next = (TR::PatchNOPedGuardSiteOnUserTrigger*)cursor->getNext();
-   cursor->compensate(vm, 0, code);
+   //if(cursor)
+     cursor->compensate(vm, 0, code);
+   //else {
+     //auto newList = TR::list<uint8_t*,TRPersistentMemoryAllocator>(getTypedAllocator<TR_VirtualGuard*>(TRPersistentMemoryAllocator(trPersistentMemory)));
+     //cursor = TR::PatchDisplacementSiteUserTrigger::make(vm,trPersistentMemory,assumptionTriggered,newList,headPtr);
+     //cursor->compensate(vm, 0, code);
+     
+//   }
 //    prev = cursor;
 //    cursor = next;
 //    }

@@ -81,6 +81,19 @@ class OMR_EXTENSIBLE RelocationRecordDataAddress: public OMR::RelocationRecordDa
 
     
    };
+class OMR_EXTENSIBLE RelocationRecordDisplacementSite: public OMR::RelocationRecordDisplacementSiteConnector
+   {
+   public:
+      RelocationRecordDisplacementSite(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) 
+      : OMR::RelocationRecordDisplacementSiteConnector(reloRuntime,record)
+        {}
+      
+      RelocationRecordDisplacementSite(): OMR::RelocationRecordDisplacementSiteConnector() {}
+      static RelocationRecord *create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget,
+				      TR::RelocationRecordBinaryTemplate *recordPointer);
+
+    
+   };
 class OMR_EXTENSIBLE RelocationRecordMethodCallAddressBinaryTemplate: public OMR::RelocationRecordMethodCallAddressBinaryTemplateConnector
    {
       public:
@@ -90,6 +103,11 @@ class OMR_EXTENSIBLE RelocationRecordDataAddressBinaryTemplate: public OMR::Relo
    {
       public:
       RelocationRecordDataAddressBinaryTemplate():OMR::RelocationRecordDataAddressBinaryTemplateConnector(){};
+   };
+class OMR_EXTENSIBLE RelocationRecordDisplacementSiteBinaryTemplate: public OMR::RelocationRecordDisplacementSiteBinaryTemplateConnector
+   {
+      public:
+      RelocationRecordDisplacementSiteBinaryTemplate():OMR::RelocationRecordDisplacementSiteBinaryTemplateConnector(){};
    };
 
 }

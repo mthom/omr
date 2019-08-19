@@ -45,6 +45,7 @@ void SOMCompositeCache::populateTables()
 
       _codeUpdatePtr += descriptor.entry->codeLength;
       _codeUpdatePtr += sizeof(SOMCacheEntry);
+      _codeUpdatePtr += descriptor.relocationRecordSize;
     } else {
       break;
     }
@@ -86,9 +87,9 @@ UDATA SOMCompositeCache::dataSectionFreeSpace()
 
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
-bool SOMCompositeCache::storeEntry(const char* methodName, void* codeLocation, U_32 codeLength)
+bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allocSize)
 {
-  UDATA allocSize = sizeof(SOMCacheEntry) + codeLength;
+  //UDATA allocSize = sizeof(SOMCacheEntry) + codeLength;
   UDATA freeSpace = dataSectionFreeSpace();
 
   if(freeSpace < allocSize) {
@@ -96,15 +97,18 @@ bool SOMCompositeCache::storeEntry(const char* methodName, void* codeLocation, U
   }
 
   // yes, there's an extraneous string copy done here, buuuht, that is fine for now.
-  SOMCacheEntry entry(methodName, codeLength);
+  SOMCacheEntry entry(methodName, allocSize);
   SOMCacheEntry* entryLocation = _codeUpdatePtr++;
 
   memcpy(entryLocation, &entry, sizeof(SOMCacheEntry));
-  memcpy(_codeUpdatePtr, codeLocation, codeLength);
+  //memcpy(_codeUpdatePtr, codeLocation, codeLength);
 
-  _codeUpdatePtr += codeLength;
+  //_codeUpdatePtr += codeLength;
 
   _codeEntries[methodName] = entryLocation;
+
+  memcpy(_codeUpdatePtr,data,allocSize);
+  _codeUpdatePtr += allocSize;
 
   // now write the relocation record to the cache.
   /*size_t relocationRecordSize = static_cast<size_t>(*_relocationData);

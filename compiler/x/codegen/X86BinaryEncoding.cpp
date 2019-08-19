@@ -2862,7 +2862,8 @@ TR::AMD64RegImm64SymInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
 
          case TR_NativeMethodAbsolute:
             {
-            if (cg()->comp()->getOption(TR_EmitRelocatableELFFile))
+            //if (cg()->comp()->getOption(TR_EmitRelocatableELFFile))
+	    if(false)
                {
                TR_ResolvedMethod *target = getSymbolReference()->getSymbol()->castToResolvedMethodSymbol()->getResolvedMethod();
 	            cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,reinterpret_cast<uint8_t*>(const_cast<char *>(target->externalName(cg()->trMemory()))), TR_MethodCallAddress, cg()), __FILE__, __LINE__, getNode());
