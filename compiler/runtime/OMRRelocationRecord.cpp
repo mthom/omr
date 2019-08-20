@@ -495,6 +495,7 @@ OMR::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRun
    TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
    std::string name = "gl_"+std::to_string(reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset);
    reloTarget->storeAddress((uint8_t*)rr->symbolAddress(const_cast<char*>(name.c_str())), reloLocation);
+   return 0;
    }
 
 OMR::RelocationRecordDisplacementSite::RelocationRecordDisplacementSite(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record): RelocationRecord(reloRuntime, record)
@@ -505,8 +506,7 @@ void
 OMR::RelocationRecordDisplacementSite::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget)
    {
    TR::RelocationRecordDisplacementSitePrivateData *reloPrivateData = &(privateData()->displacementSite);
-   static uint64_t assumptionID = 0;
-   reloPrivateData->_assumptionID = ++assumptionID;
+   reloPrivateData->_assumptionID = reinterpret_cast<uint64_t>(offset(reloTarget));
    reloPrivateData->_displacementSite = new (trPersistentMemory) TR_DisplacementSite(reloPrivateData->_assumptionID);
    OMR::RuntimeAssumption **assumptions = new (trPersistentMemory) OMR::RuntimeAssumption*();
    TR::PatchDisplacementSiteUserTrigger::make(TR::FrontEnd::instance(), trPersistentMemory, reloPrivateData->_displacementSite->getAssumptionID(), 
@@ -521,6 +521,7 @@ OMR::RelocationRecordDisplacementSite::applyRelocation(TR::RelocationRuntime *re
      
 //     }
    createAssumptions(reloRuntime,reloLocation);
+   return 0;
    }
 
 void
@@ -528,6 +529,19 @@ OMR::RelocationRecordDisplacementSite::createAssumptions(TR::RelocationRuntime *
    {
    privateData()->displacementSite._displacementSite->addLocation(reloLocation);
    
+   }
+
+void 
+OMR::RelocationRecordDisplacementSite::setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset)
+   {
+   RelocationRecordDisplacementSiteBinaryTemplate *reloRecord = reinterpret_cast<RelocationRecordDisplacementSiteBinaryTemplate*>(_record);
+   reloTarget->storeRelocationRecordValue(offset, (uintptrj_t *) &(reloRecord)->_offset);
+   }
+
+uintptrj_t
+OMR::RelocationRecordDisplacementSite::offset(TR::RelocationTarget *reloTarget)
+   {
+   return reloTarget->loadRelocationRecordValue((uintptrj_t *) &((RelocationRecordDisplacementSiteBinaryTemplate *)_record)->_offset);
    }
 
 uint32_t OMR::RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds] =

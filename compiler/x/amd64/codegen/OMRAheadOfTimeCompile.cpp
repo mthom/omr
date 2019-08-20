@@ -39,6 +39,7 @@
 #include "env/AotAdapter.hpp"
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/RelocationRecord.hpp"
+#include "compile/DisplacementSites.hpp"
 #define NON_HELPER   0x00
 
 TR::AheadOfTimeCompile*
@@ -235,7 +236,9 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	break;
       case TR_DisplacementSiteRelocation:
 	{
-//	OMR::RelocationRecordDisplacementSite *dispSite = reinterpret_cast<OMR::RelocationRecordDisplacementSite*>(reloRecord);
+	OMR::RelocationRecordDisplacementSite *reloDispSite = reinterpret_cast<OMR::RelocationRecordDisplacementSite*>(reloRecord);
+	TR_DisplacementSite *dispSite = reinterpret_cast<TR_DisplacementSite*>(relocation->getTargetAddress());
+	reloDispSite->setOffset(reloTarget,dispSite->getAssumptionID());
 	}
 	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
 	break;

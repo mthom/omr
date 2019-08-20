@@ -189,7 +189,7 @@ namespace OMR
    UDATA _offset;
    };
   struct RelocationRecordDataAddressBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate {};
-  struct RelocationRecordDisplacementSiteBinaryTemplate : public RelocationRecordBinaryTemplate
+  struct RelocationRecordDisplacementSiteBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate
    {
    };
   
@@ -348,10 +348,11 @@ class RelocationRecordDisplacementSite: public RelocationRecord
      RelocationRecordDisplacementSite *self();
      RelocationRecordDisplacementSite(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
      virtual char *name() { return "DisplacementSite"; };
-     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordDisplacementSite);}
+     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordDisplacementSiteBinaryTemplate);}
      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
      virtual void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
-//     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     uintptr_t offset(TR::RelocationTarget *reloTarget);
    private:
      void createAssumptions(TR::RelocationRuntime *reloRuntime, uint8_t *reloLocation);
    };

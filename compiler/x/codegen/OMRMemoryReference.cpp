@@ -1368,14 +1368,14 @@ OMR::X86::MemoryReference::addMetaDataForCodeAddress(
 	        {
 		if (cg->comp()->getOption(TR_EmitRelocatableELFFile)&&self()->getDisplacementSite())
                    {
-		   cg->addExternalRelocation(new (cg->trHeapMemory()) TR::ExternalRelocation(cursor,0, TR_DisplacementSiteRelocation, cg), __FILE__, __LINE__, node);
+		   cg->addExternalRelocation(new (cg->trHeapMemory()) TR::ExternalRelocation(cursor,reinterpret_cast<uint8_t*>(self()->getDisplacementSite()), TR_DisplacementSiteRelocation, cg), __FILE__, __LINE__, node);
 		   }
 		} 
 	     else
 		{
 		  if (cg->comp()->getOption(TR_EmitRelocatableELFFile)&&self()->getDisplacementSite())
 		      {
-		   cg->addExternalRelocation(new (cg->trHeapMemory()) TR::ExternalRelocation(cursor,0, TR_DisplacementSiteRelocation, cg), __FILE__, __LINE__, node);
+		   cg->addExternalRelocation(new (cg->trHeapMemory()) TR::ExternalRelocation(cursor,reinterpret_cast<uint8_t*>(self()->getDisplacementSite()), TR_DisplacementSiteRelocation, cg), __FILE__, __LINE__, node);
 		      }
 		  if (self()->getSymbolReference().getSymbol()
 		      && self()->getSymbolReference().getSymbol()->isClassObject()
