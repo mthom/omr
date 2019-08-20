@@ -26,7 +26,7 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
 				_osCache.crcFocus(),
 				MAX_CRC_SAMPLES))
   , _codeUpdatePtr(OSCacheBumpRegionFocus<SOMCacheEntry>(_osCache.dataSectionRegion(),
-							  (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress()))
+							 (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress()))
   , _relocationData(NULL)
 {
   populateTables();

@@ -27,29 +27,37 @@
 #include <iostream>
 #include "runtime/RelocationRuntime.hpp"
 
- void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::CodeCacheManager* cc){
+void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::CodeCacheManager* cc){
   _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("som_shared_cache", "/tmp");
   _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL,cc);
   _codeCacheManager = cc;
 //   _cacheInUse
  }
+
 void OMR::AotAdapter::storeExternalSymbol(const char *symbolName, void* symbolAddress){
     _reloRuntime->registerLoadedSymbol(symbolName,symbolAddress);
 }
+
 void* OMR::AOTMethodHeader::serialize(){
     uintptrj_t allocSize = this->sizeOfSerializedVersion();
     uint8_t* buffer = (uint8_t*) malloc(allocSize);
     uint8_t* ptr = buffer;
+
     memcpy(ptr,&allocSize,sizeof(uintptrj_t));
     ptr+=sizeof(uintptrj_t);
+
     memcpy(ptr,&this->compiledCodeSize,sizeof(uint32_t));
     ptr+=sizeof(uint32_t);   
+
     memcpy(ptr,this->compiledCodeStart,this->compiledCodeSize);
     ptr+=this->compiledCodeSize;
+
     memcpy(ptr,&this->relocationsSize,sizeof(uint32_t));
     ptr+=sizeof(uint32_t);   
+
     memcpy(ptr,this->relocationsStart,this->relocationsSize);
     ptr+=this->relocationsSize;
+
     return buffer;
 }
 OMR::AOTMethodHeader::AOTMethodHeader(uint8_t* rawData){
@@ -57,10 +65,13 @@ OMR::AOTMethodHeader::AOTMethodHeader(uint8_t* rawData){
     // Skip the header size
     rawData+=sizeof(uintptrj_t);
     this->compiledCodeSize = *((uint32_t*) rawData);
+
     rawData+=sizeof(uint32_t);
     this->compiledCodeStart=rawData;
+
     rawData+=compiledCodeSize;
     this->relocationsSize = *((uint32_t*) rawData); 
+
     rawData+=sizeof(uint32_t);
     this->relocationsStart=rawData;   
 
@@ -106,26 +117,33 @@ void OMR::AotAdapter::relocateMethod(const char* methodName){
     TR::AOTMethodHeader* hdr =  getRegisteredAOTMethodHeader(methodName);
     _reloRuntime->self()->prepareRelocateAOTCodeAndData(hdr,hdr->compiledCodeStart);
 }
- TR::AOTMethodHeader* OMR::AotAdapter::getRegisteredAOTMethodHeader(const char* methodName){
+
+TR::AOTMethodHeader* OMR::AotAdapter::getRegisteredAOTMethodHeader(const char* methodName){
     std::string method(methodName);
     TR::AOTMethodHeader* result =_methodNameToHeaderMap[methodName];
+
     if (result==NULL)
         {
         result = loadAOTMethodAndDataFromTheCache(methodName);
         }
+
     return result;
  }
-void OMR::AotAdapter::storeHeaderForLastCompiledMethodUnderName(const char* methodName){
+
+void OMR::AotAdapter::storeHeaderForLastCompiledMethodUnderName(const char* methodName)
+{
     std::string method(methodName);
     if ( _methodNameToHeaderMap[_lastMethodIdentifier ] != NULL){
         _methodNameToHeaderMap[method]=_methodNameToHeaderMap[_lastMethodIdentifier ];
         storeAOTMethodAndDataInTheCache(methodName);
         _methodNameToHeaderMap[_lastMethodIdentifier] = NULL;
-    }else
+    }
+    else
     {
     //   std::cerr<<"Last method not found!"<<std::endl;
     }
 }
+
 bool isMethodAllocatedAlready(void* pc){
     return false;
 }
@@ -138,18 +156,22 @@ void* OMR::AotAdapter::getMethodCode(const char* methodName)
     if (false == isMethodAllocatedAlready(methodHeader->compiledCodeStart))
         {
         int32_t numReserved;
-        static   TR::CodeCache *codeCache = _codeCacheManager->reserveCodeCache(false, methodHeader->compiledCodeSize, 0, &numReserved);
+        static TR::CodeCache *codeCache = _codeCacheManager->reserveCodeCache(false, methodHeader->compiledCodeSize, 0, &numReserved);
         if(!codeCache)
             {
             return nullptr;
             }
+
         uint32_t  codeLength=methodHeader->compiledCodeSize;
         uint8_t * coldCode = nullptr;
         void * warmCode =  _codeCacheManager->allocateCodeMemory(codeLength, 0, &codeCache, &coldCode, false);
-        if(!warmCode){
-            codeCache->unreserve();
-            return nullptr;
-        }
+
+        if (!warmCode)
+	   {
+	     codeCache->unreserve();
+	     return nullptr;
+	   }
+
         memcpy(warmCode,methodHeader->compiledCodeStart,codeLength);
         methodHeader->compiledCodeStart=(uint8_t*)warmCode;
         _reloRuntime->registerLoadedSymbol(methodName,warmCode);
