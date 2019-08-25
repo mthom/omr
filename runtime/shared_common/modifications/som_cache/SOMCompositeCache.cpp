@@ -2,6 +2,10 @@
 #include "SOMCompositeCache.hpp"
 #include "SOMOSCacheConfig.hpp"
 
+#include <cstring>
+
+using ItemHeader = SOMCacheMetadataItemHeader;
+
 static OMRPortLibrary* initializePortLibrary()
 {
   static OMRPortLibrary library;
@@ -20,13 +24,10 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
   : _configOptions(300 * 1024 * 1024)
   , _config(5, &_configOptions, 0)
   , _osCache(initializePortLibrary(), cacheName, cachePath, 5, &_config, &_configOptions, 0)
-  , _readerCount(SynchronizedCacheCounter(_osCache.headerRegion(),
-					  _osCache.readerCountFocus()))
-  , _crcChecker(CacheCRCChecker(_osCache.headerRegion(),
-				_osCache.crcFocus(),
-				MAX_CRC_SAMPLES))
-  , _codeUpdatePtr(OSCacheBumpRegionFocus<SOMCacheEntry>(_osCache.dataSectionRegion(),
-							 (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress()))
+  , _readerCount(_osCache.headerRegion(), _osCache.readerCountFocus())
+  , _crcChecker(_osCache.headerRegion(), _osCache.crcFocus(), MAX_CRC_SAMPLES)
+  , _codeUpdatePtr(_osCache.dataSectionRegion(), (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
+  , _metadataUpdatePtr(_osCache.metadataUpdateFocus())
   , _relocationData(NULL)
 {
   populateTables();
@@ -34,34 +35,46 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
 
 void SOMCompositeCache::populateTables()
 {
-  SOMCacheEntry* dataSectionEnd = (SOMCacheEntry*) _osCache.dataSectionRegion()->regionEnd();
-  SOMDataSectionEntryIterator iterator = constructEntryIterator(dataSectionEnd - sizeof(SOMCacheEntry));
+   SOMCacheEntry* dataSectionEnd = (SOMCacheEntry*) _osCache.dataSectionRegion()->regionEnd();
+   SOMDataSectionEntryIterator iterator = constructDataSectionEntryIterator(dataSectionEnd - sizeof(SOMCacheEntry));
 
-  while(true) {
-    SOMCacheEntryDescriptor descriptor = iterator.next();
+   while(true) {
+     SOMCacheEntryDescriptor descriptor = iterator.next();
 
-    if(descriptor) {
-      _codeEntries[descriptor.entry->methodName] = descriptor.entry;
+     if(descriptor) {
+       _codeEntries[descriptor.entry->methodName] = descriptor.entry;
 
-      _codeUpdatePtr += descriptor.entry->codeLength;
-      _codeUpdatePtr += sizeof(SOMCacheEntry);
-    } else {
-      break;
-    }
-  }
+       _codeUpdatePtr += descriptor.entry->codeLength;
+       _codeUpdatePtr += sizeof(SOMCacheEntry);
+     } else {
+       break;
+     }
+   }
+}
+
+SOMCacheMetadataEntryIterator
+SOMCompositeCache::constructMetadataSectionEntryIterator()
+{   
+   return {_osCache.metadataSectionRegion(), _osCache.metadataUpdateFocus()};
+}
+
+bool
+SOMCompositeCache::createdNewCache()
+{
+   return _osCache._initContext->creatingNewCache();
 }
 
 // limit should reflect the true limit of the cache at
 // initialization. Read in the cache size, modify accordingly.  By an
 // argument, whose default should be _codeUpdatePtr.
 SOMDataSectionEntryIterator
-SOMCompositeCache::constructEntryIterator(SOMCacheEntry* delimiter)
+SOMCompositeCache::constructDataSectionEntryIterator(SOMCacheEntry* delimiter)
 {
-  OSCacheRegion* dataSectionRegion = _osCache.dataSectionRegion();
+  OSCacheContiguousRegion* dataSectionRegion = _osCache.dataSectionRegion();
   SOMCacheEntry* dataSectionStartAddress = (SOMCacheEntry*) dataSectionRegion->regionStartAddress();
 
-  OSCacheBumpRegionFocus<SOMCacheEntry> focus(dataSectionRegion, dataSectionStartAddress);
-  OSCacheBumpRegionFocus<SOMCacheEntry> limit(dataSectionRegion, delimiter);
+  OSCacheRegionBumpFocus<SOMCacheEntry> focus(dataSectionRegion, dataSectionStartAddress);
+  OSCacheRegionBumpFocus<SOMCacheEntry> limit(dataSectionRegion, delimiter);
 
   return SOMDataSectionEntryIterator(focus, limit);
 }
@@ -78,10 +91,17 @@ bool SOMCompositeCache::startup(const char* cacheName, const char* ctrlDirName)
 
 UDATA SOMCompositeCache::dataSectionFreeSpace()
 {
-  SOMCacheEntry* startAddress = (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress();
-  UDATA dataSectionSize = _osCache.dataSectionRegion()->regionSize();
+   SOMCacheEntry* startAddress = (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress();
+   UDATA dataSectionSize = _osCache.dataSectionRegion()->regionSize();
 
-  return dataSectionSize - (UDATA) (_codeUpdatePtr - startAddress);
+   return dataSectionSize - (UDATA) (_codeUpdatePtr - startAddress);
+}
+
+void SOMCompositeCache::copyMetadataBuffer(void *data, size_t size)
+{
+   _metadataUpdatePtr -= size;
+   memcpy(_metadataUpdatePtr, data, size);
+   *_osCache.metadataOffset() += size;
 }
 
 // find space for, and stores, a code entry. if it fails at any point,
@@ -108,10 +128,10 @@ bool SOMCompositeCache::storeEntry(const char* methodName, void* codeLocation, U
 
   // now write the relocation record to the cache.
   /*size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
-  
+
   memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
   _codeUpdatePtr+=relocationRecordSize;*/
-  
+
   return true;
 }
 

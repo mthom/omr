@@ -1,7 +1,7 @@
 #if !defined(DATA_SECTION_ENTRY_ITERATOR_HPP_INCLUDED)
 #define DATA_SECTION_ENTRY_ITERATOR_HPP_INCLUDED
 
-#include "OSCacheBumpRegionFocus.hpp"
+#include "OSCacheRegionBumpFocus.hpp"
 
 #include "SOMCacheEntry.hpp"
 
@@ -13,7 +13,7 @@ struct SOMCacheEntryDescriptor {
 
   SOMCacheEntryDescriptor(SOMCacheEntry* entry)
     : entry(entry)
-    , codeLocation(entry + sizeof(SOMCacheEntry))
+    , codeLocation(entry + 1) // 1 is implicitly multiplied by sizeof(SOMCacheEntry).
   {}
 
   inline bool operator ==(const SOMCacheEntryDescriptor& rhs) const {
@@ -31,8 +31,8 @@ static const SOMCacheEntryDescriptor nullCacheEntryDescriptor;
 class SOMDataSectionEntryIterator
 {
 public:
-  SOMDataSectionEntryIterator(OSCacheBumpRegionFocus<SOMCacheEntry> focus,
-			       OSCacheBumpRegionFocus<SOMCacheEntry> limit)
+  SOMDataSectionEntryIterator(OSCacheRegionBumpFocus<SOMCacheEntry> focus,
+			      OSCacheRegionBumpFocus<SOMCacheEntry> limit)
     : _focus(focus)
     , _limit(limit)
   {}
@@ -51,8 +51,8 @@ public:
   }
 
 protected:  
-  OSCacheBumpRegionFocus<SOMCacheEntry> _focus;
-  const OSCacheBumpRegionFocus<SOMCacheEntry> _limit;
+  OSCacheRegionBumpFocus<SOMCacheEntry> _focus;
+  const OSCacheRegionBumpFocus<SOMCacheEntry> _limit;
 };
 
 #endif

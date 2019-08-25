@@ -24,6 +24,7 @@
 #include "env/RawAllocator.hpp"
 #include "infra/Annotations.hpp"
 #include "compiler/env/jittypes.h"
+#include "compiler/env/SharedCache.hpp"
 
 // #include "runtime/Runtime.hpp"
 #include <map>
@@ -43,7 +44,7 @@ namespace TR
     {
     class AotAdapter;
     class SharedCacheRelocationRuntime;
-    class SharedCache;
+      //    class SharedCache;
     class CodeCache;
     class CodeCacheManager;
     class RelocationRuntime;
@@ -61,7 +62,7 @@ class OMR_EXTENSIBLE AOTMethodHeader
       // This is one possible implementation, for a cache with contiguous
       // code and relocations data stored
    public:
-      AOTMethodHeader(){};
+      AOTMethodHeader() {}
       AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize):
          compiledCodeStart(compiledCodeStart),
          compiledCodeSize(compiledCodeSize),
@@ -91,29 +92,35 @@ class OMR_EXTENSIBLE AOTMethodHeader
 
 class OMR_EXTENSIBLE AotAdapter{
 public:
-    AotAdapter(){};
+    AotAdapter() {}
+
+    virtual ~AotAdapter() {}
+    
     TR::AotAdapter* self();
     TR::RelocationRuntime* rr();
+
     void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
     void storeExternalSymbol(const char *symbolName, void* symbolAddress);
-    void storeHeaderForLastCompiledMethodUnderName(const char *methodName);
-    virtual void createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize);
+    void registerAOTMethodHeader(std::string methodName, TR::AOTMethodHeader* hdr);
+    //    void storeHeaderForLastCompiledMethodUnderName(const char *methodName);
+    //    virtual TR::AOTMethodHeader* createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize, uint8_t* dataStart, uint32_t dataSize);
     void *getMethodCode(const char *methodName);
-    void relocateMethod(const char *methodName);
+    void relocateRegisteredMethod(const char *methodName);
+
+    TR::SharedCache* getSharedCache();
 
  private:
     
-    void storeAOTMethodAndDataInTheCache(const char *methodName);
-    void registerAOTMethodHeader(std::string methodName,TR::AOTMethodHeader* hdr);
-    TR::AOTMethodHeader* loadAOTMethodAndDataFromTheCache(const char *methodName);
+    //    void storeAOTMethodAndDataInTheCache(const char *methodName);    
+    //    TR::AOTMethodHeader* loadAOTMethodAndDataFromTheCache(const char *methodName);    
     TR::AOTMethodHeader* getRegisteredAOTMethodHeader(const char * methodName);
   
     TR::SharedCache* _sharedCache;
     TR::SharedCacheRelocationRuntime* _reloRuntime;
     TR::CodeCacheManager*    _codeCacheManager;
-    TR::CompilerEnv* _compiler;
-    std::map<std::string,TR::AOTMethodHeader*> _methodNameToHeaderMap;
-    std::string _lastMethodIdentifier = "LastMethod";
+    //    TR::CompilerEnv* _compiler;
+    std::map<std::string, TR::AOTMethodHeader*> _methodNameToHeaderMap;
+    // std::string _lastMethodIdentifier = "LastMethod";
     TR::CodeCache* _cacheInUse;
 };
 }

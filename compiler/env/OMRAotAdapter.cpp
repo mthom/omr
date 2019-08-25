@@ -24,8 +24,9 @@
 #include "env/CompilerEnv.hpp"
 #include "env/SharedCache.hpp"
 #include "runtime/CodeCache.hpp"
-#include <iostream>
 #include "runtime/RelocationRuntime.hpp"
+
+#include <iostream>
 
 void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::CodeCacheManager* cc){
   _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("som_shared_cache", "/tmp");
@@ -34,11 +35,21 @@ void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::Co
 //   _cacheInUse
  }
 
-void OMR::AotAdapter::storeExternalSymbol(const char *symbolName, void* symbolAddress){
+TR::SharedCache* OMR::AotAdapter::getSharedCache() {
+   // WTF? Fix this! 
+   return *(TR::SharedCache**) ((U_8*) &_sharedCache + 0x10);
+}
+
+void OMR::AotAdapter::storeExternalSymbol(const char *symbolName, void* symbolAddress)
+{
     _reloRuntime->registerLoadedSymbol(symbolName,symbolAddress);
 }
 
-void* OMR::AOTMethodHeader::serialize(){
+// TODO: how is this different from the AOTMethodHeader constructor?
+// and why is malloc being used? set up TR_ALLOC inside
+// AOTMethodHeader, use placement new along with the constructor.
+void* OMR::AOTMethodHeader::serialize()
+{
     uintptrj_t allocSize = this->sizeOfSerializedVersion();
     uint8_t* buffer = (uint8_t*) malloc(allocSize);
     uint8_t* ptr = buffer;
@@ -60,7 +71,9 @@ void* OMR::AOTMethodHeader::serialize(){
 
     return buffer;
 }
-OMR::AOTMethodHeader::AOTMethodHeader(uint8_t* rawData){
+
+OMR::AOTMethodHeader::AOTMethodHeader(uint8_t* rawData)
+{
     // uintptrj_t sizeOfHeader = (uintptrj_t) rawData;
     // Skip the header size
     rawData+=sizeof(uintptrj_t);
@@ -81,7 +94,7 @@ uintptrj_t OMR::AOTMethodHeader::sizeOfSerializedVersion(){
     return sizeof(uintptrj_t) +2*sizeof(uint8_t*)+2*sizeof(uint32_t)+this->compiledCodeSize+this->relocationsSize;
 }
 
-
+/*
 void OMR::AotAdapter::storeAOTMethodAndDataInTheCache(const char* methodName){
     TR::AOTMethodHeader* hdr =_methodNameToHeaderMap[_lastMethodIdentifier];
     _sharedCache->storeEntry(methodName,hdr->serialize(),hdr->sizeOfSerializedVersion());
@@ -100,7 +113,8 @@ TR::AOTMethodHeader* OMR::AotAdapter::loadAOTMethodAndDataFromTheCache(const cha
 
     return methodHeader;
 }
-void OMR::AotAdapter::registerAOTMethodHeader(std::string methodName,TR::AOTMethodHeader* header){
+*/
+void OMR::AotAdapter::registerAOTMethodHeader(std::string methodName,TR::AOTMethodHeader* header) {
     _methodNameToHeaderMap[methodName] = header;
 }
 
@@ -108,15 +122,36 @@ TR::RelocationRuntime* OMR::AotAdapter::rr(){
     return _reloRuntime->self();
 }
 
-void OMR::AotAdapter::createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize){
-     TR::AOTMethodHeader* hdr = (TR::AOTMethodHeader*)new (TR::AOTMethodHeader) (codeStart,codeSize,dataStart,dataSize);
-     registerAOTMethodHeader(_lastMethodIdentifier,hdr );
+// this isn't necessary.
+//TR::AOTMethodHeader*
+//OMR::AotAdapter::createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize)
+//{
+//     TR::AOTMethodHeader *hdr = new TR::AOTMethodHeader(codeStart,codeSize,dataStart,dataSize);
+//     registerAOTMethodHeader(_lastMethodIdentifier,hdr );
+//}
+//
+void OMR::AotAdapter::relocateRegisteredMethod(const char* methodName)
+{
+   TR::AOTMethodHeader* hdr = getRegisteredAOTMethodHeader(methodName);
+    _reloRuntime->self()->prepareRelocateAOTCodeAndData(hdr, hdr->compiledCodeStart);
 }
 
-void OMR::AotAdapter::relocateMethod(const char* methodName){
-    TR::AOTMethodHeader* hdr =  getRegisteredAOTMethodHeader(methodName);
-    _reloRuntime->self()->prepareRelocateAOTCodeAndData(hdr,hdr->compiledCodeStart);
+TR::AOTMethodHeader* OMR::AotAdapter::getRegisteredAOTMethodHeader(const char* methodName)
+{
+   auto it = _methodNameToHeaderMap.find(methodName);
+
+   if (it != _methodNameToHeaderMap.end())
+      return it->second;
+
+   return nullptr;
 }
+
+/* This function was redefined because the original (below) was trying
+   to do too much. If the method isn't found in the map, it isn't our
+   problem. This class is meant to be a convenience, not a nanny
+   state.  Also, 'loadAOTMethodAndDataFromTheCache' was removed
+   because it's the job of the shared cache to load AOT data, not the
+   AOT adapter.
 
 TR::AOTMethodHeader* OMR::AotAdapter::getRegisteredAOTMethodHeader(const char* methodName){
     std::string method(methodName);
@@ -129,7 +164,8 @@ TR::AOTMethodHeader* OMR::AotAdapter::getRegisteredAOTMethodHeader(const char* m
 
     return result;
  }
-
+*/
+/*
 void OMR::AotAdapter::storeHeaderForLastCompiledMethodUnderName(const char* methodName)
 {
     std::string method(methodName);
@@ -143,6 +179,7 @@ void OMR::AotAdapter::storeHeaderForLastCompiledMethodUnderName(const char* meth
     //   std::cerr<<"Last method not found!"<<std::endl;
     }
 }
+*/
 
 bool isMethodAllocatedAlready(void* pc){
     return false;

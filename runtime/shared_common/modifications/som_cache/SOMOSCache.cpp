@@ -7,12 +7,12 @@
 
 template <class SuperOSCache>
 SOMOSCache<SuperOSCache>::SOMOSCache(OMRPortLibrary* library,
-				       const char* cacheName,
-				       const char* ctrlDirName,
-				       IDATA numLocks,
-				       SOMOSCacheConfig<typename SuperOSCache::config_type>* config,
-				       SOMOSCacheConfigOptions* configOptions,
-				       UDATA osPageSize)
+				     const char* cacheName,
+				     const char* ctrlDirName,
+				     IDATA numLocks,
+				     SOMOSCacheConfig<typename SuperOSCache::config_type>* config,
+				     SOMOSCacheConfigOptions* configOptions,
+				     UDATA osPageSize)
   : SuperOSCache(library, cacheName, ctrlDirName, numLocks,
 		 (_config = config),
 		 configOptions)
@@ -28,3 +28,4 @@ SOMOSCache<SuperOSCache>::constructCacheIterator(char* resultBuf) {
 
 template class SOMOSCache<OSMemoryMappedCache>;
 template class SOMOSCache<OSSharedMemoryCache>;
+

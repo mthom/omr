@@ -43,7 +43,7 @@
 #include "runtime/RelocationRecord.hpp"
 
 #include "runtime/RelocationRuntime.hpp"
-#include "SOMCompositeCache.hpp"
+#include "runtime/shared_common/modifications/som_cache/SOMCompositeCache.hpp"
 #include "env/AotAdapter.hpp"
 
 //#include "WASMCompositeCache.hpp"
@@ -52,8 +52,6 @@ extern TR_RuntimeHelperTable runtimeHelpers;
 extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *callBacks, int32_t *numHelpers, int32_t *CCPreLoadedCodeSize);
 
 //Shared cache relocation runtime. It is not thread safe.
-//
-static TR::AotAdapter* AotAdapter;
 static void
 initHelper(void *helper, TR_RuntimeHelper id)
    {
@@ -128,24 +126,23 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 }
 
 
-bool storeCodeEntry(const char *methodName, void *codeLocation) 
-   {
-      AotAdapter->storeHeaderForLastCompiledMethodUnderName(methodName);
-   }
+//bool storeCodeEntry(const char *methodName, void *codeLocation) 
+//   {
+//     TR::Compiler->aotAdapter.storeHeaderForLastCompiledMethodUnderName(methodName);
+//   }
 
 
 bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager) {  
-   AotAdapter = new TR::AotAdapter();
-   AotAdapter->initializeAOTClasses(raw,codeCacheManager);
+   TR::Compiler->aotAdapter.initializeAOTClasses(raw,codeCacheManager);
    return true;
 }
 
 void *getCodeEntry(const char *methodName){
-  return  AotAdapter->getMethodCode(methodName);
+  return  TR::Compiler->aotAdapter.getMethodCode(methodName);
 }
 
 void relocateCodeEntry(const char *methodName,void *warmCode) {
-   AotAdapter->relocateMethod(methodName);
+   TR::Compiler->aotAdapter.relocateRegisteredMethod(methodName);
 }
 
 // helperIDs is an array of helper id corresponding to the addresses passed in "helpers"
@@ -198,7 +195,7 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 
    initializeCodeCache(fe.codeCacheManager());
    initializeAOT(&rawAllocator,&(fe.codeCacheManager()));
-   TR::Compiler->aotAdapter = AotAdapter;
+
    return true;
    }
 
@@ -275,14 +272,14 @@ internal_shutdownJit()
 // }
 //   TR::Compiler->cache->cleanup();
    }
-
-bool
-internal_storeCodeEntry(char* methodName, void* codeLocation)
-   {
-    return storeCodeEntry((const char*)methodName, codeLocation);
-
-   }
-
+//
+//bool
+//internal_storeCodeEntry(char* methodName, void* codeLocation)
+//   {
+//    return storeCodeEntry((const char*)methodName, codeLocation);
+//
+//   }
+//
 void *
 internal_getCodeEntry(char *methodName)
    {
@@ -303,5 +300,5 @@ void internal_relocateCodeEntry(char *methodName,void *warmCode)
 void internal_setCodeEntry(char *methodName, void *codeLocation)
    {
      const char *methodN = const_cast<const char *>(methodName);
-     AotAdapter->storeExternalSymbol(methodN,codeLocation);
+     TR::Compiler->aotAdapter.storeExternalSymbol(methodN,codeLocation);
    }

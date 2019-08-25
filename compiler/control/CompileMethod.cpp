@@ -427,7 +427,7 @@ compileMethodFromDetails(
    TR_ASSERT(TR::comp() == &compiler, "the TLS TR::Compilation object %p for this thread does not match the one %p just created.", TR::comp(), &compiler);
    if (compiler.compileRelocatableCode())
       {
-      compiler.setReloRuntime(TR::Compiler->aotAdapter->rr());
+      compiler.setReloRuntime(TR::Compiler->aotAdapter.rr());
       }
    try
       {
@@ -542,11 +542,19 @@ compileMethodFromDetails(
                                   translationTime%1000);
          if (compiler.compileRelocatableCode())
             {
-            TR::Compiler->aotAdapter->createAOTMethodHeader(
-                        startPC,
-                        compiler.cg()->getCodeLength(),
-                        compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
-                        compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
+	      //TODO: use an OMR allocator here.
+	      TR::AOTMethodHeader* methodHeader =
+		new TR::AOTMethodHeader(startPC,
+					compiler.cg()->getCodeLength(),
+					compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
+					compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
+
+	      TR::Compiler->aotAdapter.registerAOTMethodHeader(compiler.externalName(), methodHeader);
+//            TR::Compiler->aotAdapter.createAOTMethodHeader(
+//                        startPC,
+//                        compiler.cg()->getCodeLength(),
+//                        compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
+//                        compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
             }
          }
       else /* of rc == COMPILATION_SUCCEEDED */

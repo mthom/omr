@@ -55,6 +55,8 @@ void SOMOSCacheConfig<OSCacheConfigImpl>::nullifyRegions()
 	 _layout[HEADER_REGION_ID]->regionSize());
   memset(_layout[DATA_SECTION_REGION_ID]->regionStartAddress(), 0,
 	 _layout[DATA_SECTION_REGION_ID]->regionSize());
+  memset(_layout[METADATA_REGION_ID]->regionStartAddress(), 0,
+	 _layout[METADATA_REGION_ID]->regionSize());
 }
 
 template <class OSCacheConfigImpl>

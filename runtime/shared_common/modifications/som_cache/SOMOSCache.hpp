@@ -3,7 +3,9 @@
 
 #include "OSCacheIterator.hpp"
 #include "OSCacheRegion.hpp"
+#include "OSCacheRegionRetreatingBumpFocus.hpp"
 
+#include "SOMMetadataSectionEntryIterator.hpp"
 #include "SOMOSCacheConfig.hpp"
 #include "SOMOSCacheConfigOptions.hpp"
 #include "SOMOSCacheHeaderMapping.hpp"
@@ -15,16 +17,17 @@ class SOMCompositeCache;
 template <class SuperOSCache>
 class SOMOSCache: public SuperOSCache
 {
+  friend class SOMCompositeCache;
 public:
   TR_ALLOC(TR_Memory::SharedCache)
 
   SOMOSCache(OMRPortLibrary* library,
-	      const char* cacheName,
-	      const char* ctrlDirName,
-	      IDATA numLocks,
-	      SOMOSCacheConfig<typename SuperOSCache::config_type>* config,
-	      SOMOSCacheConfigOptions* configOptions,
-	      UDATA osPageSize = 0);
+	     const char* cacheName,
+	     const char* ctrlDirName,
+	     IDATA numLocks,
+	     SOMOSCacheConfig<typename SuperOSCache::config_type>* config,
+	     SOMOSCacheConfigOptions* configOptions,
+	     UDATA osPageSize = 0);
 
   using SuperOSCache::startup;
   using SuperOSCache::cleanup;
@@ -34,13 +37,17 @@ public:
   }
   
   OSCacheContiguousRegion* headerRegion() {
-    return (OSCacheContiguousRegion*) _config->_layout.operator[](HEADER_REGION_ID);
+    return (OSCacheContiguousRegion*) _config->_layout[HEADER_REGION_ID];
   }
 
   OSCacheContiguousRegion* dataSectionRegion() {
-    return (OSCacheContiguousRegion*) _config->_layout.operator[](DATA_SECTION_REGION_ID);
+    return (OSCacheContiguousRegion*) _config->_layout[DATA_SECTION_REGION_ID];
   }
 
+  OSCacheContiguousRegion* metadataSectionRegion() {
+    return (OSCacheContiguousRegion*) _config->_layout[METADATA_REGION_ID];
+  }
+  
   UDATA* readerCountFocus() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
@@ -51,6 +58,17 @@ public:
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
+  UDATA* metadataOffset() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataUpdateOffset);
+    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+
+  OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> metadataUpdateFocus()
+  {
+    auto headerAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataOffset();
+    return {metadataSectionRegion(), (SOMCacheMetadataItemHeader*) headerAddress};
+  }
+  
   U_32 getDataSize() override {
     return _config->getDataSectionSize();
   }

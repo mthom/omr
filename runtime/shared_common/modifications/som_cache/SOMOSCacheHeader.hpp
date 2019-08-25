@@ -31,8 +31,8 @@ public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
 
   SOMOSCacheHeader(int regionID, bool pageBoundaryAligned)
-    : OSMemoryMappedCacheHeader(5, new SOMOSCacheHeaderMappingImpl<OSMemoryMappedCacheHeader>())
-    , OSCacheContiguousRegion(nullptr, regionID, pageBoundaryAligned)
+    : OSCacheContiguousRegion(nullptr, regionID, pageBoundaryAligned),
+      OSMemoryMappedCacheHeader(5, new SOMOSCacheHeaderMappingImpl<OSMemoryMappedCacheHeader>())
   {}
 
   void refresh(OMRPortLibrary* library) override;
@@ -43,13 +43,13 @@ public:
   UDATA regionSize() const override {
     return sizeof(SOMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>);
   }
-  
+
 protected:
   friend class SOMOSCacheConfig<OSMemoryMappedCacheConfig>;
   friend class SOMOSCacheLayout<OSMemoryMappedCacheHeader>;
-  
+
   SOMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* derivedMapping();
-  
+
   void setConfigOptions(SOMOSCacheConfigOptions* configOptions) {
 	_configOptions = configOptions;
   }
@@ -59,8 +59,8 @@ protected:
 
 template <>
 class SOMOSCacheHeader<OSSharedMemoryCacheHeader>:
-  virtual public OSCacheContiguousRegion,
-          public OSSharedMemoryCacheHeader
+          public OSSharedMemoryCacheHeader,
+  virtual public OSCacheContiguousRegion
 {
 public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)
@@ -84,7 +84,7 @@ protected:
   friend class SOMOSCacheLayout<OSSharedMemoryCacheHeader>;
 
   SOMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
-  
+
   void setConfigOptions(SOMOSCacheConfigOptions* configOptions) {
 	_configOptions = configOptions;
   }
