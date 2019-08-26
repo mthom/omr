@@ -162,8 +162,11 @@ TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntim
         reloRecord = new (storage) OMR::RelocationRecordArbitrarySizedHeader(reloRuntime,record);
         break;
       case TR_DisplacementSiteRelocation:
-	 reloRecord = new (storage) OMR::RelocationRecordDisplacementSite(reloRuntime,record);
+	reloRecord = new (storage) OMR::RelocationRecordDisplacementSite(reloRuntime,record);
         break;
+      case TR_CallFunction:
+	reloRecord = new (storage) OMR::RelocationRecordCallFunction(reloRuntime,record);
+	break;
       default:
          // TODO: error condition
          printf("Unexpected relo record: %d\n", reloType);fflush(stdout);
@@ -511,6 +514,8 @@ OMR::RelocationRecordDisplacementSite::preparePrivateData(TR::RelocationRuntime 
    OMR::RuntimeAssumption **assumptions = new (trPersistentMemory) OMR::RuntimeAssumption*();
    TR::PatchDisplacementSiteUserTrigger::make(TR::FrontEnd::instance(), trPersistentMemory, reloPrivateData->_displacementSite->getAssumptionID(), 
 					      reloPrivateData->_displacementSite->getSites(),   assumptions);
+   void(*function)(uint64_t) = reinterpret_cast<void(*)(uint64_t)>(reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime)->symbolAddress("setAssumptionID"));
+   function(reloPrivateData->_assumptionID);
    }
 
 int32_t
@@ -542,6 +547,26 @@ uintptrj_t
 OMR::RelocationRecordDisplacementSite::offset(TR::RelocationTarget *reloTarget)
    {
    return reloTarget->loadRelocationRecordValue((uintptrj_t *) &((RelocationRecordDisplacementSiteBinaryTemplate *)_record)->_offset);
+   }
+
+void 
+OMR::RelocationRecordCallFunction::setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset)
+   {
+   RelocationRecordCallFunctionBinaryTemplate *reloRecord = reinterpret_cast<RelocationRecordCallFunctionBinaryTemplate*>(_record);
+   reloTarget->storeRelocationRecordValue(offset, (uintptrj_t *) &(reloRecord)->_offset);
+   }
+
+uintptrj_t
+OMR::RelocationRecordCallFunction::offset(TR::RelocationTarget *reloTarget)
+   {
+   return reloTarget->loadRelocationRecordValue((uintptrj_t *) &((RelocationRecordCallFunctionBinaryTemplate *)_record)->_offset);
+   }
+
+int32_t
+OMR::RelocationRecordCallFunction::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+   {
+   void(*function)(uint64_t) = reinterpret_cast<void(*)(uint64_t)>(reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime)->symbolAddress("callFunction"));
+   function(reinterpret_cast<uint64_t>(offset(reloTarget)));
    }
 
 uint32_t OMR::RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds] =

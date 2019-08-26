@@ -534,6 +534,12 @@
                 , "return": "IlValue"
                 , "parms": [{"name":"value","type":"int64"}]
                 },
+		{ "name": "VMConstInt64"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "IlValue"
+                , "parms": [{"name":"value","type":"int64"}]
+                },
                 { "name": "ConstString"
                 , "overloadsuffix": ""
                 , "flags": []

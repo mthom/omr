@@ -239,6 +239,7 @@ public:
    TR::IlValue *ConstInt16(int16_t value);
    TR::IlValue *ConstInt32(int32_t value);
    TR::IlValue *ConstInt64(int64_t value);
+   TR::IlValue *VMConstInt64(int64_t value);
    TR::IlValue *ConstFloat(float value);
    TR::IlValue *ConstDouble(double value);
    TR::IlValue *ConstAddress(const void * const value);

@@ -951,6 +951,16 @@ OMR::IlBuilder::ConstInt64(int64_t value)
    }
 
 TR::IlValue *
+OMR::IlBuilder::VMConstInt64(int64_t value)
+  {
+  TR::Node *r = TR::Node::lconst(value);
+  r->setVMValue(true);
+  TR::IlValue *returnValue = newValue(Int64, r);
+  TraceIL("IlBuilder[ %p ]::%d is VMConstInt64 %d\n", this, returnValue->getID(), value);
+  return returnValue;
+  }
+
+TR::IlValue *
 OMR::IlBuilder::ConstFloat(float value)
    {
    TR::Node *fconstNode = TR::Node::create(0, TR::fconst, 0);

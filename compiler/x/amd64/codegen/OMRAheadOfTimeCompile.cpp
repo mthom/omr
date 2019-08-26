@@ -242,6 +242,13 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	}
 	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
 	break;
+      case TR_CallFunction:
+	{
+        OMR::RelocationRecordCallFunction *reloCallFunc = reinterpret_cast<OMR::RelocationRecordCallFunction*>(reloRecord);
+	reloCallFunc->setOffset(reloTarget,reinterpret_cast<uintptr_t>(relocation->getTargetAddress()));
+	}
+	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
+	break;
       default:
          // initializeCommonAOTRelocationHeader is currently in the process
          // of becoming the canonical place to initialize the platform agnostic
@@ -399,6 +406,7 @@ sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate),         // TR_Metho
 0, // 101
 sizeof(OMR::RelocationRecordASHLBinaryTemplate), // 102
 sizeof(TR::RelocationRecordDisplacementSiteBinaryTemplate),//103
+sizeof(TR::RelocationRecordCallFunctionBinaryTemplate)
 #else
 
    12,                                              // TR_ConstantPool                        = 0
