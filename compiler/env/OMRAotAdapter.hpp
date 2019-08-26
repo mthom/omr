@@ -70,7 +70,7 @@ class OMR_EXTENSIBLE AOTMethodHeader
          relocationsSize(relocationsSize)
          {};
       AOTMethodHeader(uint8_t* rawData);
-      
+
       uint8_t* compiledCodeStart;
       uint32_t compiledCodeSize;
       uint8_t* relocationsStart;
@@ -102,17 +102,17 @@ public:
     void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
     void storeExternalSymbol(const char *symbolName, void* symbolAddress);
     void registerAOTMethodHeader(std::string methodName, TR::AOTMethodHeader* hdr);
-    //    void storeHeaderForLastCompiledMethodUnderName(const char *methodName);
-    //    virtual TR::AOTMethodHeader* createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize, uint8_t* dataStart, uint32_t dataSize);
+    void storeHeaderForCompiledMethod(const char *methodName);
+    virtual TR::AOTMethodHeader* createAndRegisterAOTMethodHeader(const char* methodName, uint8_t* codeStart, uint32_t codeSize,
+								  uint8_t* dataStart, uint32_t dataSize);
     void *getMethodCode(const char *methodName);
     void relocateRegisteredMethod(const char *methodName);
 
     TR::SharedCache* getSharedCache();
 
- private:
-    
-    //    void storeAOTMethodAndDataInTheCache(const char *methodName);    
-    //    TR::AOTMethodHeader* loadAOTMethodAndDataFromTheCache(const char *methodName);    
+ private:    
+    void storeAOTMethodAndDataInTheCache(const char *methodName);    
+    TR::AOTMethodHeader* loadAOTMethodAndDataFromTheCache(const char *methodName);    
     TR::AOTMethodHeader* getRegisteredAOTMethodHeader(const char * methodName);
   
     TR::SharedCache* _sharedCache;
@@ -120,7 +120,6 @@ public:
     TR::CodeCacheManager*    _codeCacheManager;
     //    TR::CompilerEnv* _compiler;
     std::map<std::string, TR::AOTMethodHeader*> _methodNameToHeaderMap;
-    // std::string _lastMethodIdentifier = "LastMethod";
     TR::CodeCache* _cacheInUse;
 };
 }

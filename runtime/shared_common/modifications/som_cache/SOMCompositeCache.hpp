@@ -47,7 +47,7 @@ public:
 
   void copyMetadataBuffer(void* data, size_t size);
 
-  void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
+  void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
 
   virtual SOMCacheMetadataEntryIterator constructMetadataSectionEntryIterator();
 

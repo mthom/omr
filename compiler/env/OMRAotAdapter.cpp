@@ -94,10 +94,10 @@ uintptrj_t OMR::AOTMethodHeader::sizeOfSerializedVersion(){
     return sizeof(uintptrj_t) +2*sizeof(uint8_t*)+2*sizeof(uint32_t)+this->compiledCodeSize+this->relocationsSize;
 }
 
-/*
-void OMR::AotAdapter::storeAOTMethodAndDataInTheCache(const char* methodName){
-    TR::AOTMethodHeader* hdr =_methodNameToHeaderMap[_lastMethodIdentifier];
-    _sharedCache->storeEntry(methodName,hdr->serialize(),hdr->sizeOfSerializedVersion());
+void OMR::AotAdapter::storeAOTMethodAndDataInTheCache(const char* methodName)
+{
+    TR::AOTMethodHeader* hdr =_methodNameToHeaderMap[methodName];
+    _sharedCache->storeEntry(methodName, hdr->serialize(), hdr->sizeOfSerializedVersion());
 }
 
 TR::AOTMethodHeader* OMR::AotAdapter::loadAOTMethodAndDataFromTheCache(const char* methodName)
@@ -113,7 +113,7 @@ TR::AOTMethodHeader* OMR::AotAdapter::loadAOTMethodAndDataFromTheCache(const cha
 
     return methodHeader;
 }
-*/
+
 void OMR::AotAdapter::registerAOTMethodHeader(std::string methodName,TR::AOTMethodHeader* header) {
     _methodNameToHeaderMap[methodName] = header;
 }
@@ -122,14 +122,15 @@ TR::RelocationRuntime* OMR::AotAdapter::rr(){
     return _reloRuntime->self();
 }
 
-// this isn't necessary.
-//TR::AOTMethodHeader*
-//OMR::AotAdapter::createAOTMethodHeader(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize)
-//{
-//     TR::AOTMethodHeader *hdr = new TR::AOTMethodHeader(codeStart,codeSize,dataStart,dataSize);
-//     registerAOTMethodHeader(_lastMethodIdentifier,hdr );
-//}
-//
+TR::AOTMethodHeader*
+OMR::AotAdapter::createAndRegisterAOTMethodHeader(const char* methodName, uint8_t* codeStart, uint32_t codeSize,
+						  uint8_t* dataStart, uint32_t dataSize)
+{
+     TR::AOTMethodHeader *hdr = new TR::AOTMethodHeader(codeStart, codeSize, dataStart, dataSize);
+     registerAOTMethodHeader(methodName, hdr);
+     return hdr;
+}
+
 void OMR::AotAdapter::relocateRegisteredMethod(const char* methodName)
 {
    TR::AOTMethodHeader* hdr = getRegisteredAOTMethodHeader(methodName);
@@ -138,12 +139,15 @@ void OMR::AotAdapter::relocateRegisteredMethod(const char* methodName)
 
 TR::AOTMethodHeader* OMR::AotAdapter::getRegisteredAOTMethodHeader(const char* methodName)
 {
-   auto it = _methodNameToHeaderMap.find(methodName);
+   std::string method(methodName);
+   TR::AOTMethodHeader* result =_methodNameToHeaderMap[methodName];
 
-   if (it != _methodNameToHeaderMap.end())
-      return it->second;
+   if (result==NULL)
+     {
+       result = loadAOTMethodAndDataFromTheCache(methodName);
+     }
 
-   return nullptr;
+   return result;
 }
 
 /* This function was redefined because the original (below) was trying
@@ -165,21 +169,18 @@ TR::AOTMethodHeader* OMR::AotAdapter::getRegisteredAOTMethodHeader(const char* m
     return result;
  }
 */
-/*
-void OMR::AotAdapter::storeHeaderForLastCompiledMethodUnderName(const char* methodName)
+
+void OMR::AotAdapter::storeHeaderForCompiledMethod(const char* methodName)
 {
     std::string method(methodName);
-    if ( _methodNameToHeaderMap[_lastMethodIdentifier ] != NULL){
-        _methodNameToHeaderMap[method]=_methodNameToHeaderMap[_lastMethodIdentifier ];
-        storeAOTMethodAndDataInTheCache(methodName);
-        _methodNameToHeaderMap[_lastMethodIdentifier] = NULL;
-    }
-    else
+
+    if (_methodNameToHeaderMap[methodName] != NULL)
     {
-    //   std::cerr<<"Last method not found!"<<std::endl;
+       storeAOTMethodAndDataInTheCache(methodName);
+    } else {
+       std::cerr << "Method " << methodName << " not found!" << std::endl;
     }
 }
-*/
 
 bool isMethodAllocatedAlready(void* pc){
     return false;

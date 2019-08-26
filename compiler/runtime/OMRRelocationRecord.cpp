@@ -26,6 +26,7 @@
 #include "omrcfg.h"
 #include "codegen/CodeGenerator.hpp"
 #include "codegen/FrontEnd.hpp"
+#include "env/ConcreteFE.hpp"
 #include "codegen/Relocation.hpp"
 #include "compile/ResolvedMethod.hpp"
 #include "control/Options.hpp"
@@ -43,6 +44,8 @@
 #include "runtime/RelocationTarget.hpp"
 #include "runtime/SymbolValidationManager.hpp"
 #include "runtime/OMRRelocationRecord.hpp"
+#include "runtime/OMRRuntimeAssumptions.hpp"
+#include "compile/DisplacementSites.hpp"
 
 // TODO: move this someplace common for RuntimeAssumptions.cpp and here
 #if defined(__IBMCPP__) && !defined(AIXPPC) && !defined(LINUXPPC)
@@ -157,6 +160,9 @@ TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntim
         break;
       case TR_ArbitrarySizedHeader:
         reloRecord = new (storage) OMR::RelocationRecordArbitrarySizedHeader(reloRuntime,record);
+        break;
+      case TR_DisplacementSiteRelocation:
+	 reloRecord = new (storage) OMR::RelocationRecordDisplacementSite(reloRuntime,record);
         break;
       default:
          // TODO: error condition
@@ -489,6 +495,53 @@ OMR::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRun
    TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
    std::string name = "gl_"+std::to_string(reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset);
    reloTarget->storeAddress((uint8_t*)rr->symbolAddress(const_cast<char*>(name.c_str())), reloLocation);
+   return 0;
+   }
+
+OMR::RelocationRecordDisplacementSite::RelocationRecordDisplacementSite(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record): RelocationRecord(reloRuntime, record)
+   {
+   }
+
+void 
+OMR::RelocationRecordDisplacementSite::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget)
+   {
+   TR::RelocationRecordDisplacementSitePrivateData *reloPrivateData = &(privateData()->displacementSite);
+   reloPrivateData->_assumptionID = reinterpret_cast<uint64_t>(offset(reloTarget));
+   reloPrivateData->_displacementSite = new (trPersistentMemory) TR_DisplacementSite(reloPrivateData->_assumptionID);
+   OMR::RuntimeAssumption **assumptions = new (trPersistentMemory) OMR::RuntimeAssumption*();
+   TR::PatchDisplacementSiteUserTrigger::make(TR::FrontEnd::instance(), trPersistentMemory, reloPrivateData->_displacementSite->getAssumptionID(), 
+					      reloPrivateData->_displacementSite->getSites(),   assumptions);
+   }
+
+int32_t
+OMR::RelocationRecordDisplacementSite::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+   {
+//   if(!_displacementSite)
+//     {
+     
+//     }
+   createAssumptions(reloRuntime,reloLocation);
+   return 0;
+   }
+
+void
+OMR::RelocationRecordDisplacementSite::createAssumptions(TR::RelocationRuntime *reloRuntime, uint8_t *reloLocation)
+   {
+   privateData()->displacementSite._displacementSite->addLocation(reloLocation);
+   
+   }
+
+void 
+OMR::RelocationRecordDisplacementSite::setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset)
+   {
+   RelocationRecordDisplacementSiteBinaryTemplate *reloRecord = reinterpret_cast<RelocationRecordDisplacementSiteBinaryTemplate*>(_record);
+   reloTarget->storeRelocationRecordValue(offset, (uintptrj_t *) &(reloRecord)->_offset);
+   }
+
+uintptrj_t
+OMR::RelocationRecordDisplacementSite::offset(TR::RelocationTarget *reloTarget)
+   {
+   return reloTarget->loadRelocationRecordValue((uintptrj_t *) &((RelocationRecordDisplacementSiteBinaryTemplate *)_record)->_offset);
    }
 
 uint32_t OMR::RelocationRecord::_relocationRecordHeaderSizeTable[TR_NumExternalRelocationKinds] =

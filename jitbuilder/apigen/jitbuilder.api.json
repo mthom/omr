@@ -62,6 +62,15 @@
 	    {"name":"warmCode","type":"pointer"}
             ]
         },
+	{ "name": "storeCodeEntry"
+	, "overloadsuffix": ""
+        , "flags": []
+        , "return": "boolean"
+        , "parms": [
+	    {"name":"methodName","type":"string"},
+	    {"name":"codeLocation","type":"pointer"}
+            ]
+        },
         { "name": "invalidateJitAssumption"
         , "overloadsuffix": ""
         , "flags": []

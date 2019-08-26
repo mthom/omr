@@ -13,7 +13,8 @@ struct SOMCacheEntryDescriptor {
 
   SOMCacheEntryDescriptor(SOMCacheEntry* entry)
     : entry(entry)
-    , codeLocation(entry + 1) // 1 is implicitly multiplied by sizeof(SOMCacheEntry).
+    , codeLocation(entry + sizeof(SOMCacheEntry))
+    , relocationRecordSize(0)
   {}
 
   inline bool operator ==(const SOMCacheEntryDescriptor& rhs) const {
@@ -24,6 +25,7 @@ struct SOMCacheEntryDescriptor {
   
   SOMCacheEntry* entry;
   void* codeLocation;
+  uint32_t relocationRecordSize;
 };
 
 static const SOMCacheEntryDescriptor nullCacheEntryDescriptor;

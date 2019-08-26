@@ -1359,17 +1359,31 @@ OMR::X86::MemoryReference::addMetaDataForCodeAddress(
          if (!(displacement == 0 &&
                !base->needsDisp() &&
                !base->needsDisp() &&
-               !self()->isForceWideDisplacement()) &&
-             !(displacement >= -128 &&
-               displacement <= 127  &&
                !self()->isForceWideDisplacement()))
-            {
-            if (self()->getSymbolReference().getSymbol()
-               && self()->getSymbolReference().getSymbol()->isClassObject()
-               && cg->wantToPatchClassPointer(NULL, cursor)) // possibly unresolved, may not point to beginning of class
-               {
-               cg->jitAdd32BitPicToPatchOnClassRedefinition((void*)(uintptr_t)*(int32_t*)cursor, (void *) cursor, self()->getUnresolvedDataSnippet() != NULL);
-               }
+	    {
+
+             if (displacement >= -128 &&
+		 displacement <= 127  &&
+		 !self()->isForceWideDisplacement())
+	        {
+		if (cg->comp()->getOption(TR_EmitRelocatableELFFile)&&self()->getDisplacementSite())
+                   {
+		   cg->addExternalRelocation(new (cg->trHeapMemory()) TR::ExternalRelocation(cursor,reinterpret_cast<uint8_t*>(self()->getDisplacementSite()), TR_DisplacementSiteRelocation, cg), __FILE__, __LINE__, node);
+		   }
+		} 
+	     else
+		{
+		  if (cg->comp()->getOption(TR_EmitRelocatableELFFile)&&self()->getDisplacementSite())
+		      {
+		   cg->addExternalRelocation(new (cg->trHeapMemory()) TR::ExternalRelocation(cursor,reinterpret_cast<uint8_t*>(self()->getDisplacementSite()), TR_DisplacementSiteRelocation, cg), __FILE__, __LINE__, node);
+		      }
+		  if (self()->getSymbolReference().getSymbol()
+		      && self()->getSymbolReference().getSymbol()->isClassObject()
+		      && cg->wantToPatchClassPointer(NULL, cursor)) // possibly unresolved, may not point to beginning of class
+		      {
+		      cg->jitAdd32BitPicToPatchOnClassRedefinition((void*)(uintptr_t)*(int32_t*)cursor, (void *) cursor, self()->getUnresolvedDataSnippet() != NULL);
+		      }
+		}
             }
 
          break;

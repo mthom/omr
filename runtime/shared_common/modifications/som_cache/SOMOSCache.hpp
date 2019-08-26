@@ -58,15 +58,15 @@ public:
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
-  UDATA* metadataOffset() {
+  U_32* metadataOffset() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataUpdateOffset);
-    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+    return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
   OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> metadataUpdateFocus()
   {
-    auto headerAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataOffset();
-    return {metadataSectionRegion(), (SOMCacheMetadataItemHeader*) headerAddress};
+    auto offsetAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataOffset();
+    return {metadataSectionRegion(), (SOMCacheMetadataItemHeader*) offsetAddress};
   }
   
   U_32 getDataSize() override {

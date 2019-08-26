@@ -542,19 +542,13 @@ compileMethodFromDetails(
                                   translationTime%1000);
          if (compiler.compileRelocatableCode())
             {
-	      //TODO: use an OMR allocator here.
-	      TR::AOTMethodHeader* methodHeader =
-		new TR::AOTMethodHeader(startPC,
-					compiler.cg()->getCodeLength(),
-					compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
-					compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
-
-	      TR::Compiler->aotAdapter.registerAOTMethodHeader(compiler.externalName(), methodHeader);
-//            TR::Compiler->aotAdapter.createAOTMethodHeader(
-//                        startPC,
-//                        compiler.cg()->getCodeLength(),
-//                        compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
-//                        compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
+	      const char* methodName = compilee.externalName(&trMemory);
+	      TR::Compiler->aotAdapter.createAndRegisterAOTMethodHeader(
+			methodName,
+                        startPC,
+                        compiler.cg()->getCodeLength(),
+                        compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),
+                        compiler.cg()->getAheadOfTimeCompile()->getSizeOfAOTRelocations());
             }
          }
       else /* of rc == COMPILATION_SUCCEEDED */

@@ -402,7 +402,8 @@ typedef enum
    TR_DiscontiguousSymbolFromManager      = 100,
    TR_ResolvedTrampolines                 = 101,
    TR_ArbitrarySizedHeader                = 102,
-   TR_NumExternalRelocationKinds          = 103,
+   TR_DisplacementSiteRelocation          = 103,
+   TR_NumExternalRelocationKinds          = 104,
    TR_ExternalRelocationTargetKindMask    = 0xff,
    } TR_ExternalRelocationTargetKind;
 

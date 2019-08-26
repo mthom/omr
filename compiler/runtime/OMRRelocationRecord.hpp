@@ -88,6 +88,22 @@ namespace OMR { typedef OMR::RelocationRecordDataAddressBinaryTemplate Relocatio
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
 
+#ifndef OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_CONNECTOR
+#define OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_CONNECTOR
+namespace OMR { class RelocationRecordDisplacementSite; }
+namespace OMR { typedef OMR::RelocationRecordDisplacementSite RelocationRecordDisplacementSiteConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
+
+#ifndef OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_BINARY_TEMPLATE_CONNECTOR
+#define OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_BINARY_TEMPLATE_CONNECTOR
+namespace OMR { class RelocationRecordDisplacementSiteBinaryTemplate; }
+namespace OMR { typedef OMR::RelocationRecordDisplacementSiteBinaryTemplate RelocationRecordDisplacementSiteBinaryTemplateConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
+
 #include <stdint.h>
 #include "compile/Compilation.hpp"
 #include "env/jittypes.h"
@@ -104,6 +120,11 @@ struct RelocationRecordMethodCallPrivateData
    {
       uintptrj_t callTargetOffset;
    };
+struct RelocationRecordDisplacementSitePrivateData
+   {
+      TR_DisplacementSite *_displacementSite;
+      uint64_t _assumptionID;
+   };
 
    union RelocationRecordPrivateData
    {
@@ -119,6 +140,7 @@ struct RelocationRecordMethodCallPrivateData
 //       TR::RelocationRecordEmitClassPrivateData emitClass;
 //       TR::RelocationRecordDebugCounterPrivateData debugCounter;
 //       TR::RelocationSymbolFromManagerPrivateData symbolFromManager;
+      TR::RelocationRecordDisplacementSitePrivateData displacementSite;
     
    };
 
@@ -167,6 +189,10 @@ namespace OMR
    UDATA _offset;
    };
   struct RelocationRecordDataAddressBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate {};
+  struct RelocationRecordDisplacementSiteBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate
+   {
+   };
+  
    
    class  OMR_EXTENSIBLE  RelocationRecord
    {
@@ -313,6 +339,22 @@ class RelocationRecordArbitrarySizedHeader : public RelocationRecord
      void fillThePayload(TR::RelocationTarget* reloTarget, uint8_t* data);
      uintptr_t offset(TR::RelocationTarget *reloTarget);
      //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
+   };
+
+class RelocationRecordDisplacementSite: public RelocationRecord
+   {
+   public:
+     RelocationRecordDisplacementSite() {}
+     RelocationRecordDisplacementSite *self();
+     RelocationRecordDisplacementSite(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
+     virtual char *name() { return "DisplacementSite"; };
+     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordDisplacementSiteBinaryTemplate);}
+     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+     virtual void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
+     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     uintptr_t offset(TR::RelocationTarget *reloTarget);
+   private:
+     void createAssumptions(TR::RelocationRuntime *reloRuntime, uint8_t *reloLocation);
    };
 
 } //namespace OMR

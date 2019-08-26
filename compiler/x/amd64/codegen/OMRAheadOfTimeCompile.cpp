@@ -39,6 +39,7 @@
 #include "env/AotAdapter.hpp"
 #include "runtime/CodeCacheManager.hpp"
 #include "runtime/RelocationRecord.hpp"
+#include "compile/DisplacementSites.hpp"
 #define NON_HELPER   0x00
 
 TR::AheadOfTimeCompile*
@@ -233,6 +234,14 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	// sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
 	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
 	break;
+      case TR_DisplacementSiteRelocation:
+	{
+	OMR::RelocationRecordDisplacementSite *reloDispSite = reinterpret_cast<OMR::RelocationRecordDisplacementSite*>(reloRecord);
+	TR_DisplacementSite *dispSite = reinterpret_cast<TR_DisplacementSite*>(relocation->getTargetAddress());
+	reloDispSite->setOffset(reloTarget,dispSite->getAssumptionID());
+	}
+	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
+	break;
       default:
          // initializeCommonAOTRelocationHeader is currently in the process
          // of becoming the canonical place to initialize the platform agnostic
@@ -388,7 +397,8 @@ uint32_t OMR::X86::AMD64::AheadOfTimeCompile::_relocationKindToHeaderSizeMap[TR_
 sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate),         // TR_MethodCallAddress                   = 99,
 0, //100
 0, // 101
-sizeof(OMR::RelocationRecordASHLBinaryTemplate) // 102
+sizeof(OMR::RelocationRecordASHLBinaryTemplate), // 102
+sizeof(TR::RelocationRecordDisplacementSiteBinaryTemplate),//103
 #else
 
    12,                                              // TR_ConstantPool                        = 0

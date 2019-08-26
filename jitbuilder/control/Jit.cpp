@@ -126,10 +126,11 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 }
 
 
-//bool storeCodeEntry(const char *methodName, void *codeLocation) 
-//   {
-//     TR::Compiler->aotAdapter.storeHeaderForLastCompiledMethodUnderName(methodName);
-//   }
+bool storeCodeEntry(const char *methodName, void *codeLocation) 
+   {
+     TR::Compiler->aotAdapter.storeHeaderForCompiledMethod(methodName);
+     return true;
+   }
 
 
 bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager) {  
@@ -273,13 +274,12 @@ internal_shutdownJit()
 //   TR::Compiler->cache->cleanup();
    }
 //
-//bool
-//internal_storeCodeEntry(char* methodName, void* codeLocation)
-//   {
-//    return storeCodeEntry((const char*)methodName, codeLocation);
-//
-//   }
-//
+bool
+internal_storeCodeEntry(char* methodName, void* codeLocation)
+   {
+    return storeCodeEntry((const char*)methodName, codeLocation);
+   }
+
 void *
 internal_getCodeEntry(char *methodName)
    {
