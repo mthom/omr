@@ -7,6 +7,7 @@
 
 #define HEADER_REGION_ID 0
 #define DATA_SECTION_REGION_ID 1
+#define METADATA_REGION_ID 2
 
 template <class>
 class SOMOSCache;

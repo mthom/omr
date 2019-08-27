@@ -14,30 +14,28 @@ public:
     , _blockSize(0)
     , _header(0, pageBoundaryAligned)
     , _dataSection(nullptr, 1, pageBoundaryAligned)
+    , _metadataSection(nullptr, 2, pageBoundaryAligned)
   {
-    // first two arguments are the OSCacheLayout* and the region ID.
+    // first two arguments are this OSCacheLayout* and the region ID.
     //_header = ::new SOMOSCacheHeader<OSCacheHeader>(this, 0, pageBoundaryAligned);
     //_dataSection = ::new OSCacheContiguousRegion((OSCacheLayout*) this, 1, pageBoundaryAligned);
 
     _header.setCacheLayout(this);
     _dataSection.setCacheLayout(this);
+    _metadataSection.setCacheLayout(this);
 	
     addRegion(&_header);
     addRegion(&_dataSection);
+    addRegion(&_metadataSection);
   }
 
-  virtual ~SOMOSCacheLayout() {
-    this->_regions.clear();
-    
-//    delete _header;
-//    delete _dataSection;
-  }
+  virtual ~SOMOSCacheLayout() {}
 
   // once the cache is attached to, is the data well-formed?
   // depending on page boundary alignment, and possibly other factors, the effective
   // cache size may differ from the block size.
   UDATA effectiveCacheSize() {
-    return _header.regionSize() + _dataSection.regionSize();
+    return _header.regionSize() + _dataSection.regionSize() + _metadataSection.regionSize();
   }
 
   UDATA actualCacheSize() {
@@ -55,23 +53,36 @@ protected:
 
   void init(void* blockAddress, uintptr_t size) override
   {
-    _header.adjustRegionStartAndSize(blockAddress, _header.regionSize());
-    _dataSection.adjustRegionStartAndSize((void*) ((UDATA) blockAddress + _header.regionSize()),
-					   size - _header.regionSize());
+    UDATA frontier = (UDATA) blockAddress;
+
+    _header.adjustRegionStartAndSize((void*) frontier, _header.regionSize());
+    frontier += _header.regionSize();
+
+    auto dataSectionSize = (size - _header.regionSize()) / 2;
+
+    _dataSection.adjustRegionStartAndSize((void*) frontier, dataSectionSize);
+    frontier += _dataSection.regionSize();
+
+    auto metadataSectionSize = size - dataSectionSize - _header.regionSize();
+    
+    _metadataSection.adjustRegionStartAndSize((void*) frontier, metadataSectionSize);
   
     _header.alignToPageBoundary(_osPageSize);
     _dataSection.alignToPageBoundary(_osPageSize);
+    _metadataSection.alignToPageBoundary(_osPageSize);
 
     _blockSize = size;  
   }
   
   inline void clearRegions() {
-    _regions.clear();
+     _regions.clear();
   }
   
   UDATA _blockSize;
+
   SOMOSCacheHeader<OSCacheHeader> _header;
   OSCacheContiguousRegion _dataSection;
+  OSCacheContiguousRegion _metadataSection;
 };
 
 #endif

@@ -36,15 +36,6 @@
         , "return": "none"
         , "parms": []
         },
-	{ "name": "storeCodeEntry"
-        , "overloadsuffix": ""
-        , "flags": []
-        , "return": "boolean"
-        , "parms": [
-            {"name":"methodName","type":"string"},
-            {"name":"codeLocation","type":"pointer"}
-            ]
-        },
 	{ "name": "getCodeEntry"
         , "overloadsuffix": ""
         , "flags": []
@@ -69,6 +60,15 @@
         , "parms": [
 	    {"name":"methodName","type":"string"},
 	    {"name":"warmCode","type":"pointer"}
+            ]
+        },
+	{ "name": "storeCodeEntry"
+	, "overloadsuffix": ""
+        , "flags": []
+        , "return": "boolean"
+        , "parms": [
+	    {"name":"methodName","type":"string"},
+	    {"name":"codeLocation","type":"pointer"}
             ]
         },
         { "name": "invalidateJitAssumption"

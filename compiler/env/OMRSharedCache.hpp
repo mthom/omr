@@ -24,10 +24,12 @@
 
 #ifndef OMR_SHARED_CACHE_CONNECTOR
 #define OMR_SHARED_CACHE_CONNECTOR
+
 class SOMCompositeCache;
 namespace OMR { typedef ::SOMCompositeCache SharedCacheConnector; }
-#endif
 
-#include "SOMCompositeCache.hpp"
+#include "runtime/shared_common/modifications/som_cache/SOMCompositeCache.hpp"
+
+#endif
 
 #endif

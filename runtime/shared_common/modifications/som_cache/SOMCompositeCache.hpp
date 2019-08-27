@@ -5,7 +5,8 @@
 #include <string>
 
 #include "CacheCRCChecker.hpp"
-#include "OSCacheBumpRegionFocus.hpp"
+#include "OSCacheRegionBumpFocus.hpp"
+#include "OSCacheRegionRetreatingBumpFocus.hpp"
 #include "SynchronizedCacheCounter.hpp"
 
 #include "OSMemoryMappedCache.hpp"
@@ -13,8 +14,8 @@
 
 #include "OSCacheImpl.hpp"
 
-#include "SOMCacheEntry.hpp"
 #include "SOMDataSectionEntryIterator.hpp"
+#include "SOMMetadataSectionEntryIterator.hpp"
 #include "SOMOSCache.hpp"
 
 #include "env/TRMemory.hpp"
@@ -23,8 +24,8 @@ class SOMCompositeCache {
 public:
   TR_ALLOC(TR_Memory::SharedCache)
 
-  SOMCompositeCache(const char* cacheName = "som_shared_cache",
-		    const char* cachePath = "/tmp");
+  explicit SOMCompositeCache(const char* cacheName = "som_shared_cache",
+			     const char* cachePath = "/tmp");
 
   void cleanup() {
     _osCache.cleanup();
@@ -38,14 +39,20 @@ public:
 
   bool storeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
 
+  bool createdNewCache();
+
   UDATA baseSharedCacheAddress();
 
   void *loadEntry(const char *methodName);
 
-  void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
+  void copyMetadataBuffer(void* data, size_t size);
+
+  void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
+
+  virtual SOMCacheMetadataEntryIterator constructMetadataSectionEntryIterator();
 
 private:
-  virtual SOMDataSectionEntryIterator constructEntryIterator(SOMCacheEntry* delimiter);
+  virtual SOMDataSectionEntryIterator constructDataSectionEntryIterator(SOMCacheEntry* delimiter);
 
   UDATA dataSectionFreeSpace();
   void populateTables();
@@ -56,7 +63,8 @@ private:
 
   SynchronizedCacheCounter _readerCount;
   CacheCRCChecker _crcChecker;
-  OSCacheBumpRegionFocus<SOMCacheEntry> _codeUpdatePtr;
+  OSCacheRegionBumpFocus<SOMCacheEntry> _codeUpdatePtr;
+  OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> _metadataUpdatePtr;
 
   std::map<std::string, SOMCacheEntry*> _codeEntries;
   std::map<std::string, void*> _loadedMethods;

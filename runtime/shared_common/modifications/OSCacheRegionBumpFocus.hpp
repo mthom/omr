@@ -23,6 +23,7 @@
 #if !defined(OS_CACHE_REGION_BUMP_FOCUS_HPP_INCLUDED)
 #define OS_CACHE_REGION_BUMP_FOCUS_HPP_INCLUDED
 
+#include "OSCacheContiguousRegion.hpp"
 #include "OSCacheRegionFocus.hpp"
 
 #include "omrport.h"
@@ -36,9 +37,9 @@
 // region is full (basically, once the pointer steps outside of the region address
 // range, as decided by the region itself, the ++ operator returns NULL).
 template <typename T>
-class OSCacheBumpRegionFocus: public OSCacheRegionFocus<T> {
+class OSCacheRegionBumpFocus: public OSCacheRegionFocus<T> {
 public:
-  OSCacheBumpRegionFocus(OSCacheRegion* region, T* focus)
+  OSCacheRegionBumpFocus(OSCacheContiguousRegion* region, T* focus)
     : OSCacheRegionFocus<T>(region, focus)
   {}
 
@@ -50,7 +51,7 @@ public:
     return this->_focus;
   }
 
-  OSCacheBumpRegionFocus& operator +=(UDATA bump) {
+  OSCacheRegionBumpFocus& operator +=(UDATA bump) {
     if(!blockInRange(bump)) {
       return *this;
     }
@@ -70,7 +71,7 @@ public:
     return focus;
   }
 
-  inline bool operator <(const OSCacheBumpRegionFocus<T>& rhs) const {
+  inline bool operator <(const OSCacheRegionBumpFocus<T>& rhs) const {
     return this->_region == rhs._region && this->_focus < rhs._focus;
   }
 

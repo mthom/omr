@@ -99,7 +99,7 @@ public:
    // AOT object, used for AOT
    //
 
-   TR::AotAdapter* aotAdapter;
+   TR::AotAdapter aotAdapter;
 
    bool isInitialized() { return _initialized; }
 
@@ -114,7 +114,7 @@ public:
 
    // Set the AOT object
    //
-   void setAOTAdapter (TR::AotAdapter* ao) { aotAdapter = ao;}
+   // void setAOTAdapter (TR::AotAdapter* ao) { aotAdapter = ao;}
    TR::PersistentAllocator &persistentAllocator() { return _persistentAllocator; }
 
    void* setVirtualDispatchThunk(const TR::VirtualDispatchKey& key, void *thunkPtr);

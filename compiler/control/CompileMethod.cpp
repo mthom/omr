@@ -427,7 +427,7 @@ compileMethodFromDetails(
    TR_ASSERT(TR::comp() == &compiler, "the TLS TR::Compilation object %p for this thread does not match the one %p just created.", TR::comp(), &compiler);
    if (compiler.compileRelocatableCode())
       {
-      compiler.setReloRuntime(TR::Compiler->aotAdapter->rr());
+      compiler.setReloRuntime(TR::Compiler->aotAdapter.rr());
       }
    try
       {
@@ -542,7 +542,9 @@ compileMethodFromDetails(
                                   translationTime%1000);
          if (compiler.compileRelocatableCode())
             {
-            TR::Compiler->aotAdapter->createAOTMethodHeader(
+	      const char* methodName = compilee.externalName(&trMemory);
+	      TR::Compiler->aotAdapter.createAndRegisterAOTMethodHeader(
+			methodName,
                         startPC,
                         compiler.cg()->getCodeLength(),
                         compiler.cg()->getAheadOfTimeCompile()->getRelocationData(),

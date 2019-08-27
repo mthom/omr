@@ -16,6 +16,7 @@ struct SOMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
   U_32 _dataSectionSize; // the size of the data section.
   UDATA _assumptionID;
   UDATA _card;
+  U_32 _metadataUpdateOffset;
 
   UDATA size() const {
     return sizeof(SOMOSCacheHeaderMapping<OSCacheHeader>);
