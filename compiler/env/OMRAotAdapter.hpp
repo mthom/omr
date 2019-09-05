@@ -29,6 +29,7 @@
 // #include "runtime/Runtime.hpp"
 #include <map>
 #include <string>
+
 #ifndef OMR_AOTADAPTER_CONNECTOR
 #define OMR_AOTADAPTER_CONNECTOR
 namespace OMR { class AotAdapter; }
@@ -94,8 +95,6 @@ class OMR_EXTENSIBLE AotAdapter{
 public:
     AotAdapter() {}
 
-    virtual ~AotAdapter() {}
-    
     TR::AotAdapter* self();
     TR::RelocationRuntime* rr();
 
@@ -108,16 +107,16 @@ public:
     void *getMethodCode(const char *methodName);
     void relocateRegisteredMethod(const char *methodName);
 
-    TR::SharedCache* getSharedCache();
+    TR::SharedCache* getSharedCache();  
 
  private:    
     void storeAOTMethodAndDataInTheCache(const char *methodName);    
     TR::AOTMethodHeader* loadAOTMethodAndDataFromTheCache(const char *methodName);    
     TR::AOTMethodHeader* getRegisteredAOTMethodHeader(const char * methodName);
-  
-    TR::SharedCache* _sharedCache;
+
     TR::SharedCacheRelocationRuntime* _reloRuntime;
     TR::CodeCacheManager*    _codeCacheManager;
+    TR::SharedCache* _sharedCache;
     //    TR::CompilerEnv* _compiler;
     std::map<std::string, TR::AOTMethodHeader*> _methodNameToHeaderMap;
     TR::CodeCache* _cacheInUse;

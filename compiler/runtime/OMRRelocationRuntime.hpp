@@ -59,6 +59,8 @@ namespace TR {
    class RelocationRuntimeLogger;
    class RelocationRecordBinaryTemplate;
    class CodeCacheManager;
+   class AOTMethodHeader;
+
 // class Resolved method will probably need to be returned back
 // when the generic object model is here, since resolved method is one of 
 // classes that could be used for abstraction

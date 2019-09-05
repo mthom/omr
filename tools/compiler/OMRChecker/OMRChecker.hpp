@@ -755,12 +755,12 @@ public:
             builder.AddFixItHint(FixItHint::CreateInsertion(receiver->getExprLoc(), staticCastHint));
          }
       } else if (isa<CXXStaticCastExpr>(receiver)) {
-         CXXStaticCastExpr *cast        = dyn_cast<CXXStaticCastExpr>(receiver);
-         CXXRecordDecl *targetClass     = cast->getType()->getAs<PointerType>() ?  cast->getType()->getAs<PointerType>()->getPointeeType()->getAsCXXRecordDecl()->getCanonicalDecl() : NULL;
+         CXXStaticCastExpr *cast          = dyn_cast<CXXStaticCastExpr>(receiver);
+         const CXXRecordDecl *targetClass = cast->getType()->getAs<clang::PointerType>() ?  cast->getType()->getPointeeCXXRecordDecl()->getCanonicalDecl() : NULL;
          trace("targetClass of static cast" << (targetClass ? targetClass->getQualifiedNameAsString() : "NULL" ) );
          CXXThisExpr *thisExpr = getThisExpr(cast->getSubExpr());
          if (thisExpr) {
-            auto *thisConcrete = ClassChecker->getAssociatedConcreteType(thisExpr->getType()->getAs<PointerType>()->getPointeeType()->getAsCXXRecordDecl());
+            auto *thisConcrete = ClassChecker->getAssociatedConcreteType(thisExpr->getType()->getPointeeCXXRecordDecl());
             if (thisConcrete) {
                trace("Associated concrete class: " << thisConcrete->getQualifiedNameAsString() );
                if (targetClass == NULL || targetClass != thisConcrete) {

@@ -13,9 +13,8 @@ SOMOSCacheConfig<OSCacheConfigImpl>::SOMOSCacheConfig(U_32 numLocks, SOMOSCacheC
   : OSCacheConfigImpl(numLocks)
   , _layout(osPageSize, osPageSize > 0)
 {
-  SOMOSCacheHeader<header_type>* header = dynamic_cast<SOMOSCacheHeader<header_type>*>(_layout[HEADER_REGION_ID]);    
-  header->setConfigOptions(configOptions);    
-  this->_header = header;
+  this->_header = _layout.getHeader();
+   _layout.getHeader()->setConfigOptions(configOptions);    
 }
 
 template <class OSCacheConfigImpl>
@@ -83,8 +82,8 @@ U_64* SOMOSCacheConfig<OSCacheConfigImpl>::getInitCompleteLocation() {
 
 template <class OSCacheConfigImpl>
 bool SOMOSCacheConfig<OSCacheConfigImpl>::setCacheInitComplete() {
-  SOMOSCacheHeader<header_type>* header = dynamic_cast<SOMOSCacheHeader<header_type>*>(_layout[HEADER_REGION_ID]);
-  header->derivedMapping()->_cacheInitComplete = 1;
+  //  SOMOSCacheHeader<header_type>* header = dynamic_cast<SOMOSCacheHeader<header_type>*>(_layout[HEADER_REGION_ID]);
+  _layout.getHeader()->derivedMapping()->_cacheInitComplete = 1;
   return true;
 }
 

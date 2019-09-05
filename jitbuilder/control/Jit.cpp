@@ -46,7 +46,7 @@
 #include "runtime/shared_common/modifications/som_cache/SOMCompositeCache.hpp"
 #include "env/AotAdapter.hpp"
 
-//#include "WASMCompositeCache.hpp"
+#include <iostream>
 
 extern TR_RuntimeHelperTable runtimeHelpers;
 extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *callBacks, int32_t *numHelpers, int32_t *CCPreLoadedCodeSize);
@@ -138,7 +138,7 @@ bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager
    return true;
 }
 
-void *getCodeEntry(const char *methodName){
+void *getCodeEntry(const char *methodName) {
   return  TR::Compiler->aotAdapter.getMethodCode(methodName);
 }
 
@@ -162,7 +162,11 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
       {
       // Allocate the host environment structure
       //
-      TR::Compiler = new (rawAllocator) TR::CompilerEnv(rawAllocator, TR::PersistentAllocatorKit(rawAllocator));
+	TR::Compiler = new (rawAllocator) TR::CompilerEnv(rawAllocator, TR::PersistentAllocatorKit(rawAllocator));
+	std::cout << "size of TR::Compiler within OMR: " << sizeof(*TR::Compiler) << "\n";
+	std::cout << "value of TR::Compiler: " << TR::Compiler << "\n";
+	std::cout << "value of &TR::Compiler->aotAdapter: " << &TR::Compiler->aotAdapter << "\n";
+	std::cout << "value of TR::Compiler->_sharedCache: " << TR::Compiler->aotAdapter.getSharedCache() << "\n";
       }
    catch (const std::bad_alloc& ba)
       {

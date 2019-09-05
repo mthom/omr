@@ -51,6 +51,10 @@ public:
 protected:
   friend class SOMOSCacheConfig<typename OSCacheHeader::config_type>;
 
+  inline SOMOSCacheHeader<OSCacheHeader>* getHeader() {
+    return &_header;
+  }
+
   void init(void* blockAddress, uintptr_t size) override
   {
     UDATA frontier = (UDATA) blockAddress;

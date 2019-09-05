@@ -37,12 +37,14 @@ CHECKER_O         := $(OMRCHECKER_OBJDIR)/OMRChecker.o
 CHECKER_CPP       := $(OMRCHECKER_SRCDIR)/OMRChecker.cpp
 CHECKER_HPP       := $(OMRCHECKER_SRCDIR)/OMRChecker.hpp
 
+INCLUDE_FLAGS     := /usr/lib/llvm-6.0/include/
+
 #
 # Build variables
 #
 LLVM_CONFIG ?= llvm-config
 CLANG       ?= clang++
-CXX       	?= g++
+CXX         := clang++
 PYTHON      ?= python2
 
 LDFLAGS   	:= -shared `$(LLVM_CONFIG) --ldflags` 
@@ -58,7 +60,7 @@ $(OMRCHECKER_OBJECT): $(CHECKER_O)
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 $(CHECKER_O): $(CHECKER_CPP) $(CHECKER_HPP) 
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_FLAGS) -c -o $@ $<
 
 #
 # Rules for running tests

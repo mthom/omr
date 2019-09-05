@@ -19,6 +19,8 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
 #############################################################################
 
+set(CMAKE_CXX_FLAGS "-Xclang -load -Xclang /home/mark/sompp/omr/tools/compiler/OMRChecker/OMRChecker.so -Xclang -add-plugin -Xclang omr-checker")
+
 compiler_library(env
 	${CMAKE_CURRENT_LIST_DIR}/ExceptionTable.cpp
 	${CMAKE_CURRENT_LIST_DIR}/OMRCPU.cpp
@@ -55,4 +57,5 @@ compiler_library(env
 	# We need to make
 	${CMAKE_CURRENT_LIST_DIR}/OMRAotAdapter.cpp
 
-)
+	)
+     

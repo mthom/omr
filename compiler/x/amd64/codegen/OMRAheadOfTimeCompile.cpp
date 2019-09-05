@@ -227,7 +227,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	{
 	OMR::RelocationRecordDataAddress *daRecord = reinterpret_cast<OMR::RelocationRecordDataAddress*>(reloRecord);
 	TR::SymbolReference * symRef = reinterpret_cast<TR::SymbolReference*>(relocation->getTargetAddress());
-	TR::StaticSymbol * symbol = dynamic_cast<TR::StaticSymbol*>(symRef->getSymbol());
+	TR::StaticSymbol * symbol = reinterpret_cast<TR::StaticSymbol*>(symRef->getSymbol()); /// was dynamic_cast :|
 	uint64_t index = symbol->getTOCIndex();
 	daRecord->setOffset(reloTarget,index);
 	}

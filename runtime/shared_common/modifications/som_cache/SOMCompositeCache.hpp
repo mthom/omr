@@ -30,10 +30,6 @@ public:
   void cleanup() {
     _osCache.cleanup();
   }
-  
-  void setRelocationData(uint8_t* relocationData) {
-    _relocationData = relocationData;
-  }
 
   bool startup(const char* cacheName, const char* ctrlDirName);
 
@@ -68,8 +64,6 @@ private:
 
   std::map<std::string, SOMCacheEntry*> _codeEntries;
   std::map<std::string, void*> _loadedMethods;
-
-  uint8_t* _relocationData;
 };
 
 #endif
