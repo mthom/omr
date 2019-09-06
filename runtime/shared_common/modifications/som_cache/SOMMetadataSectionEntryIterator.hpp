@@ -54,6 +54,11 @@ static const SOMCacheMetadataEntryDescriptor nullCacheMetadataEntryDescriptor;
 class SOMCacheMetadataEntryIterator
 {
 public:
+  SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region)
+    : _focus(region, (ItemHeader*) region->regionStartAddress())
+    , _region(region)
+  {}
+  
   SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region, ItemHeader* start)
     : _focus(region, start)
     , _region(region)

@@ -27,7 +27,8 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
   , _readerCount(_osCache.headerRegion(), _osCache.readerCountFocus())
   , _crcChecker(_osCache.headerRegion(), _osCache.crcFocus(), MAX_CRC_SAMPLES)
   , _codeUpdatePtr(_osCache.dataSectionRegion(), (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
-  , _metadataUpdatePtr(_osCache.metadataUpdateFocus())
+  , _preludeUpdatePtr(_osCache.metadataSectionFocus())
+  , _relocationData(NULL)
 {
   populateTables();
 }
@@ -52,16 +53,22 @@ void SOMCompositeCache::populateTables()
    }
 }
 
-SOMCacheMetadataEntryIterator
-SOMCompositeCache::constructMetadataSectionEntryIterator()
-{   
-   return {_osCache.metadataSectionRegion(), _osCache.metadataUpdateFocus()};
-}
-
 bool
 SOMCompositeCache::createdNewCache()
 {
    return _osCache._initContext->creatingNewCache();
+}
+
+SOMCacheMetadataEntryIterator
+SOMCompositeCache::constructPreludeSectionEntryIterator()
+{
+   return {_osCache.preludeSectionRegion()};
+}
+
+SOMCacheMetadataEntryIterator
+SOMCompositeCache::constructMetadataSectionEntryIterator()
+{
+   return {_osCache.metadataSectionRegion(), _osCache.metadataSectionFocus() };
 }
 
 // limit should reflect the true limit of the cache at
@@ -97,11 +104,11 @@ UDATA SOMCompositeCache::dataSectionFreeSpace()
    return dataSectionSize - (UDATA) (_codeUpdatePtr - startAddress);
 }
 
-void SOMCompositeCache::copyMetadataBuffer(void *data, size_t size)
+void SOMCompositeCache::copyPreludeBuffer(void *data, size_t size)
 {
-   _metadataUpdatePtr -= size;
-   memcpy(_metadataUpdatePtr, data, size);
-   *_osCache.metadataOffset() += size;
+   _preludeUpdatePtr -= size;
+   memcpy(_preludeUpdatePtr, data, size);
+   *_osCache.metadataSectionSizeFieldOffset() += size;
 }
 
 // find space for, and stores, a code entry. if it fails at any point,
@@ -129,13 +136,30 @@ bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allo
   memcpy(_codeUpdatePtr,data,allocSize);
   _codeUpdatePtr += allocSize;
 
+  // now write the relocation record to the cache.
+  /*size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
+
+  memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
+  _codeUpdatePtr+=relocationRecordSize;*/
+
   return true;
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
 void *SOMCompositeCache::loadEntry(const char *methodName) {
+//if(!_loadedMethods[methodName]){
     SOMCacheEntry *entry = _codeEntries[methodName];
 
+//  void * methodArea =  mmap(NULL,
+//            codeLength,
+//            PROT_READ | PROT_WRITE | PROT_EXEC,
+//            MAP_ANONYMOUS | MAP_PRIVATE,
+//            0,
+//            0);
+//  _loadedMethods[methodName] = methodArea;
+//  memcpy(methodArea,entry,codeLength);
+//}
+//return _loadedMethods[methodName];
     void *rawData = NULL;
     if (entry)
       rawData = (void*) (entry+1);
@@ -146,20 +170,21 @@ void SOMCompositeCache::storeCallAddressToHeaders(void *calleeMethod, size_t met
 {
     SOMCacheEntry *callee = reinterpret_cast<SOMCacheEntry *>(calleeMethod);
     callee--;
-    
+
     UDATA relativeCalleeNameOffset = reinterpret_cast<UDATA>(&callee->methodName) - this->baseSharedCacheAddress();
-    
+
     for (auto entry : _codeEntries)
     {
        U_32 codeLength = entry.second->codeLength;
        char *methodName = reinterpret_cast<char *>(entry.second) + sizeof(SOMCacheEntry)+codeLength;
-      
+
        if (*methodName)
        {
 	  methodName = methodName+methodNameTemplateOffset;
 
 	  if (*reinterpret_cast<UDATA *>(methodName)==relativeCalleeNameOffset)
 	  {
+//	    *methodName = reinterpret_cast<UDATA>(calleeCodeCacheAddress);
 	     memcpy(methodName,&calleeCodeCacheAddress,sizeof(UDATA));
 	  }
        }
