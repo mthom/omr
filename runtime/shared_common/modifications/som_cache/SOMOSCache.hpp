@@ -47,6 +47,10 @@ public:
   OSCacheContiguousRegion* metadataSectionRegion() {
     return (OSCacheContiguousRegion*) _config->_layout[METADATA_REGION_ID];
   }
+
+  OSCacheContiguousRegion* preludeSectionRegion() {
+    return (OSCacheContiguousRegion*) _config->_layout[PRELUDE_REGION_ID];
+  }
   
   UDATA* readerCountFocus() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
@@ -58,14 +62,14 @@ public:
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
-  U_32* metadataOffset() {
-    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataUpdateOffset);
+  U_32* metadataSectionSizeFieldOffset() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataSectionSize);
     return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
   OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> metadataUpdateFocus()
   {
-    auto offsetAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataOffset();
+    auto offsetAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataSectionSizeFieldOffset();
     return {metadataSectionRegion(), (SOMCacheMetadataItemHeader*) offsetAddress};
   }
   

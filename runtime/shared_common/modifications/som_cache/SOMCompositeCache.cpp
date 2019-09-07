@@ -27,7 +27,8 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
   , _readerCount(_osCache.headerRegion(), _osCache.readerCountFocus())
   , _crcChecker(_osCache.headerRegion(), _osCache.crcFocus(), MAX_CRC_SAMPLES)
   , _codeUpdatePtr(_osCache.dataSectionRegion(), (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
-  , _metadataUpdatePtr(_osCache.metadataUpdateFocus())
+  , _preludeUpdatePtr(_osCache.preludeSectionRegion(),
+		      (ItemHeader*) _osCache.preludeSectionRegion()->regionStartAddress())
 {
   populateTables();
 }
@@ -53,8 +54,14 @@ void SOMCompositeCache::populateTables()
 }
 
 SOMCacheMetadataEntryIterator
+SOMCompositeCache::constructPreludeSectionEntryIterator()
+{
+   return {_osCache.preludeSectionRegion()};
+}
+
+SOMCacheMetadataEntryIterator
 SOMCompositeCache::constructMetadataSectionEntryIterator()
-{   
+{
    return {_osCache.metadataSectionRegion(), _osCache.metadataUpdateFocus()};
 }
 
@@ -97,11 +104,12 @@ UDATA SOMCompositeCache::dataSectionFreeSpace()
    return dataSectionSize - (UDATA) (_codeUpdatePtr - startAddress);
 }
 
-void SOMCompositeCache::copyMetadataBuffer(void *data, size_t size)
+void SOMCompositeCache::copyPreludeBuffer(void* data, size_t size)
 {
-   _metadataUpdatePtr -= size;
-   memcpy(_metadataUpdatePtr, data, size);
-   *_osCache.metadataOffset() += size;
+  //   _preludeUpdatePtr -= size;
+   memcpy(_preludeUpdatePtr, data, size);
+   _preludeUpdatePtr += size;
+   // *_osCache.metadataSectionSizeFieldOffset() += size;
 }
 
 // find space for, and stores, a code entry. if it fails at any point,
@@ -146,14 +154,14 @@ void SOMCompositeCache::storeCallAddressToHeaders(void *calleeMethod, size_t met
 {
     SOMCacheEntry *callee = reinterpret_cast<SOMCacheEntry *>(calleeMethod);
     callee--;
-    
+
     UDATA relativeCalleeNameOffset = reinterpret_cast<UDATA>(&callee->methodName) - this->baseSharedCacheAddress();
-    
+
     for (auto entry : _codeEntries)
     {
        U_32 codeLength = entry.second->codeLength;
        char *methodName = reinterpret_cast<char *>(entry.second) + sizeof(SOMCacheEntry)+codeLength;
-      
+
        if (*methodName)
        {
 	  methodName = methodName+methodNameTemplateOffset;

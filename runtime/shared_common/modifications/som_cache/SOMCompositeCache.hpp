@@ -41,11 +41,12 @@ public:
 
   void *loadEntry(const char *methodName);
 
-  void copyMetadataBuffer(void* data, size_t size);
+  void copyPreludeBuffer(void* data, size_t size);
 
   void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
 
   virtual SOMCacheMetadataEntryIterator constructMetadataSectionEntryIterator();
+  virtual SOMCacheMetadataEntryIterator constructPreludeSectionEntryIterator();
 
 private:
   virtual SOMDataSectionEntryIterator constructDataSectionEntryIterator(SOMCacheEntry* delimiter);
@@ -60,7 +61,7 @@ private:
   SynchronizedCacheCounter _readerCount;
   CacheCRCChecker _crcChecker;
   OSCacheRegionBumpFocus<SOMCacheEntry> _codeUpdatePtr;
-  OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> _metadataUpdatePtr;
+  OSCacheRegionBumpFocus<SOMCacheMetadataItemHeader> _preludeUpdatePtr;
 
   std::map<std::string, SOMCacheEntry*> _codeEntries;
   std::map<std::string, void*> _loadedMethods;
