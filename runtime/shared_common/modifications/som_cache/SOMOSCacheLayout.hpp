@@ -19,10 +19,6 @@ public:
     , _metadataSection(nullptr, 2, pageBoundaryAligned)
     , _preludeSection(nullptr, 3, pageBoundaryAligned)
   {
-    // first two arguments are this OSCacheLayout* and the region ID.
-    //_header = ::new SOMOSCacheHeader<OSCacheHeader>(this, 0, pageBoundaryAligned);
-    //_dataSection = ::new OSCacheContiguousRegion((OSCacheLayout*) this, 1, pageBoundaryAligned);
-
     _header.setCacheLayout(this);
     _dataSection.setCacheLayout(this);
     _metadataSection.setCacheLayout(this);
