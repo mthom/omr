@@ -65,7 +65,7 @@ private:
   SynchronizedCacheCounter _readerCount;
   CacheCRCChecker _crcChecker;
   OSCacheRegionBumpFocus<SOMCacheEntry> _codeUpdatePtr;
-  OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> _preludeUpdatePtr;
+  OSCacheRegionBumpFocus<SOMCacheMetadataItemHeader> _preludeUpdatePtr;
 
   std::map<std::string, SOMCacheEntry*> _codeEntries;
   std::map<std::string, void*> _loadedMethods;

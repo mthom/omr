@@ -77,7 +77,7 @@ public:
 
 protected:
   inline bool blockInRange(UDATA size) const {
-    return this->_region->isAddressInRegion((void*) this->_focus, size);
+    return this->_region->isBlockInRegion((void*) this->_focus, size);
   }
 };
 

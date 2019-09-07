@@ -65,7 +65,7 @@ public:
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _cacheCrc);
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
-  
+
   U_32* metadataSectionSizeFieldOffset() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataSectionSize);
     return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);

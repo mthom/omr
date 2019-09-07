@@ -39,7 +39,7 @@ public:
     : _region(region)
     , _focus(focus)
   {
-    Trc_SHR_Assert_True(region != NULL && region->isAddressInRegion((void*) focus, sizeof(T)));
+    Trc_SHR_Assert_True(region != NULL && region->isAddressInRegion((void*) focus));
   }
 
   OSCacheRegion* region() {
