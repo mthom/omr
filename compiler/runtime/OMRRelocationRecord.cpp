@@ -162,8 +162,11 @@ TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntim
         reloRecord = new (storage) OMR::RelocationRecordArbitrarySizedHeader(reloRuntime,record);
         break;
       case TR_DisplacementSiteRelocation:
-	 reloRecord = new (storage) OMR::RelocationRecordDisplacementSite(reloRuntime,record);
+	reloRecord = new (storage) OMR::RelocationRecordDisplacementSite(reloRuntime,record);
         break;
+      case TR_SOMObjectAddress:
+	reloRecord = new (storage) OMR::RelocationRecordSOMObject(reloRuntime, record);
+	break;
       default:
          // TODO: error condition
          printf("Unexpected relo record: %d\n", reloType);fflush(stdout);
@@ -492,9 +495,37 @@ OMR::RelocationRecordDataAddress::offset(TR::RelocationTarget *reloTarget)
 int32_t 
 OMR::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
    {
+//   TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
+//   void *oldAddress = reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset;
+//
+//   reloTarget->storeAddress((uint8_t*)rr->objectAddress(oldAddress), reloLocation);
+   return 0;
+   }
+
+OMR::RelocationRecordSOMObject::RelocationRecordSOMObject(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record): RelocationRecord(reloRuntime, record)
+   {
+   }
+
+void 
+OMR::RelocationRecordSOMObject::setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset)
+   {
+   RelocationRecordSOMObjectBinaryTemplate *reloRecord = reinterpret_cast<RelocationRecordSOMObjectBinaryTemplate*>(_record);
+   reloTarget->storeRelocationRecordValue(offset, (uintptrj_t *) &(reloRecord)->_offset);
+   }
+
+uintptrj_t
+OMR::RelocationRecordSOMObject::offset(TR::RelocationTarget *reloTarget)
+   {
+   return reloTarget->loadRelocationRecordValue((uintptrj_t *) &((RelocationRecordSOMObjectBinaryTemplate *)_record)->_offset);
+   }
+
+int32_t
+OMR::RelocationRecordSOMObject::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+   {
    TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
-   std::string name = "gl_"+std::to_string(reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset);
-   reloTarget->storeAddress((uint8_t*)rr->symbolAddress(const_cast<char*>(name.c_str())), reloLocation);
+   auto oldAddress = reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset;
+   reloTarget->storeAddress((uint8_t*)rr->objectAddress(oldAddress), reloLocation);
+
    return 0;
    }
 

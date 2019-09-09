@@ -38,8 +38,11 @@
 #include "env/OMREnvironment.hpp"
 #include "env/OMRCPU.hpp" // for TR_ProcessorFeatureFlags
 #include "env/JitConfig.hpp" // for JitConfig, it got moved
-#include "runtime/OMRRelocationRuntimeTypes.hpp" 
+#include "runtime/OMRRelocationRuntimeTypes.hpp"
 #include "runtime/RelocationRuntimeLogger.hpp"
+
+// SOM dependencies.
+#include "../../src/aot/ObjectDeserializer.hpp"
 
 #ifndef OMR_RELOCATION_RUNTIME_CONNECTOR
 #define OMR_RELOCATION_RUNTIME_CONNECTOR
@@ -52,8 +55,8 @@ namespace OMR { class SharedCacheRelocationRuntime; }
 namespace OMR { typedef OMR::SharedCacheRelocationRuntime SharedCacheRelocationRuntimeConnector; }
 #endif
 
-namespace TR { 
-   class CompilationInfo; 
+namespace TR {
+   class CompilationInfo;
    class RelocationRecord;
    class RelocationTarget;
    class RelocationRuntimeLogger;
@@ -62,11 +65,11 @@ namespace TR {
    class AOTMethodHeader;
 
 // class Resolved method will probably need to be returned back
-// when the generic object model is here, since resolved method is one of 
+// when the generic object model is here, since resolved method is one of
 // classes that could be used for abstraction
 //  class ResolvedMethod;
-   class CodeCache; 
-   class PersistentInfo; 
+   class CodeCache;
+   class PersistentInfo;
    }
 
 #ifdef __cplusplus
@@ -207,7 +210,7 @@ class RelocationRuntime {
                                                          // TR::Options *options,
                                                          // TR::Compilation *compilation,a
                                                          // TR_ResolvedMethod *resolvedMethod
-                                                         
+
                                                          );
 
       // virtual bool storeAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe, OMR_VMThread *curThread);
@@ -380,13 +383,23 @@ namespace OMR
 class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
 public:
       TR_ALLOC(TR_Memory::Relocation);
+
       TR::RelocationRuntime* self();
+
       void * operator new(size_t, TR::JitConfig *);
-      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg,TR::CodeCacheManager *ccm) : OMR::RelocationRuntime(jitCfg,ccm) {
+
+      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg, TR::CodeCacheManager *ccm,
+				   std::map<SOMCacheMetadataItemHeader, AbstractVMObject*>& oldNewAddresses)
+	  : OMR::RelocationRuntime(jitCfg,ccm)
+	  , _oldNewAddresses(oldNewAddresses)
+      {
          _sharedCacheIsFull=false;
-         }
+      }
+
+      void *objectAddress(void *oldAddress);
       void *symbolAddress(char *symbolName);
-      void registerLoadedSymbol(const char *&symbolName,void *&symbolAddress);
+
+      void registerLoadedSymbol(const char * symbolName, void *symbolAddress);
       // virtual bool storeAotInformation( uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart,uint32_t dataSize);
    //  virtual bool storeAOTHeader(OMR_VM *omrVm, TR_FrontEnd *fe, OMR_VMThread *curThread);
    //    virtual TR::AOTHeader *createAOTHeader(OMR_VM *omrVM, TR_FrontEnd *fe);
@@ -396,7 +409,6 @@ public:
    //    virtual TR_YesNoMaybe isMethodInSharedCache(OMRMethod *method, OMR_VM *omrVm);
 
       //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
-
 
 private:
       uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
@@ -416,7 +428,9 @@ private:
 
       static const char aotHeaderKey[];
       static const UDATA aotHeaderKeyLength;
+
       std::map<std::string,void *> _symbolLocation;
+      std::map<SOMCacheMetadataItemHeader, AbstractVMObject*>& _oldNewAddresses;
 };
 } // end namespace OMR
 #endif   // RELOCATION_RUNTIME_INCL

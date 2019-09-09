@@ -227,7 +227,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	{
 	OMR::RelocationRecordDataAddress *daRecord = reinterpret_cast<OMR::RelocationRecordDataAddress*>(reloRecord);
 	TR::SymbolReference * symRef = reinterpret_cast<TR::SymbolReference*>(relocation->getTargetAddress());
-	TR::StaticSymbol * symbol = reinterpret_cast<TR::StaticSymbol*>(symRef->getSymbol()); /// was dynamic_cast :|
+	TR::StaticSymbol * symbol = reinterpret_cast<TR::StaticSymbol*>(symRef->getSymbol());
 	uint64_t index = symbol->getTOCIndex();
 	daRecord->setOffset(reloTarget,index);
 	}
@@ -238,8 +238,16 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	{
 	OMR::RelocationRecordDisplacementSite *reloDispSite = reinterpret_cast<OMR::RelocationRecordDisplacementSite*>(reloRecord);
 	TR_DisplacementSite *dispSite = reinterpret_cast<TR_DisplacementSite*>(relocation->getTargetAddress());
-	reloDispSite->setOffset(reloTarget,dispSite->getAssumptionID());
+	reloDispSite->setOffset(reloTarget, dispSite->getAssumptionID());
 	}
+	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
+	break;
+      case TR_SOMObjectAddress:
+	{
+	OMR::RelocationRecordSOMObject *reloSOMObj = reinterpret_cast<OMR::RelocationRecordSOMObject*>(reloRecord);
+	reloSOMObj->setOffset(reloTarget, relocation->getTargetAddress());
+	}
+	
 	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
 	break;
       default:
@@ -399,6 +407,7 @@ sizeof(TR::RelocationRecordMethodCallAddressBinaryTemplate),         // TR_Metho
 0, // 101
 sizeof(OMR::RelocationRecordASHLBinaryTemplate), // 102
 sizeof(TR::RelocationRecordDisplacementSiteBinaryTemplate),//103
+sizeof(TR::RelocationRecordSOMObjectBinaryTemplate),//104
 #else
 
    12,                                              // TR_ConstantPool                        = 0

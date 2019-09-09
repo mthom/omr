@@ -221,12 +221,14 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
 
    TR_ExternalRelocationTargetKind reloKind = TR_NoRelocation;
    if (cg->profiledPointersRequireRelocation() && node && node->getOpCodeValue() == TR::aconst &&
-         (node->isClassPointerConstant() || node->isMethodPointerConstant()))
+        (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isSOMObjectAddress()))
       {
       if (node->isClassPointerConstant())
          reloKind = TR_ClassPointer;
       else if (node->isMethodPointerConstant())
          reloKind = TR_MethodPointer;
+      else if (node->isSOMObjectAddress())
+	 reloKind = TR_SOMObjectAddress;
       else
          TR_ASSERT(0, "Unexpected node, don't know how to relocate");
       }
@@ -256,7 +258,7 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
       if (is64Bit)
          {
          if (cg->constantAddressesCanChangeSize(node) && node && node->getOpCodeValue() == TR::aconst &&
-             (node->isClassPointerConstant() || node->isMethodPointerConstant()))
+             (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isDataAddressConstant()))
             {
             movInstruction = generateRegImm64Instruction(MOV8RegImm64, node, target, value, cg, reloKind);
             }
@@ -328,7 +330,7 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
          if (is64Bit)
             {
             if (cg->constantAddressesCanChangeSize(node) && node && node->getOpCodeValue() == TR::aconst &&
-                (node->isClassPointerConstant() || node->isMethodPointerConstant()))
+                (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isDataAddressConstant()))
                {
                movInstruction = generateRegImm64Instruction(MOV8RegImm64, node, target, value, cg, reloKind);
                }

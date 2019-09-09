@@ -403,7 +403,8 @@ typedef enum
    TR_ResolvedTrampolines                 = 101,
    TR_ArbitrarySizedHeader                = 102,
    TR_DisplacementSiteRelocation          = 103,
-   TR_NumExternalRelocationKinds          = 104,
+   TR_SOMObjectAddress                    = 104,
+   TR_NumExternalRelocationKinds          = 105,
    TR_ExternalRelocationTargetKindMask    = 0xff,
    } TR_ExternalRelocationTargetKind;
 

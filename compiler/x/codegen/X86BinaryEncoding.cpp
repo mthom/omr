@@ -2625,6 +2625,27 @@ TR::AMD64RegImm64Instruction::addMetaDataForCodeAddress(uint8_t *cursor)
 
    TR::SymbolReference *methodSymRef = getNode()->getOpCode().hasSymbolReference()?getNode()->getSymbolReference():NULL;
 
+   switch (_reloKind)
+     {
+     case TR_SOMObjectAddress:
+       cg()->addExternalRelocation(new (cg()->trHeapMemory())
+				   TR::ExternalRelocation(cursor,
+							  (uint8_t *) getSourceImmediate(),
+							  NULL,
+							  TR_SOMObjectAddress,
+							  cg()),
+				   __FILE__, __LINE__,
+				   getNode());       
+       /*
+       cg()->addExternalRelocation(new (cg()->trHeapMemory())
+				   TR::ExternalRelocation(cursor,
+							  (uint8_t*)getNode(),
+							  (TR_ExternalRelocationTargetKind) _reloKind,
+							  cg()),
+				   __FILE__, __LINE__, getNode());
+       */
+     }
+
 #ifdef J9_PROJECT_SPECIFIC
    if (comp->fej9()->helpersNeedRelocation())
       {

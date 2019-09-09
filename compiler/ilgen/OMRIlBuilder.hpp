@@ -242,6 +242,7 @@ public:
    TR::IlValue *ConstFloat(float value);
    TR::IlValue *ConstDouble(double value);
    TR::IlValue *ConstAddress(const void * const value);
+   TR::IlValue *ConstRelocatableAddress(const void * const value);
    TR::IlValue *ConstString(const char * const value);
 
    TR::IlValue *Const(int8_t value)             { return ConstInt8(value); }

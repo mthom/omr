@@ -33,12 +33,12 @@ OMR::AotAdapter::self()
    return static_cast<TR::AotAdapter *>(this);
    }
 
-void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::CodeCacheManager* cc){
+void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator, TR::CodeCacheManager* cc)
+{
   _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("som_shared_cache", "/tmp");
-  _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL,cc);
+  _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime(NULL, cc);
   _codeCacheManager = cc;
-//   _cacheInUse
- }
+}
 
 TR::SharedCache* OMR::AotAdapter::getSharedCache() {
    // WTF? Fix this! >:O

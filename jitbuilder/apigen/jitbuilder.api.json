@@ -498,6 +498,12 @@
                 , "return": "IlValue"
                 , "parms": [{"name":"value","type":"pointer"}]
                 },
+                { "name": "ConstRelocatableAddress"
+                , "overloadsuffix": ""
+                , "flags": []
+                , "return": "IlValue"
+                , "parms": [{"name":"value","type":"pointer"}]
+                },
                 { "name": "ConstDouble"
                 , "overloadsuffix": ""
                 , "flags": []

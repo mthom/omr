@@ -320,6 +320,39 @@ OMR::SharedCacheRelocationRuntime::symbolAddress(char *symbolName)
    return _symbolLocation[symbol];
    }
 
+void *
+OMR::SharedCacheRelocationRuntime::objectAddress(void* oldAddress)
+   {
+   using ItemHeader = SOMCacheMetadataItemHeader;
+
+   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::object, oldAddress });
+
+   if (it != _oldNewAddresses.end())
+      return (void*) *it;
+
+   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::num_double, oldAddress });
+
+   if (it != _oldNewAddresses.end())
+      return (void*) *it;
+
+   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::num_integer, oldAddress });
+
+   if (it != _oldNewAddresses.end())
+      return (void*) *it;
+
+   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::vm_string, oldAddress });
+
+   if (it != _oldNewAddresses.end())
+      return (void*) *it;
+
+   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::symbol, oldAddress });
+
+   if (it != _oldNewAddresses.end())
+      return (void*) *it;
+
+   return NULL;
+   }
+
 void
 OMR::SharedCacheRelocationRuntime::registerLoadedSymbol(const char *&symbolName, void *&symbolAddress)
    {

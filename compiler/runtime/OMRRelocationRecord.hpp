@@ -104,6 +104,14 @@ namespace OMR { typedef OMR::RelocationRecordDisplacementSiteBinaryTemplate Relo
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
 
+#ifndef OMR_RELOCATION_RECORD_SOM_OBJECT_BINARY_TEMPLATE_CONNECTOR
+#define OMR_RELOCATION_RECORD_SOM_OBJECT_BINARY_TEMPLATE_CONNECTOR
+namespace OMR { class RelocationRecordSOMObjectBinaryTemplate; }
+namespace OMR { typedef OMR::RelocationRecordSOMObjectBinaryTemplate RelocationRecordSOMObjectBinaryTemplateConnector; }
+#else
+   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
+#endif
+
 #include <stdint.h>
 #include "compile/Compilation.hpp"
 #include "env/jittypes.h"
@@ -171,7 +179,7 @@ namespace OMR
          uint8_t _type;
          uint8_t _flags;
          #if defined(TR_HOST_64BIT)
-      uint32_t _extra; //holds prePrologue offset
+         uint32_t _extra; //holds prePrologue offset
          #endif
    };
 
@@ -192,7 +200,10 @@ namespace OMR
   struct RelocationRecordDisplacementSiteBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate
    {
    };
-  
+
+  struct RelocationRecordSOMObjectBinaryTemplate: public RelocationRecordWithOffsetBinaryTemplate
+   {
+   };
    
    class  OMR_EXTENSIBLE  RelocationRecord
    {
@@ -341,6 +352,21 @@ class RelocationRecordArbitrarySizedHeader : public RelocationRecord
      //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
    };
 
+class RelocationRecordSOMObject: public RelocationRecord
+   {
+   public:
+     RelocationRecordSOMObject() {}
+     RelocationRecordSOMObject *self();
+     RelocationRecordSOMObject(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
+
+     virtual char *name() { return "SOMObject"; }
+     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordSOMObjectBinaryTemplate);}
+     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+     virtual void preparePrivateData(TR::RelocationRuntime *, TR::RelocationTarget *) {}
+     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     uintptr_t offset(TR::RelocationTarget *reloTarget);
+   };
+  
 class RelocationRecordDisplacementSite: public RelocationRecord
    {
    public:
