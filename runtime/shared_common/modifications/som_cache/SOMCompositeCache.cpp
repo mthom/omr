@@ -105,6 +105,26 @@ void SOMCompositeCache::copyMetadataBuffer(void *data, size_t size)
    *_osCache.metadataOffset() += size;
 }
 
+void SOMCompositeCache::storeAssumptionID(UDATA aID)
+{
+  *_osCache.assumptionIDFocus() = aID;
+}
+
+UDATA SOMCompositeCache::assumptionID()
+{
+  return *_osCache.assumptionIDFocus();
+}
+
+void SOMCompositeCache::storeCard(UDATA aID)
+{
+  *_osCache.cardFocus() = aID;
+}
+
+UDATA SOMCompositeCache::card()
+{
+  return *_osCache.cardFocus();
+}
+
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
 bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allocSize)

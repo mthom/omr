@@ -68,6 +68,16 @@ public:
     auto offsetAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataOffset();
     return {metadataSectionRegion(), (SOMCacheMetadataItemHeader*) offsetAddress};
   }
+
+  UDATA* assumptionIDFocus() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _assumptionID);
+    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+
+  UDATA* cardFocus() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _card);
+    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
   
   U_32 getDataSize() override {
     return _config->getDataSectionSize();

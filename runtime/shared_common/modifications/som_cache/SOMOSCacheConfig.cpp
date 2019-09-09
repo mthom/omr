@@ -102,13 +102,13 @@ U_32* SOMOSCacheConfig<OSCacheConfigImpl>::getCacheSizeFieldLocation() {
 template <class OSCacheConfigImpl>
 U_64* SOMOSCacheConfig<OSCacheConfigImpl>::getAssumptionIDFieldLocation() {
   U_32 offset = offsetof(SOMOSCacheHeaderMapping<header_type>, _assumptionID);
-  return (U_32*) _layout[HEADER_REGION_ID]->regionStartAddress() + offset;
+  return (U_64*) _layout[HEADER_REGION_ID]->regionStartAddress() + offset;
 }
 
 template <class OSCacheConfigImpl>
 U_64* SOMOSCacheConfig<OSCacheConfigImpl>::getCardFieldLocation() {
   U_32 offset = offsetof(SOMOSCacheHeaderMapping<header_type>, _card);
-  return (U_32*) _layout[HEADER_REGION_ID]->regionStartAddress() + offset;
+  return (U_64*) _layout[HEADER_REGION_ID]->regionStartAddress() + offset;
 }
 
 template <class OSCacheConfigImpl>
