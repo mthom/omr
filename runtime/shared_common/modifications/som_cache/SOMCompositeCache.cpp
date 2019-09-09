@@ -27,8 +27,8 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
   , _readerCount(_osCache.headerRegion(), _osCache.readerCountFocus())
   , _crcChecker(_osCache.headerRegion(), _osCache.crcFocus(), MAX_CRC_SAMPLES)
   , _codeUpdatePtr(_osCache.dataSectionRegion(), (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
-  , _preludeUpdatePtr(_osCache.metadataSectionFocus())
-  , _relocationData(NULL)
+  , _preludeUpdatePtr(_osCache.preludeSectionRegion(),
+		      (ItemHeader*) _osCache.preludeSectionRegion()->regionStartAddress())
 {
   populateTables();
 }
@@ -104,11 +104,10 @@ UDATA SOMCompositeCache::dataSectionFreeSpace()
    return dataSectionSize - (UDATA) (_codeUpdatePtr - startAddress);
 }
 
-void SOMCompositeCache::copyPreludeBuffer(void *data, size_t size)
+void SOMCompositeCache::copyPreludeBuffer(void* data, size_t size)
 {
-   _preludeUpdatePtr -= size;
    memcpy(_preludeUpdatePtr, data, size);
-   *_osCache.metadataSectionSizeFieldOffset() += size;
+   _preludeUpdatePtr += size;
 }
 
 // find space for, and stores, a code entry. if it fails at any point,

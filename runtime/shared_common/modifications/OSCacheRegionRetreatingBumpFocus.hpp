@@ -89,7 +89,7 @@ public:
 
 protected:
   inline bool blockInRange(UDATA size) const {
-    return this->_region->isAddressInRegion((void*)((U_8*) this->_focus - size), size);
+    return this->_region->isBlockInRegion((void*)((U_8*) this->_focus - size), size);
   }
 };
 

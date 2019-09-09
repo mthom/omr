@@ -163,10 +163,6 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
       // Allocate the host environment structure
       //
 	TR::Compiler = new (rawAllocator) TR::CompilerEnv(rawAllocator, TR::PersistentAllocatorKit(rawAllocator));
-	std::cout << "size of TR::Compiler within OMR: " << sizeof(*TR::Compiler) << "\n";
-	std::cout << "value of TR::Compiler: " << TR::Compiler << "\n";
-	std::cout << "value of &TR::Compiler->aotAdapter: " << &TR::Compiler->aotAdapter << "\n";
-	std::cout << "value of TR::Compiler->_sharedCache: " << TR::Compiler->aotAdapter.getSharedCache() << "\n";
       }
    catch (const std::bad_alloc& ba)
       {

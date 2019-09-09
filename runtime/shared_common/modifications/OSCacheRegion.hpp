@@ -45,10 +45,13 @@ public:
 
   // the start address of the region.
   virtual void* regionStartAddress() const = 0;
-  
+
+  // does the described address of data fall within the region's memory?
+  virtual bool isAddressInRegion(void* itemAddress) = 0;
+
   // does the described block of data fall within the region's memory?
-  virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize) = 0;
-  
+  virtual bool isBlockInRegion(void* itemAddress, UDATA itemSize) = 0;
+
   // render the Region's memory protection settings as flags that can
   // be used by the underlying ocmponents of the OMRPortLibrary, as
   // anticipated by the OSCacheRegion subclass.
@@ -71,10 +74,10 @@ public:
   virtual void initialize(OSCacheRegionInitializer* initializer) = 0;
 
   virtual bool adjustRegionStartAndSize(void* blockAddress, uintptr_t size) = 0;
-  
+
   // calculates the size of the region.
   virtual UDATA regionSize() const = 0;
-  
+
   virtual int regionID() {
     return _regionID;
   }
@@ -88,7 +91,7 @@ public:
     _layout = layout;
   }
 
-protected:  
+protected:
   OSCacheLayout* _layout;
   int _regionID;
 };

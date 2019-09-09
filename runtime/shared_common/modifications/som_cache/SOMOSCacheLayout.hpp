@@ -5,7 +5,7 @@
 #include "OSCacheContiguousRegion.hpp"
 #include "SOMOSCacheHeader.hpp"
 
-const auto PRELUDE_SECTION_SIZE = 95 * 1024;
+const auto PRELUDE_SECTION_SIZE = 100 * 1024;
 
 template <class OSCacheHeader>
 class SOMOSCacheLayout: public OSCacheLayout
@@ -38,7 +38,7 @@ public:
   UDATA effectiveCacheSize() {
     UDATA size = 0;
 
-    for(const auto* region : _regions) 
+    for(const auto* region: _regions)
       size += region->regionSize();
 
     return size;
@@ -79,7 +79,7 @@ protected:
     frontier += _metadataSection.regionSize();
 
     _preludeSection.adjustRegionStartAndSize((void*) frontier, PRELUDE_SECTION_SIZE);
-  
+
     _header.alignToPageBoundary(_osPageSize);
     _dataSection.alignToPageBoundary(_osPageSize);
     _metadataSection.alignToPageBoundary(_osPageSize);
@@ -95,10 +95,10 @@ protected:
   UDATA _blockSize;
 
   SOMOSCacheHeader<OSCacheHeader> _header;
-  
+
   OSCacheContiguousRegion _dataSection;
   OSCacheContiguousRegion _metadataSection;
-  OSCacheContiguousRegion _preludeSection; // needs roughly 92k to store the SOM prelude.
+  OSCacheContiguousRegion _preludeSection;
 };
 
 #endif
