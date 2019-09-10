@@ -404,7 +404,7 @@ public:
 	_oldNewAddresses = map;
       }
 
-      void *objectAddress(AbstractVMObject *oldAddress);
+      ::AbstractVMObject *objectAddress(::AbstractVMObject *oldAddress, uint64_t size);
       void *symbolAddress(char *symbolName);
 
       void registerLoadedSymbol(const char * symbolName, void *symbolAddress);

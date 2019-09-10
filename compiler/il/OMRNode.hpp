@@ -391,6 +391,8 @@ public:
    TR::Node *             getValueChild();
    TR::Node *             getAndDecChild(int32_t c);
 
+   uint64_t               getSOMObjectSize() const;
+
    TR::Node *             duplicateTree(bool duplicateChildren = true);
    TR::Node *             duplicateTreeForCodeMotion();
    TR::Node *             duplicateTreeWithCommoning(TR::Allocator allocator);
@@ -1465,7 +1467,7 @@ public:
    const char * printIsMethodPointerConstant();
 
    bool isSOMObjectAddress();
-   void setIsSOMObjectAddress(bool b);
+   void setIsSOMObjectAddress(bool b, uint64_t size);
    bool chkSOMObjectAddress();
    const char * printIsSOMObjectAddress();
 
@@ -1831,6 +1833,8 @@ protected:
    UnionPropertyA         _unionPropertyA;
 
    TR::Node*              _displacementSiteKey;
+
+   uint32_t               _somObjectSize;
 
 // Private functionality.
 private:

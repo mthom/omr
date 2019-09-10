@@ -258,7 +258,7 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
       if (is64Bit)
          {
          if (cg->constantAddressesCanChangeSize(node) && node && node->getOpCodeValue() == TR::aconst &&
-             (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isDataAddressConstant()))
+             (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isSOMObjectAddress()))
             {
             movInstruction = generateRegImm64Instruction(MOV8RegImm64, node, target, value, cg, reloKind);
             }
@@ -330,7 +330,7 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
          if (is64Bit)
             {
             if (cg->constantAddressesCanChangeSize(node) && node && node->getOpCodeValue() == TR::aconst &&
-                (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isDataAddressConstant()))
+                (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isSOMObjectAddress()))
                {
                movInstruction = generateRegImm64Instruction(MOV8RegImm64, node, target, value, cg, reloKind);
                }

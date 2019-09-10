@@ -35,6 +35,7 @@
 #include "control/Options_inlines.hpp"
 #include "env/jittypes.h"
 #include "env/CompilerEnv.hpp"
+#include "env/SharedCache.hpp"
 #include "runtime/CodeCache.hpp"
 #include "runtime/CodeCacheConfig.hpp"
 #include "runtime/CodeCacheManager.hpp"
@@ -320,41 +321,41 @@ OMR::SharedCacheRelocationRuntime::symbolAddress(char *symbolName)
    return _symbolLocation[symbol];
    }
 
-void *
-OMR::SharedCacheRelocationRuntime::objectAddress(AbstractVMObject* oldAddress)
+AbstractVMObject *
+OMR::SharedCacheRelocationRuntime::objectAddress(::AbstractVMObject* oldAddress, uint64_t size)
    {
-   using ItemHeader = SOMCacheMetadataItemHeader;
+   using ItemHeader = ::SOMCacheMetadataItemHeader;
 
-   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::object, oldAddress });
+   auto it = _oldNewAddresses->find(ItemHeader { ItemHeader::object, oldAddress, size });
 
-   if (it != _oldNewAddresses.end())
-      return (void*) *it;
+   if (it != _oldNewAddresses->end())
+      return it->second;
 
-   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::num_double, oldAddress });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::symbol, oldAddress, size });
 
-   if (it != _oldNewAddresses.end())
-      return (void*) *it;
+   if (it != _oldNewAddresses->end())
+      return it->second;
 
-   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::num_integer, oldAddress });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_double, oldAddress, size });
 
-   if (it != _oldNewAddresses.end())
-      return (void*) *it;
+   if (it != _oldNewAddresses->end())
+      return it->second;
 
-   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::vm_string, oldAddress });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_integer, oldAddress, size });
 
-   if (it != _oldNewAddresses.end())
-      return (void*) *it;
+   if (it != _oldNewAddresses->end())
+      return it->second;
 
-   auto it = _oldNewAddresses.find(ItemHeader { ItemHeader::symbol, oldAddress });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::vm_string, oldAddress, size });
 
-   if (it != _oldNewAddresses.end())
-      return (void*) *it;
+   if (it != _oldNewAddresses->end())
+      return it->second;
 
    return NULL;
    }
 
 void
-OMR::SharedCacheRelocationRuntime::registerLoadedSymbol(const char *&symbolName, void *&symbolAddress)
+OMR::SharedCacheRelocationRuntime::registerLoadedSymbol(const char* symbolName, void* symbolAddress)
    {
    std::string method(symbolName);
    _symbolLocation[symbolName] = symbolAddress;
