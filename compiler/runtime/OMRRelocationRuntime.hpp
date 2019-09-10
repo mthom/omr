@@ -38,11 +38,10 @@
 #include "env/OMREnvironment.hpp"
 #include "env/OMRCPU.hpp" // for TR_ProcessorFeatureFlags
 #include "env/JitConfig.hpp" // for JitConfig, it got moved
+#include "env/SharedCache.hpp"
 #include "runtime/OMRRelocationRuntimeTypes.hpp"
 #include "runtime/RelocationRuntimeLogger.hpp"
 
-// SOM dependencies.
-#include "../../src/aot/ObjectDeserializer.hpp"
 
 #ifndef OMR_RELOCATION_RUNTIME_CONNECTOR
 #define OMR_RELOCATION_RUNTIME_CONNECTOR
@@ -54,6 +53,8 @@ namespace OMR { typedef OMR::RelocationRuntime RelocationRuntimeConnector; }
 namespace OMR { class SharedCacheRelocationRuntime; }
 namespace OMR { typedef OMR::SharedCacheRelocationRuntime SharedCacheRelocationRuntimeConnector; }
 #endif
+
+#include <map>
 
 namespace TR {
    class CompilationInfo;
@@ -378,6 +379,9 @@ class RelocationRuntime {
 #endif
 };
 }
+
+class AbstractVMObject;
+
 namespace OMR
 {
 class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
@@ -388,15 +392,19 @@ public:
 
       void * operator new(size_t, TR::JitConfig *);
 
-      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg, TR::CodeCacheManager *ccm,
-				   std::map<SOMCacheMetadataItemHeader, AbstractVMObject*>& oldNewAddresses)
-	  : OMR::RelocationRuntime(jitCfg,ccm)
-	  , _oldNewAddresses(oldNewAddresses)
+      SharedCacheRelocationRuntime(TR::JitConfig *jitCfg, TR::CodeCacheManager *ccm)
+	  : OMR::RelocationRuntime(jitCfg, ccm)
+	  , _oldNewAddresses(nullptr)
       {
          _sharedCacheIsFull=false;
       }
 
-      void *objectAddress(void *oldAddress);
+      void setOldNewAddressMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map)
+      {
+	_oldNewAddresses = map;
+      }
+
+      void *objectAddress(AbstractVMObject *oldAddress);
       void *symbolAddress(char *symbolName);
 
       void registerLoadedSymbol(const char * symbolName, void *symbolAddress);
@@ -429,8 +437,8 @@ private:
       static const char aotHeaderKey[];
       static const UDATA aotHeaderKeyLength;
 
-      std::map<std::string,void *> _symbolLocation;
-      std::map<SOMCacheMetadataItemHeader, AbstractVMObject*>& _oldNewAddresses;
+      std::map<std::string, void *> _symbolLocation;
+      std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*> const* _oldNewAddresses;
 };
 } // end namespace OMR
 #endif   // RELOCATION_RUNTIME_INCL

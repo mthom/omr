@@ -321,7 +321,7 @@ OMR::SharedCacheRelocationRuntime::symbolAddress(char *symbolName)
    }
 
 void *
-OMR::SharedCacheRelocationRuntime::objectAddress(void* oldAddress)
+OMR::SharedCacheRelocationRuntime::objectAddress(AbstractVMObject* oldAddress)
    {
    using ItemHeader = SOMCacheMetadataItemHeader;
 

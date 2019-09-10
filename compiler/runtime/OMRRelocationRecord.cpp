@@ -524,7 +524,7 @@ OMR::RelocationRecordSOMObject::applyRelocation(TR::RelocationRuntime *reloRunti
    {
    TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
    auto oldAddress = reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record)->_offset;
-   reloTarget->storeAddress((uint8_t*)rr->objectAddress(oldAddress), reloLocation);
+   reloTarget->storeAddress((uint8_t*)rr->objectAddress((void*)oldAddress), reloLocation);
 
    return 0;
    }

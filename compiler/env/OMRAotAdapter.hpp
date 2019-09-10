@@ -90,8 +90,11 @@ class OMR_EXTENSIBLE AOTMethodHeader
    
    };
 
+class AbstractVMObject;
+struct SOMCacheMetadataItemHeader;
 
-class OMR_EXTENSIBLE AotAdapter{
+class OMR_EXTENSIBLE AotAdapter
+  {
 public:
     AotAdapter() {}
 
@@ -99,6 +102,7 @@ public:
     TR::RelocationRuntime* rr();
 
     void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
+    void initializeRelocationRuntime(std::map<SOMCacheMetadataItemHeader, AbstractVMObject*>& oldNewAddresses);
     void storeExternalSymbol(const char *symbolName, void* symbolAddress);
     void registerAOTMethodHeader(std::string methodName, TR::AOTMethodHeader* hdr);
     void storeHeaderForCompiledMethod(const char *methodName);

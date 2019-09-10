@@ -26,6 +26,9 @@
 #include "runtime/RelocationRuntime.hpp"
 
 #include <iostream>
+#include <map>
+
+class AbstractVMObject;
 
 TR::AotAdapter *
 OMR::AotAdapter::self()

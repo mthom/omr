@@ -40,13 +40,15 @@
 #include "runtime/CodeCache.hpp"
 //#include "runtime/Runtime.hpp"
 #include "runtime/JBJitConfig.hpp"
-#include "runtime/RelocationRecord.hpp"
 
 #include "runtime/RelocationRuntime.hpp"
-#include "runtime/shared_common/modifications/som_cache/SOMCompositeCache.hpp"
 #include "env/AotAdapter.hpp"
 
 #include <iostream>
+#include <map>
+
+class AbstractVMObject;
+struct SOMCacheMetadataItemHeader;
 
 extern TR_RuntimeHelperTable runtimeHelpers;
 extern void setupCodeCacheParameters(int32_t *, OMR::CodeCacheCodeGenCallbacks *callBacks, int32_t *numHelpers, int32_t *CCPreLoadedCodeSize);
@@ -79,7 +81,7 @@ initializeAllHelpers(JitBuilder::JitConfig *jitConfig, TR_RuntimeHelper *helperI
       #if defined(LINUXPPC64) && !defined(__LITTLE_ENDIAN__)
          jitConfig->setInterpreterTOC(((size_t *)helperAddresses[0])[1]);
       #endif
-      }   
+      }
    }
 
 void
@@ -126,15 +128,16 @@ initializeCodeCache(TR::CodeCacheManager & codeCacheManager)
 }
 
 
-bool storeCodeEntry(const char *methodName, void *codeLocation) 
+bool storeCodeEntry(const char *methodName, void *codeLocation)
    {
      TR::Compiler->aotAdapter.storeHeaderForCompiledMethod(methodName);
      return true;
    }
 
 
-bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager) {  
-   TR::Compiler->aotAdapter.initializeAOTClasses(raw,codeCacheManager);
+bool initializeAOT(TR::RawAllocator* raw, TR::CodeCacheManager* codeCacheManager)
+{
+   TR::Compiler->aotAdapter.initializeAOTClasses(raw, codeCacheManager);
    return true;
 }
 
@@ -180,7 +183,7 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 //   omr_vmthread_getCurrent(omrvm);
 //   omr_vmthread_firstAttach(omrvm,&vmThread);
 // omrshr_init(omrvm,0,nullptr);
-   //omrshr_storeCompiledMethod(vmThread, 
+   //omrshr_storeCompiledMethod(vmThread,
    TR::Compiler->initialize();
    TR::Compiler->vm._vmThread = vmThread;
 
@@ -190,7 +193,7 @@ initializeJitBuilder(TR_RuntimeHelper *helperIDs, void **helperAddresses, int32_
 //   fe.omrvm((void*)omrvm);
 
    initializeAllHelpers(jitConfig, helperIDs, helperAddresses, numHelpers);
-   
+
    if (commonJitInit(fe, options) < 0)
      return false;
 
@@ -239,7 +242,7 @@ internal_initializeJit()
 int32_t
 internal_compileMethodBuilder(TR::MethodBuilder *m, void **entry)
    {
- 
+
    auto rc = m->Compile(entry);
 
 #if defined(J9ZOS390)
@@ -255,7 +258,7 @@ internal_compileMethodBuilder(TR::MethodBuilder *m, void **entry)
 
    *entry = (void*) fd;
 #endif
-     
+
 
    return rc;
    }

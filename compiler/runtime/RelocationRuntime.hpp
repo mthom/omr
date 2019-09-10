@@ -22,10 +22,14 @@
 #ifndef TR_RELOCATIONRUNTIME_INCL
 #define TR_RELOCATIONRUNTIME_INCL
 
+#include <map>
+
 #include "runtime/OMRRelocationRuntime.hpp"
 
 #include "runtime/CodeCacheConfig.hpp"
 #include "env/TRMemory.hpp"
+
+class AbstractVMObject;
 
 namespace TR
 {
@@ -33,12 +37,15 @@ namespace TR
 class OMR_EXTENSIBLE RelocationRuntime : public OMR::RelocationRuntimeConnector
    {
    public:
-   RelocationRuntime(JitConfig* jitConfig,TR::CodeCacheManager* ccm);
-};
+     RelocationRuntime(TR::JitConfig* jitConfig, TR::CodeCacheManager* ccm);
+   };
+
 class OMR_EXTENSIBLE SharedCacheRelocationRuntime : public OMR::SharedCacheRelocationRuntimeConnector
    {
    public:
-   SharedCacheRelocationRuntime(JitConfig* jitConfig,TR::CodeCacheManager* ccm):OMR::SharedCacheRelocationRuntimeConnector(jitConfig,ccm){};
+     SharedCacheRelocationRuntime(TR::JitConfig* jitConfig, TR::CodeCacheManager* ccm)
+       : OMR::SharedCacheRelocationRuntimeConnector(jitConfig, ccm)
+     {}
    };
 }
 #endif
