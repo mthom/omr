@@ -391,8 +391,6 @@ public:
    TR::Node *             getValueChild();
    TR::Node *             getAndDecChild(int32_t c);
 
-   uint64_t               getSOMObjectSize() const;
-
    TR::Node *             duplicateTree(bool duplicateChildren = true);
    TR::Node *             duplicateTreeForCodeMotion();
    TR::Node *             duplicateTreeWithCommoning(TR::Allocator allocator);

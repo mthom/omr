@@ -143,7 +143,6 @@ OMR::RelocationRecordGroup::handleRelocation(TR::RelocationRuntime *reloRuntime,
 #define FLAGS_RELOCATION_TYPE_MASK      (TR::ExternalRelocationTargetKindMask)
 #define FLAGS_RELOCATION_FLAG_MASK      ((uint8_t) (FLAGS_RELOCATION_WIDE_OFFSETS | FLAGS_RELOCATION_EIP_OFFSET))
 
-
 TR::RelocationRecord *
 TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *record)
    {
@@ -404,7 +403,9 @@ int32_t
 OMR::RelocationRecordArbitrarySizedHeader::applyRelocation(TR::RelocationRuntime 
          *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
 {
-};
+    return 0;
+}
+
 OMR::RelocationRecordArbitrarySizedHeader *
 OMR::RelocationRecordArbitrarySizedHeader::self(){
     return static_cast<RelocationRecordArbitrarySizedHeader *>(this);

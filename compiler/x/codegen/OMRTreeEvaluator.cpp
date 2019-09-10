@@ -220,18 +220,22 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
       }
 
    TR_ExternalRelocationTargetKind reloKind = TR_NoRelocation;
-   if (cg->profiledPointersRequireRelocation() && node && node->getOpCodeValue() == TR::aconst &&
-        (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isSOMObjectAddress()))
+   if (cg->profiledPointersRequireRelocation() && node &&
+       node->getOpCodeValue() == TR::aconst &&
+       (node->isClassPointerConstant() || node->isMethodPointerConstant()))
       {
       if (node->isClassPointerConstant())
          reloKind = TR_ClassPointer;
       else if (node->isMethodPointerConstant())
          reloKind = TR_MethodPointer;
-      else if (node->isSOMObjectAddress())
-	 reloKind = TR_SOMObjectAddress;
       else
          TR_ASSERT(0, "Unexpected node, don't know how to relocate");
       }
+   
+   if (node && (node->getOpCodeValue() == TR::aconst || node->getOpCodeValue() == TR::lconst) && node->isSOMObjectAddress())
+      {
+      reloKind = TR_SOMObjectAddress;
+      }      
 
    if (currentInstruction)
       {

@@ -256,7 +256,6 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
          // relocation headers; new relocation records' header should be
          // initialized here.
          cursor = self()->initializeCommonAOTRelocationHeader(relocation, reloRecord);
-
       }
    return cursor;
    }
@@ -264,6 +263,7 @@ uint8_t *
 OMR::X86::AMD64::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternalRelocation *relocation, TR::RelocationRecord *reloRecord)
    {
    uint8_t *cursor = relocation->getRelocationData();
+
 
    TR::Compilation *comp = TR::comp();
    TR::RelocationRuntime *reloRuntime = NULL;

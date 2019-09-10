@@ -1125,6 +1125,10 @@ OMR::IlBuilder::convertTo(TR::DataType typeTo, TR::IlValue *v, bool needUnsigned
    TR_ASSERT(convertOp != TR::BadILOp, "Builder [ %p ] unknown conversion requested for value %d %s to %s", this, v->getID(), typeFrom.toString(), typeTo.toString());
 
    TR::Node *result = TR::Node::create(convertOp, 1, loadValue(v));
+
+   if (loadValue(v)->isSOMObjectAddress())
+      result->setIsSOMObjectAddress(true);
+   
    TR::IlValue *convertedValue = newValue(typeTo, result);
    return convertedValue;
    }

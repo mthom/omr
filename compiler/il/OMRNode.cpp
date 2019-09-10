@@ -7884,7 +7884,7 @@ OMR::Node::printIsMethodPointerConstant()
 bool
 OMR::Node::isSOMObjectAddress()
    {
-   TR_ASSERT(self()->getOpCodeValue() == TR::aconst, "Can only call this for aconst\n");
+     // TR_ASSERT(self()->getOpCodeValue() == TR::aconst, "Can only call this for aconst\n");
    return _flags.testAny(somObjectAddressConstant);
    }
 
@@ -7892,7 +7892,7 @@ void
 OMR::Node::setIsSOMObjectAddress(bool b)
    {
    TR::Compilation * c = TR::comp();
-   TR_ASSERT((self()->getOpCodeValue() == TR::aconst), "Can only call this for aconst\n");
+   // TR_ASSERT((self()->getOpCodeValue() == TR::aconst), "Can only call this for aconst\n");
    if (performNodeTransformation2(c, "O^O NODE FLAGS: Setting somObjectAddressConstant flag on node %p to %d\n", self(), b))
       _flags.set(somObjectAddressConstant, b);
    }
