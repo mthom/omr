@@ -203,13 +203,12 @@ namespace OMR
 
   struct RelocationRecordSOMObjectBinaryTemplate: public RelocationRecordWithOffsetBinaryTemplate
    {
-   uint64_t _size;
    };
    
-   class  OMR_EXTENSIBLE  RelocationRecord
+  class  OMR_EXTENSIBLE  RelocationRecord
    {
    
-   public:
+  public:
       RelocationRecord() {}
       RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record)
          {
@@ -223,7 +222,6 @@ namespace OMR
       virtual char *name() { return "RelocationRecord"; }
 
       virtual bool isValidationRecord() { return false; }
-
 
       static RelocationRecord *create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *recordPointer);
 
@@ -365,7 +363,6 @@ class RelocationRecordSOMObject: public RelocationRecord
      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
      virtual void preparePrivateData(TR::RelocationRuntime *, TR::RelocationTarget *) {}
      void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
-     void setSOMObjectSize(TR::RelocationTarget *reloTarget, uintptr_t size);
      uintptr_t offset(TR::RelocationTarget *reloTarget);
    };
   

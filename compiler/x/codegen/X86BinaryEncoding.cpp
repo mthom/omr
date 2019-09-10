@@ -2631,7 +2631,7 @@ TR::AMD64RegImm64Instruction::addMetaDataForCodeAddress(uint8_t *cursor)
        cg()->addExternalRelocation(new (cg()->trHeapMemory())
 				   TR::ExternalRelocation(cursor,
 							  (uint8_t *) getSourceImmediate(),
-							  (uint8_t *) getNode()->getSOMObjectSize(),
+							  NULL,
 							  TR_SOMObjectAddress,
 							  cg()),
 				   __FILE__, __LINE__,

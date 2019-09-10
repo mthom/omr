@@ -502,8 +502,7 @@
                 , "overloadsuffix": ""
                 , "flags": []
                 , "return": "IlValue"
-                , "parms": [{"name":"value","type":"pointer"},
-			    {"name":"size","type":"uint64"}]
+                , "parms": [{"name":"value","type":"pointer"}]
                 },
                 { "name": "ConstDouble"
                 , "overloadsuffix": ""

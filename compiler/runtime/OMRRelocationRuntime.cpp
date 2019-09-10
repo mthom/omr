@@ -321,32 +321,32 @@ OMR::SharedCacheRelocationRuntime::symbolAddress(char *symbolName)
    return _symbolLocation[symbol];
    }
 
-AbstractVMObject *
-OMR::SharedCacheRelocationRuntime::objectAddress(::AbstractVMObject* oldAddress, uint64_t size)
+::AbstractVMObject *
+OMR::SharedCacheRelocationRuntime::objectAddress(::AbstractVMObject* oldAddress)
    {
    using ItemHeader = ::SOMCacheMetadataItemHeader;
 
-   auto it = _oldNewAddresses->find(ItemHeader { ItemHeader::object, oldAddress, size });
+   auto it = _oldNewAddresses->find(ItemHeader { ItemHeader::object, oldAddress, 0 });
 
    if (it != _oldNewAddresses->end())
       return it->second;
 
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::symbol, oldAddress, size });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::symbol, oldAddress, 0 });
 
    if (it != _oldNewAddresses->end())
       return it->second;
 
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_double, oldAddress, size });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_double, oldAddress, 0 });
 
    if (it != _oldNewAddresses->end())
       return it->second;
 
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_integer, oldAddress, size });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_integer, oldAddress, 0 });
 
    if (it != _oldNewAddresses->end())
       return it->second;
 
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::vm_string, oldAddress, size });
+   it = _oldNewAddresses->find(ItemHeader { ItemHeader::vm_string, oldAddress, 0 });
 
    if (it != _oldNewAddresses->end())
       return it->second;

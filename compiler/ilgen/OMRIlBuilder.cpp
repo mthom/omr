@@ -987,12 +987,12 @@ OMR::IlBuilder::ConstAddress(const void * const value)
    }
 
 TR::IlValue *
-OMR::IlBuilder::ConstRelocatableAddress(const void * const value, uint64_t size)
+OMR::IlBuilder::ConstRelocatableAddress(const void * const value)
    {
    TR::IlValue *returnValue = newValue(Address, TR::Node::aconst((uintptrj_t)value));
    TR::Node *node = loadValue(returnValue);
 
-   node->setIsSOMObjectAddress(true, size);
+   node->setIsSOMObjectAddress(true);
 
    TraceIL("IlBuilder[ %p ]::%d is ConstRelocatableAddress %p\n", this, returnValue->getID(), value);
    return returnValue;

@@ -513,13 +513,6 @@ OMR::RelocationRecordSOMObject::setOffset(TR::RelocationTarget *reloTarget, uint
    reloTarget->storeRelocationRecordValue(offset, (uintptrj_t *) &(reloRecord)->_offset);
    }
 
-void
-OMR::RelocationRecordSOMObject::setSOMObjectSize(TR::RelocationTarget *reloTarget, uintptr_t size)
-   {
-   RelocationRecordSOMObjectBinaryTemplate *reloRecord = reinterpret_cast<RelocationRecordSOMObjectBinaryTemplate*>(_record);
-   reloTarget->storeRelocationRecordValue(size, (uintptrj_t *) &(reloRecord)->_size);
-   }
-
 uintptrj_t
 OMR::RelocationRecordSOMObject::offset(TR::RelocationTarget *reloTarget)
    {
@@ -532,8 +525,7 @@ OMR::RelocationRecordSOMObject::applyRelocation(TR::RelocationRuntime *reloRunti
    TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
    auto* binTemplate = reinterpret_cast<TR::RelocationRecordDataAddressBinaryTemplate*>(_record);
 
-   reloTarget->storeAddress((uint8_t*) rr->objectAddress((::AbstractVMObject*) binTemplate->_offset,
-							 binTemplate->_size),
+   reloTarget->storeAddress((uint8_t*) rr->objectAddress((::AbstractVMObject*) binTemplate->_offset),
 			    reloLocation);
    return 0;
    }

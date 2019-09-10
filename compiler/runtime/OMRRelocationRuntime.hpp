@@ -152,6 +152,9 @@ typedef struct AOTRuntimeInfo {
 #ifdef __cplusplus
 }
 #endif
+
+class AbstractVMObject;
+
 namespace OMR{
 
 class RelocationRuntime {
@@ -191,6 +194,11 @@ class RelocationRuntime {
 
       UDATA reloEndTime()                                         { return _reloEndTime; }
       void setReloEndTime(UDATA time)                             { _reloEndTime = time; }
+
+      void setOldNewAddressesMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map)
+      {
+	_oldNewAddresses = map;
+      }
 
       int32_t returnCode()                                        { return _returnCode; }
       void setReturnCode(int32_t rc)                              { _returnCode = rc; }
@@ -320,6 +328,9 @@ class RelocationRuntime {
 
    protected:
       static bool       _globalValuesInitialized;
+
+      std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*> const* _oldNewAddresses;
+
       TR::JitConfig *_jitConfig;
       OMR_VM *_omrVM;
       TR_FrontEnd *_fe;
@@ -380,8 +391,6 @@ class RelocationRuntime {
 };
 }
 
-class AbstractVMObject;
-
 namespace OMR
 {
 class SharedCacheRelocationRuntime : public OMR::RelocationRuntime {
@@ -394,17 +403,11 @@ public:
 
       SharedCacheRelocationRuntime(TR::JitConfig *jitCfg, TR::CodeCacheManager *ccm)
 	  : OMR::RelocationRuntime(jitCfg, ccm)
-	  , _oldNewAddresses(nullptr)
       {
          _sharedCacheIsFull=false;
       }
 
-      void setOldNewAddressMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map)
-      {
-	_oldNewAddresses = map;
-      }
-
-      ::AbstractVMObject *objectAddress(::AbstractVMObject *oldAddress, uint64_t size);
+      ::AbstractVMObject *objectAddress(::AbstractVMObject *oldAddress);
       void *symbolAddress(char *symbolName);
 
       void registerLoadedSymbol(const char * symbolName, void *symbolAddress);
@@ -419,7 +422,7 @@ public:
       //virtual TR_OpaqueClassBlock *getClassFromCP(OMR_VMThread *vmThread, OMR_VM *omrVm, J9ConstantPool *constantPool, I_32 cpIndex, bool isStatic);
 
 private:
-      uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
+  //  uint32_t getCurrentLockwordOptionHashValue(OMR_VM *vm) const;
       virtual uint8_t * allocateSpaceInDataCache(UDATA metaDataSize, UDATA type);
       virtual void initializeAotRuntimeInfo();
       virtual void initializeCacheDeltas();
@@ -427,18 +430,17 @@ private:
       virtual void incompatibleCache(U_32 module, U_32 reason, char *assumeMessage);
 
       void checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTHeader * hdrInCache, intptr_t featureFlags);
-      bool generateError(char *assumeMessage);
+  //      bool generateError(char *assumeMessage);
 
       bool _sharedCacheIsFull;
 
-      static bool useDFPHardware(TR_FrontEnd *fe);
+  //      static bool useDFPHardware(TR_FrontEnd *fe);
       static uintptr_t generateFeatureFlags(TR_FrontEnd *fe);
 
       static const char aotHeaderKey[];
       static const UDATA aotHeaderKeyLength;
 
       std::map<std::string, void *> _symbolLocation;
-      std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*> const* _oldNewAddresses;
 };
 } // end namespace OMR
 #endif   // RELOCATION_RUNTIME_INCL

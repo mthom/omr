@@ -102,7 +102,6 @@ public:
     TR::RelocationRuntime* rr();
 
     void initializeAOTClasses(TR::RawAllocator* allocator, TR::CodeCacheManager* CodeCacheManager);
-    void initializeRelocationRuntime(std::map<SOMCacheMetadataItemHeader, AbstractVMObject*>& oldNewAddresses);
     void storeExternalSymbol(const char *symbolName, void* symbolAddress);
     void registerAOTMethodHeader(std::string methodName, TR::AOTMethodHeader* hdr);
     void storeHeaderForCompiledMethod(const char *methodName);
@@ -110,6 +109,8 @@ public:
 								  uint8_t* dataStart, uint32_t dataSize);
     void *getMethodCode(const char *methodName);
     void relocateRegisteredMethod(const char *methodName);
+
+    void setOldNewAddressesMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map);
 
     TR::SharedCache* getSharedCache();  
 

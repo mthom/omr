@@ -1467,7 +1467,7 @@ public:
    const char * printIsMethodPointerConstant();
 
    bool isSOMObjectAddress();
-   void setIsSOMObjectAddress(bool b, uint64_t size);
+   void setIsSOMObjectAddress(bool b);
    bool chkSOMObjectAddress();
    const char * printIsSOMObjectAddress();
 
@@ -1833,8 +1833,6 @@ protected:
    UnionPropertyA         _unionPropertyA;
 
    TR::Node*              _displacementSiteKey;
-
-   uint32_t               _somObjectSize;
 
 // Private functionality.
 private:

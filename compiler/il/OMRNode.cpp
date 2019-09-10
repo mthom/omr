@@ -121,8 +121,7 @@ OMR::Node::Node()
      _byteCodeInfo(),
      _unionBase(),
      _unionPropertyA(),
-     _displacementSiteKey(NULL),
-     _somObjectSize(0)
+     _displacementSiteKey(NULL)
    {
    }
 
@@ -144,8 +143,7 @@ OMR::Node::Node(TR::Node *originatingByteCodeNode, TR::ILOpCodes op, uint16_t nu
      _byteCodeInfo(),
      _unionBase(),
      _unionPropertyA(),
-     _displacementSiteKey(NULL),
-     _somObjectSize(0)
+     _displacementSiteKey(NULL)
    {
    TR::Compilation * comp = TR::comp();
 
@@ -248,8 +246,7 @@ OMR::Node::Node(TR::Node * from, uint16_t numChildren)
      _byteCodeInfo(),
      _unionBase(),
      _unionPropertyA(),
-     _displacementSiteKey(NULL),
-     _somObjectSize(0)
+     _displacementSiteKey(NULL)
    {
    TR::Compilation * comp = TR::comp();
    memcpy(self(), from, sizeof(TR::Node));
@@ -347,12 +344,6 @@ OMR::Node::copy(TR::Node * from, int32_t numChildren)
 
    return clone;
    }
-
-uint64_t
-OMR::Node::getSOMObjectSize() const
-{
-   return _somObjectSize;
-}
 
 /**
  * Copy the children of from to this node, extending if necessary
@@ -7898,13 +7889,12 @@ OMR::Node::isSOMObjectAddress()
    }
 
 void
-OMR::Node::setIsSOMObjectAddress(bool b, uint64_t size)
+OMR::Node::setIsSOMObjectAddress(bool b)
    {
    TR::Compilation * c = TR::comp();
    TR_ASSERT((self()->getOpCodeValue() == TR::aconst), "Can only call this for aconst\n");
    if (performNodeTransformation2(c, "O^O NODE FLAGS: Setting somObjectAddressConstant flag on node %p to %d\n", self(), b))
       _flags.set(somObjectAddressConstant, b);
-      _somObjectSize = size;
    }
 
 bool

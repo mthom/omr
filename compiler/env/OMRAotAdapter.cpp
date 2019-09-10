@@ -28,8 +28,6 @@
 #include <iostream>
 #include <map>
 
-class AbstractVMObject;
-
 TR::AotAdapter *
 OMR::AotAdapter::self()
    {
@@ -41,6 +39,12 @@ void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator, TR::C
   _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("som_shared_cache", "/tmp");
   _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime(NULL, cc);
   _codeCacheManager = cc;
+}
+
+void OMR::AotAdapter::setOldNewAddressesMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map)
+{
+  auto *rr = *reinterpret_cast<TR::SharedCacheRelocationRuntime**>(reinterpret_cast<U_8*>(&_reloRuntime) + 0x10);
+  rr->setOldNewAddressesMap(map);
 }
 
 TR::SharedCache* OMR::AotAdapter::getSharedCache() {
