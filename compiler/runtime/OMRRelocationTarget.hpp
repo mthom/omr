@@ -85,9 +85,6 @@ class  OMR_EXTENSIBLE RelocationTarget
       virtual uint32_t loadUnsigned32b(uint8_t *address)                    { return *(uint32_t *) address; }
       virtual void storeUnsigned32b(uint32_t value, uint8_t *address)       { *(uint32_t *)address = value; }
 
-      virtual uint64_t loadUnsigned64b(uint8_t *address)                    { return *(uint64_t *) address; }
-      virtual void storeUnsigned64b(uint64_t value, uint8_t *address)       { *(uint64_t *)address = value; }
-
       virtual int32_t loadSigned32b(uint8_t *address)                       { return *(int32_t *) address; }
       virtual void storeSigned32b(int32_t value, uint8_t *address)          { *(int32_t *)address = value; }
 

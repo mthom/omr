@@ -1524,7 +1524,7 @@ TR::X86RegImmInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
 
       TR::SymbolType symbolKind = TR::SymbolType::typeClass;
       switch (_reloKind)
-         {
+         {/*
          case TR_HEAP_BASE:
             cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,
                                                     (uint8_t*)TR_HeapBase,
@@ -1561,7 +1561,7 @@ TR::X86RegImmInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
                                                       cg()),
                           __FILE__, __LINE__, getNode());
             break;
-
+	  */
          case TR_MethodPointer:
             if (getNode() && getNode()->getInlinedSiteIndex() == -1 &&
                (void *)(uintptr_t) getSourceImmediate() == cg()->comp()->getCurrentMethod()->resolvedMethodAddress())

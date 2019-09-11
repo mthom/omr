@@ -1466,8 +1466,6 @@ public:
 
    bool isSOMObjectAddress();
    void setIsSOMObjectAddress(bool b);
-   bool chkSOMObjectAddress();
-   const char * printIsSOMObjectAddress();
 
    bool isUnneededIALoad();
    void setUnneededIALoad(bool v);
@@ -1799,6 +1797,8 @@ protected:
    /// \note Should be the first field, as it makes debugging
    ///       easier.
    TR::ILOpCode           _opCode;
+
+   bool _isSOMObjectAddress;
 
    /// Number of children this node has.
    uint16_t               _numChildren;
