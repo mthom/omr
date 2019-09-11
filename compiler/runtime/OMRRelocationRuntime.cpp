@@ -326,30 +326,28 @@ OMR::SharedCacheRelocationRuntime::objectAddress(::AbstractVMObject* oldAddress)
    {
    using ItemHeader = ::SOMCacheMetadataItemHeader;
 
-   auto it = _oldNewAddresses->find(ItemHeader { ItemHeader::object, oldAddress, 0 });
+   static ItemHeader::ItemDesc itemDescs[] = {
+     ItemHeader::method,
+     ItemHeader::array,
+     ItemHeader::clazz,
+     ItemHeader::symbol,
+     ItemHeader::block,
+     ItemHeader::object,
+     ItemHeader::frame,
+     ItemHeader::vm_string,
+     ItemHeader::eval_prim,
+     ItemHeader::prim,
+     ItemHeader::num_double,
+     ItemHeader::num_integer
+   };
+   
+   for(auto itemDesc : itemDescs)
+      {
+      auto it = _oldNewAddresses->find(ItemHeader { itemDesc, oldAddress, 0 });
 
-   if (it != _oldNewAddresses->end())
-      return it->second;
-
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::symbol, oldAddress, 0 });
-
-   if (it != _oldNewAddresses->end())
-      return it->second;
-
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_double, oldAddress, 0 });
-
-   if (it != _oldNewAddresses->end())
-      return it->second;
-
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::num_integer, oldAddress, 0 });
-
-   if (it != _oldNewAddresses->end())
-      return it->second;
-
-   it = _oldNewAddresses->find(ItemHeader { ItemHeader::vm_string, oldAddress, 0 });
-
-   if (it != _oldNewAddresses->end())
-      return it->second;
+      if (it != _oldNewAddresses->end())
+	 return it->second;
+      }
 
    return NULL;
    }
