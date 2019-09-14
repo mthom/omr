@@ -12,8 +12,6 @@
 
 #include "env/TRMemory.hpp"
 
-class SOMCompositeCache;
-
 template <class SuperOSCache>
 class SOMOSCache: public SuperOSCache
 {
@@ -71,10 +69,9 @@ public:
     return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
-  OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> metadataSectionFocus()
-  {
-    auto offsetAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataSectionSizeFieldOffset();
-    return {metadataSectionRegion(), (SOMCacheMetadataItemHeader*) offsetAddress};
+  U_64* lastAssumptionIDOffset() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _lastAssumptionID);
+    return (U_64*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
   
   U_32 getDataSize() override {

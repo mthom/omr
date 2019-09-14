@@ -29,8 +29,11 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
   , _codeUpdatePtr(_osCache.dataSectionRegion(), (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
   , _preludeUpdatePtr(_osCache.preludeSectionRegion(),
 		      (ItemHeader*) _osCache.preludeSectionRegion()->regionStartAddress())
+  , _metadataUpdatePtr(_osCache.metadataSectionRegion(),
+		      (ItemHeader*) _osCache.metadataSectionRegion()->regionStartAddress())
 {
-  populateTables();
+   populateTables();
+   _metadataUpdatePtr += *_osCache.metadataSectionSizeFieldOffset();
 }
 
 void SOMCompositeCache::populateTables()
@@ -68,7 +71,13 @@ SOMCompositeCache::constructPreludeSectionEntryIterator()
 SOMCacheMetadataEntryIterator
 SOMCompositeCache::constructMetadataSectionEntryIterator()
 {
-   return {_osCache.metadataSectionRegion(), _osCache.metadataSectionFocus() };
+   return {_osCache.metadataSectionRegion()};
+}
+
+SOMCacheMetadataEntryIterator
+SOMCompositeCache::constructMetadataSectionUpdateIterator()
+{
+   return {_osCache.metadataSectionRegion(), _metadataUpdatePtr};
 }
 
 // limit should reflect the true limit of the cache at
@@ -108,6 +117,14 @@ void SOMCompositeCache::copyPreludeBuffer(void* data, size_t size)
 {
    memcpy(_preludeUpdatePtr, data, size);
    _preludeUpdatePtr += size;
+}
+
+void SOMCompositeCache::copyMetadata(void* data, size_t size)
+{
+   memcpy(_metadataUpdatePtr, data, size);
+   _metadataUpdatePtr += size;
+   // TODO: move the size update to SOMOSCache::cleanup.
+   *_osCache.metadataSectionSizeFieldOffset() += size;
 }
 
 // find space for, and stores, a code entry. if it fails at any point,
@@ -163,6 +180,16 @@ void *SOMCompositeCache::loadEntry(const char *methodName) {
     if (entry)
       rawData = (void*) (entry+1);
     return rawData;
+}
+
+U_64 SOMCompositeCache::lastAssumptionID()
+{
+    return *_osCache.lastAssumptionIDOffset();
+}
+
+void SOMCompositeCache::setLastAssumptionID(U_64 assumptionID)
+{
+    *_osCache.lastAssumptionIDOffset() = assumptionID;
 }
 
 void SOMCompositeCache::storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress)

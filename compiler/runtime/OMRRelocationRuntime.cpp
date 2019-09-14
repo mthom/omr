@@ -99,10 +99,10 @@ TR::RelocationRuntime * OMR::RelocationRuntime::self()
    {
    return static_cast<TR::RelocationRuntime*>(this);
    }
-TR::AOTMethodHeader* 
+TR::AOTMethodHeader*
 OMR::RelocationRuntime::createMethodHeader(uint8_t *codeLocation,
                             uint32_t codeLength,  uint8_t* reloLocation,uint32_t reloSize){
-      
+
    // _aotMethodHeaderEntry = (TR::AOTMethodHeader*)new (TR::AOTMethodHeader);
    // _aotMethodHeaderEntry->compiledCodeSize  = codeLength;
    // _aotMethodHeaderEntry->relocationsSize   = reloSize;
@@ -111,7 +111,7 @@ OMR::RelocationRuntime::createMethodHeader(uint8_t *codeLocation,
    return NULL;
    // return _aotMethodHeaderEntry;
 }
-uint8_t * 
+uint8_t *
 OMR::RelocationRuntime::allocateSpaceInCodeCache(UDATA codeSize){
 
    return  NULL;
@@ -134,7 +134,7 @@ OMR::RelocationRuntime::relocateAOTCodeAndData(
 
 void *
 OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
-                     
+
                         // OMR_VMThread* vmThread,
 						      // TR_FrontEnd *theFE,
 						      // TR::CodeCache *aotMCCRuntimeCodeCache,
@@ -173,12 +173,12 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
    _aotMethodHeaderEntry = (TR::AOTMethodHeader*)(cacheEntry);
    tempDataStart = _aotMethodHeaderEntry->relocationsStart;
    // if (!aotMethodHeaderVersionsMatch())
-   //    return NULL; 
+   //    return NULL;
 
    UDATA codeSize = _aotMethodHeaderEntry->compiledCodeSize;
    tempCodeStart = reinterpret_cast<uint8_t*>(_aotMethodHeaderEntry->compiledCodeStart);
    // TR_ASSERT(codeSize > sizeof(OMR::CodeCacheMethodHeader), "codeSize for AOT loads should include the CodeCacheHeader");
-     
+
 
    // _newExceptionTableStart = allocateSpaceInDataCache(10,10);//_exceptionTableCacheEntry->size, _exceptionTableCacheEntry->type);
    // tempCodeStart = tempDataStart + dataSize;
@@ -187,7 +187,7 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
        // _exceptionTable = reinterpret_cast<J9JITExceptionTable *>(_newExceptionTableStart + sizeof(J9JITDataCacheHeader)); // Get new exceptionTable location
 
        // This must be an AOT load because for AOT compilations we relocate in place
-       
+
        // We must prepare the list of assumptions linked to the metadata
        // We could set just a NULL pointer and let the code update that should an
        // assumption be created.
@@ -199,7 +199,7 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
        // If we cannot allocate the memory, fail the compilation
        //
 
-        
+
        // newCodeStart points after a OMR::CodeCacheMethodHeader, but tempCodeStart points at a OMR::CodeCacheMethodHeader
        // to keep alignment consistent, back newCodeStart over the OMR::CodeCacheMethodHeader
        //we can still do the code start without the bodyInfo! need check in cleanup!
@@ -217,7 +217,7 @@ OMR::RelocationRuntime::prepareRelocateAOTCodeAndData(
 	   //((OMR::CodeCacheMethodHeader*)newCodeStart)->_metaData = NULL;
       _relocationStatus = TR_AotRelocationCleanUp::RelocationNoError;
 	 }
-       
+
        if (_relocationStatus == RelocationNoError)
 	 {
       initializeAotRuntimeInfo();
@@ -340,15 +340,16 @@ OMR::SharedCacheRelocationRuntime::objectAddress(::AbstractVMObject* oldAddress)
      ItemHeader::num_double,
      ItemHeader::num_integer
    };
-   
+
    for(auto itemDesc : itemDescs)
       {
       auto it = _oldNewAddresses->find(ItemHeader { itemDesc, oldAddress, 0 });
 
-      if (it != _oldNewAddresses->end())
+      if (it != _oldNewAddresses->end() && it->second)
 	 return it->second;
       }
 
+   TR_ASSERT(0, "SharedCacheRelocationRuntime: Can't find non-NULL new address in _oldNewAddresses.");
    return NULL;
    }
 
@@ -417,7 +418,7 @@ OMR::SharedCacheRelocationRuntime::checkAOTHeaderFlags(TR_FrontEnd *fe, TR::AOTH
 
 //    return NULL;
 //    }
-// bool 
+// bool
 // OMR::RelocationRuntime::storeAotInformation(uint8_t* codeStart, uint32_t codeSize,uint8_t* dataStart, uint32_t dataSize){
 //    // //  "This should never happen"
 //    return false;

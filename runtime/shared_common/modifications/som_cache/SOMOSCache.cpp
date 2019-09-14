@@ -20,6 +20,8 @@ SOMOSCache<SuperOSCache>::SOMOSCache(OMRPortLibrary* library,
   startup(cacheName, ctrlDirName);
 }
 
+//TODO: 
+
 template <class SuperOSCache>
 OSCacheIterator*
 SOMOSCache<SuperOSCache>::constructCacheIterator(char* resultBuf) {

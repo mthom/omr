@@ -52,7 +52,12 @@ TR_RuntimeAssumptionTable::init()
    // A palliative would be to store a hint in te shared class cache
    size_t sizes[LastAssumptionKind];
    for (int32_t i=0; i < LastAssumptionKind; i++)
-      sizes[i] = 251;
+     if (i == RuntimeAssumptionOnDisplacementSitePatch) {
+       sizes[i] = 1024 * 256; // should be enough.. for now, haha.
+     } else {
+       sizes[i] = 251;
+     }
+
    // overrides in case user provided options or we know we are in specific environments
    if (TR::Options::_classExtendRatSize > 0)
       sizes[RuntimeAssumptionOnClassExtend] = TR::Options::_classExtendRatSize;
@@ -413,23 +418,11 @@ void
 TR_RuntimeAssumptionTable::notifyUserAssumptionTrigger(TR_FrontEnd *vm, uint64_t assumptionTriggered, uint8_t code)
    {
    OMR::CriticalSection notifyUserTriggerEvent(assumptionTableMutex);
-   OMR::RuntimeAssumption **headPtr = getBucketPtr(RuntimeAssumptionOnUserTrigger, (uintptrj_t)assumptionTriggered); //hashCode((uintptrj_t)assumptionTriggered));
+   OMR::RuntimeAssumption **headPtr = getBucketPtr(RuntimeAssumptionOnDisplacementSitePatch, (uintptrj_t)assumptionTriggered); //hashCode((uintptrj_t)assumptionTriggered));
    TR::PatchDisplacementSiteUserTrigger *cursor = (TR::PatchDisplacementSiteUserTrigger *)(*headPtr);
-// TR::PatchDisplacementSiteUserTrigger *prev   = 0;
-// while (cursor)
-//    {
-//    TR::PatchNOPedGuardSiteOnUserTrigger *next = (TR::PatchNOPedGuardSiteOnUserTrigger*)cursor->getNext();
-   //if(cursor)
-     cursor->compensate(vm, 0, code);
-   //else {
-     //auto newList = TR::list<uint8_t*,TRPersistentMemoryAllocator>(getTypedAllocator<TR_VirtualGuard*>(TRPersistentMemoryAllocator(trPersistentMemory)));
-     //cursor = TR::PatchDisplacementSiteUserTrigger::make(vm,trPersistentMemory,assumptionTriggered,newList,headPtr);
-     //cursor->compensate(vm, 0, code);
-     
-//   }
-//    prev = cursor;
-//    cursor = next;
-//    }
+
+   TR_ASSERT(assumptionTriggered == cursor->_key, "assumption triggered must match the key of the TR::PatchDisplacementSiteUserTrigger");
+   cursor->compensate(vm, 0, code);
    }
 
 void

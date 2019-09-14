@@ -91,6 +91,14 @@ public:
     return *this;
   }
 
+  bool operator ==(const SOMCacheMetadataEntryIterator& it) const {
+    return _region == it._region && _focus == it._focus;
+  }
+
+  bool operator !=(const SOMCacheMetadataEntryIterator& it) const {
+    return !(*this == it);
+  }  
+  
 protected:  
   OSCacheRegionBumpFocus<ItemHeader> _focus;
   OSCacheContiguousRegion* _region;
