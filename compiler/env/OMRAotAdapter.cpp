@@ -19,7 +19,6 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "env/AotAdapter.hpp"
 #include "jitbuilder/runtime/CodeCacheManager.hpp"
 #include "env/CompilerEnv.hpp"
 #include "env/SharedCache.hpp"
@@ -27,17 +26,36 @@
 #include "runtime/RelocationRuntime.hpp"
 
 #include <iostream>
+#include <map>
 
-void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator,TR::CodeCacheManager* cc){
+TR::AotAdapter *
+OMR::AotAdapter::self()
+   {
+   return static_cast<TR::AotAdapter *>(this);
+   }
+
+void OMR::AotAdapter::initializeAOTClasses(TR::RawAllocator* rawAllocator, TR::CodeCacheManager* cc)
+{
   _sharedCache = new (PERSISTENT_NEW) TR::SharedCache("som_shared_cache", "/tmp");
-  _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime (NULL,cc);
+  _reloRuntime = new (PERSISTENT_NEW) TR::SharedCacheRelocationRuntime(NULL, cc);
   _codeCacheManager = cc;
-//   _cacheInUse
- }
+}
+
+void OMR::AotAdapter::setOldNewAddressesMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map)
+{
+  auto *rr = *reinterpret_cast<TR::SharedCacheRelocationRuntime**>(reinterpret_cast<U_8*>(&_reloRuntime) + 0x10);
+  rr->setOldNewAddressesMap(map);
+}
+
+void OMR::AotAdapter::setReverseLookupMap(const std::map<::AbstractVMObject*, ::AbstractVMObject*>* map)
+{
+  auto *rr = *reinterpret_cast<TR::SharedCacheRelocationRuntime**>(reinterpret_cast<U_8*>(&_reloRuntime) + 0x10);
+  rr->setReverseLookupMap(map);
+}
 
 TR::SharedCache* OMR::AotAdapter::getSharedCache() {
-   // WTF? Fix this! 
-   return *(TR::SharedCache**) ((U_8*) &_sharedCache + 0x10);
+   // WTF? Fix this! >:O
+   return *reinterpret_cast<TR::SharedCache**>(reinterpret_cast<U_8*>(&_sharedCache) + 0x10);
 }
 
 void OMR::AotAdapter::storeExternalSymbol(const char *symbolName, void* symbolAddress)

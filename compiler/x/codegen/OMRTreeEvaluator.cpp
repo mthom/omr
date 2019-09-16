@@ -220,8 +220,9 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
       }
 
    TR_ExternalRelocationTargetKind reloKind = TR_NoRelocation;
-   if (cg->profiledPointersRequireRelocation() && node && node->getOpCodeValue() == TR::aconst &&
-         (node->isClassPointerConstant() || node->isMethodPointerConstant()))
+   if (cg->profiledPointersRequireRelocation() && node &&
+       node->getOpCodeValue() == TR::aconst &&
+       (node->isClassPointerConstant() || node->isMethodPointerConstant()))
       {
       if (node->isClassPointerConstant())
          reloKind = TR_ClassPointer;
@@ -230,6 +231,11 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
       else
          TR_ASSERT(0, "Unexpected node, don't know how to relocate");
       }
+   
+   if (node && (node->getOpCodeValue() == TR::aconst || node->getOpCodeValue() == TR::lconst) && node->isSOMObjectAddress())
+      {
+      reloKind = TR_SOMObjectAddress;
+      }      
 
    if (currentInstruction)
       {
@@ -256,7 +262,7 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
       if (is64Bit)
          {
          if (cg->constantAddressesCanChangeSize(node) && node && node->getOpCodeValue() == TR::aconst &&
-             (node->isClassPointerConstant() || node->isMethodPointerConstant()))
+             (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isSOMObjectAddress()))
             {
             movInstruction = generateRegImm64Instruction(MOV8RegImm64, node, target, value, cg, reloKind);
             }
@@ -328,7 +334,7 @@ TR::Instruction *OMR::X86::TreeEvaluator::insertLoadConstant(TR::Node           
          if (is64Bit)
             {
             if (cg->constantAddressesCanChangeSize(node) && node && node->getOpCodeValue() == TR::aconst &&
-                (node->isClassPointerConstant() || node->isMethodPointerConstant()))
+                (node->isClassPointerConstant() || node->isMethodPointerConstant() || node->isSOMObjectAddress()))
                {
                movInstruction = generateRegImm64Instruction(MOV8RegImm64, node, target, value, cg, reloKind);
                }

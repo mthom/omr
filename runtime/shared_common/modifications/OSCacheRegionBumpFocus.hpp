@@ -75,9 +75,13 @@ public:
     return this->_region == rhs._region && this->_focus < rhs._focus;
   }
 
+  inline bool operator ==(const OSCacheRegionBumpFocus<T>& rhs) const {
+    return this->_region == rhs._region && this->_focus == rhs._focus;
+  }
+
 protected:
   inline bool blockInRange(UDATA size) const {
-    return this->_region->isAddressInRegion((void*) this->_focus, size);
+    return this->_region->isBlockInRegion((void*) this->_focus, size);
   }
 };
 

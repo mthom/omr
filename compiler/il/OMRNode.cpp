@@ -208,8 +208,10 @@ OMR::Node::Node(TR::Node *originatingByteCodeNode, TR::ILOpCodes op, uint16_t nu
       if(comp->getDebug())
         comp->getDebug()->newNode(self());
 
-      if (originatingByteCodeNode)
+      if (originatingByteCodeNode) {
 	 _displacementSiteKey = originatingByteCodeNode->_displacementSiteKey;
+	 _isSOMObjectAddress  = originatingByteCodeNode->_isSOMObjectAddress;
+      }
 
    // check that _unionPropertyA union is disjoint
    TR_ASSERT(
@@ -344,8 +346,6 @@ OMR::Node::copy(TR::Node * from, int32_t numChildren)
 
    return clone;
    }
-
-
 
 /**
  * Copy the children of from to this node, extending if necessary
@@ -7855,7 +7855,6 @@ OMR::Node::printIsClassPointerConstant()
    }
 
 
-
 bool
 OMR::Node::isMethodPointerConstant()
    {
@@ -7882,6 +7881,22 @@ const char *
 OMR::Node::printIsMethodPointerConstant()
    {
    return self()->chkMethodPointerConstant() ? "methodPointerConstant " : "";
+   }
+
+bool
+OMR::Node::isSOMObjectAddress()
+   {
+     // TR_ASSERT(self()->getOpCodeValue() == TR::aconst, "Can only call this for aconst\n");
+     return _isSOMObjectAddress;
+   }
+
+void
+OMR::Node::setIsSOMObjectAddress(bool b)
+   {
+   TR::Compilation * c = TR::comp();
+   // TR_ASSERT((self()->getOpCodeValue() == TR::aconst), "Can only call this for aconst\n");
+   if (performNodeTransformation2(c, "O^O NODE FLAGS: Setting somObjectAddressConstant flag on node %p to %d\n", self(), b))
+      _isSOMObjectAddress = true;
    }
 
 

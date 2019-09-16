@@ -54,6 +54,11 @@ static const SOMCacheMetadataEntryDescriptor nullCacheMetadataEntryDescriptor;
 class SOMCacheMetadataEntryIterator
 {
 public:
+  SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region)
+    : _focus(region, (ItemHeader*) region->regionStartAddress())
+    , _region(region)
+  {}
+  
   SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region, ItemHeader* start)
     : _focus(region, start)
     , _region(region)
@@ -86,6 +91,14 @@ public:
     return *this;
   }
 
+  bool operator ==(const SOMCacheMetadataEntryIterator& it) const {
+    return _region == it._region && _focus == it._focus;
+  }
+
+  bool operator !=(const SOMCacheMetadataEntryIterator& it) const {
+    return !(*this == it);
+  }  
+  
 protected:  
   OSCacheRegionBumpFocus<ItemHeader> _focus;
   OSCacheContiguousRegion* _region;

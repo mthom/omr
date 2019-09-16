@@ -427,7 +427,7 @@ compileMethodFromDetails(
    TR_ASSERT(TR::comp() == &compiler, "the TLS TR::Compilation object %p for this thread does not match the one %p just created.", TR::comp(), &compiler);
    if (compiler.compileRelocatableCode())
       {
-      compiler.setReloRuntime(TR::Compiler->aotAdapter.rr());
+      compiler.setReloRuntime(TR::Compiler->aotAdapter.rr()->self());
       }
    try
       {

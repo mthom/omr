@@ -47,6 +47,7 @@ enum TR_RuntimeAssumptionKind
    RuntimeAssumptionOnMutableCallSiteChange,
    RuntimeAssumptionOnMethodBreakPoint,
    RuntimeAssumptionOnUserTrigger,
+   RuntimeAssumptionOnDisplacementSitePatch,
    LastAssumptionKind,
    // If you add another kind, add its name to the runtimeAssumptionKindNames array
    RuntimeAssumptionSentinel // This is special as there is no hashtable associated with it and we only create one of them

@@ -1464,6 +1464,9 @@ public:
    bool chkMethodPointerConstant();
    const char * printIsMethodPointerConstant();
 
+   bool isSOMObjectAddress();
+   void setIsSOMObjectAddress(bool b);
+
    bool isUnneededIALoad();
    void setUnneededIALoad(bool v);
 
@@ -1788,7 +1791,7 @@ protected:
       };
 
    UnionPropertyA_Type getUnionPropertyA_Type();
-
+   
 // Protected fields
 protected:
 
@@ -1797,6 +1800,8 @@ protected:
    /// \note Should be the first field, as it makes debugging
    ///       easier.
    TR::ILOpCode           _opCode;
+
+   bool _isSOMObjectAddress;
 
    /// Number of children this node has.
    uint16_t               _numChildren;
@@ -1837,7 +1842,6 @@ private:
 
    friend class ::TR_DebugExt;
    friend class TR::NodePool;
-
 
 // flag bits
 protected:
@@ -2040,6 +2044,7 @@ protected:
       // Flags used by TR::aconst and TR::iaload (on s390 iaload can be used after dynamic lit pool)
       //
       classPointerConstant                  = 0x00010000,
+      somObjectAddressConstant              = 0x00004000,
       methodPointerConstant                 = 0x00002000,
       unneededIALoad                        = 0x00001000,
 

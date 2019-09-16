@@ -326,7 +326,7 @@ class PatchDisplacementSiteUserTrigger : public IndirectLoadOffsetPatchSite
    virtual uintptrj_t hashCode() { return getKey(); }
    virtual void compensate(TR_FrontEnd *, bool, void*) {}
    virtual void compensate(TR_FrontEnd *, bool, uint8_t code) { compensate(_sites, code); }
-   virtual TR_RuntimeAssumptionKind getAssumptionKind() { return RuntimeAssumptionOnUserTrigger; }
+   virtual TR_RuntimeAssumptionKind getAssumptionKind() { return RuntimeAssumptionOnDisplacementSitePatch; }
    virtual void dumpInfo() {}
    virtual uint8_t *getFirstAssumingPC() { return NULL; }
    virtual uint8_t *getLastAssumingPC() { return NULL; }

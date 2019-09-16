@@ -997,6 +997,18 @@ OMR::IlBuilder::ConstAddress(const void * const value)
    }
 
 TR::IlValue *
+OMR::IlBuilder::ConstRelocatableAddress(const void * const value)
+   {
+   TR::IlValue *returnValue = newValue(Address, TR::Node::aconst((uintptrj_t)value));
+   TR::Node *node = loadValue(returnValue);
+
+   node->setIsSOMObjectAddress(true);
+
+   TraceIL("IlBuilder[ %p ]::%d is ConstRelocatableAddress %p\n", this, returnValue->getID(), value);
+   return returnValue;
+   }
+
+TR::IlValue *
 OMR::IlBuilder::ConstInteger(TR::IlType *intType, int64_t value)
    {
    if      (intType == Int8)  return ConstInt8 ((int8_t)  value);
@@ -1123,6 +1135,10 @@ OMR::IlBuilder::convertTo(TR::DataType typeTo, TR::IlValue *v, bool needUnsigned
    TR_ASSERT(convertOp != TR::BadILOp, "Builder [ %p ] unknown conversion requested for value %d %s to %s", this, v->getID(), typeFrom.toString(), typeTo.toString());
 
    TR::Node *result = TR::Node::create(convertOp, 1, loadValue(v));
+
+   if (loadValue(v)->isSOMObjectAddress())
+      result->setIsSOMObjectAddress(true);
+   
    TR::IlValue *convertedValue = newValue(typeTo, result);
    return convertedValue;
    }

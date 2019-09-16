@@ -122,12 +122,11 @@ class OMR_EXTENSIBLE RelocationRecordDisplacementSiteBinaryTemplate: public OMR:
       public:
       RelocationRecordDisplacementSiteBinaryTemplate():OMR::RelocationRecordDisplacementSiteBinaryTemplateConnector(){};
    };
-class OMR_EXTENSIBLE RelocationRecordCallFunctionBinaryTemplate: public OMR::RelocationRecordCallFunctionBinaryTemplateConnector
+class OMR_EXTENSIBLE RelocationRecordSOMObjectBinaryTemplate: public OMR::RelocationRecordSOMObjectBinaryTemplateConnector
    {
       public:
-      RelocationRecordCallFunctionBinaryTemplate():OMR::RelocationRecordCallFunctionBinaryTemplateConnector(){};
+      RelocationRecordSOMObjectBinaryTemplate():OMR::RelocationRecordSOMObjectBinaryTemplateConnector(){};
    };
-
 }
 
 #endif /* RELOCATION_RECORD_INCL */

@@ -563,7 +563,7 @@ const char *TR::ExternalRelocation::_externalRelocationTargetKindNames[TR_NumExt
    "TR_ResolvedTrampolines (101)",
    "RelocationRecordArbitrarySizedHeader (102)",
    "TR_DisplacementSiteRelocation (103)",
-   "TR_CallFunction (104)"
+   "TR_SOMObjectAddress (104)"
    };
 
 uintptr_t TR::ExternalRelocation::_globalValueList[TR_NumGlobalValueItems] =

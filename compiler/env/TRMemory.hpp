@@ -1173,7 +1173,7 @@ namespace TR
        */
       Metric Read(void) const { return _reading; }
 
-      static char* Name(bool csv = false)
+      static const char* Name(bool csv = false)
          {
          if (csv)
             return "Allocs";
@@ -1181,7 +1181,7 @@ namespace TR
             return "Memory Usage (bytes)";
          }
 
-      static char *UnitsText(bool alternativeFormat = false /* ignored */)
+      static const char *UnitsText(bool alternativeFormat = false /* ignored */)
          {
             return "allocated (% total)  freed (% total)  maxLive (% total)";
          }

@@ -38,7 +38,12 @@ bool OSCacheContiguousRegion::alignToPageBoundary(UDATA osPageSize)
   }
 }
 
-bool OSCacheContiguousRegion::isAddressInRegion(void* itemAddress, UDATA itemSize)
+bool OSCacheContiguousRegion::isAddressInRegion(void* itemAddress)
+{
+  return isBlockInRegion(itemAddress, 0);
+}
+
+bool OSCacheContiguousRegion::isBlockInRegion(void* itemAddress, UDATA itemSize)
 {
   return (void*) ((UDATA) regionStartAddress() + regionSize()) >= (void*) ((UDATA) itemAddress + itemSize)
       && regionStartAddress() <= itemAddress;

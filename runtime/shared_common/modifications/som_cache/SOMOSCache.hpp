@@ -12,8 +12,6 @@
 
 #include "env/TRMemory.hpp"
 
-class SOMCompositeCache;
-
 template <class SuperOSCache>
 class SOMOSCache: public SuperOSCache
 {
@@ -47,6 +45,14 @@ public:
   OSCacheContiguousRegion* metadataSectionRegion() {
     return (OSCacheContiguousRegion*) _config->_layout[METADATA_REGION_ID];
   }
+
+  OSCacheContiguousRegion* preludeSectionRegion() {
+    return (OSCacheContiguousRegion*) _config->_layout[PRELUDE_REGION_ID];
+  }
+
+  bool started() override {
+    return _started;
+  }
   
   UDATA* readerCountFocus() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
@@ -58,15 +64,14 @@ public:
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
-  U_32* metadataOffset() {
-    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataUpdateOffset);
+  U_32* metadataSectionSizeFieldOffset() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataSectionSize);
     return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
-  OSCacheRegionRetreatingBumpFocus<SOMCacheMetadataItemHeader> metadataUpdateFocus()
-  {
-    auto offsetAddress = (uint8_t*) metadataSectionRegion()->regionEnd() - *metadataOffset();
-    return {metadataSectionRegion(), (SOMCacheMetadataItemHeader*) offsetAddress};
+  U_64* lastAssumptionIDOffset() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _lastAssumptionID);
+    return (U_64*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
   UDATA* assumptionIDFocus() {
@@ -85,11 +90,6 @@ public:
 
   U_32 getTotalSize() override {
     return _config->getCacheSize();
-  }
-  
-  // obviously totally naive, but do it anyway.
-  bool started() override {
-    return true;
   }
 
   OSCacheIterator* constructCacheIterator(char* resultBuf) override;
@@ -111,6 +111,7 @@ protected:
   }
 
   SOMOSCacheConfig<typename SuperOSCache::config_type>* _config;
+  bool _started;
 };
 
 #endif

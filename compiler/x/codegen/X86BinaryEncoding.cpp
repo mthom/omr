@@ -1524,7 +1524,7 @@ TR::X86RegImmInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
 
       TR::SymbolType symbolKind = TR::SymbolType::typeClass;
       switch (_reloKind)
-         {
+         {/*
          case TR_HEAP_BASE:
             cg()->addExternalRelocation(new (cg()->trHeapMemory()) TR::ExternalRelocation(cursor,
                                                     (uint8_t*)TR_HeapBase,
@@ -1561,7 +1561,7 @@ TR::X86RegImmInstruction::addMetaDataForCodeAddress(uint8_t *cursor)
                                                       cg()),
                           __FILE__, __LINE__, getNode());
             break;
-
+	  */
          case TR_MethodPointer:
             if (getNode() && getNode()->getInlinedSiteIndex() == -1 &&
                (void *)(uintptr_t) getSourceImmediate() == cg()->comp()->getCurrentMethod()->resolvedMethodAddress())
@@ -2624,6 +2624,27 @@ TR::AMD64RegImm64Instruction::addMetaDataForCodeAddress(uint8_t *cursor)
       staticMethodPIC = true;
 
    TR::SymbolReference *methodSymRef = getNode()->getOpCode().hasSymbolReference()?getNode()->getSymbolReference():NULL;
+
+   switch (_reloKind)
+     {
+     case TR_SOMObjectAddress:
+       cg()->addExternalRelocation(new (cg()->trHeapMemory())
+				   TR::ExternalRelocation(cursor,
+							  (uint8_t *) getSourceImmediate(),
+							  NULL,
+							  TR_SOMObjectAddress,
+							  cg()),
+				   __FILE__, __LINE__,
+				   getNode());       
+       /*
+       cg()->addExternalRelocation(new (cg()->trHeapMemory())
+				   TR::ExternalRelocation(cursor,
+							  (uint8_t*)getNode(),
+							  (TR_ExternalRelocationTargetKind) _reloKind,
+							  cg()),
+				   __FILE__, __LINE__, getNode());
+       */
+     }
 
 #ifdef J9_PROJECT_SPECIFIC
    if (comp->fej9()->helpersNeedRelocation())

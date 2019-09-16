@@ -83,8 +83,8 @@ namespace OMR { typedef OMR::RelocationRecordDataAddress RelocationRecordDataAdd
 
 #ifndef OMR_RELOCATION_RECORD_DATA_ADDRESS_BINARY_TEMPLATE_CONNECTOR
 #define OMR_RELOCATION_RECORD_DATA_ADDRESS_BINARY_TEMPLATE_CONNECTOR
-namespace OMR { typedef RelocationRecordWithOffsetBinaryTemplate RelocationRecordDataAddressBinaryTemplate; }
-namespace OMR { typedef OMR::RelocationRecordWithOffsetBinaryTemplate RelocationRecordDataAddressBinaryTemplateConnector; }
+namespace OMR { class RelocationRecordDataAddressBinaryTemplate; }
+namespace OMR { typedef OMR::RelocationRecordDataAddressBinaryTemplate RelocationRecordDataAddressBinaryTemplateConnector; }
 #else
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
@@ -99,24 +99,16 @@ namespace OMR { typedef OMR::RelocationRecordDisplacementSite RelocationRecordDi
 
 #ifndef OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_BINARY_TEMPLATE_CONNECTOR
 #define OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_BINARY_TEMPLATE_CONNECTOR
-namespace OMR { typedef RelocationRecordWithOffsetBinaryTemplate RelocationRecordDisplacementSiteBinaryTemplate;}
-namespace OMR { typedef OMR::RelocationRecordWithOffsetBinaryTemplate RelocationRecordDisplacementSiteBinaryTemplateConnector; }
+namespace OMR { class RelocationRecordDisplacementSiteBinaryTemplate;}
+namespace OMR { typedef OMR::RelocationRecordDisplacementSiteBinaryTemplate RelocationRecordDisplacementSiteBinaryTemplateConnector; }
 #else
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
 
-#ifndef OMR_RELOCATION_RECORD_CALL_FUNCTION_CONNECTOR
-#define OMR_RELOCATION_RECORD_CALL_FUNCTION_CONNECTOR
-namespace OMR { class RelocationRecordCallFunction; }
-namespace OMR { typedef OMR::RelocationRecordCallFunction RelocationRecordCallFunctionConnector; }
-#else
-   #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
-#endif
-
-#ifndef OMR_RELOCATION_RECORD_CALL_FUNCTION_BINARY_TEMPLATE_CONNECTOR
-#define OMR_RELOCATION_RECORD_CALL_FUNCTION_BINARY_TEMPLATE_CONNECTOR
-namespace OMR { typedef RelocationRecordWithOffsetBinaryTemplate RelocationRecordCallFunctionBinaryTemplate;}
-namespace OMR { typedef OMR::RelocationRecordWithOffsetBinaryTemplate RelocationRecordCallFunctionBinaryTemplateConnector; }
+#ifndef OMR_RELOCATION_RECORD_SOM_OBJECT_BINARY_TEMPLATE_CONNECTOR
+#define OMR_RELOCATION_RECORD_SOM_OBJECT_BINARY_TEMPLATE_CONNECTOR
+namespace OMR { class RelocationRecordSOMObjectBinaryTemplate; }
+namespace OMR { typedef OMR::RelocationRecordSOMObjectBinaryTemplate RelocationRecordSOMObjectBinaryTemplateConnector; }
 #else
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
@@ -188,7 +180,7 @@ namespace OMR
          uint8_t _type;
          uint8_t _flags;
          #if defined(TR_HOST_64BIT)
-      uint32_t _extra; //holds prePrologue offset
+         uint32_t _extra; //holds prePrologue offset
          #endif
    };
 
@@ -205,18 +197,19 @@ namespace OMR
    {
    UDATA _offset;
    };
-//  typedef RelocationRecordWithOffsetBinaryTemplate RelocationRecordDataAddressBinaryTemplate;
-//  typedef RelocationRecordWithOffsetBinaryTemplate RelocationRecordDisplacementSiteBinaryTemplate;
-  //struct RelocationRecordDataAddressBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate {};
-  //struct RelocationRecordDisplacementSiteBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate
-   //{
-   //};
-  
+  struct RelocationRecordDataAddressBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate {};
+  struct RelocationRecordDisplacementSiteBinaryTemplate : public RelocationRecordWithOffsetBinaryTemplate
+   {
+   };
+
+  struct RelocationRecordSOMObjectBinaryTemplate: public RelocationRecordWithOffsetBinaryTemplate
+   {
+   };
    
-   class  OMR_EXTENSIBLE  RelocationRecord
+  class  OMR_EXTENSIBLE  RelocationRecord
    {
    
-   public:
+  public:
       RelocationRecord() {}
       RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record)
          {
@@ -230,7 +223,6 @@ namespace OMR
       virtual char *name() { return "RelocationRecord"; }
 
       virtual bool isValidationRecord() { return false; }
-
 
       static RelocationRecord *create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *recordPointer);
 
@@ -360,6 +352,21 @@ class RelocationRecordArbitrarySizedHeader : public RelocationRecord
      //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
    };
 
+class RelocationRecordSOMObject: public RelocationRecord
+   {
+   public:
+     RelocationRecordSOMObject() {}
+     RelocationRecordSOMObject *self();
+     RelocationRecordSOMObject(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
+
+     virtual char *name() { return "SOMObject"; }
+     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordSOMObjectBinaryTemplate);}
+     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+     virtual void preparePrivateData(TR::RelocationRuntime *, TR::RelocationTarget *) {}
+     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
+     uintptr_t offset(TR::RelocationTarget *reloTarget);
+   };
+  
 class RelocationRecordDisplacementSite: public RelocationRecord
    {
    public:

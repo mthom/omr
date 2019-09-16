@@ -34,7 +34,6 @@ macro(add_compiler_subdirectory dir)
 	include("${omr_SOURCE_DIR}/compiler/${dir}/CMakeLists.txt")
 endmacro(add_compiler_subdirectory)
 
-
 # create an object list which is populated in the subdirectories
 set(CORE_COMPILER_OBJECTS "")
 

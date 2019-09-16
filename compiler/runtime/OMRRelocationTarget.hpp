@@ -59,8 +59,9 @@ class  OMR_EXTENSIBLE RelocationTarget
          _reloRuntime = reloRuntime;
          }
 
-      TR::RelocationRuntime *reloRuntime()                                   { return _reloRuntime; }
-   virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
+      TR::RelocationRuntime *reloRuntime()                                  { return _reloRuntime; }
+
+      virtual bool isOrderedPairRelocation(TR::RelocationRecord *reloRecord, TR::RelocationTarget *reloTarget);
       virtual void flushCache(uint8_t *codeStart, unsigned long size)       {} // default impl is empty
 
       virtual void preRelocationsAppliedEvent()                             {} // default impl is empty

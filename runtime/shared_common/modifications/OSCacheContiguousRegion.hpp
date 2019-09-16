@@ -52,7 +52,9 @@ public:
 
   virtual UDATA renderToMemoryProtectionFlags() override;
 
-  virtual bool isAddressInRegion(void* itemAddress, UDATA itemSize) override;
+  virtual bool isAddressInRegion(void* itemAddress) override;
+
+  virtual bool isBlockInRegion(void* itemAddress, UDATA itemSize) override;
 
   // add memory protections to the region.
   virtual IDATA setPermissions(OSCacheMemoryProtector* protector) override;

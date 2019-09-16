@@ -65,7 +65,7 @@ TR::PatchDisplacementSiteUserTrigger::make(TR_FrontEnd *fe, TR_PersistentMemory 
 					   OMR::RuntimeAssumption **sentinel)
    {
    TR::PatchDisplacementSiteUserTrigger *result = new (pm) TR::PatchDisplacementSiteUserTrigger(pm, assumptionID, sites);
-   result->addToRAT(pm, RuntimeAssumptionOnUserTrigger, fe, sentinel);
+   result->addToRAT(pm, RuntimeAssumptionOnDisplacementSitePatch, fe, sentinel);
    return result;
    }
 
