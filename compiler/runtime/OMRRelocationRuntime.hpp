@@ -23,6 +23,8 @@
 #ifndef RELOCATION_RUNTIME_INCL
 #define RELOCATION_RUNTIME_INCL
 
+#include <memory>
+
 #include "omrcfg.h"
 #include "omr.h"
 
@@ -41,7 +43,6 @@
 #include "env/SharedCache.hpp"
 #include "runtime/OMRRelocationRuntimeTypes.hpp"
 #include "runtime/RelocationRuntimeLogger.hpp"
-
 
 #ifndef OMR_RELOCATION_RUNTIME_CONNECTOR
 #define OMR_RELOCATION_RUNTIME_CONNECTOR
@@ -200,22 +201,22 @@ class RelocationRuntime {
 	_oldNewAddresses = map;
       }
 
-      void setReverseLookupMap(const std::map<::AbstractVMObject*, ::AbstractVMObject*>* map)
+      void setReverseLookupMap(std::shared_ptr<std::map<::AbstractVMObject*, ::AbstractVMObject*>>& map)
       {
 	_reverseLookup = map;
       }
 
-      uintptrj_t reverseLookup(void* address) 
+      ::AbstractVMObject* reverseLookup(::AbstractVMObject* address) 
       {
 	if (!_reverseLookup) 
-	   return reinterpret_cast<uintptrj_t>(address);
+	   return address;
 
-	auto it = _reverseLookup->find(reinterpret_cast<::AbstractVMObject*>(address));
+	auto it = _reverseLookup->find(address);
 
 	if (it != _reverseLookup->end())
-	   return reinterpret_cast<uintptrj_t>(it->second);
+	   return it->second;
 		
-	return reinterpret_cast<uintptrj_t>(address);
+	return address;
       }
 
       int32_t returnCode()                                        { return _returnCode; }
@@ -348,7 +349,7 @@ class RelocationRuntime {
       static bool       _globalValuesInitialized;
 
       std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*> const* _oldNewAddresses;
-      std::map<::AbstractVMObject*, ::AbstractVMObject*> const* _reverseLookup;
+      std::shared_ptr<std::map<::AbstractVMObject*, ::AbstractVMObject*>> _reverseLookup;
 
       TR::JitConfig *_jitConfig;
       OMR_VM *_omrVM;
