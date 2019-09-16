@@ -54,6 +54,8 @@
 #include "codegen/CodeGenerator.hpp"
 #include "compile/ResolvedMethod.hpp"
 
+#include "../src/vm/Universe.h"
+
 OMR::RelocationRuntime::RelocationRuntime(TR::JitConfig* t, TR::CodeCacheManager* codeCacheManager)
 {
    //This should be fixed with Options fix
@@ -345,10 +347,18 @@ OMR::SharedCacheRelocationRuntime::objectAddress(::AbstractVMObject* oldAddress)
       {
       auto it = _oldNewAddresses->find(ItemHeader { itemDesc, oldAddress, 0 });
 
-      if (it != _oldNewAddresses->end() && it->second)
+      if (it != _oldNewAddresses->end() && it->second) {
+	 auto* ptr = reinterpret_cast<vm_oop_t>(it->second);
+	 TR_ASSERT(Universe::IsValidObject(ptr), "invalid address %x in objectAddress", it->second);
 	 return it->second;
       }
 
+      if (it->second == NULL)
+	 std::cout << "rejected relocation to NULL address from old address " << oldAddress << "\n";
+      }
+
+   std::cout << "Either it was located to a NULL address or " << oldAddress << " was never relocated.\n";
+   
    TR_ASSERT(0, "SharedCacheRelocationRuntime: Can't find non-NULL new address in _oldNewAddresses.");
    return NULL;
    }

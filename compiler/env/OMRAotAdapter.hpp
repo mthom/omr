@@ -111,6 +111,7 @@ public:
     void relocateRegisteredMethod(const char *methodName);
 
     void setOldNewAddressesMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map);
+    void setReverseLookupMap(const std::map<::AbstractVMObject*, ::AbstractVMObject*>* map);
 
     TR::SharedCache* getSharedCache();  
 

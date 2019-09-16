@@ -592,6 +592,12 @@ OMR::CodeGenerator::uncommonCallConstNodes()
 
                 TR::Node* newConstNode = TR::Node::create(paramNode->getOpCodeValue(), 0);
                 newConstNode->setConstValue(paramNode->getConstValue());
+
+		if (paramNode->isSOMObjectAddress())
+		   {
+		   newConstNode->setIsSOMObjectAddress(true);
+		   }
+
                 callNode->setAndIncChild(i, newConstNode);
                 paramNode->decReferenceCount();
                 }

@@ -47,6 +47,12 @@ void OMR::AotAdapter::setOldNewAddressesMap(const std::map<::SOMCacheMetadataIte
   rr->setOldNewAddressesMap(map);
 }
 
+void OMR::AotAdapter::setReverseLookupMap(const std::map<::AbstractVMObject*, ::AbstractVMObject*>* map)
+{
+  auto *rr = *reinterpret_cast<TR::SharedCacheRelocationRuntime**>(reinterpret_cast<U_8*>(&_reloRuntime) + 0x10);
+  rr->setReverseLookupMap(map);
+}
+
 TR::SharedCache* OMR::AotAdapter::getSharedCache() {
    // WTF? Fix this! >:O
    return *reinterpret_cast<TR::SharedCache**>(reinterpret_cast<U_8*>(&_sharedCache) + 0x10);

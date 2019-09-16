@@ -131,11 +131,10 @@ void SOMCompositeCache::copyMetadata(void* data, size_t size)
 // simply return 0.
 bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allocSize)
 {
-  //UDATA allocSize = sizeof(SOMCacheEntry) + codeLength;
   UDATA freeSpace = dataSectionFreeSpace();
 
-  if(freeSpace < allocSize) {
-    return false;
+  if (freeSpace < allocSize + sizeof(SOMCacheEntry)) {
+     return false;
   }
 
   // yes, there's an extraneous string copy done here, buuuht, that is fine for now.
@@ -143,20 +142,10 @@ bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allo
   SOMCacheEntry* entryLocation = _codeUpdatePtr++;
 
   memcpy(entryLocation, &entry, sizeof(SOMCacheEntry));
-  //memcpy(_codeUpdatePtr, codeLocation, codeLength);
-
-  //_codeUpdatePtr += codeLength;
-
   _codeEntries[methodName] = entryLocation;
 
   memcpy(_codeUpdatePtr,data,allocSize);
   _codeUpdatePtr += allocSize;
-
-  // now write the relocation record to the cache.
-  /*size_t relocationRecordSize = static_cast<size_t>(*_relocationData);
-
-  memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
-  _codeUpdatePtr+=relocationRecordSize;*/
 
   return true;
 }

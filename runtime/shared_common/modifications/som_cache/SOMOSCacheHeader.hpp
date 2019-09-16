@@ -59,8 +59,8 @@ protected:
 
 template <>
 class SOMOSCacheHeader<OSSharedMemoryCacheHeader>:
-          public OSSharedMemoryCacheHeader,
-  virtual public OSCacheContiguousRegion
+  virtual public OSCacheContiguousRegion,
+          public OSSharedMemoryCacheHeader
 {
 public:
   TR_ALLOC(TR_Memory::SharedCacheRegion)

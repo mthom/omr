@@ -245,7 +245,9 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
       case TR_SOMObjectAddress:
 	{
 	OMR::RelocationRecordSOMObject *reloSOMObj = reinterpret_cast<OMR::RelocationRecordSOMObject*>(reloRecord);
-	reloSOMObj->setOffset(reloTarget, (uintptr_t) relocation->getTargetAddress());
+	uintptrj_t address = reloRuntime->reverseLookup(relocation->getTargetAddress());
+
+	reloSOMObj->setOffset(reloTarget, address);
 	}
 	
 	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];

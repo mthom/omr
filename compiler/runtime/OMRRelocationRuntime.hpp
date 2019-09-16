@@ -200,6 +200,24 @@ class RelocationRuntime {
 	_oldNewAddresses = map;
       }
 
+      void setReverseLookupMap(const std::map<::AbstractVMObject*, ::AbstractVMObject*>* map)
+      {
+	_reverseLookup = map;
+      }
+
+      uintptrj_t reverseLookup(void* address) 
+      {
+	if (!_reverseLookup) 
+	   return reinterpret_cast<uintptrj_t>(address);
+
+	auto it = _reverseLookup->find(reinterpret_cast<::AbstractVMObject*>(address));
+
+	if (it != _reverseLookup->end())
+	   return reinterpret_cast<uintptrj_t>(it->second);
+		
+	return reinterpret_cast<uintptrj_t>(address);
+      }
+
       int32_t returnCode()                                        { return _returnCode; }
       void setReturnCode(int32_t rc)                              { _returnCode = rc; }
 
@@ -330,6 +348,7 @@ class RelocationRuntime {
       static bool       _globalValuesInitialized;
 
       std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*> const* _oldNewAddresses;
+      std::map<::AbstractVMObject*, ::AbstractVMObject*> const* _reverseLookup;
 
       TR::JitConfig *_jitConfig;
       OMR_VM *_omrVM;
