@@ -32,9 +32,9 @@ public:
   void nullifyRegions() override;
   U_32 getCacheSize() override;
   U_32* getCacheSizeFieldLocation() override;
-  U_64* getAssumptionIDFieldLocation();
+//U_64* getAssumptionIDFieldLocation();
 //  U_64 getAssumptionID();
-  U_64* getCardFieldLocation();
+//U_64* getCardFieldLocation();
 //  U_64 getCard();
   void detachRegions() override;
   

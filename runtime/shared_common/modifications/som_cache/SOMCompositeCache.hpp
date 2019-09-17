@@ -50,11 +50,11 @@ public:
 
   void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
 
-  void storeAssumptionID(UDATA);
-  UDATA assumptionID();
+//void storeAssumptionID(UDATA);
+//UDATA assumptionID();
 
-  void storeCard(UDATA);
-  UDATA card();
+//void storeCard(UDATA);
+//UDATA card();
 
   virtual SOMCacheMetadataEntryIterator constructMetadataSectionEntryIterator();
   virtual SOMCacheMetadataEntryIterator constructMetadataSectionUpdateIterator();

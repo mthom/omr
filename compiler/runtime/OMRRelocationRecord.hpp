@@ -383,19 +383,6 @@ class RelocationRecordDisplacementSite: public RelocationRecord
      void createAssumptions(TR::RelocationRuntime *reloRuntime, uint8_t *reloLocation);
    };
 
-class RelocationRecordCallFunction: public RelocationRecord
-   {
-   public:
-     RelocationRecordCallFunction() {}
-     RelocationRecordCallFunction *self();
-     RelocationRecordCallFunction(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecord(reloRuntime, record) {}
-     virtual char *name() { return "CallFunction"; };
-     virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordCallFunctionBinaryTemplate);}
-     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
-     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
-     uintptr_t offset(TR::RelocationTarget *reloTarget);
-   };
-
 } //namespace OMR
 // No class that derives from TR::RelocationRecord should define any state: all state variables should be declared
 //  in TR::RelocationRecord or the constructor/decode() mechanisms will not work properly

@@ -14,9 +14,9 @@ struct SOMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
   UDATA _cacheInitComplete;
   UDATA _cacheCrc;
   U_32 _dataSectionSize; // the size of the data section.
-  UDATA _assumptionID;
-  UDATA _card;
-  U_32 _metadataUpdateOffset;
+//UDATA _assumptionID;
+//UDATA _card;
+//U_32 _metadataUpdateOffset;
   U_32 _metadataSectionSize;
   U_64 _lastAssumptionID;
 

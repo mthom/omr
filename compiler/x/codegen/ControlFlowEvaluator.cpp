@@ -926,8 +926,6 @@ void OMR::X86::TreeEvaluator::compareIntegersForEquality(TR::Node *node, TR::Cod
             }
          else
             {
-	    if(secondChild->isVMValue())
-	      cg->addExternalRelocation(new (cg->trHeapMemory()) TR::ExternalRelocation(reinterpret_cast<uint8_t*>(secondChild),reinterpret_cast<uint8_t*>(constValue), TR_CallFunction, cg), __FILE__, __LINE__, secondChild);
             cmpInstruction = generateRegImmInstruction(CMPRegImm4(is64Bit), node, firstChildReg, constValue, cg);
             }
          TR::Symbol *symbol = NULL;

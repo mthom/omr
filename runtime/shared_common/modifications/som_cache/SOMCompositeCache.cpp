@@ -126,7 +126,7 @@ void SOMCompositeCache::copyMetadata(void* data, size_t size)
    // TODO: move the size update to SOMOSCache::cleanup.
    *_osCache.metadataSectionSizeFieldOffset() += size;
 }
-
+/*
 void SOMCompositeCache::storeAssumptionID(UDATA aID)
 {
   *_osCache.assumptionIDFocus() = aID;
@@ -146,7 +146,7 @@ UDATA SOMCompositeCache::card()
 {
   return *_osCache.cardFocus();
 }
-
+*/
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
 bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allocSize)
