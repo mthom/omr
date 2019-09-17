@@ -28,6 +28,7 @@
 
 // #include "runtime/Runtime.hpp"
 #include <map>
+#include <memory>
 #include <string>
 
 #ifndef OMR_AOTADAPTER_CONNECTOR
@@ -111,7 +112,8 @@ public:
     void relocateRegisteredMethod(const char *methodName);
 
     void setOldNewAddressesMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map);
-    void setReverseLookupMap(const std::map<::AbstractVMObject*, ::AbstractVMObject*>* map);
+    void setReverseLookupMap(std::shared_ptr<std::map<::AbstractVMObject*, ::AbstractVMObject*>>& map);
+    ::AbstractVMObject* reverseLookup(::AbstractVMObject* obj);
 
     TR::SharedCache* getSharedCache();  
 
