@@ -6,7 +6,6 @@
 
 #include "CacheCRCChecker.hpp"
 #include "OSCacheRegionBumpFocus.hpp"
-#include "OSCacheRegionRetreatingBumpFocus.hpp"
 #include "SynchronizedCacheCounter.hpp"
 
 #include "OSMemoryMappedCache.hpp"
@@ -51,7 +50,6 @@ public:
   void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
 
   virtual SOMCacheMetadataEntryIterator constructMetadataSectionEntryIterator();
-  virtual SOMCacheMetadataEntryIterator constructMetadataSectionUpdateIterator();
   virtual SOMCacheMetadataEntryIterator constructPreludeSectionEntryIterator();
 
   U_64 lastAssumptionID();
@@ -62,15 +60,16 @@ private:
 
   UDATA dataSectionFreeSpace();
   void populateTables();
+  void updateMetadataPtr();
 
   SOMOSCacheConfigOptions _configOptions;
   SOMOSCacheConfig<typename OSMemoryMappedCache::config_type> _config;
   SOMOSCache<OSMemoryMappedCache> _osCache;
 
-  SynchronizedCacheCounter _readerCount;
+  SynchronizedCacheCounter _dataSectionReaderCount;
+  SynchronizedCacheCounter _metadataSectionReaderCount;
   CacheCRCChecker _crcChecker;
   OSCacheRegionBumpFocus<SOMCacheEntry> _codeUpdatePtr;
-  OSCacheRegionBumpFocus<SOMCacheMetadataItemHeader> _preludeUpdatePtr;
   OSCacheRegionBumpFocus<SOMCacheMetadataItemHeader> _metadataUpdatePtr;
 
   std::map<std::string, SOMCacheEntry*> _codeEntries;

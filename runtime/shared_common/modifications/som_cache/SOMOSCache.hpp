@@ -3,7 +3,6 @@
 
 #include "OSCacheIterator.hpp"
 #include "OSCacheRegion.hpp"
-#include "OSCacheRegionRetreatingBumpFocus.hpp"
 
 #include "SOMMetadataSectionEntryIterator.hpp"
 #include "SOMOSCacheConfig.hpp"
@@ -27,12 +26,26 @@ public:
 	     SOMOSCacheConfigOptions* configOptions,
 	     UDATA osPageSize = 0);
 
-  using SuperOSCache::startup;
+  virtual ~SOMOSCache() {
+     this->cleanup();
+  }
+
   using SuperOSCache::cleanup;
   
-  virtual ~SOMOSCache() {
-    this->cleanup();
+  bool startup(const char* cacheName, const char* ctrlDirName) override {
+     return (_started = SuperOSCache::startup(cacheName, ctrlDirName));      
   }
+
+  IDATA acquireLock(UDATA lockID) {
+     return _config->acquireLock(this->_portLibrary, lockID, NULL);
+  }
+
+  IDATA releaseLock(UDATA lockID) {
+     return _config->releaseLock(this->_portLibrary, lockID);
+  }
+
+  IDATA acquireHeaderWriteLock();
+  IDATA releaseHeaderWriteLock();
   
   OSCacheContiguousRegion* headerRegion() {
     return (OSCacheContiguousRegion*) _config->_layout[HEADER_REGION_ID];
@@ -54,14 +67,24 @@ public:
     return _started;
   }
   
-  UDATA* readerCountFocus() {
-    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _readerCount);
+  UDATA* dataSectionReaderCountFocus() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _dataSectionReaderCount);
+    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+
+  UDATA* metadataSectionReaderCountFocus() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataSectionReaderCount);
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
   UDATA* crcFocus() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _cacheCrc);
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+
+  U_32* preludeSectionSizeFieldOffset() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _preludeSectionSize);
+    return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
   U_32* metadataSectionSizeFieldOffset() {
@@ -84,6 +107,10 @@ public:
 
   OSCacheIterator* constructCacheIterator(char* resultBuf) override;
   
+  IDATA setRegionPermissions(OSCacheRegion*) override {
+      return 0;
+  }
+
   using SuperOSCache::runExitProcedure;
   using SuperOSCache::errorHandler;
   using SuperOSCache::getPermissionsRegionGranularity;
@@ -92,7 +119,7 @@ protected:
   IDATA initCacheName(const char* cacheName) override {
     OMRPORT_ACCESS_FROM_OMRPORT(this->_portLibrary);
     
-    if (!(this->_cacheName = (char*)omrmem_allocate_memory(OMRSH_MAXPATH, OMRMEM_CATEGORY_CLASSES))) {
+    if (!(this->_cacheName = (char*) omrmem_allocate_memory(OMRSH_MAXPATH, OMRMEM_CATEGORY_CLASSES))) {
       return -1;
     }
     

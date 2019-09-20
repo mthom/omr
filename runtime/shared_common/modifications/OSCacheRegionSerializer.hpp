@@ -29,6 +29,8 @@ class OSSharedMemoryCacheHeader;
 class OSCacheRegionSerializer
 {
 public:
+  virtual ~OSCacheRegionSerializer() {}
+
   virtual void serialize(OSMemoryMappedCacheHeader*) = 0;
   virtual void serialize(OSSharedMemoryCacheHeader*) = 0;  
   virtual void serialize(OSCacheContiguousRegion*) = 0;

@@ -5,8 +5,8 @@ bool SynchronizedCacheCounter::incrementCount(OSCacheImpl& osCache)
   UDATA oldNum, value;
 
   if (!osCache.started() || osCache.runningReadOnly()) {
-    Trc_SHR_Assert_ShouldNeverHappen();
-    return false;
+     Trc_SHR_Assert_ShouldNeverHappen();
+     return false;
   }
 
   oldNum = *_regionFocus.focus(); // _theca->readerCount;

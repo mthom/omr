@@ -79,6 +79,11 @@ public:
     return this->_region == rhs._region && this->_focus == rhs._focus;
   }
 
+  virtual OSCacheRegionBumpFocus<T>& operator =(T* newFocus) {
+    this->_focus = newFocus;
+    return *this;
+  }
+
 protected:
   inline bool blockInRange(UDATA size) const {
     return this->_region->isBlockInRegion((void*) this->_focus, size);

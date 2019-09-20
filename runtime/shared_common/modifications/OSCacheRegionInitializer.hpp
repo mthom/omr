@@ -29,6 +29,8 @@ class OSSharedMemoryCacheHeader;
 class OSCacheRegionInitializer
 {
 public:
+  virtual ~OSCacheRegionInitializer() {}
+
   virtual void initialize(OSMemoryMappedCacheHeader*) = 0;
   virtual void initialize(OSSharedMemoryCacheHeader*) = 0;
   virtual void initialize(OSCacheRegion*) = 0;

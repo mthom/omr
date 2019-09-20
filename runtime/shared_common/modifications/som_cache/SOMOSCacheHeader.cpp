@@ -17,7 +17,8 @@ void refresh_mapping(SOMOSCacheConfigOptions* configOptions,
 		     SOMOSCacheHeaderMapping<OSCacheHeader>* mapping)
 {
   mapping->_cacheSize = configOptions->cacheSize();
-  mapping->_readerCount = 0;
+  mapping->_dataSectionReaderCount = 0;
+  mapping->_metadataSectionReaderCount = 0;
   mapping->_cacheCrc = 0;
   mapping->_dataSectionSize = configOptions->dataSectionSize();
 }
@@ -25,7 +26,7 @@ void refresh_mapping(SOMOSCacheConfigOptions* configOptions,
 void
 SOMOSCacheHeader<OSMemoryMappedCacheHeader>::create(OMRPortLibrary* library)
 {
-  OSMemoryMappedCacheHeader::create(library);
+  OSMemoryMappedCacheHeader::create(library);  
   refresh_mapping(_configOptions, derivedMapping());
 }
 

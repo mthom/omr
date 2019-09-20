@@ -19,15 +19,13 @@ public:
     , _metadataSection(nullptr, 2, pageBoundaryAligned)
     , _preludeSection(nullptr, 3, pageBoundaryAligned)
   {
-    _header.setCacheLayout(this);
-    _dataSection.setCacheLayout(this);
-    _metadataSection.setCacheLayout(this);
-    _preludeSection.setCacheLayout(this);
-	
     addRegion(&_header);
     addRegion(&_dataSection);
     addRegion(&_metadataSection);
     addRegion(&_preludeSection);
+
+    for(auto* region : _regions)
+      region->setCacheLayout(this);
   }
 
   virtual ~SOMOSCacheLayout() {}
@@ -38,8 +36,8 @@ public:
   UDATA effectiveCacheSize() {
     UDATA size = 0;
 
-    for(const auto* region: _regions)
-      size += region->regionSize();
+    for(const auto* region : _regions)
+       size += region->regionSize();
 
     return size;
   }

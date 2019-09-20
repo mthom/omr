@@ -24,36 +24,43 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
   : _configOptions(300 * 1024 * 1024)
   , _config(5, &_configOptions, 0)
   , _osCache(initializePortLibrary(), cacheName, cachePath, 5, &_config, &_configOptions, 0)
-  , _readerCount(_osCache.headerRegion(), _osCache.readerCountFocus())
+  , _dataSectionReaderCount(_osCache.headerRegion(), _osCache.dataSectionReaderCountFocus())
+  , _metadataSectionReaderCount(_osCache.headerRegion(), _osCache.metadataSectionReaderCountFocus())
   , _crcChecker(_osCache.headerRegion(), _osCache.crcFocus(), MAX_CRC_SAMPLES)
   , _codeUpdatePtr(_osCache.dataSectionRegion(), (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
-  , _preludeUpdatePtr(_osCache.preludeSectionRegion(),
-		      (ItemHeader*) _osCache.preludeSectionRegion()->regionStartAddress())
   , _metadataUpdatePtr(_osCache.metadataSectionRegion(),
 		      (ItemHeader*) _osCache.metadataSectionRegion()->regionStartAddress())
 {
+   //TODO: claim the header lock here and release when done.
    populateTables();
+
+   _osCache.acquireHeaderWriteLock();
    _metadataUpdatePtr += *_osCache.metadataSectionSizeFieldOffset();
+   _osCache.releaseHeaderWriteLock();
 }
 
 void SOMCompositeCache::populateTables()
 {
+   _dataSectionReaderCount.incrementCount(_osCache);
+
    SOMCacheEntry* dataSectionEnd = (SOMCacheEntry*) _osCache.dataSectionRegion()->regionEnd();
    SOMDataSectionEntryIterator iterator = constructDataSectionEntryIterator(dataSectionEnd - sizeof(SOMCacheEntry));
 
    while(true) {
      SOMCacheEntryDescriptor descriptor = iterator.next();
 
-     if(descriptor) {
-       _codeEntries[descriptor.entry->methodName] = descriptor.entry;
+     if (descriptor) {
+        _codeEntries[descriptor.entry->methodName] = descriptor.entry;
 
-       _codeUpdatePtr += descriptor.entry->codeLength;
-       _codeUpdatePtr += sizeof(SOMCacheEntry);
-       _codeUpdatePtr += descriptor.relocationRecordSize;
+	_codeUpdatePtr += descriptor.entry->codeLength;
+	_codeUpdatePtr += sizeof(SOMCacheEntry);
+	_codeUpdatePtr += descriptor.relocationRecordSize;
      } else {
-       break;
+        break;
      }
    }
+
+   _dataSectionReaderCount.decrementCount(_osCache);
 }
 
 bool
@@ -71,12 +78,10 @@ SOMCompositeCache::constructPreludeSectionEntryIterator()
 SOMCacheMetadataEntryIterator
 SOMCompositeCache::constructMetadataSectionEntryIterator()
 {
-   return {_osCache.metadataSectionRegion()};
-}
+   _osCache.acquireHeaderWriteLock();
+   updateMetadataPtr();
+   _osCache.releaseHeaderWriteLock();
 
-SOMCacheMetadataEntryIterator
-SOMCompositeCache::constructMetadataSectionUpdateIterator()
-{
    return {_osCache.metadataSectionRegion(), _metadataUpdatePtr};
 }
 
@@ -86,23 +91,23 @@ SOMCompositeCache::constructMetadataSectionUpdateIterator()
 SOMDataSectionEntryIterator
 SOMCompositeCache::constructDataSectionEntryIterator(SOMCacheEntry* delimiter)
 {
-  OSCacheContiguousRegion* dataSectionRegion = _osCache.dataSectionRegion();
-  SOMCacheEntry* dataSectionStartAddress = (SOMCacheEntry*) dataSectionRegion->regionStartAddress();
+   OSCacheContiguousRegion* dataSectionRegion = _osCache.dataSectionRegion();
+   SOMCacheEntry* dataSectionStartAddress = (SOMCacheEntry*) dataSectionRegion->regionStartAddress();
 
-  OSCacheRegionBumpFocus<SOMCacheEntry> focus(dataSectionRegion, dataSectionStartAddress);
-  OSCacheRegionBumpFocus<SOMCacheEntry> limit(dataSectionRegion, delimiter);
+   OSCacheRegionBumpFocus<SOMCacheEntry> focus(dataSectionRegion, dataSectionStartAddress);
+   OSCacheRegionBumpFocus<SOMCacheEntry> limit(dataSectionRegion, delimiter);
 
-  return SOMDataSectionEntryIterator(focus, limit);
+   return SOMDataSectionEntryIterator(focus, limit);
 }
 
-UDATA SOMCompositeCache::baseSharedCacheAddress(){
-  return reinterpret_cast<UDATA>(_osCache.headerRegion()->regionStartAddress());
+UDATA SOMCompositeCache::baseSharedCacheAddress()
+{
+   return reinterpret_cast<UDATA>(_osCache.headerRegion()->regionStartAddress());
 }
 
 bool SOMCompositeCache::startup(const char* cacheName, const char* ctrlDirName)
 {
-  if(!_osCache.startup(cacheName, ctrlDirName))
-    return false;
+   return _osCache.startup(cacheName, ctrlDirName);
 }
 
 UDATA SOMCompositeCache::dataSectionFreeSpace()
@@ -115,16 +120,49 @@ UDATA SOMCompositeCache::dataSectionFreeSpace()
 
 void SOMCompositeCache::copyPreludeBuffer(void* data, size_t size)
 {
-   memcpy(_preludeUpdatePtr, data, size);
-   _preludeUpdatePtr += size;
+   _osCache.acquireHeaderWriteLock();
+
+   const auto* preludeRegion = _osCache.preludeSectionRegion();
+   auto preludeSectionSize = *_osCache.preludeSectionSizeFieldOffset();
+
+   if (preludeSectionSize == 0) {
+      _osCache.acquireLock(PRELUDE_SECTION_LOCK_ID);
+
+      TR_ASSERT(size <= preludeRegion->regionSize(),
+		"copyPreludeBuffer: size of prelude metadata cannot exceed prelude region size");
+      
+      memcpy(preludeRegion->regionStartAddress(), data, size);
+      *_osCache.preludeSectionSizeFieldOffset() = size;
+      
+      _osCache.releaseLock(PRELUDE_SECTION_LOCK_ID);
+   }
+   
+   _osCache.releaseHeaderWriteLock();
+}
+
+// ASSUMES: the header write lock is held.
+void SOMCompositeCache::updateMetadataPtr()
+{
+   auto oldSize = *_osCache.metadataSectionSizeFieldOffset();
+   auto startAddress = _osCache.metadataSectionRegion()->regionStartAddress();
+
+   _metadataUpdatePtr = reinterpret_cast<SOMCacheMetadataItemHeader*>(static_cast<uint8_t*>(startAddress) + oldSize);
 }
 
 void SOMCompositeCache::copyMetadata(void* data, size_t size)
 {
+   _osCache.acquireHeaderWriteLock();
+   _osCache.acquireLock(METADATA_SECTION_LOCK_ID);
+
+   updateMetadataPtr();
+
    memcpy(_metadataUpdatePtr, data, size);
    _metadataUpdatePtr += size;
-   // TODO: move the size update to SOMOSCache::cleanup.
+
    *_osCache.metadataSectionSizeFieldOffset() += size;
+
+   _osCache.releaseLock(METADATA_SECTION_LOCK_ID);
+   _osCache.releaseHeaderWriteLock();
 }
 
 // find space for, and stores, a code entry. if it fails at any point,
@@ -144,41 +182,36 @@ bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allo
   memcpy(entryLocation, &entry, sizeof(SOMCacheEntry));
   _codeEntries[methodName] = entryLocation;
 
-  memcpy(_codeUpdatePtr,data,allocSize);
+  memcpy(_codeUpdatePtr, data, allocSize);
   _codeUpdatePtr += allocSize;
 
   return true;
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
-void *SOMCompositeCache::loadEntry(const char *methodName) {
-//if(!_loadedMethods[methodName]){
+void *SOMCompositeCache::loadEntry(const char *methodName)
+{
     SOMCacheEntry *entry = _codeEntries[methodName];
 
-//  void * methodArea =  mmap(NULL,
-//            codeLength,
-//            PROT_READ | PROT_WRITE | PROT_EXEC,
-//            MAP_ANONYMOUS | MAP_PRIVATE,
-//            0,
-//            0);
-//  _loadedMethods[methodName] = methodArea;
-//  memcpy(methodArea,entry,codeLength);
-//}
-//return _loadedMethods[methodName];
     void *rawData = NULL;
-    if (entry)
-      rawData = (void*) (entry+1);
+    if (entry) rawData = (void*) (entry+1);
     return rawData;
 }
 
 U_64 SOMCompositeCache::lastAssumptionID()
 {
-    return *_osCache.lastAssumptionIDOffset();
+    _osCache.acquireHeaderWriteLock();
+    auto offset = *_osCache.lastAssumptionIDOffset();
+    _osCache.releaseHeaderWriteLock();
+
+    return offset;
 }
 
 void SOMCompositeCache::setLastAssumptionID(U_64 assumptionID)
 {
+    _osCache.acquireHeaderWriteLock();
     *_osCache.lastAssumptionIDOffset() = assumptionID;
+    _osCache.releaseHeaderWriteLock();
 }
 
 void SOMCompositeCache::storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress)
@@ -200,7 +233,7 @@ void SOMCompositeCache::storeCallAddressToHeaders(void *calleeMethod, size_t met
 	  if (*reinterpret_cast<UDATA *>(methodName)==relativeCalleeNameOffset)
 	  {
 //	    *methodName = reinterpret_cast<UDATA>(calleeCodeCacheAddress);
-	     memcpy(methodName,&calleeCodeCacheAddress,sizeof(UDATA));
+	     memcpy(methodName, &calleeCodeCacheAddress, sizeof(UDATA));
 	  }
        }
     }

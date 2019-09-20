@@ -78,7 +78,7 @@ IDATA OSMemoryMappedCacheConfig::getReadWriteLockID()
   return _readWriteLockID;
 }
 
-IDATA OSMemoryMappedCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo* lastErrorInfo)
+IDATA OSMemoryMappedCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lockID, LastErrorInfo*)
 {
   OMRPORT_ACCESS_FROM_OMRPORT(library);
 
@@ -120,120 +120,124 @@ IDATA OSMemoryMappedCacheConfig::acquireLock(OMRPortLibrary* library, UDATA lock
   rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
 #endif
 
-  while ((rc == -1) && (omrerror_last_error_number() == OMRPORT_ERROR_FILE_LOCK_EDEADLK)) {
-    if (++loopCount > 1) {
-      /* We time the loop so it doesn't loop forever. Try the lock algorithm below
-       * once before staring the timer. */
-      if (startLoopTime == 0) {
-	startLoopTime = omrtime_nano_time();
-      } else if (loopCount > 2) {
-	/* Loop at least twice */
-	endLoopTime = omrtime_nano_time();
-	if ((endLoopTime - startLoopTime) > ((I_64)RETRY_OBTAIN_WRITE_LOCK_MAX_MS * NANOSECS_PER_MILLISEC)) {
-	  break;
-	}
-      }
-      omrthread_nanosleep(RETRY_OBTAIN_WRITE_LOCK_SLEEP_NS);
-    }
-    /* CMVC 153095: there are only three states our locks may be in if EDEADLK is detected.
-     * We can recover from cases 2 & 3 (see comments inline below). For case 1 our only option
-     * is to exit and let the caller retry.
-     */
-    if (lockID == _readWriteLockID && omrthread_monitor_owned_by_self(_lockMutex[_writeLockID]) == 1) {
-      /*	CMVC 153095: Case 1
-       * Current thread:
-       *	- Owns W monitor, W lock, RW monitor, and gets EDADLK on RW lock
-       *
-       * Notes:
-       *	- This means other JVMs caused EDEADLK becuase they are holding RW, and
-       *	  waiting on W in a sequence that gives fcntl the impression of deadlock
-       *	- If current thread owns the W monitor, it must also own the W lock
-       *	  if the call stack ended up here.
-       *
-       * Recovery:
-       *	- In this case we can't do anything but retry RW, because EDEADLK is caused by other JVMs.
-       *
-       */
-      Trc_SHR_OSC_Mmap_acquireWriteLockDeadlockMsg("Case 1: Current thread owns W lock & monitor, and RW monitor, but EDEADLK'd on RW lock");
-#if defined(WIN32) || defined(WIN64)
-      rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
-#else
-      rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
-#endif
+//  this is an example of how to handle deadlock, where two contending
+//  VMs or threads each hold the mmap lock desired by the other.
 
-    } else if (lockID == _readWriteLockID) {
-      /*	CMVC 153095: Case 2
-       * Another thread:
-       *	- Owns the W monitor, and is waiting on (or owns) the W lock
-       *
-       * Current thread:
-       *	- Current thread owns the RW monitor, and gets EDEADLK on RW lock
-       *
-       * Note:
-       *  - Deadlock might caused by the order in which threads have taken taken locks, when compaired to another JVM.
-       *  - In the recovery code below the first release of the RW Monitor is to ensure SCStoreTransactions
-       *    can complete.
-       *
-       * Recovery
-       *	- Recover by trying to take the W monitor, then RW monitor and lock. This will
-       *	  resolve any EDEADLK caused by this JVM, because it ensures no thread in this JVM will hold
-       *	  the W lock.
-       */
-      Trc_SHR_OSC_Mmap_acquireWriteLockDeadlockMsg("Case 2: Current thread owns RW mon, but EDEADLK'd on RW lock");
-      omrthread_monitor_exit(_lockMutex[_readWriteLockID]);
-
-      if (omrthread_monitor_enter(_lockMutex[_writeLockID]) != 0) {
-	Trc_SHR_OSC_Mmap_acquireWriteLock_errorTakingWriteMonitor();
-	return -1;
-      }
-
-      if (omrthread_monitor_enter(_lockMutex[_readWriteLockID]) != 0) {
-	Trc_SHR_OSC_Mmap_acquireWriteLock_errorTakingWriteMonitor();
-	omrthread_monitor_exit(_lockMutex[getWriteLockID()]);
-	return -1;
-      }
-#if defined(WIN32) || defined(WIN64)
-      rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
-#else
-      rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
-#endif
-
-      omrthread_monitor_exit(_lockMutex[getWriteLockID()]);
-
-    } else if (lockID == _writeLockID) {
-      /*	CMVC 153095: Case 3
-       * Another thread:
-       *	- Owns RW monintor, and is waiting on (or owns) the RW lock.
-       *
-       * Current thread:
-       *	- Owns W monintor, and gets EDEADLK on W lock.
-       *
-       * Note:
-       *  - If the 'call stack' ends up here then it is known the current thread
-       *    does not own the ReadWrite lock. The shared classes code always
-       *    takes the W lock, then RW lock, OR just the RW lock.
-       *
-       * Recovery:
-       *	- In this case we recover by waiting on the RW monitor before taking the W lock. This will
-       *	  resolve any EDEADLK caused by this JVM, because it ensures no thread in this JVM will hold
-       *	  the RW lock.
-       */
-      Trc_SHR_OSC_Mmap_acquireWriteLockDeadlockMsg("Case 3: Current thread owns W mon, but EDEADLK'd on W lock");
-      if (omrthread_monitor_enter(_lockMutex[_readWriteLockID]) != 0) {
-	Trc_SHR_OSC_Mmap_acquireWriteLock_errorTakingReadWriteMonitor();
-	break;
-      }
-#if defined(WIN32) || defined(WIN64)
-      rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
-#else
-      rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
-#endif
-      omrthread_monitor_exit(_lockMutex[getReadWriteLockID()]);
-
-    } else {
-      Trc_SHR_Assert_ShouldNeverHappen();
-    }
-  }
+//  while ((rc == -1) && (omrerror_last_error_number() == OMRPORT_ERROR_FILE_LOCK_EDEADLK)) {
+//    if (++loopCount > 1) {
+//      /* We time the loop so it doesn't loop forever. Try the lock algorithm below
+//       * once before staring the timer. */
+//      if (startLoopTime == 0) {
+//	startLoopTime = omrtime_nano_time();
+//      } else if (loopCount > 2) {
+//	/* Loop at least twice */
+//	endLoopTime = omrtime_nano_time();
+//	if ((endLoopTime - startLoopTime) > ((I_64)RETRY_OBTAIN_WRITE_LOCK_MAX_MS * NANOSECS_PER_MILLISEC)) {
+//	  break;
+//	}
+//      }
+//      
+//      omrthread_nanosleep(RETRY_OBTAIN_WRITE_LOCK_SLEEP_NS);
+//    }
+//    /* CMVC 153095: there are only three states our locks may be in if EDEADLK is detected.
+//     * We can recover from cases 2 & 3 (see comments inline below). For case 1 our only option
+//     * is to exit and let the caller retry.
+//     */
+//    if (lockID == _readWriteLockID && omrthread_monitor_owned_by_self(_lockMutex[_writeLockID]) == 1) {
+//      /*	CMVC 153095: Case 1
+//       * Current thread:
+//       *	- Owns W monitor, W lock, RW monitor, and gets EDADLK on RW lock
+//       *
+//       * Notes:
+//       *	- This means other JVMs caused EDEADLK becuase they are holding RW, and
+//       *	  waiting on W in a sequence that gives fcntl the impression of deadlock
+//       *	- If current thread owns the W monitor, it must also own the W lock
+//       *	  if the call stack ended up here.
+//       *
+//       * Recovery:
+//       *	- In this case we can't do anything but retry RW, because EDEADLK is caused by other JVMs.
+//       *
+//       */
+//      Trc_SHR_OSC_Mmap_acquireWriteLockDeadlockMsg("Case 1: Current thread owns W lock & monitor, and RW monitor, but EDEADLK'd on RW lock");
+//#if defined(WIN32) || defined(WIN64)
+//      rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+//#else
+//      rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+//#endif
+//
+//    } else if (lockID == _readWriteLockID) {
+//      /*	CMVC 153095: Case 2
+//       * Another thread:
+//       *	- Owns the W monitor, and is waiting on (or owns) the W lock
+//       *
+//       * Current thread:
+//       *	- Current thread owns the RW monitor, and gets EDEADLK on RW lock
+//       *
+//       * Note:
+//       *  - Deadlock might caused by the order in which threads have taken taken locks, when compaired to another JVM.
+//       *  - In the recovery code below the first release of the RW Monitor is to ensure SCStoreTransactions
+//       *    can complete.
+//       *
+//       * Recovery
+//       *	- Recover by trying to take the W monitor, then RW monitor and lock. This will
+//       *	  resolve any EDEADLK caused by this JVM, because it ensures no thread in this JVM will hold
+//       *	  the W lock.
+//       */
+//      Trc_SHR_OSC_Mmap_acquireWriteLockDeadlockMsg("Case 2: Current thread owns RW mon, but EDEADLK'd on RW lock");
+//      omrthread_monitor_exit(_lockMutex[_readWriteLockID]);
+//
+//      if (omrthread_monitor_enter(_lockMutex[_writeLockID]) != 0) {
+//	Trc_SHR_OSC_Mmap_acquireWriteLock_errorTakingWriteMonitor();
+//	return -1;
+//      }
+//
+//      if (omrthread_monitor_enter(_lockMutex[_readWriteLockID]) != 0) {
+//	Trc_SHR_OSC_Mmap_acquireWriteLock_errorTakingWriteMonitor();
+//	omrthread_monitor_exit(_lockMutex[getWriteLockID()]);
+//	return -1;
+//      }
+//#if defined(WIN32) || defined(WIN64)
+//      rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+//#else
+//      rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+//#endif
+//
+//      omrthread_monitor_exit(_lockMutex[getWriteLockID()]);
+//
+//    } else if (lockID == _writeLockID) {
+//      /*	CMVC 153095: Case 3
+//       * Another thread:
+//       *	- Owns RW monintor, and is waiting on (or owns) the RW lock.
+//       *
+//       * Current thread:
+//       *	- Owns W monintor, and gets EDEADLK on W lock.
+//       *
+//       * Note:
+//       *  - If the 'call stack' ends up here then it is known the current thread
+//       *    does not own the ReadWrite lock. The shared classes code always
+//       *    takes the W lock, then RW lock, OR just the RW lock.
+//       *
+//       * Recovery:
+//       *	- In this case we recover by waiting on the RW monitor before taking the W lock. This will
+//       *	  resolve any EDEADLK caused by this JVM, because it ensures no thread in this JVM will hold
+//       *	  the RW lock.
+//       */
+//      Trc_SHR_OSC_Mmap_acquireWriteLockDeadlockMsg("Case 3: Current thread owns W mon, but EDEADLK'd on W lock");
+//      if (omrthread_monitor_enter(_lockMutex[_readWriteLockID]) != 0) {
+//	Trc_SHR_OSC_Mmap_acquireWriteLock_errorTakingReadWriteMonitor();
+//	break;
+//      }
+//#if defined(WIN32) || defined(WIN64)
+//      rc = omrfile_blockingasync_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+//#else
+//      rc = omrfile_lock_bytes(_fileHandle, lockFlags, lockOffset, lockLength);
+//#endif
+//      omrthread_monitor_exit(_lockMutex[getReadWriteLockID()]);
+//
+//    } else {
+//      Trc_SHR_Assert_ShouldNeverHappen();
+//    }
+//  }
 
   if (rc == -1) {
     Trc_SHR_OSC_Mmap_acquireWriteLock_badLock();

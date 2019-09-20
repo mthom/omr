@@ -5,8 +5,8 @@
 
 struct SOMCacheMetadataItemHeader
 {
-    enum ItemDesc: uint8_t { 
-      object = 0x1, array, num_integer, 
+    enum ItemDesc: uint8_t {
+      object = 0x1, array, num_integer,
       block, clazz, num_double,
       eval_prim, frame, method,
       prim, vm_string, symbol
@@ -28,7 +28,7 @@ struct SOMCacheMetadataEntryDescriptor {
     : header(NULL)
     , metadataLocation(NULL)
   {}
-  
+
   SOMCacheMetadataEntryDescriptor(SOMCacheMetadataItemHeader* header)
     : header(header)
     , metadataLocation(header + 1) // 1 is implicitly multiplied by sizeof(SOMCacheMetadataItemHeader).
@@ -44,7 +44,7 @@ struct SOMCacheMetadataEntryDescriptor {
   }
 
   operator bool() const;
-  
+
   SOMCacheMetadataItemHeader* header;
   void* metadataLocation;
 };
@@ -56,19 +56,21 @@ class SOMCacheMetadataEntryIterator
 public:
   SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region)
     : _focus(region, (ItemHeader*) region->regionStartAddress())
+    , _limit((ItemHeader*) region->regionEnd())
     , _region(region)
   {}
-  
-  SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region, ItemHeader* start)
-    : _focus(region, start)
+
+  SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region, ItemHeader* limit)
+    : _focus(region, (ItemHeader*) region->regionStartAddress())
     , _region(region)
+    , _limit(limit)
   {}
 
   SOMCacheMetadataEntryDescriptor next()
   {
     SOMCacheMetadataItemHeader* header = _focus;
 
-    if (header == NULL || header->size == 0 || !(_focus < _region->regionEnd())) {
+    if (header == NULL || header->size == 0 || !(_focus < _limit)) {
        return nullCacheMetadataEntryDescriptor;
     }
 
@@ -97,11 +99,12 @@ public:
 
   bool operator !=(const SOMCacheMetadataEntryIterator& it) const {
     return !(*this == it);
-  }  
-  
-protected:  
+  }
+
+protected:
   OSCacheRegionBumpFocus<ItemHeader> _focus;
   OSCacheContiguousRegion* _region;
+  ItemHeader* _limit;
 };
 
 #endif

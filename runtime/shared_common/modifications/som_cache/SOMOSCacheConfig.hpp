@@ -10,6 +10,10 @@
 #define METADATA_REGION_ID 2
 #define PRELUDE_REGION_ID 3
 
+#define PRELUDE_SECTION_LOCK_ID 0
+#define DATA_SECTION_LOCK_ID 1
+#define METADATA_SECTION_LOCK_ID 2
+
 template <class>
 class SOMOSCache;
 
@@ -38,6 +42,8 @@ public:
   virtual void initializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize) override;
   
   using OSCacheConfigImpl::releaseLock;
+  using OSCacheConfigImpl::acquireHeaderWriteLock;
+  using OSCacheConfigImpl::releaseHeaderWriteLock;
   
 private:
   friend class SOMOSCache<cache_type>;
