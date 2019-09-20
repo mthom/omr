@@ -45,6 +45,8 @@ public:
 
   virtual bool incrementCount(OSCacheImpl& osCache);
   virtual bool decrementCount(OSCacheImpl& osCache);
+
+  virtual volatile UDATA count() const;
   
 protected:
   OSCacheRegionFocus<volatile UDATA> _regionFocus;

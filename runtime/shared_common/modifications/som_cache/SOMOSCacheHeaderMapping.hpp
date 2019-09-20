@@ -11,14 +11,14 @@ struct SOMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
   typename CacheHeaderMapping<OSCacheHeader>::mapping_type _mapping;  
   U_32 _cacheSize;
   volatile UDATA _dataSectionReaderCount;
-  volatile UDATA _metadataSectionReaderCount;
   UDATA _cacheInitComplete;
   UDATA _cacheCrc;
   U_32 _preludeSectionSize;
   U_32 _dataSectionSize;
   U_32 _metadataSectionSize;
   U_64 _lastAssumptionID;
-
+  U_32 _isLocked;
+  
   UDATA size() const {
     return sizeof(SOMOSCacheHeaderMapping<OSCacheHeader>);
   }

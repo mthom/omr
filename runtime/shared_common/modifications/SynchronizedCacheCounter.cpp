@@ -65,3 +65,7 @@ bool SynchronizedCacheCounter::decrementCount(OSCacheImpl& osCache)
 
   return true;
 }
+
+volatile UDATA SynchronizedCacheCounter::count() const {
+  return *_regionFocus.focus();
+}

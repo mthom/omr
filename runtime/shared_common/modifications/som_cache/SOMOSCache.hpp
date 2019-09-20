@@ -46,7 +46,7 @@ public:
 
   IDATA acquireHeaderWriteLock();
   IDATA releaseHeaderWriteLock();
-  
+
   OSCacheContiguousRegion* headerRegion() {
     return (OSCacheContiguousRegion*) _config->_layout[HEADER_REGION_ID];
   }
@@ -72,11 +72,6 @@ public:
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
-  UDATA* metadataSectionReaderCountFocus() {
-    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataSectionReaderCount);
-    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
-  }
-
   UDATA* crcFocus() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _cacheCrc);
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
@@ -95,6 +90,11 @@ public:
   U_64* lastAssumptionIDOffset() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _lastAssumptionID);
     return (U_64*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+
+  U_32* isLockedOffset() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _isLocked);
+    return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
   
   U_32 getDataSize() override {

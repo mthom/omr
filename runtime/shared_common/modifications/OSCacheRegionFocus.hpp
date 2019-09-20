@@ -46,7 +46,7 @@ public:
     return _region;
   }
 
-  T* focus() {
+  T* focus() const {
     return _focus;
   }
   

@@ -44,6 +44,10 @@ public:
 
   void *loadEntry(const char *methodName);
 
+  bool isCacheLocked();
+  void lockCache();
+  void unlockCache();
+
   void copyPreludeBuffer(void* data, size_t size);
   void copyMetadata(void* data, size_t size);
 
@@ -62,12 +66,14 @@ private:
   void populateTables();
   void updateMetadataPtr();
 
+  void enterReadMutex();
+  void exitReadMutex();
+  
   SOMOSCacheConfigOptions _configOptions;
   SOMOSCacheConfig<typename OSMemoryMappedCache::config_type> _config;
   SOMOSCache<OSMemoryMappedCache> _osCache;
 
   SynchronizedCacheCounter _dataSectionReaderCount;
-  SynchronizedCacheCounter _metadataSectionReaderCount;
   CacheCRCChecker _crcChecker;
   OSCacheRegionBumpFocus<SOMCacheEntry> _codeUpdatePtr;
   OSCacheRegionBumpFocus<SOMCacheMetadataItemHeader> _metadataUpdatePtr;

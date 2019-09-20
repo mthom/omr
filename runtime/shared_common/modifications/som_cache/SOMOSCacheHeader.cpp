@@ -18,7 +18,6 @@ void refresh_mapping(SOMOSCacheConfigOptions* configOptions,
 {
   mapping->_cacheSize = configOptions->cacheSize();
   mapping->_dataSectionReaderCount = 0;
-  mapping->_metadataSectionReaderCount = 0;
   mapping->_cacheCrc = 0;
   mapping->_dataSectionSize = configOptions->dataSectionSize();
 }
