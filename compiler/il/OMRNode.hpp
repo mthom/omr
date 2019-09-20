@@ -1470,6 +1470,9 @@ public:
    bool isUnneededIALoad();
    void setUnneededIALoad(bool v);
 
+   bool isVMValue();
+   void setVMValue(bool v);
+
    // Flags used by TR::monent, TR::monexit, ad TR::tstart
    bool canSkipSync();
    void setSkipSync(bool v);
@@ -2044,6 +2047,9 @@ protected:
       somObjectAddressConstant              = 0x00004000,
       methodPointerConstant                 = 0x00002000,
       unneededIALoad                        = 0x00001000,
+
+      // Flags used by TR::lconst
+      VMValue                               = 0x00001000,
 
       // Flags used by TR::monent, TR::monexit, and TR::tstart
       //

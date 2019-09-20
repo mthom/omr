@@ -99,11 +99,10 @@ U_32* SOMOSCacheConfig<OSCacheConfigImpl>::getCacheSizeFieldLocation() {
 }
 
 template <class OSCacheConfigImpl>
-void SOMOSCacheConfig<OSCacheConfigImpl>::detachRegions()
-{
+void SOMOSCacheConfig<OSCacheConfigImpl>::detachRegions() {
    _layout[HEADER_REGION_ID]->adjustRegionStartAndSize(NULL, 0);
    _layout[DATA_SECTION_REGION_ID]->adjustRegionStartAndSize(NULL, 0);
-
+   
    _layout.clearRegions();
 }
 

@@ -7919,6 +7919,21 @@ OMR::Node::setUnneededIALoad(bool v)
 
 
 bool
+OMR::Node::isVMValue()
+   {
+   return (self()->getOpCodeValue() == TR::lconst && _flags.testAny(VMValue));
+   }
+
+void
+OMR::Node::setVMValue(bool v)
+   {
+   TR_ASSERT(self()->getOpCodeValue() == TR::lconst, "Can only call this for lconst");
+   _flags.set(VMValue, v);
+   }
+
+
+
+bool
 OMR::Node::canSkipSync()
    {
    TR_ASSERT(self()->getOpCodeValue() == TR::monexit || self()->getOpCodeValue() == TR::monent, "Opcode must be monexit/monent");

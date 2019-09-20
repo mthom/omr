@@ -36,7 +36,7 @@ public:
 
   bool startup(const char* cacheName, const char* ctrlDirName);
 
-  bool storeEntry(const char* methodName, void* codeLocation, U_32 codeLength);
+  bool storeEntry(const char* methodName, void* data, U_32 allocSize);
 
   bool createdNewCache();
 
@@ -52,6 +52,12 @@ public:
   void copyMetadata(void* data, size_t size);
 
   void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
+
+//void storeAssumptionID(UDATA);
+//UDATA assumptionID();
+
+//void storeCard(UDATA);
+//UDATA card();
 
   virtual SOMCacheMetadataEntryIterator constructMetadataSectionEntryIterator();
   virtual SOMCacheMetadataEntryIterator constructPreludeSectionEntryIterator();

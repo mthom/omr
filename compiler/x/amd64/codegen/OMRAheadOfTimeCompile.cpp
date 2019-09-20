@@ -192,26 +192,7 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
    switch (targetKind)
       {
       case TR_MethodCallAddress:
-         {
-	   OMR::RelocationRecordMethodCallAddress *mcaRecord = reinterpret_cast<OMR::RelocationRecordMethodCallAddress *>(reloRecord);
 
-	   mcaRecord->setEipRelative(reloTarget);
-	   // Buuuuuuuhhhhhnnnnnn??? What?
-	   
-	   //	   uint64_t methodName = 0;
-	   //Should work if method name is like func_1
-	   //	   strcpy(reinterpret_cast<char *>(&methodName),const_cast<const char *>(reinterpret_cast<char *>(relocation->getTargetAddress())));
-      
-//	   memcpy(&methodName,relocation->getTargetAddress(),8);
-	   mcaRecord->setAddress(reloTarget, relocation->getTargetAddress());
-//	   mcaRecord->setAddress(reloTarget,reinterpret_cast<uint8_t *>(methodName));
-         }
-
-	//  sharedCache->setRelocationData(relocation->getRelocationData()-SIZEPOINTER);
-	 cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
-	 //	 sharedCache->setRelocationData(relocation->getRelocationData());
-	 
-         break;
       case TR_ArbitrarySizedHeader:
          {
             OMR::RelocationRecordArbitrarySizedHeader *ar = reinterpret_cast<OMR::RelocationRecordArbitrarySizedHeader *>(reloRecord);
@@ -251,7 +232,6 @@ uint8_t* OMR::X86::AMD64::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::
 	
 	reloSOMObj->setOffset(reloTarget, reinterpret_cast<uintptrj_t>(address));
 	}
-	
 	cursor = relocation->getRelocationData()+_relocationKindToHeaderSizeMap[targetKind];
 	break;
       default:

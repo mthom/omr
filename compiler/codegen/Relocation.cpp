@@ -235,7 +235,7 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
       // right now simplest solution is to address [0]
       // this has heavy impact on the performance
       uint8_t headersMatch = 1;
-      if (r->getTargetKind() == TR_ArbitrarySizedHeader &&
+      if ((r->getTargetKind() == TR_ArbitrarySizedHeader || r->getTargetKind() == TR_MethodCallAddress) &&
           r->getTargetKind() == _kind)
       {
          int iterator = 0;
@@ -312,7 +312,7 @@ void TR::ExternalRelocation::addExternalRelocation(TR::CodeGenerator *codeGen)
    //TODO for ASHL, introduce comparison of data
 
    aot.add(temp);
-   if (_kind==TR_ArbitrarySizedHeader){
+   if (_kind==TR_ArbitrarySizedHeader || _kind==TR_MethodCallAddress){
       int c = (int)_targetAddress2[0];
       //TODO put it into some header"с
       // Should ve like this
