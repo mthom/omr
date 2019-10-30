@@ -46,6 +46,7 @@ namespace OMR { typedef OMR::RelocationRecordBinaryTemplate RelocationRecordBina
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
 #endif
 
+namespace OMR { class RelocationRecordWithOffsetBinaryTemplate; }
 
 #ifndef OMR_RELOCATION_RECORD_GROUP_CONNECTOR
 #define OMR_RELOCATION_RECORD_GROUP_CONNECTOR
@@ -98,7 +99,7 @@ namespace OMR { typedef OMR::RelocationRecordDisplacementSite RelocationRecordDi
 
 #ifndef OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_BINARY_TEMPLATE_CONNECTOR
 #define OMR_RELOCATION_RECORD_DISPLACEMENT_SITE_BINARY_TEMPLATE_CONNECTOR
-namespace OMR { class RelocationRecordDisplacementSiteBinaryTemplate; }
+namespace OMR { class RelocationRecordDisplacementSiteBinaryTemplate;}
 namespace OMR { typedef OMR::RelocationRecordDisplacementSiteBinaryTemplate RelocationRecordDisplacementSiteBinaryTemplateConnector; }
 #else
    #error OMR::RelocationRecord expected to be a primary connector, but another connector is already defined
@@ -183,13 +184,14 @@ namespace OMR
          #endif
    };
 
-  struct RelocationRecordMethodCallAddressBinaryTemplate : public RelocationRecordBinaryTemplate
-   {
-   UDATA _methodAddress;
-   };
+ 
   struct RelocationRecordASHLBinaryTemplate : public RelocationRecordBinaryTemplate
    {
    uint8_t sizeOfDataInTheHeader;
+   };
+
+  struct RelocationRecordMethodCallAddressBinaryTemplate : public RelocationRecordASHLBinaryTemplate
+   {
    };
 
   struct RelocationRecordWithOffsetBinaryTemplate : public RelocationRecordBinaryTemplate
@@ -305,23 +307,6 @@ class RelocationRecordGroup
       TR::RelocationRecordBinaryTemplate *_dataBuffer;
    };
 
-class RelocationRecordMethodCallAddress : public RelocationRecord
-   {
-   public:
-      RelocationRecordMethodCallAddress() {}
-      RelocationRecordMethodCallAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecord(reloRuntime, record) {}
-
-      virtual char *name() { return "MethodCallAddress"; }
-      virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordMethodCallAddressBinaryTemplate); }
-      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
-      virtual void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
-      uint8_t* address(TR::RelocationTarget *reloTarget);
-      void setAddress(TR::RelocationTarget *reloTarget, uint8_t* callTargetAddress);
-
-   private:
-      uint8_t *computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation);
-   };
-
 class RelocationRecordDataAddress : public RelocationRecord
    {
    public:
@@ -344,11 +329,25 @@ class RelocationRecordArbitrarySizedHeader : public RelocationRecord
      virtual char *name() { return "ArbitrarySizedHeader"; }
      virtual int32_t bytesInHeaderAndPayload();
      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
-     void setOffset(TR::RelocationTarget *reloTarget, uintptr_t offset);
      void setSizeOfASHLHeader(TR::RelocationTarget* reloTarget, uint8_t size);
      void fillThePayload(TR::RelocationTarget* reloTarget, uint8_t* data);
-     uintptr_t offset(TR::RelocationTarget *reloTarget);
+     uint8_t *payload(TR::RelocationTarget *reloTarget);
      //     uint8_t *findDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
+   };
+
+class RelocationRecordMethodCallAddress : public RelocationRecordArbitrarySizedHeader
+   {
+   public:
+      RelocationRecordMethodCallAddress() {}
+      RelocationRecordMethodCallAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecordArbitrarySizedHeader(reloRuntime, record) {}
+
+      virtual char *name() { return "MethodCallAddress"; }
+      //virtual int32_t bytesInHeaderAndPayload() { return sizeof(RelocationRecordMethodCallAddressBinaryTemplate); }
+      virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+      virtual void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
+      
+   private:
+      uint8_t *computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation);
    };
 
 class RelocationRecordSOMObject: public RelocationRecord
