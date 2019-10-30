@@ -26,6 +26,10 @@ void
 SOMOSCacheHeader<OSMemoryMappedCacheHeader>::create(OMRPortLibrary* library)
 {
   OSMemoryMappedCacheHeader::create(library);  
+
+  derivedMapping()->_vmCounter = 0;
+  derivedMapping()->_writeHash = 0;
+
   refresh_mapping(_configOptions, derivedMapping());
 }
 

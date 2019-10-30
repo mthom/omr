@@ -113,6 +113,8 @@ public:
 
     void setOldNewAddressesMap(const std::map<::SOMCacheMetadataItemHeader, ::AbstractVMObject*>* map);
     void setReverseLookupMap(std::shared_ptr<std::map<::AbstractVMObject*, ::AbstractVMObject*>>& map);
+    std::shared_ptr<std::map<::AbstractVMObject*, ::AbstractVMObject*>>& getReverseLookupMap();
+
     ::AbstractVMObject* reverseLookup(::AbstractVMObject* obj);
 
     TR::SharedCache* getSharedCache();  

@@ -2,14 +2,21 @@
 #include "SOMCompositeCache.hpp"
 #include "SOMOSCacheConfig.hpp"
 
+#include "Universe.h"
+
 #include "omr.h"
 #include "omrcfg.h"
 #include "omrport.h"
 #include "shrnls.h"
 #include "ut_omrshr_mods.h"
 
+#include "compiler/env/CompilerEnv.hpp"
+
 #include <cstring>
 #include <iostream>
+
+#define WRITEHASH_MASK 0x000FFFFF
+#define WRITEHASH_SHIFT 20
 
 using ItemHeader = SOMCacheMetadataItemHeader;
 
@@ -32,22 +39,107 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
   , _config(5, &_configOptions, 0)
   , _osCache(initializePortLibrary(), cacheName, cachePath, 5, &_config, &_configOptions, 0)
   , _dataSectionReaderCount(_osCache.headerRegion(), _osCache.dataSectionReaderCountFocus())
+  , _metadataSectionReaderCount(_osCache.headerRegion(), _osCache.metadataSectionReaderCountFocus())
   , _crcChecker(_osCache.headerRegion(), _osCache.crcFocus(), MAX_CRC_SAMPLES)
-  , _codeUpdatePtr(_osCache.dataSectionRegion(), (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
+  , _codeUpdatePtr(_osCache.dataSectionRegion(),
+		   (SOMCacheEntry*) _osCache.dataSectionRegion()->regionStartAddress())
   , _metadataUpdatePtr(_osCache.metadataSectionRegion(),
-		      (ItemHeader*) _osCache.metadataSectionRegion()->regionStartAddress())
+		       (ItemHeader*) _osCache.metadataSectionRegion()->regionStartAddress())
 {
-   //TODO: claim the header lock here and release when done.
    populateTables();
 
    _osCache.acquireHeaderWriteLock();
+
+   _osCache.incrementVMCounter();
    _metadataUpdatePtr += *_osCache.metadataSectionSizeFieldOffset();
+
    _osCache.releaseHeaderWriteLock();
+}
+
+UDATA SOMCompositeCache::tryResetWriteHash(UDATA hashValue)
+{
+   if (!_osCache.started()) {
+     return false;
+   }
+
+   UDATA oldCachedHashValue = *_osCache.writeHashPtr();
+   UDATA value = 0;
+   UDATA maskedHash = hashValue & WRITEHASH_MASK;
+
+   if (maskedHash == (oldCachedHashValue & WRITEHASH_MASK)) {// || (_lastFailedWHCount > FAILED_WRITEHASH_MAX_COUNT)) {
+      setWriteHash(0);
+//     _lastFailedWHCount = 0;
+//     _lastFailedWriteHash = 0;
+//     Trc_SHR_CC_tryResetWriteHash_Exit1(_commonCCInfo->vmID, maskedHash, _theca->writeHash);
+      return 1; // we reset the hash.
+   }
+
+   return 0;
+}
+
+// DOES NOT ASSUME: caller holds the header write lock.
+void SOMCompositeCache::setWriteHash(UDATA hashValue)
+{
+   UDATA oldCachedHashValue = *_osCache.writeHashPtr();
+   UDATA value = 0;
+
+   if (hashValue != 0) {
+      value = (hashValue & WRITEHASH_MASK) | (_osCache.vmID() << WRITEHASH_SHIFT);
+   }
+
+   // unprotectHeaderReadWriteArea(currentThread, false);
+   // compareSwapResult =
+   VM_AtomicSupport::lockCompareExchange(_osCache.writeHashPtr(),
+					 oldCachedHashValue,
+					 value);
+   // protectHeaderReadWriteArea(currentThread, false);
+}
+
+// DOES NOT ASSUME: caller holds the header write lock.
+// this supposes peekForWriteHash returned true, and thus..
+// we want to use the write hash.
+UDATA SOMCompositeCache::testAndSetWriteHash(UDATA hashValue)
+{
+   if (!_osCache.started()) {
+     return false;
+   }
+
+   UDATA cachedHashValue = *_osCache.writeHashPtr();
+   UDATA maskedHash = hashValue & WRITEHASH_MASK;
+
+   if (hashValue == 0) {
+     setWriteHash(hashValue);
+   } else if (maskedHash == (cachedHashValue & WRITEHASH_MASK)) {
+     // the first WRITEHASH_MASK + 1 bits of the write hash encode
+     // the actual hash value. The rest, to the left of that value,
+     // encode the ID of the VM that wrote the hash to the cache header.
+
+     // I love you, write hash! :-O
+     UDATA vmWroteToCache = cachedHashValue >> WRITEHASH_SHIFT;
+
+     if (_osCache.vmID() != vmWroteToCache) {
+        // and, this signifies that another VM is storing the class (or failing that, one
+        // with an identical hash) to the cache. Wait for it to finish, update the metadata
+        // pointer, and load it.
+        return 1;
+     }
+   }
+
+   return 0; // this means we set the write hash.
+}
+
+bool SOMCompositeCache::peekForWriteHash()
+{
+   if (!_osCache.started()) {
+     return false;
+   }
+
+   return _osCache.vmID() < _osCache.vmIDCounter();
 }
 
 void SOMCompositeCache::populateTables()
 {
-   enterReadMutex();
+   enterReadMutex(_dataSectionReaderCount, DATA_SECTION_LOCK_ID);
 
    SOMCacheEntry* dataSectionEnd = (SOMCacheEntry*) _osCache.dataSectionRegion()->regionEnd();
    SOMDataSectionEntryIterator iterator = constructDataSectionEntryIterator(dataSectionEnd - sizeof(SOMCacheEntry));
@@ -66,7 +158,7 @@ void SOMCompositeCache::populateTables()
      }
    }
 
-   exitReadMutex();
+   exitReadMutex(_dataSectionReaderCount);
 }
 
 bool
@@ -84,10 +176,7 @@ SOMCompositeCache::constructPreludeSectionEntryIterator()
 SOMCacheMetadataEntryIterator
 SOMCompositeCache::constructMetadataSectionEntryIterator()
 {
-   _osCache.acquireHeaderWriteLock();
    updateMetadataPtr();
-   _osCache.releaseHeaderWriteLock();
-
    return {_osCache.metadataSectionRegion(), _metadataUpdatePtr};
 }
 
@@ -126,21 +215,21 @@ UDATA SOMCompositeCache::dataSectionFreeSpace()
 
 // does an elaborate dance to increment the metadata section reader
 // count, blocking if the cache is locked.
-void SOMCompositeCache::enterReadMutex()
+void SOMCompositeCache::enterReadMutex(SynchronizedCacheCounter& reader, UDATA lockID)
 {
-   _dataSectionReaderCount.incrementCount(_osCache);
+   reader.incrementCount(_osCache);
 
-   if (isCacheLocked()) {
-      _dataSectionReaderCount.decrementCount(_osCache);
+   if (isCacheLocked(lockID)) {
+      reader.decrementCount(_osCache);
 
       // this will prevent another thread or VM from locking the cache
       // once the locking thread or VM unlocks it, allowing us to
       // delay the pending lock by incrementing the reader count.
-      auto rc = _osCache.acquireLock(DATA_SECTION_LOCK_ID);
+      auto rc = _osCache.acquireLock(lockID);
 
       if (rc == 0) {
-	 _dataSectionReaderCount.incrementCount(_osCache);	 
-	 rc = _osCache.releaseLock(DATA_SECTION_LOCK_ID);
+	 reader.incrementCount(_osCache);
+	 rc = _osCache.releaseLock(lockID);
       }
 
       if (rc != 0) {
@@ -149,61 +238,89 @@ void SOMCompositeCache::enterReadMutex()
    }
 }
 
-void SOMCompositeCache::exitReadMutex()
+void SOMCompositeCache::exitReadMutex(SynchronizedCacheCounter& reader)
 {
-   if (!_osCache.started())
+   if (!_osCache.started()) {
       return;
+   }
 
-   _dataSectionReaderCount.decrementCount(_osCache);
+   reader.decrementCount(_osCache);
 }
 
 // the cache lock only applies to reading/writing code from the data
 // section area. The metadata section is governed by the write hash.
-bool SOMCompositeCache::isCacheLocked()
+bool SOMCompositeCache::isCacheLocked(UDATA lockID)
 {
-   return *_osCache.isLockedOffset();
+   return *_osCache.isLockedOffset(lockID);
 }
 
-// ASSUMES: the data section write lock is held. Should probably add an assert here.
-void SOMCompositeCache::lockCache()
+// ASSUMES: the write lock under lockID is held. Should probably add an assert here.
+void SOMCompositeCache::lockCache(SynchronizedCacheCounter& reader, UDATA lockID)
 {
-   auto* isLocked = _osCache.isLockedOffset();
+   auto* isLocked = _osCache.isLockedOffset(lockID);
    *isLocked = static_cast<U_32>(true);
 
-   while (_dataSectionReaderCount.count() > 0)
-      omrthread_sleep(5); // wait 5 milliseconds.
+   while (reader.count() > 0) {
+       omrthread_sleep(5); // wait 5 milliseconds.
+   }
 }
 
-void SOMCompositeCache::unlockCache()
+void SOMCompositeCache::unlockCache(UDATA lockID)
 {
-   auto* isLocked = _osCache.isLockedOffset();
-   *isLocked = static_cast<U_32>(false);   
+   auto* isLocked = _osCache.isLockedOffset(lockID);
+   *isLocked = static_cast<U_32>(false);
 }
 
-// ASSUMES: the header write lock is held.
+// assumes the read mutex for the metadata section is held.
 void SOMCompositeCache::updateMetadataPtr()
 {
-   auto oldSize = *_osCache.metadataSectionSizeFieldOffset();
+   if (omrthread_monitor_init(&_refreshMutex, 0) != 0) {
+      _refreshMutex = NULL;
+      return; // that'ssss right, we simply fail.
+   }
+   
    auto startAddress = _osCache.metadataSectionRegion()->regionStartAddress();
 
-   _metadataUpdatePtr = reinterpret_cast<SOMCacheMetadataItemHeader*>(static_cast<uint8_t*>(startAddress) + oldSize);
+   ObjectDeserializer deserialize(TR::Compiler->aotAdapter.getReverseLookupMap());
+   SOMCacheMetadataEntryIterator it{_osCache.metadataSectionRegion()};
+   
+   it.fastForward(_metadataUpdatePtr.focus());
+
+   GetUniverse()->ProcessLoadedClasses(deserialize, it);
+   _metadataUpdatePtr = *it;
+
+   omrthread_monitor_destroy(_refreshMutex);
+   _refreshMutex = NULL;
 }
 
-void SOMCompositeCache::copyMetadata(void* data, size_t size)
+void SOMCompositeCache::copyMetadata(const char* clazz, void* data, size_t size)
 {
-   //TODO: use write hashes when copying classes to the cache.
-   _osCache.acquireHeaderWriteLock();
-   _osCache.acquireLock(METADATA_SECTION_LOCK_ID);
+   UDATA hashValue = hash<const char*>{}(clazz);
    
-   updateMetadataPtr();
+   if (hashValue == *_osCache.writeHashPtr()) {
+      enterReadMutex(_metadataSectionReaderCount, METADATA_SECTION_LOCK_ID);
+      updateMetadataPtr();
+      exitReadMutex(_metadataSectionReaderCount);
+   } else {
+      tryResetWriteHash(hashValue);
 
-   memcpy(_metadataUpdatePtr, data, size);
-   _metadataUpdatePtr += size;
+      _osCache.acquireLock(METADATA_SECTION_LOCK_ID);
+      
+      lockCache(_metadataSectionReaderCount, METADATA_SECTION_LOCK_ID);
+      updateMetadataPtr();      
 
-   *_osCache.metadataSectionSizeFieldOffset() += size;
+      memcpy(_metadataUpdatePtr, data, size);
+      _metadataUpdatePtr += size;
 
-   _osCache.releaseLock(METADATA_SECTION_LOCK_ID);
-   _osCache.releaseHeaderWriteLock();
+      _osCache.acquireHeaderWriteLock();      
+      *_osCache.metadataSectionSizeFieldOffset() += size; //TODO: again! use fetch_add.
+      _osCache.releaseHeaderWriteLock();
+
+      setWriteHash(0);
+      unlockCache(METADATA_SECTION_LOCK_ID);
+      
+      _osCache.releaseLock(METADATA_SECTION_LOCK_ID);
+   }     
 }
 
 void SOMCompositeCache::copyPreludeBuffer(void* data, size_t size)
@@ -229,26 +346,25 @@ void SOMCompositeCache::copyPreludeBuffer(void* data, size_t size)
 bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allocSize)
 {
    _osCache.acquireLock(DATA_SECTION_LOCK_ID);
-   lockCache();
-  
+   lockCache(_dataSectionReaderCount, DATA_SECTION_LOCK_ID);
+
    UDATA freeSpace = dataSectionFreeSpace();
-   
+
    if (freeSpace < allocSize + sizeof(SOMCacheEntry)) {
      return false;
    }
 
    // yes, there's an extraneous string copy done here, buuuht, that is fine for now.
    SOMCacheEntry entry(methodName, allocSize);
-   //TODO: synchronize these code update ptr's across threads! not currently being done.
-   SOMCacheEntry* entryLocation = _codeUpdatePtr++; 
-   
+   SOMCacheEntry* entryLocation = _codeUpdatePtr++;
+
    memcpy(entryLocation, &entry, sizeof(SOMCacheEntry));
    _codeEntries[methodName] = entryLocation;
-   
+
    memcpy(_codeUpdatePtr, data, allocSize);
    _codeUpdatePtr += allocSize;
-   
-   unlockCache();
+
+   unlockCache(DATA_SECTION_LOCK_ID);   
    _osCache.releaseLock(DATA_SECTION_LOCK_ID);
 
    return true;
@@ -260,7 +376,7 @@ void *SOMCompositeCache::loadEntry(const char *methodName)
    _osCache.acquireLock(DATA_SECTION_LOCK_ID);
    SOMCacheEntry *entry = _codeEntries[methodName];
    _osCache.releaseLock(DATA_SECTION_LOCK_ID);
-   
+
    void *rawData = NULL;
    if (entry) rawData = (void*) (entry+1);
 

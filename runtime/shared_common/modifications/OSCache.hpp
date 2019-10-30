@@ -100,7 +100,7 @@ public:
   
   // cleanup resources used by the cache. I'm half-convinced this should occupy a
   // Destruction methods.
-  virtual void cleanup(void) = 0;
+  virtual void cleanup() = 0;
   // deletes the shared class. contains an option to suppress verbose trace messages.
   virtual IDATA destroy(bool suppressVerbose, bool isReset = false) = 0;
   // reports on the contents of error codes and the corruption context.

@@ -26,6 +26,14 @@ public:
   explicit SOMCompositeCache(const char* cacheName = "som_shared_cache",
 			     const char* cachePath = "/tmp");
 
+  UDATA tryResetWriteHash(UDATA hashValue);
+
+  void setWriteHash(UDATA hashValue);
+
+  UDATA testAndSetWriteHash(UDATA hashValue);
+
+  bool peekForWriteHash();
+
   void cleanup() {
     _osCache.cleanup();
   }
@@ -44,12 +52,12 @@ public:
 
   void *loadEntry(const char *methodName);
 
-  bool isCacheLocked();
-  void lockCache();
-  void unlockCache();
+  bool isCacheLocked(UDATA lockID);
+  void lockCache(SynchronizedCacheCounter& reader, UDATA lockID);
+  void unlockCache(UDATA lockID);
 
   void copyPreludeBuffer(void* data, size_t size);
-  void copyMetadata(void* data, size_t size);
+  void copyMetadata(const char* clazz, void* data, size_t size);
 
   void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
 
@@ -66,14 +74,16 @@ private:
   void populateTables();
   void updateMetadataPtr();
 
-  void enterReadMutex();
-  void exitReadMutex();
+  void enterReadMutex(SynchronizedCacheCounter& reader, UDATA lockID);
+  void exitReadMutex(SynchronizedCacheCounter& reader);
   
   SOMOSCacheConfigOptions _configOptions;
   SOMOSCacheConfig<typename OSMemoryMappedCache::config_type> _config;
   SOMOSCache<OSMemoryMappedCache> _osCache;
 
   SynchronizedCacheCounter _dataSectionReaderCount;
+  SynchronizedCacheCounter _metadataSectionReaderCount;
+
   CacheCRCChecker _crcChecker;
   OSCacheRegionBumpFocus<SOMCacheEntry> _codeUpdatePtr;
   OSCacheRegionBumpFocus<SOMCacheMetadataItemHeader> _metadataUpdatePtr;
@@ -82,6 +92,7 @@ private:
   std::map<std::string, void*> _loadedMethods;
 
   uint8_t* _relocationData;
+  omrthread_monitor_t _refreshMutex;
 };
 
 #endif

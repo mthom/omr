@@ -53,6 +53,13 @@ void OMR::AotAdapter::setReverseLookupMap(std::shared_ptr<std::map<::AbstractVMO
   rr->setReverseLookupMap(map);
 }
 
+std::shared_ptr<std::map<AbstractVMObject*, AbstractVMObject*>>&
+OMR::AotAdapter::getReverseLookupMap()
+{
+  auto *rr = *reinterpret_cast<TR::SharedCacheRelocationRuntime**>(reinterpret_cast<U_8*>(&_reloRuntime) + 0x10);
+  return rr->getReverseLookupMap();
+}
+
 ::AbstractVMObject* OMR::AotAdapter::reverseLookup(::AbstractVMObject* obj)
 {
   auto *rr = *reinterpret_cast<TR::SharedCacheRelocationRuntime**>(reinterpret_cast<U_8*>(&_reloRuntime) + 0x10);

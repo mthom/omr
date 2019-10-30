@@ -72,6 +72,11 @@ public:
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
+  UDATA* metadataSectionReaderCountFocus() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _metadataSectionReaderCount);
+    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+
   UDATA* crcFocus() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _cacheCrc);
     return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
@@ -80,6 +85,27 @@ public:
   U_32* preludeSectionSizeFieldOffset() {
     UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _preludeSectionSize);
     return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+
+  // assumes the header write lock is held by the caller.
+  void incrementVMCounter() {
+    U_32 offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _vmCounter);
+    U_32* vmCounterPtr = (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);    
+    _vmID = ++*vmCounterPtr; 
+
+    // don't feed the VM ID after midnight, don't get it wet, don't let it fall to 0.
+    if (_vmID == 0)
+       _vmID = 1;
+  }
+
+  UDATA* writeHashPtr() {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _writeHash);
+    return (UDATA*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
+  }
+  
+  U_32 vmIDCounter() {
+    U_32 offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _vmCounter);
+    return *(U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);    
   }
 
   U_32* metadataSectionSizeFieldOffset() {
@@ -92,8 +118,8 @@ public:
     return (U_64*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
 
-  U_32* isLockedOffset() {
-    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _isLocked);
+  U_32* isLockedOffset(UDATA lockID) {
+    UDATA offset = offsetof(SOMOSCacheHeaderMapping<typename SuperOSCache::header_type>, _isLocked[lockID]);
     return (U_32*) ((uint8_t*) headerRegion()->regionStartAddress() + offset);
   }
   
@@ -109,6 +135,10 @@ public:
   
   IDATA setRegionPermissions(OSCacheRegion*) override {
       return 0;
+  }
+
+  U_32 vmID() const {
+      return _vmID;
   }
 
   using SuperOSCache::runExitProcedure;
@@ -128,7 +158,9 @@ protected:
   }
 
   SOMOSCacheConfig<typename SuperOSCache::config_type>* _config;
+
   bool _started;
+  U_32 _vmID;
 };
 
 #endif

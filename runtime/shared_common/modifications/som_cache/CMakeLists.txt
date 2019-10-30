@@ -39,7 +39,7 @@ add_library(som_shared_cache STATIC
 # )
 
 target_include_directories(som_shared_cache
-  PRIVATE
+        PRIVATE
 		${j9vm_SOURCE_DIR}/shared
 		${j9vm_SOURCE_DIR}/shared_util
 		${j9vm_SOURCE_DIR}/verbose
@@ -50,6 +50,8 @@ target_include_directories(som_shared_cache
 		${PROJECT_SOURCE_DIR}/port/sysvipc		
 		${PROJECT_SOURCE_DIR}/runtime/shared_common/modifications
 		${PROJECT_SOURCE_DIR}/runtime/shared_common
+		${PROJECT_SOURCE_DIR}/../src/vm
+		${PROJECT_SOURCE_DIR} # to pacify '#include "../src/misc/defs.h"'
 	PUBLIC
 		${CMAKE_CURRENT_BINARY_DIR}
 		include

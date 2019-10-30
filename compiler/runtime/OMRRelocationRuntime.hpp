@@ -201,6 +201,11 @@ class RelocationRuntime {
 	_oldNewAddresses = map;
       }
 
+      std::shared_ptr<std::map<::AbstractVMObject*, ::AbstractVMObject*>>& getReverseLookupMap()
+      {
+	return _reverseLookup;
+      }
+  
       void setReverseLookupMap(std::shared_ptr<std::map<::AbstractVMObject*, ::AbstractVMObject*>>& map)
       {
 	_reverseLookup = map;

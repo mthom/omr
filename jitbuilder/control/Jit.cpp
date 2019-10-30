@@ -271,10 +271,7 @@ internal_shutdownJit()
    TR::CodeCacheManager &codeCacheManager = fe->codeCacheManager();
    codeCacheManager.destroy();
 
-// if(cache != NULL) {
-//   delete cache;
-// }
-//   TR::Compiler->cache->cleanup();
+   TR::Compiler->aotAdapter.getSharedCache()->cleanup();
    }
 //
 bool

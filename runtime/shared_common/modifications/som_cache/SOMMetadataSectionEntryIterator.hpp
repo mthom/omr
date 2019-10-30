@@ -60,11 +60,16 @@ public:
     , _region(region)
   {}
 
+  // this creates a delimited iterator, whose end point is demarcated by limit.
   SOMCacheMetadataEntryIterator(OSCacheContiguousRegion* region, ItemHeader* limit)
     : _focus(region, (ItemHeader*) region->regionStartAddress())
     , _region(region)
     , _limit(limit)
   {}
+
+  void fastForward(ItemHeader* start) {    
+    _focus = start;
+  }
 
   SOMCacheMetadataEntryDescriptor next()
   {
@@ -80,7 +85,7 @@ public:
     return descriptor;
   }
 
-  void* operator*() {
+  ItemHeader* operator*() {
     return _focus;
   }
 
