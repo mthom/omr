@@ -45,18 +45,22 @@ target_include_directories(som_shared_cache
 		${j9vm_SOURCE_DIR}/verbose
 		${PROJECT_SOURCE_DIR}/nls
 		${PROJECT_SOURCE_DIR}/compiler
-		${PROJECT_SOURCE_DIR}/include_core
+		${PROJECT_SOURCE_DIR}/include_core		
 		${PROJECT_SOURCE_DIR}/runtime/port/sysvipc
 		${PROJECT_SOURCE_DIR}/port/sysvipc		
 		${PROJECT_SOURCE_DIR}/runtime/shared_common/modifications
-		${PROJECT_SOURCE_DIR}/runtime/shared_common
-		${PROJECT_SOURCE_DIR}/../src/vm
+		${PROJECT_SOURCE_DIR}/runtime/shared_common	
+		${PROJECT_SOURCE_DIR}/../src
+		${PROJECT_SOURCE_DIR}/jitbuilder/release/cpp/include
 		${PROJECT_SOURCE_DIR} # to pacify '#include "../src/misc/defs.h"'
 	PUBLIC
 		${CMAKE_CURRENT_BINARY_DIR}
 		include
 		.
 )
+
+# needed for HEAP_CLS to be defined by the preprocessor.
+add_definitions(-DGC_TYPE=OMR_GARBAGE_COLLECTION)
 
  target_link_libraries(som_shared_cache
    PRIVATE

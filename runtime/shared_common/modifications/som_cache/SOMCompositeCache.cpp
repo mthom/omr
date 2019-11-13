@@ -2,7 +2,9 @@
 #include "SOMCompositeCache.hpp"
 #include "SOMOSCacheConfig.hpp"
 
-#include "Universe.h"
+#include <vm/Universe.h>
+#include <vmobjects/VMClass.h>
+#include <vmobjects/VMSymbol.h>
 
 #include "omr.h"
 #include "omrcfg.h"
@@ -59,7 +61,7 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
 UDATA SOMCompositeCache::tryResetWriteHash(UDATA hashValue)
 {
    if (!_osCache.started()) {
-     return false;
+      return false;
    }
 
    UDATA oldCachedHashValue = *_osCache.writeHashPtr();
@@ -101,28 +103,28 @@ void SOMCompositeCache::setWriteHash(UDATA hashValue)
 UDATA SOMCompositeCache::testAndSetWriteHash(UDATA hashValue)
 {
    if (!_osCache.started()) {
-     return false;
+      return false;
    }
 
    UDATA cachedHashValue = *_osCache.writeHashPtr();
    UDATA maskedHash = hashValue & WRITEHASH_MASK;
 
    if (hashValue == 0) {
-     setWriteHash(hashValue);
+      setWriteHash(hashValue);
    } else if (maskedHash == (cachedHashValue & WRITEHASH_MASK)) {
-     // the first WRITEHASH_MASK + 1 bits of the write hash encode
-     // the actual hash value. The rest, to the left of that value,
-     // encode the ID of the VM that wrote the hash to the cache header.
+      // the first WRITEHASH_MASK + 1 bits of the write hash encode
+      // the actual hash value. The rest, to the left of that value,
+      // encode the ID of the VM that wrote the hash to the cache header.
 
-     // I love you, write hash! :-O
-     UDATA vmWroteToCache = cachedHashValue >> WRITEHASH_SHIFT;
+      // I love you, write hash! :-O
+      UDATA vmWroteToCache = cachedHashValue >> WRITEHASH_SHIFT;
 
-     if (_osCache.vmID() != vmWroteToCache) {
-        // and, this signifies that another VM is storing the class (or failing that, one
-        // with an identical hash) to the cache. Wait for it to finish, update the metadata
-        // pointer, and load it.
-        return 1;
-     }
+      if (_osCache.vmID() != vmWroteToCache) {
+         // and, this signifies that another VM is storing the class (or failing that, one
+         // with an identical hash) to the cache. Wait for it to finish, update the metadata
+         // pointer, and load it.
+	 return 1;
+      }
    }
 
    return 0; // this means we set the write hash.
@@ -272,31 +274,34 @@ void SOMCompositeCache::unlockCache(UDATA lockID)
 }
 
 // assumes the read mutex for the metadata section is held.
-void SOMCompositeCache::updateMetadataPtr()
+ObjectDeserializer SOMCompositeCache::updateMetadataPtr()
 {
    if (omrthread_monitor_init(&_refreshMutex, 0) != 0) {
       _refreshMutex = NULL;
-      return; // that'ssss right, we simply fail.
+      return {};
    }
-   
+
    auto startAddress = _osCache.metadataSectionRegion()->regionStartAddress();
 
    ObjectDeserializer deserialize(TR::Compiler->aotAdapter.getReverseLookupMap());
    SOMCacheMetadataEntryIterator it{_osCache.metadataSectionRegion()};
-   
+
    it.fastForward(_metadataUpdatePtr.focus());
 
    GetUniverse()->ProcessLoadedClasses(deserialize, it);
+
    _metadataUpdatePtr = *it;
 
    omrthread_monitor_destroy(_refreshMutex);
    _refreshMutex = NULL;
+
+   return deserialize;
 }
 
-void SOMCompositeCache::copyMetadata(const char* clazz, void* data, size_t size)
+void SOMCompositeCache::copyMetadata(VMSymbol* className, void* data, size_t size)
 {
-   UDATA hashValue = hash<const char*>{}(clazz);
-   
+   UDATA hashValue = hash<const char*>{}(className->GetChars());
+
    if (hashValue == *_osCache.writeHashPtr()) {
       enterReadMutex(_metadataSectionReaderCount, METADATA_SECTION_LOCK_ID);
       updateMetadataPtr();
@@ -305,22 +310,34 @@ void SOMCompositeCache::copyMetadata(const char* clazz, void* data, size_t size)
       tryResetWriteHash(hashValue);
 
       _osCache.acquireLock(METADATA_SECTION_LOCK_ID);
-      
+
       lockCache(_metadataSectionReaderCount, METADATA_SECTION_LOCK_ID);
-      updateMetadataPtr();      
+      ObjectDeserializer deserialize{updateMetadataPtr()};
 
-      memcpy(_metadataUpdatePtr, data, size);
-      _metadataUpdatePtr += size;
+      bool classInMetadataSection = false;
 
-      _osCache.acquireHeaderWriteLock();      
-      *_osCache.metadataSectionSizeFieldOffset() += size; //TODO: again! use fetch_add.
-      _osCache.releaseHeaderWriteLock();
+      for(auto* clazz : deserialize.GetPreprocessedClasses()) {
+	 if (className == clazz->GetName()) {
+	    classInMetadataSection = true;
+	    break;
+	 }
+      }
+
+      if (!classInMetadataSection) {
+	 memcpy(_metadataUpdatePtr, data, size);
+	 _metadataUpdatePtr += size;
+
+	 _osCache.acquireHeaderWriteLock();
+	 *_osCache.metadataSectionSizeFieldOffset() += size; //TODO: again! use fetch_add.
+	 _osCache.releaseHeaderWriteLock();
+      }
 
       setWriteHash(0);
+
       unlockCache(METADATA_SECTION_LOCK_ID);
-      
+
       _osCache.releaseLock(METADATA_SECTION_LOCK_ID);
-   }     
+   }
 }
 
 void SOMCompositeCache::copyPreludeBuffer(void* data, size_t size)
@@ -364,7 +381,7 @@ bool SOMCompositeCache::storeEntry(const char* methodName, void* data, U_32 allo
    memcpy(_codeUpdatePtr, data, allocSize);
    _codeUpdatePtr += allocSize;
 
-   unlockCache(DATA_SECTION_LOCK_ID);   
+   unlockCache(DATA_SECTION_LOCK_ID);
    _osCache.releaseLock(DATA_SECTION_LOCK_ID);
 
    return true;

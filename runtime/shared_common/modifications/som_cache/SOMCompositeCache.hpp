@@ -19,6 +19,9 @@
 
 #include "env/TRMemory.hpp"
 
+class ObjectDeserializer;
+class VMSymbol;
+
 class SOMCompositeCache {
 public:
   TR_ALLOC(TR_Memory::SharedCache)
@@ -57,7 +60,7 @@ public:
   void unlockCache(UDATA lockID);
 
   void copyPreludeBuffer(void* data, size_t size);
-  void copyMetadata(const char* clazz, void* data, size_t size);
+  void copyMetadata(VMSymbol* className, void* data, size_t size);
 
   void storeCallAddressToHeaders(void *calleeMethod, size_t methodNameTemplateOffset, void *calleeCodeCacheAddress);
 
@@ -78,7 +81,7 @@ private:
 
   UDATA dataSectionFreeSpace();
   void populateTables();
-  void updateMetadataPtr();
+  ObjectDeserializer updateMetadataPtr();
 
   void enterReadMutex(SynchronizedCacheCounter& reader, UDATA lockID);
   void exitReadMutex(SynchronizedCacheCounter& reader);
