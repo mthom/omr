@@ -183,6 +183,9 @@ if(OMR_SHARED_CACHE_MODS)
   add_subdirectory(runtime/shared_common/modifications)
 endif(OMR_SHARED_CACHE_MODS)
 
+# Compile som_shared_cache after jitbuilder, which it depends on.
+add_dependencies(som_shared_cache jitbuilder)
+
 # This should come last to ensure dependencies
 # are defined
 if(OMR_FVTEST)

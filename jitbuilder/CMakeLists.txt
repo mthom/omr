@@ -59,7 +59,6 @@ endif()
 set(CPP_API_GENERATOR ${CMAKE_CURRENT_SOURCE_DIR}/apigen/cppgen.py)
 set(SHARED_CACHE_MODS_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../runtime/shared_common/modifications)
 set(SOM_SHARED_CACHE_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../runtime/shared_common/modifications/som_cache)
-# set(WASM_SHARED_CACHE_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../runtime/shared_common/modifications/wasm)
 set(JITBUILDER_CPP_API_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release/cpp/include)
 set(JITBUILDER_CPP_API_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}client/cpp)
 set(JITBUILDER_API_DESCRIPTION ${CMAKE_CURRENT_SOURCE_DIR}/apigen/jitbuilder.api.json)
@@ -124,7 +123,6 @@ target_include_directories(jitbuilder
   INTERFACE
     ${SHARED_CACHE_MODS_HEADER_DIR}
     ${SOM_SHARED_CACHE_HEADER_DIR}
-#   ${WASM_SHARED_CACHE_HEADER_DIR}
     ${JITBUILDER_CPP_API_HEADER_DIR}
 )
 
@@ -132,7 +130,6 @@ target_link_libraries(jitbuilder
   	PUBLIC
 	omrvmstartup
         shared_cache_modifications
-	som_shared_cache
 	${OMR_PORT_LIB}
 )
 

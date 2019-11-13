@@ -65,9 +65,6 @@ add_definitions(-DGC_TYPE=OMR_GARBAGE_COLLECTION)
  target_link_libraries(som_shared_cache
    PRIVATE
                 shared_cache_modifications
-# 		j9vm_interface
  		j9pool
  		j9hashtable
-# 		j9utilcore
-# 		j9util
 )
