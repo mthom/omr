@@ -20,24 +20,14 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(OS_SHARED_MEMORY_CACHE_STATS_HPP_INCLUDED)
-#define OS_SHARED_MEMORY_CACHE_STATS_HPP_INCLUDED
+#if !defined(OS_CACHE_STATS_HPP_INCLUDED)
+#define OS_CACHE_STATS_HPP_INCLUDED
 
-#include "OSCacheStats.hpp"
-#include "OSSharedMemoryCache.hpp"
-
-class OSSharedMemoryCacheStats: public OSCacheStats
+class OSCacheStats
 {
 public:
-  OSSharedMemoryCacheStats(OSSharedMemoryCache* cache)
-    : _cache(cache)
-  {}
-
-  virtual IDATA getCacheStatsHelper(const char* cacheDirName);//, SH_OSCache_Info* cacheInfo);
-  virtual IDATA prepareAndGetCacheStats(); //SH_OSCache_Info* cacheInfo);
-  
-protected:
-  OSSharedMemoryCache* _cache;
+  virtual IDATA prepareAndGetCacheStats() = 0;
+  virtual void getCacheStats() = 0;
 };
 
 #endif
