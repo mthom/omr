@@ -32,12 +32,15 @@ public:
   OSSharedMemoryCacheStats(OSSharedMemoryCache* cache)
     : _cache(cache)
   {}
-
-  virtual IDATA getCacheStatsHelper(const char* cacheDirName);//, SH_OSCache_Info* cacheInfo);
-  virtual IDATA prepareAndGetCacheStats(); //SH_OSCache_Info* cacheInfo);
+  
+  virtual IDATA prepareAndGetCacheStats();
+  virtual void getCacheStats() = 0;
   
 protected:
   OSSharedMemoryCache* _cache;
+
+private:
+  IDATA getCacheStatsHelper(const char* cacheDirName);
 };
 
 #endif

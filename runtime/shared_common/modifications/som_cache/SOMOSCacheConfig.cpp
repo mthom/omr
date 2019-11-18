@@ -18,6 +18,13 @@ SOMOSCacheConfig<OSCacheConfigImpl>::SOMOSCacheConfig(U_32 numLocks, SOMOSCacheC
 }
 
 template <class OSCacheConfigImpl>
+SOMOSCacheHeader<typename OSCacheConfigImpl::header_type>*
+SOMOSCacheConfig<OSCacheConfigImpl>::getHeader()
+{
+   return _layout.getHeader();
+}
+
+template <class OSCacheConfigImpl>
 void SOMOSCacheConfig<OSCacheConfigImpl>::serializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 size)
 {
    _layout.init(blockAddress, size);

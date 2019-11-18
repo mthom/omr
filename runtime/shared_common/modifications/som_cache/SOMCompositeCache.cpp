@@ -58,6 +58,32 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
    _osCache.releaseHeaderWriteLock();
 }
 
+std::optional<SOMOSCacheInfo>
+SOMCompositeCache::getCacheStats(const char* cacheName, const char* cachePath)
+{  
+   SOMOSCacheConfigOptions configOptions(0); // 0 because we don't know the cache size.
+
+   configOptions.setStatReason(SOMOSCacheConfigOptions::StatReason::List)
+                .setOpenReason(SOMOSCacheConfigOptions::StartupReason::Stat);
+   
+   SOMOSCacheConfig<OSMemoryMappedCacheConfig> config(5, &configOptions, 0);
+
+   SOMOSCache<OSMemoryMappedCache> cache(initializePortLibrary(),
+					 cacheName,
+					 cachePath,
+					 5,
+					 &config,
+					 &configOptions,
+					 0);
+
+   
+   
+   SOMCacheStats cacheStats(&cache);   
+   cacheStats.prepareAndGetCacheStats();
+   
+   return cacheStats.cacheInfo();
+}
+
 UDATA SOMCompositeCache::tryResetWriteHash(UDATA hashValue)
 {
    if (!_osCache.started()) {
@@ -68,11 +94,8 @@ UDATA SOMCompositeCache::tryResetWriteHash(UDATA hashValue)
    UDATA value = 0;
    UDATA maskedHash = hashValue & WRITEHASH_MASK;
 
-   if (maskedHash == (oldCachedHashValue & WRITEHASH_MASK)) {// || (_lastFailedWHCount > FAILED_WRITEHASH_MAX_COUNT)) {
+   if (maskedHash == (oldCachedHashValue & WRITEHASH_MASK)) {
       setWriteHash(0);
-//     _lastFailedWHCount = 0;
-//     _lastFailedWriteHash = 0;
-//     Trc_SHR_CC_tryResetWriteHash_Exit1(_commonCCInfo->vmID, maskedHash, _theca->writeHash);
       return 1; // we reset the hash.
    }
 

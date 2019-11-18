@@ -92,12 +92,9 @@ OSMemoryMappedCacheStats::prepareAndGetCacheStats() // SH_OSCache_Info *cacheInf
 	   }
 	}
 
-	if (configOptions->statIterate()) {
+	if (configOptions->statList()) {
 	   getCacheStats();
 	}
-
-	_cache->internalDetach();
-	_cache->cleanup();
 
 	return 0;
 }

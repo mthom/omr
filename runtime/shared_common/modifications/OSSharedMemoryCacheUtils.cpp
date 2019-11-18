@@ -27,10 +27,8 @@
 
 #include "ut_omrshr_mods.h"
 
-namespace OSSharedCacheCacheUtils
-{
 #if !defined(WIN32)
-static IDATA StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cacheDirName, UDATA groupPerm, const char* cacheName, OMRPortShmemStatistic * statbuf)//cacheNameWithVGen, OMRPortShmemStatistic * statbuf)
+IDATA OSSharedMemoryCacheUtils::StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cacheDirName, UDATA groupPerm, const char* cacheName, OMRPortShmemStatistic * statbuf)//cacheNameWithVGen, OMRPortShmemStatistic * statbuf)
 {
   IDATA rc = -1;
   OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
@@ -76,4 +74,3 @@ static IDATA StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cache
   return rc;
 }
 #endif
-}

@@ -37,7 +37,7 @@ public:
   {}
   
   virtual void initialize(OSMemoryMappedCacheHeader* header) {
-    header->refresh(_library);
+     header->refresh(_library);
   }
   
   virtual void initialize(OSSharedMemoryCacheHeader*) {}

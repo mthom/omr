@@ -48,8 +48,17 @@ public:
   enum VerboseOptions {
   };
 
-  enum StartupReason {
+  enum class StartupReason {
+    Destroy,
+    Expired,
     Stat
+  };
+
+  enum class StatReason {
+    Destroy,
+    Expired,
+    Iterate,
+    List,
   };
 
   virtual bool useUserHomeDirectoryForCacheDir() = 0;

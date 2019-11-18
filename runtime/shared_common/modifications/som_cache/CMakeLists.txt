@@ -29,6 +29,7 @@ add_library(som_shared_cache STATIC
   SOMCompositeCache.cpp
   SOMDataSectionEntryIterator.cpp
   SOMMetadataSectionEntryIterator.cpp
+  SOMCacheStats.cpp
 )
 
 # Create shared class library.

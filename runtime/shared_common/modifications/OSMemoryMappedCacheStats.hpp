@@ -35,7 +35,8 @@ public:
   {}
 
   virtual IDATA prepareAndGetCacheStats();
-  
+  virtual void getCacheStats() = 0;
+
 protected:
   OSMemoryMappedCache* _cache;
   I_32 _inUse;

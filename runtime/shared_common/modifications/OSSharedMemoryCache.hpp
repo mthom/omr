@@ -54,6 +54,7 @@
 //#define SHM_DATASTARTFROMHEADER(header) SRP_GET(header->oscHdr.dataStart, void*);
 
 class OSSharedMemoryCacheConfig;
+class OSSharedMemoryCacheStats;
 
 class OSSharedMemoryCache: public OSCacheImpl
 {
@@ -76,6 +77,7 @@ public:
   typedef OSSharedMemoryCacheHeader header_type;
   typedef OSSharedMemoryCacheConfig config_type;
   typedef OSSharedMemoryCacheIterator iterator_type;
+  typedef OSSharedMemoryCacheStats stats_type;
   
 protected:
   friend class OSSharedMemoryCachePolicies;

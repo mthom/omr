@@ -23,11 +23,13 @@
 #if !defined(OS_CACHE_STATS_HPP_INCLUDED)
 #define OS_CACHE_STATS_HPP_INCLUDED
 
+#include "omrport.h"
+
 class OSCacheStats
 {
 public:
-  virtual IDATA prepareAndGetCacheStats() = 0;
-  virtual void getCacheStats() = 0;
+    virtual IDATA prepareAndGetCacheStats() = 0;
+    virtual void getCacheStats() = 0;
 };
 
 #endif

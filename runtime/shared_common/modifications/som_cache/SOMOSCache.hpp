@@ -11,6 +11,9 @@
 
 #include "env/TRMemory.hpp"
 
+template <class>
+class SOMCacheStats;
+
 template <class SuperOSCache>
 class SOMOSCache: public SuperOSCache
 {
@@ -145,6 +148,8 @@ public:
   using SuperOSCache::errorHandler;
   using SuperOSCache::getPermissionsRegionGranularity;
   
+  friend class SOMCacheStats<SuperOSCache>;
+
 protected:
   IDATA initCacheName(const char* cacheName) override {
     OMRPORT_ACCESS_FROM_OMRPORT(this->_portLibrary);

@@ -37,6 +37,7 @@
 
 class OSMemoryMappedCacheConfig;
 class OSMemoryMappedCacheIterator;
+class OSMemoryMappedCacheStats;
 
 // an implementation of a persistent shared cache that uses omrmmap primitives
 // and region-based locks on sections of files.
@@ -64,10 +65,12 @@ public:
 
   typedef OSMemoryMappedCacheConfig config_type;
   typedef OSMemoryMappedCacheIterator iterator_type;
+  typedef OSMemoryMappedCacheStats stats_type;
   
 protected:
   friend class OSMemoryMappedCacheAttachingContext;
   friend class OSMemoryMappedCacheCreatingContext;
+  friend class OSMemoryMappedCacheStats;
 
   virtual IDATA verifyCacheHeader();
   

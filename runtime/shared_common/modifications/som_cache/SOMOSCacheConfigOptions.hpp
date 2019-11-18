@@ -20,6 +20,8 @@ public:
     , _cacheSize(cacheSize)
   {}
 
+  virtual ~SOMOSCacheConfigOptions() {}
+
   bool useUserHomeDirectoryForCacheDir() override {
     return true;
   }
@@ -27,6 +29,7 @@ public:
   bool isUserSpecifiedCacheDir() override {
     return false;
   }
+  
   // is the cache being opened in read-only mode?
   bool readOnlyOpenMode() override {
     return false;
@@ -104,30 +107,39 @@ public:
   }
   
   bool openToStatExistingCache() override {
-    return false;
+    return _startupReason == StartupReason::Stat;
   }
 
   // reasons for stats. Should have a StatReason enum.
   bool statToDestroy() override {
-    return false; // like SHR_STATS_REASON_DESTROY
+    return _statReason == StatReason::Destroy; // like SHR_STATS_REASON_DESTROY
   }
 
   bool statExpired() override {
-    return false; // like SHR_STATS_REASON_EXPIRE
+    return _statReason == StatReason::Expired; // like SHR_STATS_REASON_EXPIRE
   }
   
   bool statIterate() override {
-    return false; // like SHR_STATS_REASON_ITERATE
+    return _statReason == StatReason::Iterate; // like SHR_STATS_REASON_ITERATE
   }
   
   bool statList() override {
-    return false; // like SHR_STATS_REASON_LIST
+    return _statReason == StatReason::List; // like SHR_STATS_REASON_LIST
   }
 
-  OSCacheConfigOptions& setOpenReason(StartupReason) override { return *this; }
+  OSCacheConfigOptions& setOpenReason(StartupReason reason) override {
+    _startupReason = reason;
+    return *this;
+  }
+  
   OSCacheConfigOptions& setReadOnlyOpenMode() override { return *this; }
   OSCacheConfigOptions& setOpenMode(I_32) override { return *this; }
-
+  
+  OSCacheConfigOptions& setStatReason(StatReason reason) {
+    _statReason = reason;
+    return *this;
+  }
+  
   // the block size of the cache.
   U_32 cacheSize() override {
     return _cacheSize;
@@ -193,19 +205,9 @@ public:
     return 0;
   }
 
-  // flags obviated so far:
-  /* appendBaseDir (a variable inside getCacheDir)
-     appendBaseDir = (NULL == ctrlDirName) || (OMRPORT_SHR_CACHE_TYPE_NONPERSISTENT == cacheType) || (OMRPORT_SHR_CACHE_TYPE_SNAPSHOT == cacheType);
-
-     flags |= OMRSHMEM_GETDIR_USE_USERHOME; <-- covered by useUserHomeDirectoryForCacheLocation().
-   */
 protected:
   U_32 _cacheSize;
-//
-//  CreateOptions _createOptions;
-//  RuntimeOptions _runtimeOptions;
-//  VerboseOptions _verboseOptions;
-//  StartupReason _startupReason;
+  StatReason _statReason;
 };
 
 #endif

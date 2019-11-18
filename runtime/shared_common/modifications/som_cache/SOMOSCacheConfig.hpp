@@ -17,6 +17,9 @@
 template <class>
 class SOMOSCache;
 
+template <class>
+class SOMCacheStats;
+
 template <class OSCacheConfigImpl>
 class SOMOSCacheConfig: public OSCacheConfigImpl
 {
@@ -45,13 +48,16 @@ public:
   virtual void serializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize) override;
   virtual void initializeCacheLayout(OSCache* osCache, void* blockAddress, U_32 cacheSize) override;
   
+  SOMOSCacheHeader<header_type>* getHeader();
+
   using OSCacheConfigImpl::releaseLock;
   using OSCacheConfigImpl::acquireHeaderWriteLock;
   using OSCacheConfigImpl::releaseHeaderWriteLock;
   
 private:
   friend class SOMOSCache<cache_type>;
-  
+  friend class SOMCacheStats<cache_type>;
+
   SOMOSCacheLayout<header_type> _layout;
 };
 

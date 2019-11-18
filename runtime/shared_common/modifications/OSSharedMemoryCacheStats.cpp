@@ -121,7 +121,7 @@ OSSharedMemoryCacheStats::getCacheStatsHelper(const char* cacheDirName)//, SH_OS
   UDATA statrc = 0;
   OSCacheConfigOptions* configOptions = _cache->_configOptions;
     
-  Trc_SHR_OSC_Sysv_getCacheStatsHelper_Entry(_cache->_cacheName);//cacheNameWithVGen);
+  Trc_SHR_OSC_Sysv_getCacheStatsHelper_Entry(_cache->_cacheName);
 
   // J9 specific. notice how it strips the version and gen tags to get to the core cache name!
   // hence, we just start with the core cache name, and work around the need for this step.
@@ -131,7 +131,8 @@ OSSharedMemoryCacheStats::getCacheStatsHelper(const char* cacheDirName)//, SH_OS
 //  }
   
 #if !defined(WIN32)
-  statrc = OSSharedMemoryCacheUtils::StatSysVMemoryHelper(OMRPORTLIB, cacheDirName, configOptions->groupPermissions(), _cache->_cacheName, &statbuf);
+  statrc = OSSharedMemoryCacheUtils::StatSysVMemoryHelper(OMRPORTLIB, cacheDirName, configOptions->groupPermissions(),
+							  _cache->_cacheName, &statbuf);
 #else
   statrc = omrshmem_stat(cacheDirName, configOptions->groupPermissions(), _cache->_cacheName, &statbuf);
 #endif
@@ -174,6 +175,6 @@ OSSharedMemoryCacheStats::getCacheStatsHelper(const char* cacheDirName)//, SH_OS
   }
   */
   Trc_SHR_OSC_Sysv_getCacheStatsHelper_Exit();
-  return 0;
+  return statrc;
 }
 

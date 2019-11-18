@@ -22,6 +22,9 @@ class SOMOSCacheLayout;
 template <class>
 class SOMOSCacheHeader;
 
+template <class>
+class SOMCacheStats;
+
 template <>
 class SOMOSCacheHeader<OSMemoryMappedCacheHeader>:
   virtual public OSCacheContiguousRegion,
@@ -47,6 +50,7 @@ public:
 protected:
   friend class SOMOSCacheConfig<OSMemoryMappedCacheConfig>;
   friend class SOMOSCacheLayout<OSMemoryMappedCacheHeader>;
+  friend class SOMCacheStats<OSMemoryMappedCache>;
 
   SOMOSCacheHeaderMapping<OSMemoryMappedCacheHeader>* derivedMapping();
 
@@ -82,6 +86,7 @@ public:
 protected:
   friend class SOMOSCacheConfig<OSSharedMemoryCacheConfig>;
   friend class SOMOSCacheLayout<OSSharedMemoryCacheHeader>;
+  friend class SOMCacheStats<OSSharedMemoryCache>;
 
   SOMOSCacheHeaderMapping<OSSharedMemoryCacheHeader>* derivedMapping();
 

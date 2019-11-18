@@ -27,12 +27,13 @@
 #include "OSCache.hpp"
 #include "OSCacheImpl.hpp"
 
-namespace OSSharedMemoryCacheUtils
+class OSSharedMemoryCacheUtils
 {
 #if !defined(WIN32)
-static IDATA
-StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cacheDirName, UDATA groupPerm, const char* cacheName, OMRPortShmemStatistic* statBuf);
-#endif  
-}
+public:
+  static IDATA
+  StatSysVMemoryHelper(OMRPortLibrary* portLibrary, const char* cacheDirName, UDATA groupPerm, const char* cacheName, OMRPortShmemStatistic* statBuf);
+#endif
+};
 
 #endif

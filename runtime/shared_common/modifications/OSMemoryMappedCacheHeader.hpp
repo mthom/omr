@@ -31,6 +31,9 @@
 #include "CacheHeaderMappingImpl.hpp"
 #include "OSMemoryMappedCacheHeaderMapping.hpp"
 
+template <class>
+class SOMCacheStats;
+
 class OSMemoryMappedCacheHeader: virtual public OSCacheContiguousRegion
 {
 public:

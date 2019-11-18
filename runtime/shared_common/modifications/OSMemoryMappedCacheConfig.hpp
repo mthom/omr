@@ -132,6 +132,7 @@ protected:
   friend class OSMemoryMappedCache;
   friend class OSMemoryMappedCacheCreatingContext;
   friend class OSMemoryMappedCacheAttachingContext;
+  friend class OSMemoryMappedCacheStats;
 
   // this function is meant to eliminate dangling pointers once the
   // memory mapped file is detached in detach().

@@ -2,6 +2,7 @@
 #define SOM_COMPOSITE_CACHE_HPP_INCLUDED
 
 #include <map>
+#include <optional>
 #include <string>
 
 #include "CacheCRCChecker.hpp"
@@ -16,6 +17,7 @@
 #include "SOMDataSectionEntryIterator.hpp"
 #include "SOMMetadataSectionEntryIterator.hpp"
 #include "SOMOSCache.hpp"
+#include "SOMCacheStats.hpp"
 
 #include "env/TRMemory.hpp"
 
@@ -29,6 +31,10 @@ public:
   explicit SOMCompositeCache(const char* cacheName = "som_shared_cache",
 			     const char* cachePath = "/tmp");
 
+  static std::optional<SOMOSCacheInfo>
+  getCacheStats(const char* cacheName = "som_shared_cache",
+		const char* cachePath = "/tmp");
+  
   UDATA tryResetWriteHash(UDATA hashValue);
 
   void setWriteHash(UDATA hashValue);
