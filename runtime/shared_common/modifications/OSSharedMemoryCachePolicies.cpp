@@ -131,31 +131,6 @@ OSSharedMemoryCachePolicies::openSharedSemaphore(LastErrorInfo *lastErrorInfo) /
 				_cache->_semFileName, (int)_cache->_config->_totalNumSems, 0, flags,
 				&_cache->_controlFileStatus); 
 
-  /*
-  if (OMR_ARE_ANY_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_STATS)) {
-    flags |= OMRSHSEM_OPEN_FOR_STATS;
-  } else if (OMR_ARE_ANY_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_DESTROY)) {
-    flags |= OMRSHSEM_OPEN_FOR_DESTROY;
-  } else if (OMR_ARE_ANY_BITS_SET(_createFlags, OMRSH_OSCACHE_OPEXIST_DO_NOT_CREATE)) {
-    flags |= OMRSHSEM_OPEN_DO_NOT_CREATE;
-    }
-    /*
-	switch(action){
-		case OMRSH_SYSV_REGULAR_CONTROL_FILE:
-			rc = omrshsem_deprecated_open(_cacheLocation, _configOptions->groupPermissions(), &_semhandle, _semFileName, (int)_totalNumSems, 0, flags, &_controlFileStatus);
-			break;
-		case OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE:
-			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _configOptions->groupPermissions(), &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_EMPTY_CONTROL_FILE);
-			break;
-		case OMRSH_SYSV_OLDER_CONTROL_FILE:
-			rc = omrshsem_deprecated_openDeprecated(_cacheLocation, _configOptions->groupPermissions(), &_config->_semhandle, _semFileName, OMRSH_SYSV_OLDER_CONTROL_FILE);
-			break;
-		default:
-			Trc_SHR_Assert_ShouldNeverHappen();
-			break;
-	}
-  */
-	/* if above portLibrary call is successful, portable error number is set to 0 */
   if (NULL != lastErrorInfo) {
     lastErrorInfo->populate(_cache->_portLibrary);
 //    lastErrorInfo->_lastErrorCode = omrerror_last_error_number();

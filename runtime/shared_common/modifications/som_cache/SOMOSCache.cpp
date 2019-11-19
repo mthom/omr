@@ -7,17 +7,20 @@
 
 template <class SuperOSCache>
 SOMOSCache<SuperOSCache>::SOMOSCache(OMRPortLibrary* library,
-				     const char* cacheName,
-				     const char* ctrlDirName,
+				     char* cacheName,
+				     char* ctrlDirName,
 				     IDATA numLocks,
 				     SOMOSCacheConfig<typename SuperOSCache::config_type>* config,
 				     SOMOSCacheConfigOptions* configOptions,
-				     UDATA osPageSize)
+				     UDATA osPageSize,
+				     bool callStartup)
   : SuperOSCache(library, cacheName, ctrlDirName, numLocks,
 		 (_config = config),
 		 configOptions)
 {
-  startup(cacheName, ctrlDirName);
+  if (callStartup) {
+     startup(cacheName, ctrlDirName);
+  }
 }
 
 template <class SuperOSCache>

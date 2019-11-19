@@ -57,11 +57,10 @@ bool SynchronizedCacheCounter::decrementCount(OSCacheImpl& osCache)
     
     value = oldNum - 1;
     oldNum = VM_AtomicSupport::lockCompareExchange(_regionFocus.focus(), oldNum, value);
-  } while ((UDATA)value != (oldNum - 1));
+  } while ((UDATA) value != (oldNum - 1));
 
-  //_regionFocus._region->protect(); //protectHeaderReadWriteArea(currentThread, false);
-
-  //Trc_SHR_CC_decReaderCount_Exit(_theca->readerCount);
+  // _regionFocus._region->protect(); //protectHeaderReadWriteArea(currentThread, false);
+  // Trc_SHR_CC_decReaderCount_Exit(_theca->readerCount);
 
   return true;
 }

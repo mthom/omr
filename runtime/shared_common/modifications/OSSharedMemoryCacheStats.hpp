@@ -33,7 +33,8 @@ public:
     : _cache(cache)
   {}
   
-  virtual IDATA prepareAndGetCacheStats();
+  virtual IDATA prepareCache();
+  virtual void shutdownCache();
   virtual void getCacheStats() = 0;
   
 protected:

@@ -45,7 +45,7 @@ class OSMemoryMappedCache: public OSCacheImpl {
 public:
   typedef OSMemoryMappedCacheHeader header_type;
 
-  OSMemoryMappedCache(OMRPortLibrary* library, const char* cacheName, const char* ctrlDirName, IDATA numLocks,
+  OSMemoryMappedCache(OMRPortLibrary* library, char* cacheName, char* ctrlDirName, IDATA numLocks,
 		      OSMemoryMappedCacheConfig* config, OSCacheConfigOptions* configOptions);
 
   virtual ~OSMemoryMappedCache() {}

@@ -33,12 +33,12 @@
 #include "OSSharedMemoryCacheSerializer.hpp"
 
 OSSharedMemoryCache::OSSharedMemoryCache(OMRPortLibrary* library,
-					 const char* cacheName,
-					 const char* cacheDirName,
+					 char* cacheName,
+					 char* cacheDirName,
 					 IDATA numLocks,
 					 OSSharedMemoryCacheConfig* config,
 					 OSCacheConfigOptions* configOptions)
-  : OSCacheImpl(library, configOptions, numLocks)
+  : OSCacheImpl(library, configOptions, numLocks, cacheName, cacheDirName)
   , _config(config)
 {
   initialize();

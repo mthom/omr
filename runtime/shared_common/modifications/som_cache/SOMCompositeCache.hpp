@@ -29,7 +29,8 @@ public:
   TR_ALLOC(TR_Memory::SharedCache)
 
   explicit SOMCompositeCache(const char* cacheName = "som_shared_cache",
-			     const char* cachePath = "/tmp");
+			     const char* cachePath = "/tmp",
+			     SOMOSCacheConfigOptions configOptions = { 300 * 1024 * 1024 });
 
   static std::optional<SOMOSCacheInfo>
   getCacheStats(const char* cacheName = "som_shared_cache",
@@ -44,7 +45,7 @@ public:
   bool peekForWriteHash();
 
   void cleanup() {
-    _osCache.cleanup();
+     _osCache.cleanup();
   }
   
   void setRelocationData(uint8_t* relocationData) {

@@ -18,7 +18,7 @@ struct SOMOSCacheHeaderMapping: CacheHeaderMapping<OSCacheHeader>
   U_32 _dataSectionSize;
   U_32 _metadataSectionSize;
   U_64 _lastAssumptionID;
-  U_32 _isLocked[2]; // offsets for the data section and metadata sections.
+  U_32 _isLocked[5]; // offsets for the data section and metadata sections.
   U_32 _vmCounter; // the number of connected VMs.
   UDATA _writeHash;
 

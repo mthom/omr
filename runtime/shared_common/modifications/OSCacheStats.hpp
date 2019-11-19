@@ -28,7 +28,8 @@
 class OSCacheStats
 {
 public:
-    virtual IDATA prepareAndGetCacheStats() = 0;
+    virtual IDATA prepareCache() = 0;
+    virtual void shutdownCache() = 0;
     virtual void getCacheStats() = 0;
 };
 

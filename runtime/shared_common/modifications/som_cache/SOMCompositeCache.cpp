@@ -36,10 +36,19 @@ static OMRPortLibrary* initializePortLibrary()
   return &library;
 }
 
-SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePath)
-  : _configOptions(300 * 1024 * 1024)
+SOMCompositeCache::SOMCompositeCache(const char* cacheName,
+				     const char* cachePath,
+				     SOMOSCacheConfigOptions configOptions)
+  : _configOptions{std::move(configOptions)}
   , _config(5, &_configOptions, 0)
-  , _osCache(initializePortLibrary(), cacheName, cachePath, 5, &_config, &_configOptions, 0)
+  , _osCache(initializePortLibrary(),
+	     const_cast<char*>(cacheName),
+	     const_cast<char*>(cachePath),
+	     5,
+	     &_config,
+	     &_configOptions,
+	     0,
+	     true)
   , _dataSectionReaderCount(_osCache.headerRegion(), _osCache.dataSectionReaderCountFocus())
   , _metadataSectionReaderCount(_osCache.headerRegion(), _osCache.metadataSectionReaderCountFocus())
   , _crcChecker(_osCache.headerRegion(), _osCache.crcFocus(), MAX_CRC_SAMPLES)
@@ -60,27 +69,26 @@ SOMCompositeCache::SOMCompositeCache(const char* cacheName, const char* cachePat
 
 std::optional<SOMOSCacheInfo>
 SOMCompositeCache::getCacheStats(const char* cacheName, const char* cachePath)
-{  
-   SOMOSCacheConfigOptions configOptions(0); // 0 because we don't know the cache size.
-
+{
+   SOMOSCacheConfigOptions configOptions{0};
+   
    configOptions.setStatReason(SOMOSCacheConfigOptions::StatReason::List)
                 .setOpenReason(SOMOSCacheConfigOptions::StartupReason::Stat);
-   
-   SOMOSCacheConfig<OSMemoryMappedCacheConfig> config(5, &configOptions, 0);
 
-   SOMOSCache<OSMemoryMappedCache> cache(initializePortLibrary(),
-					 cacheName,
-					 cachePath,
-					 5,
-					 &config,
-					 &configOptions,
-					 0);
+   SOMCompositeCache cache{cacheName, cachePath, configOptions};
+   SOMCacheStats cacheStats{&cache._osCache};
 
-   
-   
-   SOMCacheStats cacheStats(&cache);   
-   cacheStats.prepareAndGetCacheStats();
-   
+   if (cacheStats.prepareCache() != 0) {
+      cache.cleanup();
+      return std::nullopt;
+   }
+
+   cache.enterReadMutex(cache._metadataSectionReaderCount, METADATA_SECTION_LOCK_ID);
+   cacheStats.getCacheStats();
+   cache.exitReadMutex(cache._metadataSectionReaderCount);
+
+   cache.cleanup();
+
    return cacheStats.cacheInfo();
 }
 
@@ -183,6 +191,8 @@ void SOMCompositeCache::populateTables()
      }
    }
 
+   *_osCache.dataSectionSizeFieldOffset() = iterator.distance();
+   
    exitReadMutex(_dataSectionReaderCount);
 }
 

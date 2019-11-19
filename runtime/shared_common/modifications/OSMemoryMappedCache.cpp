@@ -33,12 +33,12 @@
 #include "ut_omrshr_mods.h"
 
 OSMemoryMappedCache::OSMemoryMappedCache(OMRPortLibrary* library,
-					 const char* cacheName,
-					 const char* ctrlDirName,
+					 char* cacheName,
+					 char* ctrlDirName,
 					 IDATA numLocks,
 					 OSMemoryMappedCacheConfig* config,
 					 OSCacheConfigOptions* configOptions)
-  : OSCacheImpl(library, configOptions, numLocks)
+  : OSCacheImpl(library, configOptions, numLocks, cacheName, ctrlDirName)
   , _config(config)
 {
   //  an abstract class, so we don't instantiate _config directly.
@@ -155,6 +155,13 @@ bool OSMemoryMappedCache::startup(const char* cacheName, const char* ctrlDirName
 	goto _errorPreFileOpen;
       }
     }
+  }
+
+  if (_configOptions->openToStatExistingCache()) {
+     if (OSCacheUtils::statCache(OMRPORTLIB, _cacheLocation, _cacheName, "The SOM shared cache doesn't exist!") != 1)
+     {
+        goto _errorPreFileOpen;
+     }
   }
 
   /* Open the file */

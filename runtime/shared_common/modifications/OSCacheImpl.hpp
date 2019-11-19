@@ -110,14 +110,15 @@ class OSCacheIterator;
 class OSCacheImpl: public OSCache
 {
 public:
-  OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks);
+  OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks,
+	      char* cacheName, char* cacheLocation);
 
   virtual ~OSCacheImpl() {
-    omrthread_t self;
-    omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
-    
-    _portLibrary->port_shutdown_library(_portLibrary);
-    omrthread_detach(self);
+      omrthread_t self;
+      omrthread_attach_ex(&self, J9THREAD_ATTR_DEFAULT);
+      
+      _portLibrary->port_shutdown_library(_portLibrary);
+      omrthread_detach(self);
   }
   
   // old J9 cache comment:
@@ -129,7 +130,7 @@ public:
   virtual OSCacheIterator* constructCacheIterator(char* resultBuf) = 0;
   
   bool runningReadOnly() const {
-    return _runningReadOnly;
+      return _runningReadOnly;
   }
 
   virtual bool startup(const char* cacheName, const char* ctrlDirName) = 0;
@@ -139,15 +140,15 @@ public:
   virtual bool started() = 0;
   
   virtual const char* cacheLocation() {
-    return _cacheLocation;
+      return _cacheLocation;
   }
 
   OMRPortLibrary* portLibrary() {
-    return _portLibrary;
+      return _portLibrary;
   }
 
   OSCacheConfigOptions* configOptions() {
-    return _configOptions;
+      return _configOptions;
   }
 
   // constructs a memory protection visitor to specialize on both the

@@ -68,42 +68,46 @@ public:
   {}
 
   void fastForward(ItemHeader* start) {    
-    _focus = start;
+      _focus = start;
   }
 
   SOMCacheMetadataEntryDescriptor next()
   {
-    SOMCacheMetadataItemHeader* header = _focus;
-
-    if (header == NULL || header->size == 0 || !(_focus < _limit)) {
-       return nullCacheMetadataEntryDescriptor;
-    }
-
-    SOMCacheMetadataEntryDescriptor descriptor(_focus++);
-    _focus += header->size;
-
-    return descriptor;
+      SOMCacheMetadataItemHeader* header = _focus;
+      
+      if (header == NULL || header->size == 0 || !(_focus < _limit)) {
+         return nullCacheMetadataEntryDescriptor;
+      }
+      
+      SOMCacheMetadataEntryDescriptor descriptor(_focus++);
+      _focus += header->size;
+      
+      return descriptor;
   }
 
   ItemHeader* operator*() {
-    return _focus;
+      return _focus;
   }
 
   ItemHeader& header() {
-    return *_focus;
+      return *_focus;
   }
 
   SOMCacheMetadataEntryIterator& operator+=(size_t bytes) {
-    _focus += bytes;
-    return *this;
+      _focus += bytes;
+      return *this;
   }
 
   bool operator ==(const SOMCacheMetadataEntryIterator& it) const {
-    return _region == it._region && _focus == it._focus;
+      return _region == it._region && _focus == it._focus;
   }
 
   bool operator !=(const SOMCacheMetadataEntryIterator& it) const {
-    return !(*this == it);
+      return !(*this == it);
+  }
+
+  void resetFocus() {
+      _focus = (ItemHeader*) _region->regionStartAddress();
   }
 
 protected:

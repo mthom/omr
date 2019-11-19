@@ -52,6 +52,11 @@ public:
     return descriptor;
   }
 
+  U_32 distance() {
+    return (U_32) ((U_8*) ((SOMCacheEntry*) _focus) -
+		   (U_8*) _focus.region()->regionStartAddress());
+  }
+
 protected:  
   OSCacheRegionBumpFocus<SOMCacheEntry> _focus;
   const OSCacheRegionBumpFocus<SOMCacheEntry> _limit;

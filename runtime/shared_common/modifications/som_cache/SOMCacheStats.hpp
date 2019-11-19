@@ -27,6 +27,8 @@ public:
     {}
 
     virtual void getCacheStats();
+    virtual void shutdownCache();
+
     const std::optional<SOMOSCacheInfo>& cacheInfo();
   
 private:

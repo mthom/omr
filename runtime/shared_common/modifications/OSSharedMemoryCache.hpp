@@ -59,7 +59,7 @@ class OSSharedMemoryCacheStats;
 class OSSharedMemoryCache: public OSCacheImpl
 {
 public:
-  OSSharedMemoryCache(OMRPortLibrary* library, const char* cacheName, const char* cacheDirName,
+  OSSharedMemoryCache(OMRPortLibrary* library, char* cacheName, char* cacheDirName,
 		      IDATA numLocks, OSSharedMemoryCacheConfig* config,
 		      OSCacheConfigOptions* configOptions);
 

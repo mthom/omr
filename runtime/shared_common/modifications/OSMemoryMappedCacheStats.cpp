@@ -23,34 +23,10 @@
  * @return 0 on success and -1 for failure
  */
 IDATA
-OSMemoryMappedCacheStats::prepareAndGetCacheStats() // SH_OSCache_Info *cacheInfo)
+OSMemoryMappedCacheStats::prepareCache() // SH_OSCache_Info *cacheInfo)
 {
         OMRPORT_ACCESS_FROM_OMRPORT(_cache->_portLibrary);
-	/* Using 'SH_OSCachemmap cacheStruct' breaks the pattern of calling getRequiredConstrBytes(), and then allocating memory.
-	 * However it is consistent with 'SH_OSCachesysv::getCacheStats'.
-	 */
-	/*
-	SH_OSCachemmap cacheStruct;
-	SH_OSCachemmap *cache = NULL;
-	void *cacheHeader;
-	I_64 *timeValue;
-	I_32 inUse;
-	*/
 	IDATA lockRc;
-	/*
-	OMRSharedCachePreinitConfig piconfig;
-	J9PortShcVersion versionData;
-	UDATA reasonForStartup = SHR_STARTUP_REASON_NORMAL;
-	
-	Trc_SHR_OSC_Mmap_getCacheStats_Entry(cacheNameWithVGen, cacheInfo);
-
-	getValuesFromShcFilePrefix(portLibrary, cacheNameWithVGen, &versionData);
-	versionData.cacheType = OMRPORT_SHR_CACHE_TYPE_PERSISTENT;
-	*/
-
-//	if (removeCacheVersionAndGen(cacheInfo->name, CACHE_ROOT_MAXLEN, J9SH_VERSION_STRING_LEN+1, cacheNameWithVGen) != 0) {
-//		return -1;
-//	}
 	
 	OSCacheConfigOptions* configOptions = _cache->_configOptions;
 
@@ -61,7 +37,7 @@ OSMemoryMappedCacheStats::prepareAndGetCacheStats() // SH_OSCache_Info *cacheInf
         }
 
 	/* We try to open the cache read/write */
-	if (!_cache->startup(_cache->_cacheName, _cache->_cacheLocation)) {
+	if (!_cache->started() && !_cache->startup(_cache->_cacheName, _cache->_cacheLocation)) {
 	   /* If that fails - try to open the cache read-only */
 	   configOptions->setReadOnlyOpenMode();
 
@@ -82,7 +58,8 @@ OSMemoryMappedCacheStats::prepareAndGetCacheStats() // SH_OSCache_Info *cacheInf
 	     _inUse = 1;
 	   }	   
 	}
-
+	
+	/*
 	if (!configOptions->openToDestroyExistingCache()) {
 	   IDATA rc = _cache->internalAttach();
 	   if (0 != rc) {
@@ -91,10 +68,12 @@ OSMemoryMappedCacheStats::prepareAndGetCacheStats() // SH_OSCache_Info *cacheInf
 	      return -1;
 	   }
 	}
-
-	if (configOptions->statList()) {
-	   getCacheStats();
-	}
-
+	*/
+	
 	return 0;
+}
+
+void OSMemoryMappedCacheStats::shutdownCache()
+{
+        _cache->cleanup();
 }

@@ -25,10 +25,16 @@
 #include "OSCacheUtils.hpp"
 #include "OSCacheImpl.hpp"
 
-OSCacheImpl::OSCacheImpl(OMRPortLibrary* library, OSCacheConfigOptions* configOptions, IDATA numLocks)
+OSCacheImpl::OSCacheImpl(OMRPortLibrary* library,
+			 OSCacheConfigOptions* configOptions,
+			 IDATA numLocks,
+			 char* cacheName,
+			 char* cacheLocation)
   : OSCache(configOptions)
   , _portLibrary(library)
   , _numLocks(numLocks)
+  , _cacheName(cacheName)
+  , _cacheLocation(cacheLocation)
 {}
 
 // formerly OSCache::commonStartup. We only kept the directory init
@@ -119,21 +125,21 @@ OSCacheImpl::commonInit()
   //  _portLibrary = portLibrary; // now handled in the constructor.
   //  _activeGeneration = generation;
   //  _cacheNameWithVGen = NULL;
-  _cacheName = NULL;
-  _cacheLocation = NULL; //_cachePathName = NULL;
+  //  _cacheName = NULL;
+  //  _cacheLocation = NULL; //_cachePathName = NULL;
   //  _cacheDirName = NULL;
-//  _verboseFlags = 0;
-//  _createFlags = 0;
+  //  _verboseFlags = 0;
+  //  _createFlags = 0;
   //  _config = NULL; // the OMRCacheConfigOptions object initialization takes care of this.
-  // _openMode = 0; // handled by OSCacheConfigOptions
-//  _dataStart = NULL; // these are now all contained in the layout process.
-//  _dataLength = 0;
-//  _headerStart = NULL;
-//  _cacheSize = 0;
+  //  _openMode = 0; // handled by OSCacheConfigOptions
+  //  _dataStart = NULL; // these are now all contained in the layout process.
+  //  _dataLength = 0;
+  //  _headerStart = NULL;
+  //  _cacheSize = 0;
   _errorCode = 0;
   _runningReadOnly = false;
-//  _doCheckBuildID = false;
-//  _isUserSpecifiedCacheDir = false;
+  //  _doCheckBuildID = false;
+  //  _isUserSpecifiedCacheDir = false;
 }
 
 void

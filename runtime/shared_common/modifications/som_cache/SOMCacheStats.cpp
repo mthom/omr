@@ -4,18 +4,18 @@
 
 template <class OSCache>
 void SOMCacheStats<OSCache>::getCacheStats()
-{   
+{
     auto* cache = dynamic_cast<SOMOSCache<OSCache>*>(this->_cache);
 
-    if (cache == nullptr) {
+    if (cache == nullptr || !cache->started()) {
        _cacheInfo = std::nullopt;
        return;
     }
-    
+
     auto* headerMapping = cache->_config->getHeader()->derivedMapping();
 
     SOMOSCacheInfo cacheInfo;
-    
+
     cacheInfo._isPersistent = std::is_same_v<OSMemoryMappedCache, OSCache>;
     cacheInfo._cacheSize = headerMapping->_cacheSize;
     cacheInfo._preludeSectionSize = headerMapping->_preludeSectionSize;
@@ -25,6 +25,13 @@ void SOMCacheStats<OSCache>::getCacheStats()
     cacheInfo._vmID = headerMapping->_vmCounter;
 
     _cacheInfo = cacheInfo;
+}
+
+template <class OSCache>
+void SOMCacheStats<OSCache>::shutdownCache()
+{
+    OSCache::stats_type::shutdownCache();
+    this->_cache = nullptr;
 }
 
 template <class OSCache>
